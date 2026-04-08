@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import kotlin.math.abs
 
 @Composable
@@ -270,18 +271,33 @@ fun EqualizerSheet(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.IconButton(
-                        onClick = {
-                            onDismiss()
-                            onAIEqualizerClick()
-                        },
-                        enabled = isEnabled
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "AI Equalizer",
-                            tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
-                        )
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                onDismiss()
+                                onAIEqualizerClick()
+                            },
+                            enabled = isEnabled
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI Equalizer",
+                                tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
+                            )
+                        }
+                        if (isEnabled) {
+                            BetaBadge(
+                                modifier = Modifier
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .graphicsLayer { 
+                                        scaleX = 0.65f
+                                        scaleY = 0.65f
+                                        transformOrigin = TransformOrigin.Center
+                                    },
+                                containerColor = finalAccentColor,
+                                contentColor = Color.White
+                            )
+                        }
                     }
 
                     androidx.compose.material3.TextButton(
