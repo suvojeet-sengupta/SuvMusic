@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
+import com.suvojeet.suvmusic.shareplay.RoomRole
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,9 +40,14 @@ fun OutputDeviceSheet(
     onRefreshDevices: () -> Unit = {},
     accentColor: Color = MaterialTheme.colorScheme.primary,
     dominantColors: DominantColors? = null,
-    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
+    listenTogetherManager: ListenTogetherManager? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    val isInRoom = listenTogetherManager?.isInRoom ?: false
+    val roomState by (listenTogetherManager?.roomState ?: remember { mutableStateOf(null) }).collectAsState()
+    val isHost = listenTogetherManager?.isHost ?: false
 
     // Determine colors
     val finalBackgroundColor = if (isDarkTheme) {
@@ -114,6 +121,86 @@ fun OutputDeviceSheet(
                             modifier = Modifier.size(22.dp)
                         )
                     }
+                }
+
+                // Listen Together Session Section
+                if (isInRoom && roomState != null) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        shape = SquircleShape,
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                        border = null
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Group,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.width(16.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Listen Together Session",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        letterSpacing = 1.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    text = "Room: ${roomState?.roomCode}",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = finalContentColor
+                                )
+                                Text(
+                                    text = "${roomState?.users?.size ?: 1} listening together",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = finalContentColor.copy(alpha = 0.5f)
+                                )
+                            }
+                            
+                            IconButton(
+                                onClick = { 
+                                    listenTogetherManager?.leaveRoom()
+                                    onDismiss()
+                                },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ExitToApp,
+                                    contentDescription = "Leave Room",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        color = finalContentColor.copy(alpha = 0.05f)
+                    )
                 }
 
                 val currentDevice = devices.find { it.isSelected }
