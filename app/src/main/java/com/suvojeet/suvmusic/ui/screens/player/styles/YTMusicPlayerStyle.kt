@@ -84,7 +84,9 @@ fun YTMusicPlayerStyle(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     if (useWideLayout) {
         YTMusicLandscapeContent(
@@ -94,7 +96,8 @@ fun YTMusicPlayerStyle(
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, playerState.isVideoMode,
             actions.onToggleVideoMode, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, player, isFullScreen, onSetFullScreen, isSwitchingMode,
-            sleepTimerOption, sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration
+            sleepTimerOption, sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration,
+            isAIEnabled, aiStatus
         )
     } else {
         YTMusicPortraitContent(
@@ -105,7 +108,8 @@ fun YTMusicPlayerStyle(
             onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration
+            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration,
+            isAIEnabled, aiStatus
         )
     }
 }
@@ -145,7 +149,9 @@ private fun YTMusicPortraitContent(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
     val controlsAlpha by animateFloatAsState(
@@ -269,7 +275,9 @@ private fun YTMusicPortraitContent(
                 dominantColors = dominantColors, isLoading = combinedLoading, compact = isShort,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 sleepTimerOption = sleepTimerOption,
-                showMoreButton = false
+                showMoreButton = false,
+                isAIEnabled = isAIEnabled,
+                aiStatus = aiStatus
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
@@ -316,7 +324,9 @@ private fun YTMusicLandscapeContent(
     sleepTimerRemainingMs: Long? = null,
     currentProgress: Float = 0f,
     currentPosition: Long = 0L,
-    currentDuration: Long = 0L
+    currentDuration: Long = 0L,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
     val controlsAlpha by animateFloatAsState(
@@ -399,7 +409,9 @@ private fun YTMusicLandscapeContent(
                 dominantColors = dominantColors, isLoading = combinedLoading,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 sleepTimerOption = sleepTimerOption,
-                showMoreButton = false
+                showMoreButton = false,
+                isAIEnabled = isAIEnabled,
+                aiStatus = aiStatus
             )
             Spacer(modifier = Modifier.height(16.dp))
             
