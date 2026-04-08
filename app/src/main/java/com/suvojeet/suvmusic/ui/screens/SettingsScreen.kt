@@ -91,6 +91,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.launch
 
@@ -462,6 +463,7 @@ fun SettingsScreen(
                         icon = Icons.Default.AutoAwesome,
                         title = "AI Assistant",
                         subtitle = "OpenAI, Anthropic, Gemini config",
+                        badge = { BetaBadge() },
                         onClick = onAISettingsClick
                     )
                     }
@@ -952,10 +954,19 @@ private fun SettingsNavigationItem(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
+    badge: @Composable (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
+        headlineContent = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, fontWeight = FontWeight.Medium)
+                if (badge != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    badge()
+                }
+            }
+        },
         supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
         leadingContent = {
             Box(

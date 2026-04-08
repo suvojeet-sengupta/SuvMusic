@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ai.ChatProxyModels
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 
@@ -39,7 +40,13 @@ fun AISettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("AI Assistant Settings", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("AI Assistant Settings", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        BetaBadge()
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
