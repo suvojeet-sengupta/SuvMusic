@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ai.AIEqualizerService
 import com.suvojeet.suvmusic.ai.AIProvider
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -79,7 +80,11 @@ fun AIEqualizerScreen(
             TopAppBar(
                 title = { 
                     Column {
-                        Text("Neural Equalizer", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Neural Equalizer", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            BetaBadge()
+                        }
                         Text(
                             text = if (isAutoModeEnabled) "Auto-Tuning Active" else "Manual Mode",
                             style = MaterialTheme.typography.labelSmall,

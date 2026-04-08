@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
 import com.suvojeet.suvmusic.ui.screens.player.components.AudioQualityDialog
 
@@ -145,6 +146,12 @@ fun SongInfoSection(
                                                     fontSize = 9.sp
                                                 ),
                                                 color = dominantColors.accent
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            BetaBadge(
+                                                containerColor = dominantColors.accent,
+                                                contentColor = Color.White,
+                                                modifier = Modifier.graphicsLayer { scaleX = 0.7f; scaleY = 0.7f }
                                             )
                                         }
                                     }
