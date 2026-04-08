@@ -150,6 +150,10 @@ void Limiter::setEnabled(bool enabled) {
     }
 }
 
+bool Limiter::isEnabled() const {
+    return enabled.load(std::memory_order_relaxed);
+}
+
 void Limiter::reset() {
     std::lock_guard<std::mutex> lock(mtx);
     envelope = 0.0f;
