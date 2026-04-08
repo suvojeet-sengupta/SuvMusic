@@ -1366,6 +1366,11 @@ class MusicPlayerService : MediaLibraryService() {
             mediaNotification.notification.flags = mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
             return mediaNotification
         }
+
+        override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo {
+            return defaultProvider.getNotificationChannelInfo()
+        }
+
         override fun handleCustomCommand(session: MediaSession, action: String, extras: android.os.Bundle): Boolean {
             return when (action) {
                 COMMAND_LIKE -> {

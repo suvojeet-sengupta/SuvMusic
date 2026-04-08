@@ -24,11 +24,15 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.suvojeet.suvmusic.data.model.DeviceType
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.shareplay.RoomRole
+import com.suvojeet.suvmusic.shareplay.RoomState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +50,7 @@ fun OutputDeviceSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
     val isInRoom = listenTogetherManager?.isInRoom ?: false
-    val roomState by (listenTogetherManager?.roomState ?: remember { mutableStateOf(null) }).collectAsState()
+    val roomState by (listenTogetherManager?.roomState ?: remember { MutableStateFlow(null) }).collectAsState()
     val isHost = listenTogetherManager?.isHost ?: false
 
     // Determine colors
