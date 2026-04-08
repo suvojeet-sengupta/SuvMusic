@@ -746,7 +746,8 @@ fun BoxScope.OverlaysContent(
         onRefreshDevices = { actions.onRefreshDevices() },
         accentColor = dominantColors.accent,
         dominantColors = dominantColors,
-        isDarkTheme = isAppInDarkTheme
+        isDarkTheme = isAppInDarkTheme,
+        listenTogetherManager = playerViewModel.listenTogetherManager
     )
 
     // Ringtone Dialogs
