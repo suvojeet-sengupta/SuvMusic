@@ -72,6 +72,7 @@ class PlayerViewModel @Inject constructor(
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
     private val spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor,
     val aiEqualizerService: com.suvojeet.suvmusic.ai.AIEqualizerService,
+    val listenTogetherManager: com.suvojeet.suvmusic.shareplay.ListenTogetherManager,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     
