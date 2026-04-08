@@ -141,6 +141,54 @@ class NativeSpatialAudio @Inject constructor() {
 
     private external fun nSetPlaybackParams(pitch: Float)
 
+    fun getEqBand(index: Int): Float = if (isLibraryLoaded) nGetEqBand(index) else 0f
+    fun isEqEnabled(): Boolean = if (isLibraryLoaded) nIsEqEnabled() else false
+    fun getBassBoost(): Float = if (isLibraryLoaded) nGetBassBoost() else 0f
+    fun getVirtualizer(): Float = if (isLibraryLoaded) nGetVirtualizer() else 0f
+    
+    fun applyAIState(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
+        if (!isLibraryLoaded) return
+        nApplyAIState(
+            state.isEqEnabled,
+            state.safeEqBands.toFloatArray(),
+            state.safeBassBoost,
+            state.safeVirtualizer,
+            state.isSpatialEnabled,
+            state.isCrossfeedEnabled,
+            state.safeLimiterThresholdDb,
+            state.safeLimiterRatio,
+            state.safeLimiterAttackMs,
+            state.safeLimiterReleaseMs,
+            state.safeLimiterMakeupGain
+        )
+    }
+
+    fun getPeakLevel(): Float = if (isLibraryLoaded) nGetPeakLevel() else 0f
+    fun getRmsLevel(): Float = if (isLibraryLoaded) nGetRmsLevel() else 0f
+
+    private external fun nApplyAIState(
+        eqEnabled: Boolean,
+        eqBands: FloatArray,
+        bassBoost: Float,
+        virtualizer: Float,
+        spatialEnabled: Boolean,
+        crossfeedEnabled: Boolean,
+        limiterThreshold: Float,
+        limiterRatio: Float,
+        limiterAttack: Float,
+        limiterRelease: Float,
+        limiterGain: Float
+    )
+
+    private external fun nGetPeakLevel(): Float
+    private external fun nGetRmsLevel(): Float
+
+    private external fun nGetEqBand(index: Int): Float
+    private external fun nIsEqEnabled(): Boolean
+    private external fun nGetBassBoost(): Float
+    private external fun nGetVirtualizer(): Float
+    private external fun nIsSpatializerEnabled(): Boolean
+
     /**
      * Extracts waveform data from a file using high-performance Memory-Mapped IO (mmap).
      * @param filePath Path to the local file.

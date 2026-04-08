@@ -946,6 +946,15 @@ fun SuvMusicApp(
                     },
                     onAddRelatedToPlaylist = { songs ->
                         playlistManagementViewModel.showAddToPlaylistSheet(songs)
+                    },
+                    onShowAIEqualizer = {
+                        playerViewModel.collapsePlayer()
+                        if (navController.currentDestination?.hasRoute<Destination.AIEqualizer>() != true) {
+                            navController.navigate(Destination.AIEqualizer) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     }
                 )
 
