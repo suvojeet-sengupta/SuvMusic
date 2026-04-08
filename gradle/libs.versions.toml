@@ -1,20 +1,20 @@
 [versions]
 agp = "9.0.1"
 kotlin = "2.3.0"
-coreKtx = "1.15.0"
+coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-splashscreen = "1.0.1"
+splashscreen = "1.2.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2026.03.01"
 material3 = "1.5.0-alpha16"
-media3 = "1.9.2"
+media3 = "1.10.0"
 mediarouter = "1.8.1"
 newpipeExtractor = "v0.26.0"
 okhttp = "5.3.0"
-coil = "3.1.0"
+coil = "3.4.0"
 hilt = "2.59.1"
 navigationCompose = "2.9.0"
 datastorePreferences = "1.1.1"
@@ -41,14 +41,22 @@ ktlint = "1.7.1"
 
 [libraries]
 # Core
+androidx-core = { group = "androidx.core", name = "core", version.ref = "coreKtx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-role = { group = "androidx.core", name = "core-role", version = "1.1.0" }
+androidx-core-animation = { group = "androidx.core", name = "core-animation", version = "1.0.0" }
+androidx-core-animation-testing = { group = "androidx.core", name = "core-animation-testing", version = "1.0.0" }
+androidx-core-performance = { group = "androidx.core", name = "core-performance", version = "1.0.0" }
+androidx-core-performance-play-services = { group = "androidx.core", name = "core-performance-play-services", version = "1.0.0" }
+androidx-core-google-shortcuts = { group = "androidx.core", name = "core-google-shortcuts", version = "1.1.0" }
+androidx-core-remoteviews = { group = "androidx.core", name = "core-remoteviews", version = "1.1.0" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 acra-http = { group = "ch.acra", name = "acra-http", version.ref = "acra" }
 acra-toast = { group = "ch.acra", name = "acra-toast", version.ref = "acra" }
 acra-notification = { group = "ch.acra", name = "acra-notification", version.ref = "acra" }
 acra-dialog = { group = "ch.acra", name = "acra-dialog", version.ref = "acra" }
 acra-core = { group = "ch.acra", name = "acra-core", version.ref = "acra" }
-androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 # Jsoup (HTML Parser)
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
