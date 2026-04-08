@@ -147,7 +147,15 @@ dependencies {
     implementation(libs.acra.dialog)
     
     // Core
+    implementation(libs.androidx.core)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.role)
+    implementation(libs.androidx.core.animation)
+    androidTestImplementation(libs.androidx.core.animation.testing)
+    implementation(libs.androidx.core.performance)
+    implementation(libs.androidx.core.performance.play.services)
+    implementation(libs.androidx.core.google.shortcuts)
+    implementation(libs.androidx.core.remoteviews)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
