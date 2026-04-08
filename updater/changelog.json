@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.2.2.0",
+      "versionCode": 25,
+      "date": "April 08, 2026",
+      "description": "• Neural Hardware AI Engine: New hardware-level AI audio engine with real-time signal analyzer. Migrated core AI logic to a dedicated C++ processor for peak performance and near-zero latency.\n• Smart AI Equalizer: Professional-grade AI tuning with A/B comparison, prompt history, and robust error handling with automatic fallback.\n• AI Feature Transparency: Introduced 'BETA' indicators across all AI-powered features, including the new Neural Equalizer and AI Assistant settings.\n• Listen Together Integration: Enhanced the Audio Output dialog with integrated 'Listen Together' session controls. View room codes and manage your session directly while switching devices.\n• Core Library Upgrades: Updated to Media3 1.10.0 and Coil 3.4.0. Improved gapless playback stability, memory efficiency during scrolling, and resolved high-res artwork crashes.\n• Technical Refinements: Implemented Media3 notification channel info requirements and optimized UI state collection for active shared-play sessions.\n• Bug Fixes: Resolved various type mismatches in AI EQ presets and fixed critical NullPointerExceptions in state unboxing and result card rendering.",
+      "isMajorUpdate": true
+    },
+    {
       "versionName": "2.2.1.0",
       "versionCode": 24,
       "date": "April 05, 2026",

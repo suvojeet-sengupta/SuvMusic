@@ -149,7 +149,9 @@ data class PlayerScreenState(
     val selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
     val enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    val sleepTimerRemainingMs: Long? = null
+    val sleepTimerRemainingMs: Long? = null,
+    val isAIEnabled: Boolean = false,
+    val aiStatus: String? = null
 )
 
 /**
@@ -189,7 +191,8 @@ data class PlayerScreenActions(
     val onSelectAllRelated: () -> Unit = {},
     val onClearRelatedSelection: () -> Unit = {},
     val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
-    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {}
+    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
+    val onShowAIEqualizer: () -> Unit = {}
 )
 
 
@@ -243,6 +246,9 @@ fun PlayerScreen(
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = PlayerStyle.YT_MUSIC)
     
+    val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle(initialValue = null)
+
     val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -446,7 +452,9 @@ fun PlayerScreen(
                                 sleepTimerRemainingMs = state.sleepTimerRemainingMs,
                                 currentProgress = currentProgress,
                                 currentPosition = currentPosition,
-                                currentDuration = currentDuration
+                                currentDuration = currentDuration,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus
                             )
                         }
                         PlayerStyle.CLASSIC -> {
@@ -473,7 +481,9 @@ fun PlayerScreen(
                                 sleepTimerRemainingMs = state.sleepTimerRemainingMs,
                                 currentProgress = currentProgress,
                                 currentPosition = currentPosition,
-                                currentDuration = currentDuration
+                                currentDuration = currentDuration,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus
                             )
                         }
                     }
@@ -705,8 +715,10 @@ fun BoxScope.OverlaysContent(
             onPreampChange = { playerViewModel.setEqPreamp(it) }, 
             onBassBoostChange = { playerViewModel.setBassBoost(it) }, 
             onVirtualizerChange = { playerViewModel.setVirtualizer(it) }, 
-            onReset = { playerViewModel.resetEqBands() }, 
-            initialEnabled = eqEnabled, 
+            onReset = { playerViewModel.resetEqBands() },
+            onAIEqualizerClick = actions.onShowAIEqualizer,
+            initialEnabled = eqEnabled,
+ 
             initialBands = eqBands, 
             initialPreamp = eqPreamp, 
             initialBassBoost = bassBoost, 
@@ -734,7 +746,8 @@ fun BoxScope.OverlaysContent(
         onRefreshDevices = { actions.onRefreshDevices() },
         accentColor = dominantColors.accent,
         dominantColors = dominantColors,
-        isDarkTheme = isAppInDarkTheme
+        isDarkTheme = isAppInDarkTheme,
+        listenTogetherManager = playerViewModel.listenTogetherManager
     )
 
     // Ringtone Dialogs

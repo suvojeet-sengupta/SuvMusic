@@ -1,53 +1,27 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material3.*
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
 import com.suvojeet.suvmusic.ui.screens.player.components.AudioQualityDialog
 
@@ -76,7 +51,9 @@ fun SongInfoSection(
     sleepTimerRemainingMs: Long? = null,
     sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     showMoreButton: Boolean = true,
-    isClassic: Boolean = false
+    isClassic: Boolean = false,
+    isAIEnabled: Boolean = false,
+    aiStatus: String? = null
 ) {
     var showQualityDialog by remember { mutableStateOf(false) }
 
@@ -123,6 +100,7 @@ fun SongInfoSection(
                                         )
                                     }
                                 }
+                                
                                 Text(
                                     text = song?.title ?: "No song playing",
                                     style = if (compact) {
@@ -140,8 +118,45 @@ fun SongInfoSection(
                                     maxLines = 1,
                                     modifier = Modifier.basicMarquee(
                                         iterations = Int.MAX_VALUE
-                                    )
+                                    ).weight(1f, fill = false)
                                 )
+
+                                // AI EQ Indicator Badge
+                                if (isAIEnabled) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        color = dominantColors.accent.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, dominantColors.accent.copy(alpha = 0.3f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(12.dp),
+                                                tint = dominantColors.accent
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "AI",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 9.sp
+                                                ),
+                                                color = dominantColors.accent
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            BetaBadge(
+                                                containerColor = dominantColors.accent,
+                                                contentColor = Color.White,
+                                                modifier = Modifier.graphicsLayer { scaleX = 0.7f; scaleY = 0.7f }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -239,6 +254,47 @@ fun SongInfoSection(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                }
+            }
+            
+            // AI Processing Status Indicator
+            androidx.compose.animation.AnimatedVisibility(
+                visible = aiStatus != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "aiPulse")
+                    val alpha by infiniteTransition.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "aiPulseAlpha"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(dominantColors.accent.copy(alpha = alpha))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = aiStatus ?: "",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp
+                        ),
+                        color = dominantColors.accent,
+                        modifier = Modifier.graphicsLayer { this.alpha = alpha }
+                    )
                 }
             }
             

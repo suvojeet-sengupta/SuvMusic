@@ -120,7 +120,23 @@ class SessionManager @Inject constructor(
         private val NAV_BAR_ALPHA_KEY = floatPreferencesKey("nav_bar_alpha")
         private val NAV_BAR_BLUR_KEY = floatPreferencesKey("nav_bar_blur")
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
-        
+
+        private val OPENAI_API_KEY = stringPreferencesKey("openai_api_key")
+        private val OPENAI_MODEL_KEY = stringPreferencesKey("openai_model")
+        private val ANTHROPIC_API_KEY = stringPreferencesKey("anthropic_api_key")
+        private val ANTHROPIC_MODEL_KEY = stringPreferencesKey("anthropic_model")
+        private val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
+        private val GEMINI_MODEL_KEY = stringPreferencesKey("gemini_model")
+        private val CHAT_PROXY_MODEL_KEY = stringPreferencesKey("chat_proxy_model")
+        private val SELECTED_AI_PROVIDER_KEY = stringPreferencesKey("selected_ai_provider")
+        private val AUTO_AI_ENABLED_KEY = booleanPreferencesKey("auto_ai_enabled")
+        private val PERSISTED_AI_STATE_KEY = stringPreferencesKey("persisted_ai_state")
+
+        // AI EQ Persistence
+        private val AI_PROMPT_HISTORY_KEY = stringPreferencesKey("ai_prompt_history")
+        // Per-song AI settings keys (dynamic)
+        private const val AI_SONG_SETTINGS_PREFIX = "ai_song_settings_"
+
         private val ENABLE_BETTER_LYRICS_KEY = booleanPreferencesKey("enable_better_lyrics")
         private val ENABLE_SIMPMUSIC_KEY = booleanPreferencesKey("enable_simpmusic")
         private val ENABLE_KUGOU_KEY = booleanPreferencesKey("enable_kugou")
@@ -799,7 +815,80 @@ class SessionManager @Inject constructor(
     val doubleTapSeekSecondsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
     }
-    
+
+    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_API_KEY] ?: "" }
+    val openaiModelFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_MODEL_KEY] ?: "gpt-4o" }
+    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_API_KEY] ?: "" }
+    val anthropicModelFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL_KEY] ?: "claude-3-5-sonnet-20240620" }
+    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_API_KEY] ?: "" }
+    val geminiModelFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_MODEL_KEY] ?: "gemini-1.5-pro" }
+    val chatProxyModelFlow: Flow<String> = context.dataStore.data.map { it[CHAT_PROXY_MODEL_KEY] ?: "gpt-5" }
+    val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "CHAT_PROXY" }
+
+    suspend fun setOpenAiApiKey(apiKey: String) = context.dataStore.edit { it[OPENAI_API_KEY] = apiKey }
+    suspend fun setOpenAiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL_KEY] = model }
+    suspend fun setAnthropicApiKey(apiKey: String) = context.dataStore.edit { it[ANTHROPIC_API_KEY] = apiKey }
+    suspend fun setAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL_KEY] = model }
+    suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
+    suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
+    suspend fun setChatProxyModel(model: String) = context.dataStore.edit { it[CHAT_PROXY_MODEL_KEY] = model }
+    suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
+
+    suspend fun isAutoAIEnabled(): Boolean = context.dataStore.data.first()[AUTO_AI_ENABLED_KEY] ?: false
+    suspend fun setAutoAIEnabled(enabled: Boolean) = context.dataStore.edit { it[AUTO_AI_ENABLED_KEY] = enabled }
+
+    suspend fun getPersistedAIState(): String? = context.dataStore.data.first()[PERSISTED_AI_STATE_KEY]
+    suspend fun savePersistedAIState(json: String?) = context.dataStore.edit { preferences ->
+        if (json == null) {
+            preferences.remove(PERSISTED_AI_STATE_KEY)
+        } else {
+            preferences[PERSISTED_AI_STATE_KEY] = json
+        }
+    }
+
+    // AI EQ Persistence Methods
+    suspend fun getAIPromptHistory(): com.suvojeet.suvmusic.ai.AIPromptHistory {
+        return context.dataStore.data.first()[AI_PROMPT_HISTORY_KEY]?.let {
+            com.suvojeet.suvmusic.ai.AIPromptHistory.fromJson(it)
+        } ?: com.suvojeet.suvmusic.ai.AIPromptHistory()
+    }
+
+    suspend fun saveAIPromptHistory(prompt: String, songId: String?, songTitle: String?) {
+        context.dataStore.edit { preferences ->
+            val history = preferences[AI_PROMPT_HISTORY_KEY]?.let {
+                com.suvojeet.suvmusic.ai.AIPromptHistory.fromJson(it)
+            } ?: com.suvojeet.suvmusic.ai.AIPromptHistory()
+            preferences[AI_PROMPT_HISTORY_KEY] = history.addEntry(prompt, songId, songTitle).toJson()
+        }
+    }
+
+    suspend fun clearAIPromptHistory() {
+        context.dataStore.edit { preferences ->
+            preferences[AI_PROMPT_HISTORY_KEY] = com.suvojeet.suvmusic.ai.AIPromptHistory().toJson()
+        }
+    }
+
+    suspend fun saveSongAISettings(songId: String, settings: com.suvojeet.suvmusic.ai.SongAISettings) {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        context.dataStore.edit { preferences ->
+            preferences[key] = settings.toJson()
+        }
+    }
+
+    suspend fun getSongAISettings(songId: String): com.suvojeet.suvmusic.ai.SongAISettings? {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        return context.dataStore.data.first()[key]?.let {
+            com.suvojeet.suvmusic.ai.SongAISettings.fromJson(it)
+        }
+    }
+
+    suspend fun clearSongAISettings(songId: String) {
+        val key = stringPreferencesKey("${AI_SONG_SETTINGS_PREFIX}$songId")
+        context.dataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
+
     suspend fun setDoubleTapSeekSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] = seconds

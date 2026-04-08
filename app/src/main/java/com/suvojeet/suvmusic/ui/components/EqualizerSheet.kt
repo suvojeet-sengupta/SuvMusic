@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import kotlin.math.abs
 
 @Composable
@@ -133,6 +136,7 @@ fun EqualizerSheet(
     onVirtualizerChange: (Float) -> Unit = {},
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onAIEqualizerClick: () -> Unit = {},
     dominantColor: Color,
     initialEnabled: Boolean,
     initialBands: FloatArray,
@@ -267,6 +271,35 @@ fun EqualizerSheet(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                onDismiss()
+                                onAIEqualizerClick()
+                            },
+                            enabled = isEnabled
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI Equalizer",
+                                tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
+                            )
+                        }
+                        if (isEnabled) {
+                            BetaBadge(
+                                modifier = Modifier
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .graphicsLayer { 
+                                        scaleX = 0.65f
+                                        scaleY = 0.65f
+                                        transformOrigin = TransformOrigin.Center
+                                    },
+                                containerColor = finalAccentColor,
+                                contentColor = Color.White
+                            )
+                        }
+                    }
+
                     androidx.compose.material3.TextButton(
                         onClick = {
                             onReset()
