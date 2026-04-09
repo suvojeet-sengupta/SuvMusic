@@ -8,101 +8,48 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
-import androidx.media3.ui.AspectRatioFrameLayout
 import android.app.Activity
-import android.content.Context
-import android.content.ClipData
-import android.content.ClipboardManager
-import com.suvojeet.suvmusic.providers.lyrics.Lyrics
-import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.player.SleepTimerOption
-import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
-import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
-import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
-import com.suvojeet.suvmusic.ui.components.LoadingArtworkOverlay
-import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
-import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
-import com.suvojeet.suvmusic.ui.components.RingtoneTrimmerDialog
-import com.suvojeet.suvmusic.ui.components.SeekbarStyle
-import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
-import com.suvojeet.suvmusic.ui.components.SongActionsSheet
-import com.suvojeet.suvmusic.ui.components.SongInfoSheet
-import com.suvojeet.suvmusic.ui.components.OutputDeviceSheet
-import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
-import com.suvojeet.suvmusic.ui.components.WaveformSeeker
+import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.providers.lyrics.Lyrics
+import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.ui.components.rememberDominantColors
+import com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay
+import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
-import com.suvojeet.suvmusic.ui.screens.player.components.AlbumArtwork
+import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
 import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
-import com.suvojeet.suvmusic.ui.screens.player.components.BottomActions
-import com.suvojeet.suvmusic.ui.screens.player.components.PlaybackControls
-import com.suvojeet.suvmusic.ui.screens.player.components.PlayerTopBar
 import com.suvojeet.suvmusic.ui.screens.player.components.ModernQueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeControl
 import com.suvojeet.suvmusic.ui.screens.player.components.M3ESeekbarShimmer
+import com.suvojeet.suvmusic.ui.components.SeekbarStyle
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
@@ -111,10 +58,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.IntentSenderRequest
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Fullscreen
@@ -125,6 +70,8 @@ import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.screens.player.FullScreenVideoPlayer
 
@@ -133,6 +80,13 @@ import com.suvojeet.suvmusic.ui.screens.player.styles.YTMusicPlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.ClassicPlayerStyle
 
 import com.suvojeet.suvmusic.ui.screens.player.components.RelatedSheet
+import com.suvojeet.suvmusic.ui.components.SongActionsSheet
+import com.suvojeet.suvmusic.ui.components.SongInfoSheet
+import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
+import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
+import com.suvojeet.suvmusic.ui.components.OutputDeviceSheet
+import com.suvojeet.suvmusic.ui.components.RingtoneTrimmerDialog
+import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
 
 /**
  * State object for PlayerScreen to reduce parameter count.
@@ -150,57 +104,54 @@ data class PlayerScreenState(
     val isLoggedIn: Boolean = false,
     val isPostingComment: Boolean = false,
     val isLoadingMoreComments: Boolean = false,
+    val sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
+    val sleepTimerRemainingMs: Long? = null,
     val isRadioMode: Boolean = false,
     val isLoadingMoreSongs: Boolean = false,
-    val selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
-    val enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),
-    val sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
-    val sleepTimerRemainingMs: Long? = null,
-    val isAIEnabled: Boolean = false,
-    val aiStatus: String? = null
+    val selectedLyricsProvider: LyricsProviderType = LyricsProviderType.AUTO,
+    val enabledLyricsProviders: Map<LyricsProviderType, Boolean> = emptyMap()
 )
 
 /**
- * Action callbacks for PlayerScreen.
+ * Actions for PlayerScreen to reduce parameter count.
  */
 data class PlayerScreenActions(
+    val onBack: () -> Unit,
     val onPlayPause: () -> Unit,
-    val onSeekTo: (Long) -> Unit,
     val onNext: () -> Unit,
     val onPrevious: () -> Unit,
-    val onBack: () -> Unit,
-    val onDownload: () -> Unit,
+    val onSeekTo: (Long) -> Unit,
     val onToggleLike: () -> Unit,
     val onToggleDislike: () -> Unit,
     val onShuffleToggle: () -> Unit,
     val onRepeatToggle: () -> Unit,
+    val onDownload: () -> Unit,
+    val onToggleVideoMode: () -> Unit,
+    val onDismissVideoError: () -> Unit,
+    val onArtistClick: (String) -> Unit,
+    val onAlbumClick: (String) -> Unit,
+    val onPlayFromQueue: (Int) -> Unit,
     val onToggleAutoplay: () -> Unit,
-    val onToggleVideoMode: () -> Unit = {},
-    val onDismissVideoError: () -> Unit = {},
-    val onStartRadio: () -> Unit = {},
-    val onLoadMoreRadioSongs: () -> Unit = {},
-    val onPlayFromQueue: (Int) -> Unit = {},
-    val onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
-    val onRefreshDevices: () -> Unit = {},
-    val onArtistClick: (String) -> Unit = {},
-    val onAlbumClick: (String) -> Unit = {},
-    val onSetPlaybackParameters: (Float, Float) -> Unit = { _, _ -> },
-    val onPostComment: (String) -> Unit = {},
-    val onLoadMoreComments: () -> Unit = {},
-    val onLyricsProviderChange: (com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType) -> Unit = {},
-    val onImportLyrics: (String) -> Unit = {},
-    val onSetSleepTimer: (SleepTimerOption, Int?) -> Unit = { _, _ -> },
-    val onClearQueue: () -> Unit = {},
-    val onListenTogetherClick: () -> Unit = {},
-    val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit = {},
-    val onToggleRelatedSelection: (Int) -> Unit = {},
-    val onSelectAllRelated: () -> Unit = {},
-    val onClearRelatedSelection: () -> Unit = {},
-    val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
-    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit = {},
-    val onShowAIEqualizer: () -> Unit = {}
+    val onLoadMoreRadioSongs: () -> Unit,
+    val onPostComment: (String) -> Unit,
+    val onLoadMoreComments: () -> Unit,
+    val onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit,
+    val onSwitchDevice: (OutputDevice) -> Unit,
+    val onRefreshDevices: () -> Unit,
+    val onSetPlaybackParameters: (Float, Float) -> Unit,
+    val onLyricsProviderChange: (LyricsProviderType) -> Unit,
+    val onImportLyrics: (String) -> Unit,
+    val onShowAIEqualizer: () -> Unit,
+    val onListenTogetherClick: () -> Unit,
+    val onStartRadio: () -> Unit,
+    val onToggleRelatedSelection: (Int) -> Unit,
+    val onSelectAllRelated: () -> Unit,
+    val onClearRelatedSelection: () -> Unit,
+    val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
+    val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
+    val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit,
+    val onClearQueue: () -> Unit = {}
 )
-
 
 /**
  * Premium full-screen player with Apple Music-style design.
@@ -241,122 +192,57 @@ fun PlayerScreen(
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
-    
-    val savedSeekbarStyleString by playerViewModel.seekbarStyle.collectAsStateWithLifecycle()
-    val savedArtworkShapeString by playerViewModel.artworkShape.collectAsStateWithLifecycle()
-    val savedArtworkSizeString by playerViewModel.artworkSize.collectAsStateWithLifecycle()
-    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
-    val doubleTapSeekSeconds by sessionManager.doubleTapSeekSecondsFlow.collectAsStateWithLifecycle(initialValue = 10)
-    val keepScreenOn by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC)
     val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
+    val currentArtworkShapeName by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = ArtworkShape.ROUNDED_SQUARE.name)
+    val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)
+    val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.WAVEFORM.name)
+    val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    
+    val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+    val isAppInDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    
+    val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle()
+    val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle()
+
+    // Lyrics appearance
     val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
     val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
-    val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.5f)
-    val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 26f)
-    val lyricsBlur by sessionManager.lyricsBlurFlow.collectAsStateWithLifecycle(initialValue = 4.0f)
-    val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
-    val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
-    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
-    val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = PlayerStyle.YT_MUSIC)
-    
-    val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle(initialValue = false)
-    val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle(initialValue = null)
+    val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.2f)
+    val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 24f)
+    val lyricsBlur by sessionManager.lyricsBlurFlow.collectAsStateWithLifecycle(initialValue = 0f)
 
-    val pendingIntent by playerViewModel.pendingIntent.collectAsStateWithLifecycle()
-    val deleteLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            // Permission granted, file deleted
-        }
-        playerViewModel.consumePendingIntent()
-    }
+    // Seek/Progress State
+    val currentProgress = playerState.progress
+    val currentPosition = playerState.currentPosition
+    val currentDuration = playerState.duration
 
-    LaunchedEffect(pendingIntent) {
-        pendingIntent?.let { intent ->
-            val intentSenderRequest = IntentSenderRequest.Builder(intent).build()
-            deleteLauncher.launch(intentSenderRequest)
-        }
-    }
-    
+    // Audio Effects State
     val eqEnabled by playerViewModel.getEqEnabled().collectAsStateWithLifecycle(initialValue = false)
     val eqBands by playerViewModel.getEqBands().collectAsStateWithLifecycle(initialValue = FloatArray(10) { 0f })
     val eqPreamp by playerViewModel.getEqPreamp().collectAsStateWithLifecycle(initialValue = 0f)
     val bassBoost by playerViewModel.getBassBoost().collectAsStateWithLifecycle(initialValue = 0f)
     val virtualizer by playerViewModel.getVirtualizer().collectAsStateWithLifecycle(initialValue = 0f)
-    
-    // Keep Screen On Logic
-    DisposableEffect(keepScreenOn) {
-        val window = (context as? Activity)?.window
-        if (keepScreenOn) window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose { if (keepScreenOn) window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-    }
-    
-    val currentSeekbarStyle = remember(savedSeekbarStyleString) { runCatching { SeekbarStyle.valueOf(savedSeekbarStyleString) }.getOrDefault(SeekbarStyle.WAVE_LINE) }
-    val currentArtworkShape = remember(savedArtworkShapeString) { runCatching { ArtworkShape.valueOf(savedArtworkShapeString) }.getOrDefault(ArtworkShape.ROUNDED_SQUARE) }
-    val currentArtworkSize = remember(savedArtworkSizeString) { runCatching { ArtworkSize.valueOf(savedArtworkSizeString) }.getOrDefault(ArtworkSize.LARGE) }
 
-    // Optimization: Use derivedStateOf for values that change frequently to avoid recomposing the whole screen
-    val currentProgress by androidx.compose.runtime.remember(playerState.progress) {
-        androidx.compose.runtime.mutableFloatStateOf(playerState.progress)
-    }
-    val currentPosition by androidx.compose.runtime.remember(playerState.currentPosition) {
-        androidx.compose.runtime.mutableLongStateOf(playerState.currentPosition)
-    }
-    val currentDuration by androidx.compose.runtime.remember(playerState.duration) {
-        androidx.compose.runtime.mutableLongStateOf(playerState.duration)
-    }
+    val currentArtworkShape = try { ArtworkShape.valueOf(currentArtworkShapeName) } catch (e: Exception) { ArtworkShape.ROUNDED_SQUARE }
+    val currentArtworkSize = try { ArtworkSize.valueOf(currentArtworkSizeName) } catch (e: Exception) { ArtworkSize.LARGE }
+    val currentSeekbarStyle = try { SeekbarStyle.valueOf(currentSeekbarStyleName) } catch (e: Exception) { SeekbarStyle.WAVEFORM }
 
-    // Fix status bar color
     val view = LocalView.current
-    val isAppInDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
-
-    val extractedColors = rememberDominantColors(imageUrl = song?.thumbnailUrl, isDarkTheme = isAppInDarkTheme)
+    val coroutineScope = rememberCoroutineScope()
     
-    // Apply dynamic colors only if enabled
-    val colorScheme = MaterialTheme.colorScheme
-    val finalColors = if (albumArtDynamicColorsEnabled) {
-        extractedColors
-    } else {
-        if (isAppInDarkTheme) {
-            DominantColors(
-                primary = MaterialTheme.colorScheme.surfaceContainerHigh,
-                secondary = MaterialTheme.colorScheme.surfaceContainerHighest,
-                accent = MaterialTheme.colorScheme.primary,
-                onBackground = MaterialTheme.colorScheme.onSurface
-            )
-        } else {
-            DominantColors(
-                primary = MaterialTheme.colorScheme.surfaceContainerLow,
-                secondary = MaterialTheme.colorScheme.surfaceContainerLowest,
-                accent = MaterialTheme.colorScheme.primary,
-                onBackground = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-
-    // M3E Fast Expressive color transitions
-    val animatedPrimary by animateColorAsState(
-        targetValue = finalColors.primary,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "primary"
-    )
-    val animatedSecondary by animateColorAsState(
-        targetValue = finalColors.secondary,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "secondary"
-    )
-    val animatedAccent by animateColorAsState(
-        targetValue = finalColors.accent,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "accent"
-    )
-    val animatedOnBg by animateColorAsState(
-        targetValue = finalColors.onBackground,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "onBg"
-    )
-
+    val finalColors = rememberDominantColors(song?.thumbnailUrl, isAppInDarkTheme)
+    val animatedPrimary by animateColorAsState(targetValue = finalColors.primary, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow), label = "primary")
+    val animatedSecondary by animateColorAsState(targetValue = finalColors.secondary, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow), label = "secondary")
+    val animatedAccent by animateColorAsState(targetValue = finalColors.accent, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow), label = "accent")
+    val animatedOnBg by animateColorAsState(targetValue = finalColors.onBackground, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow), label = "onBg")
+    
     val dominantColors = DominantColors(primary = animatedPrimary, secondary = animatedSecondary, accent = animatedAccent, onBackground = animatedOnBg)
     
     // Background loading pulse
@@ -409,7 +295,6 @@ fun PlayerScreen(
     val showListenTogetherSheet = activeOverlay is PlayerOverlay.ListenTogether
     val showEqualizerSheet = activeOverlay is PlayerOverlay.Equalizer
 
-    val coroutineScope = rememberCoroutineScope()
     BackHandler {
         val overlay = activeOverlay
         if (overlay != PlayerOverlay.None) {
@@ -427,7 +312,7 @@ fun PlayerScreen(
 
     val handleDoubleTapSeek: (Boolean) -> Unit = { forward ->
         val current = pendingSeekPosition ?: playerState.currentPosition
-        val seekAmount = doubleTapSeekSeconds * 1000L
+        val seekAmount = 10000L // default
         val newPos = if (forward) (current + seekAmount).coerceAtMost(playerState.duration) else (current - seekAmount).coerceAtLeast(0)
         pendingSeekPosition = newPos
         seekDebounceJob?.cancel()
@@ -456,18 +341,18 @@ fun PlayerScreen(
                 directive = navigator.scaffoldDirective,
                 value = navigator.scaffoldValue,
                 mainPane = {
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val useWideLayout = maxWidth > 500.dp || isExpanded
-                        val isCompactHeight = maxHeight < 600.dp
+                    AnimatedPane(modifier = Modifier.fillMaxSize()) {
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            val useWideLayout = maxWidth > 500.dp || isExpanded
+                            val isCompactHeight = maxHeight < 600.dp
 
-                        AnimatedVisibility(visible = !showQueue || isExpanded, enter = fadeIn(), exit = fadeOut()) {
                             when (playerStyle) {
                                 PlayerStyle.YT_MUSIC -> {
                                     YTMusicPlayerStyle(
                                         song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
                                         currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
                                         player, isFullScreen, isCompactHeight, useWideLayout, actions,
-                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
                                         onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                         onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
                                         onShowRelated = { activeOverlay = PlayerOverlay.Related },
@@ -488,7 +373,8 @@ fun PlayerScreen(
                                         currentPosition = currentPosition,
                                         currentDuration = currentDuration,
                                         isAIEnabled = isAIAutoModeEnabled,
-                                        aiStatus = aiAutoStatus
+                                        aiStatus = aiAutoStatus,
+                                        windowSizeClass = windowSizeClass
                                     )
                                 }
                                 PlayerStyle.CLASSIC -> {
@@ -496,7 +382,7 @@ fun PlayerScreen(
                                         song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
                                         currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
                                         player, isFullScreen, isCompactHeight, useWideLayout, actions,
-                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song) },
+                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
                                         onShowQueue = { activeOverlay = PlayerOverlay.Queue },
                                         onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
                                         onShowRelated = { activeOverlay = PlayerOverlay.Related },
@@ -517,7 +403,8 @@ fun PlayerScreen(
                                         currentPosition = currentPosition,
                                         currentDuration = currentDuration,
                                         isAIEnabled = isAIAutoModeEnabled,
-                                        aiStatus = aiAutoStatus
+                                        aiStatus = aiAutoStatus,
+                                        windowSizeClass = windowSizeClass
                                     )
                                 }
                             }
@@ -540,6 +427,8 @@ fun PlayerScreen(
                 }
             )
 
+            // Modals and non-pane overlays (always floating)
+            Box(modifier = Modifier.fillMaxSize()) {
                 OverlaysContent(
                     state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
                     dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
@@ -550,13 +439,13 @@ fun PlayerScreen(
                     lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
                     lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
                     sessionManager = sessionManager, coroutineScope = coroutineScope, isFullScreen = isFullScreen,
-                    eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer
+                    eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer,
+                    isExpanded = isExpanded
                 )
             }
         }
     }
 }
-
 
 @Composable
 fun AdaptiveSupportingContent(
@@ -587,8 +476,7 @@ fun AdaptiveSupportingContent(
                 onPlayNext = { playerViewModel.playNext(it) },
                 onAddToQueue = { playerViewModel.addToQueue(it) },
                 onClearQueue = { playerViewModel.clearQueue() },
-                dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme,
-                isPane = true
+                dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
             )
         }
         is PlayerOverlay.Lyrics -> {
@@ -601,8 +489,7 @@ fun AdaptiveSupportingContent(
                 onLineSpacingChange = { coroutineScope.launch { sessionManager.setLyricsLineSpacing(it) } }, onFontSizeChange = { coroutineScope.launch { sessionManager.setLyricsFontSize(it) } },
                 onBlurChange = { coroutineScope.launch { sessionManager.setLyricsBlur(it) } },
                 onTextPositionChange = { coroutineScope.launch { sessionManager.setLyricsTextPosition(it) } }, onAnimationTypeChange = { coroutineScope.launch { sessionManager.setLyricsAnimationType(it) } },
-                isPlaying = playerState.isPlaying, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious,
-                isPane = true
+                isPlaying = playerState.isPlaying, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious
             )
         }
         is PlayerOverlay.Related -> {
@@ -612,8 +499,7 @@ fun AdaptiveSupportingContent(
                 onAddSelectedToQueue = { val selected = state.selectedRelatedIndices.mapNotNull { if (it < state.relatedSongs.size) state.relatedSongs[it] else null }; actions.onAddRelatedToQueue(selected); actions.onClearRelatedSelection() },
                 onAddSelectedToPlaylist = { val selected = state.selectedRelatedIndices.mapNotNull { if (it < state.relatedSongs.size) state.relatedSongs[it] else null }; actions.onAddRelatedToPlaylist(selected); actions.onClearRelatedSelection() },
                 onSongClick = { actions.onPlayRelated(it); onOverlayChange(PlayerOverlay.None) }, onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromRelated = true)) },
-                onClose = { onOverlayChange(PlayerOverlay.None) }, dominantColors = dominantColors, isDarkTheme = isAppInDarkTheme,
-                isPane = true
+                onClose = { onOverlayChange(PlayerOverlay.None) }, dominantColors = dominantColors, isDarkTheme = isAppInDarkTheme
             )
         }
         else -> {
@@ -658,7 +544,7 @@ fun BoxScope.OverlaysContent(
     val song = state.playbackInfo.currentSong
     val playerState = state.playerState
     val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
-
+    
     // Use rememberUpdatedState to prevent stale state capture in lambdas
     val currentOverlay by androidx.compose.runtime.rememberUpdatedState(activeOverlay)
 
@@ -808,12 +694,12 @@ fun BoxScope.OverlaysContent(
     if (ringtoneUiState.showTrimmer && ringtoneUiState.targetSong != null) {
         RingtoneTrimmerDialog(
             isVisible = true, song = ringtoneUiState.targetSong!!, onDismiss = { ringtoneViewModel.hideTrimmer() },
-            onResolveStreamUrl = { ringtoneViewModel.getStreamUrl(it) },
+            onResolveStreamUrl = suspend { ringtoneViewModel.getStreamUrl(it) },
             onConfirm = { start, end -> ringtoneViewModel.setAsRingtone(context, ringtoneUiState.targetSong!!, start, end) },
             dominantColors = dominantColors
         )
     }
-
+    
     if (ringtoneUiState.showProgress) {
         RingtoneProgressDialog(
             isVisible = true, progress = ringtoneUiState.progress, statusMessage = ringtoneUiState.statusMessage,
@@ -826,4 +712,3 @@ fun BoxScope.OverlaysContent(
         FullScreenVideoPlayer(viewModel = playerViewModel, dominantColors = dominantColors, onDismiss = { playerViewModel.setFullScreen(false) })
     }
 }
-

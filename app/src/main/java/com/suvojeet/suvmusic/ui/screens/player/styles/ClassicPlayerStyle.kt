@@ -384,72 +384,106 @@ private fun ClassicTopBar(
     onRecenter: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Back Button
         Box(
-            modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onBack),
+            modifier = Modifier
+                .size(44.dp)
+                .clip(SquircleShape)
+                .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                .clickable(onClick = onBack),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
-        }
-
-        // Center Switch or Title
-        if (isYouTubeSong) {
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                    .padding(2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Audio",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (!isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Video",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
-        } else {
-            Text(
-                text = "NOW PLAYING",
-                style = MaterialTheme.typography.labelLarge,
-                color = dominantColors.onBackground.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Close",
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(28.dp)
             )
         }
 
-        // Right side
+        // Center: Switch or Title — uses weight to take available space, prevents overlap
+        Box(
+            modifier = Modifier.weight(1f, fill = false),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isYouTubeSong) {
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Audio",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (!isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Video",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "NOW PLAYING",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = dominantColors.onBackground.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Right side: Audio AR or Spacer
         if (audioArEnabled) {
-            Box(modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onRecenter), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Recenter Audio", tint = dominantColors.onBackground, modifier = Modifier.size(22.dp))
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(SquircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .clickable(onClick = onRecenter),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Recenter Audio",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         } else {
             Spacer(modifier = Modifier.size(44.dp))

@@ -61,18 +61,12 @@ import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveLineStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveformStyle
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.WavyProgressIndicatorDefaults
-import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlin.random.Random
 import kotlin.math.sin
 
@@ -207,38 +201,6 @@ fun WaveformSeeker(
 
         Box(
             modifier = Modifier
-                .onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown) {
-                        when (event.key) {
-                            Key.DirectionLeft -> {
-                                val newProgress = (currentProgress - 0.05f).coerceAtLeast(0f)
-                                currentProgress = newProgress
-                                onSeek(newProgress)
-                                true
-                            }
-                            Key.DirectionRight -> {
-                                val newProgress = (currentProgress + 0.05f).coerceAtMost(1f)
-                                currentProgress = newProgress
-                                onSeek(newProgress)
-                                true
-                            }
-                            Key.Enter, Key.DirectionCenter -> {
-                                // Maybe toggle play/pause? Or open style menu?
-                                // Let's keep it simple for now, maybe consume to indicate interaction
-                                true
-                            }
-                            else -> false
-                        }
-                    } else {
-                        false
-                    }
-                }
-                .dpadFocusable(
-                    shape = RoundedCornerShape(12.dp),
-                    focusedScale = 1.0f, // Don't scale the waveform, just border
-                    borderWidth = 2.dp,
-                    borderColor = activeColor
-                )
                 .fillMaxWidth()
                 .height(60.dp)
                 .graphicsLayer { clip = false }
@@ -404,7 +366,8 @@ fun WaveformSeeker(
                         .height(60.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Seek-interactive layer — tap & drag handled here
+                    // Seek-interactive layer — tap & long-press only
+                    // (horizontal drag is handled by the outer Box pointerInput)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -418,23 +381,6 @@ fun WaveformSeeker(
                                     },
                                     onLongPress = {
                                         showStyleMenu = true
-                                    }
-                                )
-                            }
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures(
-                                    onDragStart = { offset ->
-                                        isDragging = true
-                                        dragX = offset.x
-                                    },
-                                    onDragEnd = {
-                                        onSeek(currentProgress)
-                                        isDragging = false
-                                    },
-                                    onHorizontalDrag = { change, _ ->
-                                        val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                                        currentProgress = newProgress
-                                        dragX = change.position.x
                                     }
                                 )
                             }

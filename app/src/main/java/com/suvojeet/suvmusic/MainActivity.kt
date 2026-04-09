@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Lock
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
@@ -910,7 +911,7 @@ fun SuvMusicApp(
                             playerViewModel.playSong(playerState.queue[index], playerState.queue, index)
                         }
                     },
-                    onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                    onSwitchDevice = { device -> playerViewModel.switchOutputDevice(device) },
                     onRefreshDevices = { playerViewModel.refreshDevices() },
                     onArtistClick = { artistIdOrName ->
                         if (artistCredits.size > 1) {
