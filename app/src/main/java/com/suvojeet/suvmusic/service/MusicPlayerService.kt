@@ -494,6 +494,7 @@ class MusicPlayerService : MediaLibraryService() {
                     if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
                         serviceScope.launch {
                             val autoResume = sessionManager.isAutoResumeAfterCallEnabled()
+                            android.util.Log.d("MusicPlayerService", "onPlayWhenReadyChanged: playWhenReady=$playWhenReady, autoResume=$autoResume")
                             if (!playWhenReady) {
                                 // Focus lost: if auto-resume is disabled, permanently pause so it won't resume later
                                 if (!autoResume) {
@@ -503,12 +504,21 @@ class MusicPlayerService : MediaLibraryService() {
                                     }
                                 }
                             } else {
-                                // Focus regained: if auto-resume is enabled, ensure the player actually starts
-                                if (autoResume) {
-                                    android.util.Log.d("MusicPlayerService", "Focus regained. Ensuring playback resumes.")
-                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        mediaLibrarySession?.player?.play()
-                                    }
+                                // Focus regained: Media3 automatically restores playWhenReady to true.
+                                android.util.Log.d("MusicPlayerService", "Focus regained. playWhenReady is now true. Auto-resume is $autoResume.")
+                            }
+                        }
+                    }
+                }
+
+                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                    super.onPlaybackSuppressionReasonChanged(playbackSuppressionReason)
+                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        serviceScope.launch {
+                            if (sessionManager.isAutoResumeAfterCallEnabled()) {
+                                android.util.Log.d("MusicPlayerService", "Suppression removed. Ensuring playback resumes.")
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    mediaLibrarySession?.player?.play()
                                 }
                             }
                         }
