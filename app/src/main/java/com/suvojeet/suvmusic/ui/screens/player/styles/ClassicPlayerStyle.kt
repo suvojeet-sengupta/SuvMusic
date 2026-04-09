@@ -40,6 +40,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.window.core.layout.WindowSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -90,7 +93,8 @@ fun ClassicPlayerStyle(
     currentPosition: Long = 0L,
     currentDuration: Long = 0L,
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     if (useWideLayout) {
         ClassicLandscapeContent(
@@ -99,7 +103,7 @@ fun ClassicPlayerStyle(
             onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
             onSetFullScreen, isSwitchingMode, sleepTimerOption, sleepTimerRemainingMs,
-            currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
+            currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus, windowSizeClass
         )
     } else {
         ClassicPortraitContent(
@@ -109,7 +113,7 @@ fun ClassicPlayerStyle(
             onShowRelated, onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
+            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus, windowSizeClass
         )
     }
 }
@@ -151,13 +155,19 @@ private fun ClassicPortraitContent(
     currentPosition: Long = 0L,
     currentDuration: Long = 0L,
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenHeight = maxHeight
-        val isVeryShort = screenHeight < 600.dp
+        
+        // WindowSizeClass based logic
+        val heightSizeClass = windowSizeClass?.windowHeightSizeClass ?: WindowHeightSizeClass.MEDIUM
+        
+        // Dynamic thresholds
+        val isVeryShort = heightSizeClass == WindowHeightSizeClass.COMPACT || screenHeight < 600.dp
         val isShort = screenHeight < 720.dp
 
         Column(
@@ -296,12 +306,16 @@ private fun ClassicLandscapeContent(
     currentPosition: Long = 0L,
     currentDuration: Long = 0L,
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
+    
+    val widthSizeClass = windowSizeClass?.windowWidthSizeClass ?: WindowWidthSizeClass.MEDIUM
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.EXPANDED
 
-    Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.weight(0.45f).fillMaxHeight().padding(end = 16.dp), contentAlignment = Alignment.Center) {
+    Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isExpanded) 32.dp else 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(if (isExpanded) 0.4f else 0.45f).fillMaxHeight().padding(end = if (isExpanded) 32.dp else 16.dp), contentAlignment = Alignment.Center) {
             AlbumArtwork(
                 imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
                 isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
