@@ -26,23 +26,17 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     private val scope = CoroutineScope(Dispatchers.IO)
 
     // Define standard size for Bitmap to avoid Palette crash and system scaling issues.
-    // 320px is the standard maximum for MediaSession metadata on many Android versions.
-    // Reducing from 512px to 320px prevents MediaMetadata$Builder.scaleBitmap from being called
-    // by the system, which is often where the "recycled source" crash occurs.
+    // 320px was the standard maximum for MediaSession metadata on many Android versions.
+    // Modern devices can handle higher resolutions. We use 720px for high quality,
+    // which is safely under the 1MB Binder limit when using RGB_565 (720*720*2 = ~1MB).
     // Improvement (3): Further reduce to 256px for Android Auto to save memory on head units.
-    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 320
+    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 720
 
     /**
      * Detect if the current session is Android Auto.
      */
     private fun isAndroidAuto(): Boolean {
         return try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
-            // Android Auto often presents as a specific device type or brand in some versions,
-            // but a more reliable way is to check the system UI mode or specific broadcast intents.
-            // For this loader, we'll check if any output device is a "Car" or if the 
-            // configuration is in car mode.
             val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
             uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_CAR
         } catch (e: Exception) {
@@ -98,13 +92,13 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
     /**
      * Creates a safe Bitmap from a Drawable.
-     * If the Drawable has no dimensions (e.g., ColorDrawable), a 320x320 canvas is created.
+     * Uses RGB_565 for memory efficiency (no alpha needed for album art).
      */
     private fun createFallbackBitmap(drawable: Drawable): Bitmap {
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else DEFAULT_BITMAP_SIZE
         val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else DEFAULT_BITMAP_SIZE
 
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
         val canvas = Canvas(bitmap)
 
         drawable.setBounds(0, 0, canvas.width, canvas.height)
@@ -152,6 +146,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         return try {
             val request = ImageRequest.Builder(context)
                 .data(uri)
+                .size(DEFAULT_BITMAP_SIZE) // Optimization: Ask Coil to downscale during decode
                 .allowHardware(false) // Required for drawing to Canvas
                 .build()
 
@@ -171,6 +166,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
      * Creates a safe, owned bitmap from any drawable by drawing it to a fresh canvas.
      * This avoids race conditions with Coil's bitmap recycling and ensures the size
      * is within safe limits for MediaSession metadata.
+     * Uses RGB_565 to balance quality and Binder transaction limits.
      */
     private fun createSafeBitmapFromDrawable(drawable: Drawable): Bitmap? {
         return try {
@@ -185,7 +181,7 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
                 height = drawable.intrinsicHeight.takeIf { it > 0 } ?: DEFAULT_BITMAP_SIZE
             }
 
-            // Limit maximum dimension to DEFAULT_BITMAP_SIZE (320px)
+            // Limit maximum dimension to DEFAULT_BITMAP_SIZE (720px)
             if (width > DEFAULT_BITMAP_SIZE || height > DEFAULT_BITMAP_SIZE) {
                 val ratio = width.toFloat() / height.toFloat()
                 if (width > height) {
@@ -202,7 +198,8 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             height = height.coerceAtLeast(1)
 
             // Create a completely fresh bitmap that we own
-            val freshBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            // Use RGB_565 for album art to save 50% memory and stay under Binder 1MB limit
+            val freshBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
             val canvas = Canvas(freshBitmap)
 
             try {
@@ -230,13 +227,13 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
      */
     private fun createPlaceholderBitmap(): Bitmap {
         return try {
-            val bitmap = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.ARGB_8888)
+            val bitmap = Bitmap.createBitmap(DEFAULT_BITMAP_SIZE, DEFAULT_BITMAP_SIZE, Bitmap.Config.RGB_565)
             val canvas = Canvas(bitmap)
             canvas.drawColor(android.graphics.Color.DKGRAY)
             bitmap
         } catch (e: Exception) {
             // Absolute fallback - should not happen unless OOM
-            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)
         }
     }
 
