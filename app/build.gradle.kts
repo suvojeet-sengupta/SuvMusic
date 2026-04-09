@@ -13,12 +13,12 @@ plugins {
 
 android {
     namespace = "com.suvojeet.suvmusic"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.suvojeet.suvmusic"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 25
         versionName = "2.2.2.0"
 

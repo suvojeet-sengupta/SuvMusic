@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.suvojeet.suvmusic.core.model"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
