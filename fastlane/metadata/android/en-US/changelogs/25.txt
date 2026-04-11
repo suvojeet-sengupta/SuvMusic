@@ -1,0 +1,4 @@
+v2.2.2.0 - Quality Improvements
+- Add NewPipeExtractor as git submodule for better dependency management
+- UI improvements and contact email update
+- Performance optimizations and code quality enhancements
