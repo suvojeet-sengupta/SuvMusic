@@ -181,6 +181,7 @@ Senior Android Engineer
 
 [![GitHub](https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=for-the-badge&logo=github)](https://github.com/suvojeet-sengupta)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/suvojeet-sengupta/)
+[![Email](https://img.shields.io/badge/Email-suvojeet@suvojeetsengupta.in-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:suvojeet@suvojeetsengupta.in)
 [![Donate via Coindrop](https://img.shields.io/badge/Support-Coindrop-007BFF?style=for-the-badge&logo=heart&logoColor=white)](https://coindrop.to/suvojeet_sengupta)
 
 ---

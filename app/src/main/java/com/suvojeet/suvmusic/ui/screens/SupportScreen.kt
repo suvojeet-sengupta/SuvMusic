@@ -335,11 +335,11 @@ fun SupportScreen(
                     SupportListItem(
                         icon = Icons.Default.Email,
                         title = "Email",
-                        subtitle = "Suvojitsengupta21@gmail.com",
+                        subtitle = "suvojeet@suvojeetsengupta.in",
                         accentColor = primaryColor,
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:Suvojitsengupta21@gmail.com")
+                                data = Uri.parse("mailto:suvojeet@suvojeetsengupta.in")
                                 putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Support")
                             }
                             context.startActivity(intent)

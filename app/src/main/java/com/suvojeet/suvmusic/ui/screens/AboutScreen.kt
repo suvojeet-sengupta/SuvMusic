@@ -237,6 +237,7 @@ fun AboutScreen(
                         
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") })
+                            SocialIconBadge(icon = Icons.Default.Email, onClick = { uriHandler.openUri("mailto:suvojeet@suvojeetsengupta.in") })
                             SocialIconBadge(icon = Icons.Default.Language, onClick = { uriHandler.openUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Instagram, onClick = { uriHandler.openUri("https://www.instagram.com/suvojeet__sengupta?igsh=MWhyMXE4YzhxaDVvNg==") })
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.Telegram, onClick = { uriHandler.openUri("https://t.me/suvojeet_sengupta") })
