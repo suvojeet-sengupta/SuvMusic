@@ -1427,7 +1427,7 @@ class PlayerViewModel @Inject constructor(
                 )
             }
             
-            // Fetch thumbnails
+            // Fetch thumbnails and better IDs
             val updatedCredits = artistNames.map { name ->
                 try {
                     val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
@@ -1436,7 +1436,11 @@ class PlayerViewModel @Inject constructor(
                         youTubeRepository.searchArtists(name)
                     }
                     
-                    val matchingArtist = searchResults.firstOrNull { 
+                    // Prioritize Official channels (those with subscriber text or specific ID format)
+                    // and sort by subscribers if possible (though searchResults is usually already ranked by relevance)
+                    val matchingArtist = searchResults.find { 
+                        (it.name.equals(name, ignoreCase = true)) && (it.subscribers != null)
+                    } ?: searchResults.firstOrNull { 
                         it.name.contains(name, ignoreCase = true) || 
                         name.contains(it.name, ignoreCase = true)
                     } ?: searchResults.firstOrNull()

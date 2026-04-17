@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
+import com.suvojeet.suvmusic.ui.components.BounceButton
+
 @Composable
 fun PlaybackControls(
     isPlaying: Boolean,
@@ -68,24 +70,20 @@ fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        IconToggleButton(
-            checked = shuffleEnabled,
-            onCheckedChange = { onShuffleToggle() },
-            modifier = Modifier.size(48.dp),
-            colors = IconButtonDefaults.iconToggleButtonColors(
-                contentColor = dominantColors.onBackground.copy(alpha = 0.6f),
-                checkedContentColor = dominantColors.accent
-            )
+        BounceButton(
+            onClick = onShuffleToggle,
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
-                modifier = Modifier.size(secondaryIconSize)
+                modifier = Modifier.size(secondaryIconSize),
+                tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
             )
         }
 
         // Previous
-        IconButton(
+        BounceButton(
             onClick = onPrevious,
             modifier = Modifier.size(56.dp)
         ) {
@@ -98,33 +96,37 @@ fun PlaybackControls(
         }
 
         // Play/Pause
-        Box(
-            modifier = Modifier
-                .size(playSize)
-                .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape)
-                .clickable(onClick = onPlayPause, interactionSource = remember { MutableInteractionSource() }, indication = null),
-            contentAlignment = Alignment.Center
+        BounceButton(
+            onClick = onPlayPause,
+            modifier = Modifier.size(playSize)
         ) {
-            AnimatedContent(
-                targetState = isPlaying,
-                transitionSpec = {
-                    (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-                        + fadeIn()) togetherWith
-                    (scaleOut() + fadeOut())
-                },
-                label = "playPauseSwap"
-            ) { playing ->
-                Icon(
-                    imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (playing) "Pause" else "Play",
-                    tint = dominantColors.onBackground,
-                    modifier = Modifier.size(playIconSize)
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        (scaleIn(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+                            + fadeIn()) togetherWith
+                        (scaleOut() + fadeOut())
+                    },
+                    label = "playPauseSwap"
+                ) { playing ->
+                    Icon(
+                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (playing) "Pause" else "Play",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(playIconSize)
+                    )
+                }
             }
         }
 
         // Next
-        IconButton(
+        BounceButton(
             onClick = onNext,
             modifier = Modifier.size(56.dp)
         ) {
@@ -137,14 +139,9 @@ fun PlaybackControls(
         }
 
         // Repeat
-        IconToggleButton(
-            checked = repeatMode != RepeatMode.OFF,
-            onCheckedChange = { onRepeatToggle() },
-            modifier = Modifier.size(48.dp),
-            colors = IconButtonDefaults.iconToggleButtonColors(
-                contentColor = dominantColors.onBackground.copy(alpha = 0.6f),
-                checkedContentColor = dominantColors.accent
-            )
+        BounceButton(
+            onClick = onRepeatToggle,
+            modifier = Modifier.size(48.dp)
         ) {
             AnimatedContent(
                 targetState = repeatMode,
@@ -160,7 +157,8 @@ fun PlaybackControls(
                         else -> Icons.Default.Repeat
                     },
                     contentDescription = "Repeat",
-                    modifier = Modifier.size(secondaryIconSize)
+                    modifier = Modifier.size(secondaryIconSize),
+                    tint = if (mode != RepeatMode.OFF) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
                 )
             }
         }
