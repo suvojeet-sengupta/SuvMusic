@@ -84,7 +84,8 @@ fun LiquidGlassPlayerStyle(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     val thumbnailUrl = song?.thumbnailUrl
-    val scrimAlpha = if (isDarkTheme) 0.55f else 0.35f
+    val scrimAlpha = if (isDarkTheme) 0.55f else 0.40f
+    val scrimColor = if (isDarkTheme) Color.Black else Color.White
     val i = intensity.coerceIn(0.3f, 1.5f)
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -115,17 +116,25 @@ fun LiquidGlassPlayerStyle(
                 )
             }
 
-            // Layer 2: Scrim for legibility
+            // Layer 2: Scrim for legibility - Adaptive for Light/Dark
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = scrimAlpha * i * 0.7f),
-                                Color.Black.copy(alpha = scrimAlpha * i),
-                                Color.Black.copy(alpha = scrimAlpha * i * 1.2f)
-                            )
+                            colors = if (isDarkTheme) {
+                                listOf(
+                                    Color.Black.copy(alpha = scrimAlpha * i * 0.7f),
+                                    Color.Black.copy(alpha = scrimAlpha * i),
+                                    Color.Black.copy(alpha = scrimAlpha * i * 1.2f)
+                                )
+                            } else {
+                                listOf(
+                                    Color.White.copy(alpha = scrimAlpha * i * 0.5f),
+                                    Color.White.copy(alpha = scrimAlpha * i * 0.8f),
+                                    Color.White.copy(alpha = scrimAlpha * i * 1.1f)
+                                )
+                            }
                         )
                     )
             )
@@ -137,7 +146,7 @@ fun LiquidGlassPlayerStyle(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                dominantColors.primary.copy(alpha = 0.18f * i),
+                                (if (isDarkTheme) dominantColors.primary else dominantColors.primary.copy(alpha = 0.5f)).copy(alpha = 0.18f * i),
                                 Color.Transparent
                             )
                         )
