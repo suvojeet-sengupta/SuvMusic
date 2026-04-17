@@ -27,7 +27,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.MoodAndGenresViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodAndGenresScreen(
-    onCategoryClick: (String, String, String) -> Unit, // browseId, params, title
+    onCategoryClick: (String, String?, String) -> Unit, // browseId, params, title
     onBackClick: () -> Unit,
     viewModel: MoodAndGenresViewModel = hiltViewModel()
 ) {
@@ -71,7 +71,7 @@ fun MoodAndGenresScreen(
                             onClick = {
                                 onCategoryClick(
                                     category.browseId,
-                                    category.params ?: "",
+                                    category.params,
                                     category.title
                                 )
                             }
