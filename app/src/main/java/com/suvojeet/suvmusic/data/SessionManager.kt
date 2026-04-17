@@ -500,10 +500,10 @@ class SessionManager @Inject constructor(
         context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
 
     suspend fun isSponsorBlockEnabled(): Boolean =
-        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true
+        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: false
 
     val sponsorBlockEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: true
+        preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: false
     }
 
     suspend fun setSponsorBlockEnabled(enabled: Boolean) {

@@ -154,6 +154,13 @@ class ListeningHistoryRepository @Inject constructor(
     }
     
     /**
+     * Get the first ever track played.
+     */
+    suspend fun getFirstEverTrack(): ListeningHistory? {
+        return listeningHistoryDao.getFirstEverTrack()
+    }
+
+    /**
      * Clear all listening history.
      */
     suspend fun clearHistory() {

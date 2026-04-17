@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,16 +61,51 @@ fun ListeningStatsScreen(
     viewModel: ListeningStatsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
+    var showShareDialog by remember { mutableStateOf(false) }
 
     val shareStats = {
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "Check out my music personality on SuvMusic: ${uiState.musicPersonality.title}! I've listened to ${uiState.totalSongsPlayed} songs.")
+        showShareDialog = true
+    }
+
+    if (showShareDialog) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showShareDialog = false }
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    SpotifyWrappedShareCard(
+                        uiState = uiState,
+                        modifier = Modifier.clip(RoundedCornerShape(24.dp))
+                    )
+                    Button(
+                        onClick = {
+                            val topArtist = uiState.topArtists.firstOrNull()?.artist ?: "Unknown"
+                            val totalMinutes = uiState.totalListeningTimeMs / 60000
+                            val months = String.format("%.1f", uiState.totalMonthsListened)
+                            val text = "My Music Insights on SuvMusic 🎵\n\nPersonality: ${uiState.musicPersonality.title}\nTotal Playtime: $totalMinutes mins\nTop Artist: $topArtist\nMonths with SuvMusic: $months\n\n#SuvMusic #MusicInsights"
+                            
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
+                        },
+                        modifier = Modifier.padding(16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Share, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share as Text")
+                    }
+                }
+            }
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
     }
 
     Scaffold(
@@ -209,18 +245,128 @@ private fun AnimatedEntry(
     delay: Int = 0,
     content: @Composable () -> Unit
 ) {
-    var visible by remember { mutableStateOf(false) }
+    var visible by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(delay.toLong())
-        visible = true
+        if (!visible) {
+            kotlinx.coroutines.delay(delay.toLong())
+            visible = true
+        }
     }
     
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(800)) + 
-                slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(800))
+        enter = fadeIn(animationSpec = tween(600)) + 
+                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(600))
     ) {
         content()
+    }
+}
+
+@Composable
+fun SpotifyWrappedShareCard(
+    uiState: ListeningStatsUiState,
+    modifier: Modifier = Modifier
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    
+    Box(
+        modifier = modifier
+            .width(360.dp)
+            .height(640.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        primaryColor.copy(alpha = 0.9f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
+                        Color.Black
+                    )
+                )
+            )
+            .padding(24.dp)
+    ) {
+        // Background patterns
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                color = Color.White.copy(alpha = 0.05f),
+                radius = 400.dp.toPx(),
+                center = Offset(size.width, 0f)
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Audiotrack,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "SuvMusic Insights",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            
+            Spacer(Modifier.height(48.dp))
+            
+            Text(
+                "My music personality is",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Text(
+                uiState.musicPersonality.title,
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black
+            )
+            
+            Spacer(Modifier.height(40.dp))
+            
+            // Stats Grid
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    StatValue("Total Minutes", (uiState.totalListeningTimeMs / 60000).toString())
+                    Spacer(Modifier.height(24.dp))
+                    StatValue("Top Songs", uiState.totalSongsPlayed.toString())
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    StatValue("Months Listened", String.format("%.1f", uiState.totalMonthsListened))
+                    Spacer(Modifier.height(24.dp))
+                    StatValue("Top Artist", uiState.topArtists.firstOrNull()?.artist ?: "None")
+                }
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Branding Footer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "SUVMUSIC",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 4.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatValue(label: String, value: String) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+        Text(value, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -506,12 +652,23 @@ private fun GlobalStatsRow(uiState: ListeningStatsUiState) {
             )
         }
         
-        StatCardWide(
-            title = "Daily Average",
-            value = if (avgHours > 0) "${avgHours}h ${avgMinutes}m" else "${avgMinutes}m",
-            subtitle = "Based on your activity this week",
-            icon = Icons.Default.Timeline
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Months With Us",
+                value = String.format("%.1f", uiState.totalMonthsListened),
+                icon = Icons.Default.Timeline
+            )
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Daily Average",
+                value = if (avgHours > 0) "${avgHours}h ${avgMinutes}m" else "${avgMinutes}m",
+                icon = Icons.Default.Timeline
+            )
+        }
     }
 }
 
