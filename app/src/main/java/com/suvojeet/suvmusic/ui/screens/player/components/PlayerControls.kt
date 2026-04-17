@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
-import com.suvojeet.suvmusic.ui.components.BounceButton
+import com.suvojeet.suvmusic.ui.components.bounceClick
 
 @Composable
 fun PlaybackControls(
@@ -70,9 +71,11 @@ fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        BounceButton(
-            onClick = onShuffleToggle,
-            modifier = Modifier.size(48.dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .bounceClick(onClick = onShuffleToggle),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
@@ -83,9 +86,11 @@ fun PlaybackControls(
         }
 
         // Previous
-        BounceButton(
-            onClick = onPrevious,
-            modifier = Modifier.size(56.dp)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .bounceClick(onClick = onPrevious),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.SkipPrevious,
@@ -96,9 +101,11 @@ fun PlaybackControls(
         }
 
         // Play/Pause
-        BounceButton(
-            onClick = onPlayPause,
-            modifier = Modifier.size(playSize)
+        Box(
+            modifier = Modifier
+                .size(playSize)
+                .bounceClick(onClick = onPlayPause),
+            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
@@ -126,9 +133,11 @@ fun PlaybackControls(
         }
 
         // Next
-        BounceButton(
-            onClick = onNext,
-            modifier = Modifier.size(56.dp)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .bounceClick(onClick = onNext),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.SkipNext,
@@ -139,9 +148,11 @@ fun PlaybackControls(
         }
 
         // Repeat
-        BounceButton(
-            onClick = onRepeatToggle,
-            modifier = Modifier.size(48.dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .bounceClick(onClick = onRepeatToggle),
+            contentAlignment = Alignment.Center
         ) {
             AnimatedContent(
                 targetState = repeatMode,

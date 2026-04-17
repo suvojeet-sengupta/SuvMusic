@@ -10,6 +10,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -43,7 +52,9 @@ import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,8 +95,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.material.icons.filled.BrightnessLow
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.AspectRatio
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -98,6 +107,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.RotateRight
+
+import com.suvojeet.suvmusic.ui.components.BounceButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +130,10 @@ fun FullScreenVideoPlayer(
     var isVideoDownloading by remember { mutableStateOf(false) }
     var videoDownloaded by remember { mutableStateOf(false) }
     val downloadSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Double tap seeking indicators
+    var showForwardIndicator by remember { mutableStateOf(false) }
+    var showRewindIndicator by remember { mutableStateOf(false) }
 
     LaunchedEffect(areControlsVisible, playerState.isPlaying, isLocked) {
         if (areControlsVisible && playerState.isPlaying && !isLocked) {
@@ -292,10 +307,20 @@ fun FullScreenVideoPlayer(
                                 viewModel.seekTo(playerState.currentPosition + 10000)
                                 gestureStatusText = "+10s"
                                 gestureIcon = Icons.Filled.Forward10
+                                scope.launch {
+                                    showForwardIndicator = true
+                                    delay(600)
+                                    showForwardIndicator = false
+                                }
                             } else {
                                 viewModel.seekTo(playerState.currentPosition - 10000)
                                 gestureStatusText = "-10s"
                                 gestureIcon = Icons.Filled.Replay10
+                                scope.launch {
+                                    showRewindIndicator = true
+                                    delay(600)
+                                    showRewindIndicator = false
+                                }
                             }
                             showGestureStatus = true
                         }
@@ -309,7 +334,7 @@ fun FullScreenVideoPlayer(
                         if (isVolume) {
                             volumeLevel = (volumeLevel - dragAmount / size.height).coerceIn(0f, 1f)
                             gestureStatusText = "${(volumeLevel * 100).toInt()}%"
-                            gestureIcon = Icons.Filled.VolumeUp
+                            gestureIcon = if (volumeLevel > 0.6f) Icons.Filled.VolumeUp else Icons.Filled.VolumeDown
                             
                             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                             audioManager?.let {
@@ -325,7 +350,7 @@ fun FullScreenVideoPlayer(
                             }
                             brightness = (brightness - dragAmount / size.height).coerceIn(0f, 1f)
                             gestureStatusText = "${(brightness * 100).toInt()}%"
-                            gestureIcon = Icons.Filled.BrightnessHigh
+                            gestureIcon = if (brightness > 0.5f) Icons.Filled.BrightnessHigh else Icons.Filled.BrightnessLow
                             
                             val layoutParams = activity?.window?.attributes
                             layoutParams?.screenBrightness = brightness
@@ -373,6 +398,16 @@ fun FullScreenVideoPlayer(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Double tap seek indicators
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                DoubleTapSeekAnimation(visible = showRewindIndicator, isForward = false)
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                DoubleTapSeekAnimation(visible = showForwardIndicator, isForward = true)
+            }
+        }
+
         // Gesture Feedback
         AnimatedVisibility(
             visible = showGestureStatus,
@@ -381,16 +416,29 @@ fun FullScreenVideoPlayer(
             modifier = Modifier.align(Alignment.Center)
         ) {
             Surface(
-                color = Color.Black.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
+                color = Color.Black.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(gestureIcon, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(gestureStatusText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    val infiniteTransition = rememberInfiniteTransition(label = "gesture")
+                    val pulse by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.15f,
+                        animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse),
+                        label = "pulse"
+                    )
+                    
+                    Icon(
+                        imageVector = gestureIcon, 
+                        contentDescription = null, 
+                        tint = Color.White, 
+                        modifier = Modifier.size(28.dp).graphicsLayer { scaleX = pulse; scaleY = pulse }
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(gestureStatusText, color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp)
                 }
             }
         }
@@ -405,20 +453,26 @@ fun FullScreenVideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isLocked) 0.1f else 0.5f))
+                    .background(Color.Black.copy(alpha = if (isLocked) 0.15f else 0.5f))
                     .systemBarsPadding()
             ) {
                 if (isLocked) {
                     // Lock button only
-                    IconButton(
-                        onClick = { isLocked = false },
+                    BounceButton(
+                        onClick = { isLocked = false; areControlsVisible = true },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(16.dp)
-                            .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
-                            .size(56.dp)
+                            .padding(24.dp)
                     ) {
-                        Icon(Icons.Filled.LockOpen, "Unlock", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(64.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.LockOpen, "Unlock", tint = Color.White, modifier = Modifier.size(32.dp))
+                            }
+                        }
                     }
                 } else {
                     // ─── Top Bar ──────────────────
@@ -429,8 +483,8 @@ fun FullScreenVideoPlayer(
                             .align(Alignment.TopCenter),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Filled.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(32.dp))
+                        BounceButton(onClick = onDismiss) {
+                            Icon(Icons.Filled.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(36.dp))
                         }
 
                         Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
@@ -451,23 +505,23 @@ fun FullScreenVideoPlayer(
 
                         // Compact controls group
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { showQualityDialog = true }) {
+                            BounceButton(onClick = { showQualityDialog = true }) {
                                 val resLabel = playerState.videoQuality?.let { "${it.maxResolution}p" } ?: "Res"
-                                Text(resLabel, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text(resLabel, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
                             }
                             
-                            IconButton(onClick = {
+                            BounceButton(onClick = {
                                 val activity = context as? Activity
                                 activity?.requestedOrientation = if (isLandscape) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                             }) {
-                                Icon(Icons.Filled.ScreenRotation, "Rotate", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Filled.ScreenRotation, "Rotate", tint = Color.White, modifier = Modifier.size(22.dp).padding(8.dp))
                             }
                             
-                            IconButton(onClick = { showDownloadSheet = true }) {
+                            BounceButton(onClick = { showDownloadSheet = true }) {
                                 when {
                                     isVideoDownloading -> LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(18.dp))
-                                    videoDownloaded -> Icon(Icons.Filled.CheckCircle, "Done", tint = dominantColors.accent, modifier = Modifier.size(20.dp))
-                                    else -> Icon(Icons.Filled.SaveAlt, "Download", tint = Color.White, modifier = Modifier.size(20.dp))
+                                    videoDownloaded -> Icon(Icons.Filled.CheckCircle, "Done", tint = dominantColors.accent, modifier = Modifier.size(24.dp).padding(8.dp))
+                                    else -> Icon(Icons.Filled.SaveAlt, "Download", tint = Color.White, modifier = Modifier.size(24.dp).padding(8.dp))
                                 }
                             }
                         }
@@ -477,24 +531,24 @@ fun FullScreenVideoPlayer(
                     Row(
                         modifier = Modifier.align(Alignment.Center),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(isLandscape.let { if (it) 64.dp else 32.dp })
+                        horizontalArrangement = Arrangement.spacedBy(isLandscape.let { if (it) 80.dp else 48.dp })
                     ) {
-                        IconButton(onClick = { viewModel.seekTo(playerState.currentPosition - 10000L) }, modifier = Modifier.size(56.dp)) {
-                            Icon(Icons.Filled.Replay10, "-10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        BounceButton(onClick = { viewModel.seekTo(playerState.currentPosition - 10000L) }) {
+                            Icon(Icons.Filled.Replay10, "-10s", tint = Color.White, modifier = Modifier.size(48.dp))
                         }
 
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))) {
-                            if (playerState.isLoading) {
-                        LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(48.dp))
-                            } else {
-                                IconButton(onClick = { viewModel.togglePlayPause() }, modifier = Modifier.fillMaxSize()) {
-                                    Icon(if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", tint = Color.White, modifier = Modifier.size(48.dp))
+                        BounceButton(onClick = { viewModel.togglePlayPause() }) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(96.dp).background(Color.White.copy(alpha = 0.15f), CircleShape)) {
+                                if (playerState.isLoading) {
+                                    LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(56.dp))
+                                } else {
+                                    Icon(if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, "Play/Pause", tint = Color.White, modifier = Modifier.size(56.dp))
                                 }
                             }
                         }
 
-                        IconButton(onClick = { viewModel.seekTo(playerState.currentPosition + 10000L) }, modifier = Modifier.size(56.dp)) {
-                            Icon(Icons.Filled.Forward10, "+10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        BounceButton(onClick = { viewModel.seekTo(playerState.currentPosition + 10000L) }) {
+                            Icon(Icons.Filled.Forward10, "+10s", tint = Color.White, modifier = Modifier.size(48.dp))
                         }
                     }
 
@@ -503,24 +557,24 @@ fun FullScreenVideoPlayer(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = if (isLandscape) 12.dp else 24.dp, start = 16.dp, end = 16.dp)
+                            .padding(bottom = if (isLandscape) 12.dp else 32.dp, start = 16.dp, end = 16.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(formatDuration(playerState.currentPosition), style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            Text(formatDuration(playerState.currentPosition), style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.SemiBold)
                             
                             // Bottom actions group
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = {
+                                BounceButton(onClick = {
                                     resizeMode = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
                                 }) {
-                                    Icon(Icons.Filled.AspectRatio, "Resize", tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.AspectRatio, "Resize", tint = if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) dominantColors.primary else Color.White, modifier = Modifier.size(24.dp).padding(8.dp))
                                 }
-                                IconButton(onClick = { isLocked = true }) {
-                                    Icon(Icons.Filled.Lock, "Lock", tint = Color.White, modifier = Modifier.size(20.dp))
+                                BounceButton(onClick = { isLocked = true }) {
+                                    Icon(Icons.Filled.Lock, "Lock", tint = Color.White, modifier = Modifier.size(24.dp).padding(8.dp))
                                 }
                             }
                             
-                            Text(formatDuration(playerState.duration), style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            Text(formatDuration(playerState.duration), style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.SemiBold)
                         }
 
                         Slider(
@@ -530,12 +584,41 @@ fun FullScreenVideoPlayer(
                             colors = SliderDefaults.colors(
                                 thumbColor = dominantColors.primary,
                                 activeTrackColor = dominantColors.primary,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                                inactiveTrackColor = Color.White.copy(alpha = 0.25f),
+                                activeTickColor = Color.Transparent,
+                                inactiveTickColor = Color.Transparent
                             ),
-                            modifier = Modifier.fillMaxWidth().height(24.dp)
+                            modifier = Modifier.fillMaxWidth().height(32.dp)
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoubleTapSeekAnimation(
+    visible: Boolean,
+    isForward: Boolean
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut()
+    ) {
+        Surface(
+            color = Color.White.copy(alpha = 0.2f),
+            shape = CircleShape,
+            modifier = Modifier.size(100.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
             }
         }
     }
