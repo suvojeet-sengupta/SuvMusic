@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
@@ -49,12 +50,17 @@ fun LiquidGlassSurface(
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
 ) {
     val i = intensity.coerceIn(0f, 1.5f)
-    val baseAlpha = if (isDarkTheme) 0.45f * i else 0.65f * i
+    val baseAlpha = if (isDarkTheme) 0.45f * i else 0.35f * i
     val effectiveTint = if (tint == Color.Unspecified) {
         if (isDarkTheme) Color(0xFF1A1A1E).copy(alpha = baseAlpha)
         else Color.White.copy(alpha = baseAlpha)
     } else {
-        tint.copy(alpha = baseAlpha)
+        // In light mode, mix the tint with white for a cleaner look
+        if (!isDarkTheme) {
+            Color.White.copy(alpha = 0.2f * i).compositeOver(tint.copy(alpha = baseAlpha * 0.5f))
+        } else {
+            tint.copy(alpha = baseAlpha)
+        }
     }
 
     val specularHighlight = Brush.verticalGradient(
@@ -64,10 +70,10 @@ fun LiquidGlassSurface(
             Color.Transparent,
             Color.Black.copy(alpha = 0.08f * i)
         ) else listOf(
-            Color.White.copy(alpha = 0.40f * i),
-            Color.White.copy(alpha = 0.12f * i),
+            Color.White.copy(alpha = 0.25f * i),
+            Color.White.copy(alpha = 0.08f * i),
             Color.Transparent,
-            Color.Black.copy(alpha = 0.05f * i)
+            Color.Black.copy(alpha = 0.04f * i)
         )
     )
 
@@ -78,10 +84,10 @@ fun LiquidGlassSurface(
             Color.White.copy(alpha = 0.05f * i),
             Color.White.copy(alpha = 0.20f * i)
         ) else listOf(
-            Color.White.copy(alpha = 0.60f * i),
-            Color.White.copy(alpha = 0.25f * i),
-            Color.Black.copy(alpha = 0.05f * i),
-            Color.Black.copy(alpha = 0.10f * i)
+            Color.White.copy(alpha = 0.45f * i),
+            Color.White.copy(alpha = 0.15f * i),
+            Color.Black.copy(alpha = 0.03f * i),
+            Color.Black.copy(alpha = 0.08f * i)
         )
     )
 
