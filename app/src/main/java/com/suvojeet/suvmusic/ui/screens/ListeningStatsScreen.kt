@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Audiotrack
@@ -58,6 +59,7 @@ import android.content.Intent
 @Composable
 fun ListeningStatsScreen(
     onBackClick: () -> Unit,
+    onWrappedClick: (() -> Unit)? = null,
     viewModel: ListeningStatsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,6 +121,11 @@ fun ListeningStatsScreen(
                     }
                 },
                 actions = {
+                    if (onWrappedClick != null) {
+                        IconButton(onClick = onWrappedClick) {
+                            Icon(Icons.Default.AutoAwesome, "Your Wrapped")
+                        }
+                    }
                     IconButton(onClick = shareStats) {
                         Icon(Icons.Default.Share, "Share")
                     }

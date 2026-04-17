@@ -218,6 +218,10 @@ class SessionManager @Inject constructor(
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
+        private val PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("player_glass_blur")
+        private val PLAYER_GLASS_INTENSITY_KEY = floatPreferencesKey("player_glass_intensity")
+        private val MINI_PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("mini_player_glass_blur")
+        private val CROSSFADE_MS_KEY = intPreferencesKey("crossfade_ms")
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
@@ -1459,6 +1463,45 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[IOS_LIQUID_GLASS_ENABLED_KEY] = enabled
         }
+    }
+
+    // --- Liquid Glass (Player + MiniPlayer) ---
+
+    val playerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_GLASS_BLUR_KEY] ?: 60f
+    }
+
+    suspend fun setPlayerGlassBlur(value: Float) {
+        context.dataStore.edit { it[PLAYER_GLASS_BLUR_KEY] = value }
+    }
+
+    val playerGlassIntensityFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_GLASS_INTENSITY_KEY] ?: 1f
+    }
+
+    suspend fun setPlayerGlassIntensity(value: Float) {
+        context.dataStore.edit { it[PLAYER_GLASS_INTENSITY_KEY] = value }
+    }
+
+    val miniPlayerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[MINI_PLAYER_GLASS_BLUR_KEY] ?: 50f
+    }
+
+    suspend fun setMiniPlayerGlassBlur(value: Float) {
+        context.dataStore.edit { it[MINI_PLAYER_GLASS_BLUR_KEY] = value }
+    }
+
+    // --- Crossfade ---
+
+    val crossfadeMsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[CROSSFADE_MS_KEY] ?: 0
+    }
+
+    suspend fun getCrossfadeMs(): Int =
+        context.dataStore.data.first()[CROSSFADE_MS_KEY] ?: 0
+
+    suspend fun setCrossfadeMs(value: Int) {
+        context.dataStore.edit { it[CROSSFADE_MS_KEY] = value.coerceIn(0, 12000) }
     }
 
     // --- Library Settings ---
