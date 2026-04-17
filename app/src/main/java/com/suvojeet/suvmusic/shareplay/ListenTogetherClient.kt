@@ -1043,11 +1043,19 @@ class ListenTogetherClient @Inject constructor(
         wasHost = false
         storedUsername = username
         reconnectAttempts = 0
-        
+
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(username))
-        } else {
-            log(LogLevel.ERROR, "Cannot create room: Not connected to server")
+            return
+        }
+
+        pendingAction = PendingAction.CreateRoom(username)
+        log(LogLevel.INFO, "Queued create room request", "Waiting for connection")
+
+        if (_connectionState.value != ConnectionState.CONNECTING &&
+            _connectionState.value != ConnectionState.RECONNECTING
+        ) {
+            connect()
         }
     }
 
@@ -1058,11 +1066,19 @@ class ListenTogetherClient @Inject constructor(
         wasHost = false
         storedUsername = username
         reconnectAttempts = 0
-        
+
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(roomCode.uppercase(), username))
-        } else {
-            log(LogLevel.ERROR, "Cannot join room: Not connected to server")
+            return
+        }
+
+        pendingAction = PendingAction.JoinRoom(roomCode.uppercase(), username)
+        log(LogLevel.INFO, "Queued join room request", "Room: ${roomCode.uppercase()}")
+
+        if (_connectionState.value != ConnectionState.CONNECTING &&
+            _connectionState.value != ConnectionState.RECONNECTING
+        ) {
+            connect()
         }
     }
 

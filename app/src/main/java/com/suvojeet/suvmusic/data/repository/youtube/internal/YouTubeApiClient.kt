@@ -238,6 +238,48 @@ class YouTubeApiClient @Inject constructor(
     }
 
     /**
+     * Fetch public YouTube Music API without authentication with browse params.
+     * Useful for mood/genre categories that require a params token.
+     */
+    suspend fun fetchPublicApiWithParams(
+        browseId: String,
+        params: String,
+        hl: String = YouTubeConfig.DEFAULT_HL,
+        gl: String = "IN"
+    ): String {
+        val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
+
+        val jsonBody = """
+            {
+                "context": {
+                    "client": {
+                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
+                        "hl": "$hl",
+                        "gl": "$gl"
+                    }
+                },
+                "browseId": "$browseId",
+                "params": "$params"
+            }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .addHeader("Origin", "https://music.youtube.com")
+            .addHeader("Referer", "https://music.youtube.com/")
+            .build()
+
+        return try {
+            okHttpClient.newCall(request).execute().body.string()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    /**
      * Perform an authenticated action (like, create playlist, etc.).
      * @param endpoint API endpoint path (e.g., "like/like", "playlist/create")
      * @param innerBody JSON body content (without context wrapper)

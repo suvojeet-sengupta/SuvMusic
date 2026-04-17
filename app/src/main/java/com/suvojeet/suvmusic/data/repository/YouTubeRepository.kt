@@ -72,6 +72,7 @@ class YouTubeRepository @Inject constructor(
         const val FILTER_ALBUMS = "music_albums"
         const val FILTER_PLAYLISTS = "music_playlists"
         const val FILTER_ARTISTS = "music_artists"
+        private const val SEARCH_BROWSE_PREFIX = "SEARCH::"
 
         /**
          * Map language names to YouTube Music ISO codes (hl).
@@ -591,12 +592,31 @@ class YouTubeRepository @Inject constructor(
             
             if (category != null) {
                 // 3. Fetch specific mood page
+                if (category.browseId.startsWith(SEARCH_BROWSE_PREFIX)) {
+                    val songs = search(
+                        category.browseId.removePrefix(SEARCH_BROWSE_PREFIX),
+                        FILTER_SONGS
+                    )
+                    if (songs.isNotEmpty()) {
+                        return@withContext listOf(
+                            HomeSection(
+                                title = category.title,
+                                items = songs.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            )
+                        )
+                    }
+                }
+
                 val json = if (category.params != null) {
                     fetchInternalApiWithParams(category.browseId, category.params)
                 } else {
                     fetchInternalApi(category.browseId)
                 }
-                return@withContext parseHomeSectionsFromInternalJson(json)
+                val sections = parseHomeSectionsFromInternalJson(json)
+                if (sections.isNotEmpty()) {
+                    return@withContext sections
+                }
             }
             
             // 4. Fallback: Search (High accuracy fallback)
@@ -1224,28 +1244,95 @@ class YouTubeRepository @Inject constructor(
      */
     suspend fun getMoodsAndGenres(): List<BrowseCategory> = withContext(Dispatchers.IO) {
         try {
-            val json = fetchInternalApi("FEmusic_moods_and_genres")
-            parseMoodsAndGenresFromJson(json)
+            if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            val categories = mutableListOf<BrowseCategory>()
+
+            // Authenticated path
+            if (sessionManager.isLoggedIn()) {
+                val internalJson = fetchInternalApi("FEmusic_moods_and_genres", hl = hl)
+                if (internalJson.isNotBlank()) {
+                    categories.addAll(parseMoodsAndGenresFromJson(internalJson))
+                }
+            }
+
+            // Public fallback / enhancement path (also used for logged-out users)
+            if (categories.isEmpty()) {
+                val publicJson = fetchPublicApi("FEmusic_moods_and_genres", hl = hl)
+                if (publicJson.isNotBlank()) {
+                    categories.addAll(parseMoodsAndGenresFromJson(publicJson))
+                }
+            }
+
+            if (categories.isNotEmpty()) {
+                categories
+                    .distinctBy { "${it.browseId}:${it.params ?: ""}:${it.title.lowercase()}" }
+                    .filter { it.title.isNotBlank() && it.browseId.isNotBlank() }
+            } else {
+                getFallbackMoodCategories()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            getFallbackMoodCategories()
         }
     }
 
     /**
      * Get songs/content for a specific mood/genre category.
      */
-    suspend fun getCategoryContent(browseId: String, params: String? = null): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun getCategoryContent(
+        browseId: String,
+        params: String? = null,
+        title: String? = null
+    ): List<Song> = withContext(Dispatchers.IO) {
         try {
-            val json = if (params != null) {
-                fetchInternalApiWithParams(browseId, params)
-            } else {
-                fetchInternalApi(browseId)
+            if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+
+            // Search-backed virtual browse ID fallback
+            if (browseId.startsWith(SEARCH_BROWSE_PREFIX)) {
+                val query = browseId.removePrefix(SEARCH_BROWSE_PREFIX).ifBlank { title ?: "music" }
+                return@withContext search(query, FILTER_SONGS)
             }
-            parseSongsFromInternalJson(json)
+
+            var songs = emptyList<Song>()
+
+            if (sessionManager.isLoggedIn()) {
+                val internalJson = if (!params.isNullOrBlank()) {
+                    fetchInternalApiWithParams(browseId, params, hl = hl)
+                } else {
+                    fetchInternalApi(browseId, hl = hl)
+                }
+                if (internalJson.isNotBlank()) {
+                    songs = parseSongsFromInternalJson(internalJson)
+                }
+            }
+
+            if (songs.isEmpty()) {
+                val publicJson = if (!params.isNullOrBlank()) {
+                    fetchPublicApiWithParams(browseId, params, hl = hl)
+                } else {
+                    fetchPublicApi(browseId, hl = hl)
+                }
+                if (publicJson.isNotBlank()) {
+                    songs = parseSongsFromInternalJson(publicJson)
+                }
+            }
+
+            if (songs.isNotEmpty()) {
+                songs
+            } else {
+                val fallbackQuery = title?.takeIf { it.isNotBlank() } ?: "latest music"
+                search(fallbackQuery, FILTER_SONGS)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            val fallbackQuery = title?.takeIf { it.isNotBlank() } ?: "latest music"
+            search(fallbackQuery, FILTER_SONGS)
         }
     }
 
@@ -1408,67 +1495,59 @@ class YouTubeRepository @Inject constructor(
     private suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
         apiClient.fetchInternalApiWithParams(browseId, params, hl = hl, gl = gl)
 
-    private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
-        val categories = mutableListOf<com.suvojeet.suvmusic.data.model.BrowseCategory>()
+    private fun parseMoodsAndGenresFromJson(json: String): List<BrowseCategory> {
+        val categories = mutableListOf<BrowseCategory>()
         try {
             val root = JSONObject(json)
-            
-            // Navigate to the grid items
-            val contents = root.optJSONObject("contents")
-                ?.optJSONObject("singleColumnBrowseResultsRenderer")
-                ?.optJSONArray("tabs")
-                ?.optJSONObject(0)
-                ?.optJSONObject("tabRenderer")
-                ?.optJSONObject("content")
-                ?.optJSONObject("sectionListRenderer")
-                ?.optJSONArray("contents")
-            
-            if (contents != null) {
-                for (i in 0 until contents.length()) {
-                    val section = contents.optJSONObject(i)
-                    
-                    // Look for grid renderer
-                    val gridItems = section?.optJSONObject("gridRenderer")?.optJSONArray("items")
-                    
-                    if (gridItems != null) {
-                        for (j in 0 until gridItems.length()) {
-                            val item = gridItems.optJSONObject(j)
-                            val categoryRenderer = item?.optJSONObject("musicNavigationButtonRenderer")
-                            
-                            if (categoryRenderer != null) {
-                                val title = getRunText(categoryRenderer.optJSONObject("buttonText"))
-                                    ?: continue
-                                
-                                val clickEndpoint = categoryRenderer.optJSONObject("clickCommand")
-                                    ?.optJSONObject("browseEndpoint")
-                                
-                                val browseId = clickEndpoint?.optString("browseId") ?: continue
-                                val params = clickEndpoint.optString("params").takeIf { it.isNotEmpty() }
-                                
-                                // Extract color from solid background
-                                val colorValue = categoryRenderer.optJSONObject("solid")
-                                    ?.optJSONObject("leftStripeColor")
-                                    ?.optLong("value")
-                                
-                                categories.add(
-                                    com.suvojeet.suvmusic.data.model.BrowseCategory(
-                                        title = title,
-                                        browseId = browseId,
-                                        params = params,
-                                        thumbnailUrl = null,
-                                        color = colorValue
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
+
+            val buttonRenderers = mutableListOf<JSONObject>()
+            findAllObjects(root, "musicNavigationButtonRenderer", buttonRenderers)
+
+            buttonRenderers.forEach { categoryRenderer ->
+                val title = getRunText(categoryRenderer.optJSONObject("buttonText"))
+                    ?: getRunText(categoryRenderer.optJSONObject("title"))
+                    ?: return@forEach
+
+                val browseEndpoint = categoryRenderer.optJSONObject("clickCommand")
+                    ?.optJSONObject("browseEndpoint")
+                    ?: categoryRenderer.optJSONObject("navigationEndpoint")
+                        ?.optJSONObject("browseEndpoint")
+                    ?: return@forEach
+
+                val browseId = browseEndpoint.optString("browseId")
+                if (browseId.isBlank()) return@forEach
+
+                val params = browseEndpoint.optString("params").takeIf { it.isNotBlank() }
+                val colorValue = categoryRenderer.optJSONObject("solid")
+                    ?.optJSONObject("leftStripeColor")
+                    ?.optLong("value")
+
+                categories.add(
+                    BrowseCategory(
+                        title = title,
+                        browseId = browseId,
+                        params = params,
+                        thumbnailUrl = null,
+                        color = colorValue
+                    )
+                )
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return categories
+        return categories.distinctBy { "${it.browseId}:${it.params ?: ""}:${it.title.lowercase()}" }
     }
+
+    private fun getFallbackMoodCategories(): List<BrowseCategory> = listOf(
+        BrowseCategory(title = "Chill", browseId = "${SEARCH_BROWSE_PREFIX}chill music mix", params = null),
+        BrowseCategory(title = "Sleep", browseId = "${SEARCH_BROWSE_PREFIX}sleep music ambient", params = null),
+        BrowseCategory(title = "Focus", browseId = "${SEARCH_BROWSE_PREFIX}focus instrumental music", params = null),
+        BrowseCategory(title = "Workout", browseId = "${SEARCH_BROWSE_PREFIX}workout motivation songs", params = null),
+        BrowseCategory(title = "Party", browseId = "${SEARCH_BROWSE_PREFIX}party hits", params = null),
+        BrowseCategory(title = "Romance", browseId = "${SEARCH_BROWSE_PREFIX}romantic songs", params = null),
+        BrowseCategory(title = "Lo-fi", browseId = "${SEARCH_BROWSE_PREFIX}lofi beats", params = null),
+        BrowseCategory(title = "Trending", browseId = "${SEARCH_BROWSE_PREFIX}trending music", params = null)
+    )
 
     // ============================================================================================
     // Mutating Actions (Library Management)
@@ -2413,6 +2492,8 @@ class YouTubeRepository @Inject constructor(
     private suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApiWithBody(endpoint, bodyJson, hl = hl, gl = gl)
 
     private suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
+    private suspend fun fetchPublicApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
+        apiClient.fetchPublicApiWithParams(browseId, params, hl = hl, gl = gl)
 
     private suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
         apiClient.performAuthenticatedAction(endpoint, innerBody)
