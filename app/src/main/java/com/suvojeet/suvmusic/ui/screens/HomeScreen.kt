@@ -103,6 +103,7 @@ fun HomeScreen(
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
+    var isSpeedDialExpanded by remember { mutableStateOf(false) }
 
     // Stable callback reference — avoids creating new lambdas per section item
     val onSongMoreClickHandler = remember {
@@ -578,6 +579,65 @@ fun HomeScreen(
             }
         }
         
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = 104.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AnimatedVisibility(visible = isSpeedDialExpanded) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    HomeSpeedDialAction(
+                        label = "Moods",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            onExploreClick("FEmusic_moods_and_genres", "Moods & genres")
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Listen Together",
+                        icon = Icons.Default.Group,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            onListenTogetherClick()
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Radio",
+                        icon = Icons.Default.Radio,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            onStartRadio()
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Refresh",
+                        icon = Icons.Default.Refresh,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            viewModel.refresh()
+                        }
+                    )
+                }
+            }
+
+            ExtendedFloatingActionButton(
+                onClick = { isSpeedDialExpanded = !isSpeedDialExpanded },
+                icon = {
+                    Icon(
+                        imageVector = if (isSpeedDialExpanded) Icons.Default.Close else Icons.Default.Add,
+                        contentDescription = null
+                    )
+                },
+                text = { Text(if (isSpeedDialExpanded) "Close" else "Quick Mix") }
+            )
+        }
+
         // Song Options Menu
         selectedSong?.let { song ->
             SongMenuBottomSheet(
@@ -631,6 +691,37 @@ fun HomeScreen(
                 onCreateNewPlaylist = {
                     playlistViewModel.showCreatePlaylistDialog()
                 }
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeSpeedDialAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -1659,4 +1750,3 @@ fun TrackCard(
         )
     }
 }
-

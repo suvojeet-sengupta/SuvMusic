@@ -57,6 +57,7 @@ class ListenTogetherManager @Inject constructor(
     // Track active sync job to cancel it if a better update arrives
     @Volatile
     private var activeSyncJob: Job? = null
+    private var previousRole: RoomRole = RoomRole.NONE
 
     // Drift Correction
     private var anchorTime: Long = 0
@@ -199,8 +200,9 @@ class ListenTogetherManager @Inject constructor(
         
         scope.launch {
             role.collect { newRole ->
-                val wasHost = isHost
-                if (newRole == RoomRole.HOST && !wasHost && player != null) {
+                val oldRole = previousRole
+                previousRole = newRole
+                if (newRole == RoomRole.HOST && oldRole != RoomRole.HOST && player != null) {
                     Log.d(TAG, "Role changed to HOST, starting sync services")
                     startHeartbeat()
                     stopDriftCorrection()
@@ -208,7 +210,7 @@ class ListenTogetherManager @Inject constructor(
                         player?.addListener(playerListener)
                         playerListenerRegistered = true
                     }
-                } else if (newRole != RoomRole.HOST && wasHost) {
+                } else if (newRole != RoomRole.HOST && oldRole == RoomRole.HOST) {
                     Log.d(TAG, "Role changed from HOST, stopping sync services")
                     stopHeartbeat()
                 }
@@ -304,15 +306,22 @@ class ListenTogetherManager @Inject constructor(
                     }
                 }
                 if (event.isHost) {
-                    // Re-sync if needed
+                    player?.currentMediaItem?.let { item ->
+                        sendTrackChange(item)
+                        if (player?.playWhenReady == true) {
+                            val pos = player?.currentPosition ?: 0
+                            client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = item.mediaId)
+                        }
+                    }
                 } else {
-                     applyPlaybackState(
+                      applyPlaybackState(
                         currentTrack = event.state.currentTrack,
                         isPlaying = event.state.isPlaying,
                         position = event.state.position,
                         queue = event.state.queue,
                         bypassBuffer = true
                     )
+                    client.requestSync()
                 }
             }
             else -> {}
@@ -674,6 +683,7 @@ class ListenTogetherManager @Inject constructor(
                             delay(5000) // 5 seconds timeout
                             if (bufferingTrackId == track.id && pendingSyncState != null) {
                                 Log.w(TAG, "Buffer timeout for ${track.id}, forcing play")
+                                bufferCompleteReceivedForTrack = track.id
                                 applyPendingSyncIfReady()
                             }
                         }
