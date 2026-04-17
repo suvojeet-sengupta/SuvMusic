@@ -192,9 +192,9 @@ fun AIEqualizerScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Neural Terminal
+            // Neural Activity Log
             Text(
-                "Neural Processing Link",
+                "Neural Processing History",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
@@ -205,24 +205,11 @@ fun AIEqualizerScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(vertical = 8.dp),
-                color = Color.Black,
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1A1A1A))
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Box {
-                    // CRT Scanline Effect (Visual only)
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val scanlineCount = size.height.toInt() / 4
-                        for (i in 0 until scanlineCount) {
-                            drawLine(
-                                color = Color.White.copy(alpha = 0.03f),
-                                start = androidx.compose.ui.geometry.Offset(0f, i * 4f),
-                                end = androidx.compose.ui.geometry.Offset(size.width, i * 4f),
-                                strokeWidth = 1f
-                            )
-                        }
-                    }
-
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -230,26 +217,37 @@ fun AIEqualizerScreen(
                     ) {
                         items(logs) { log ->
                             val color = when {
-                                log.startsWith("Error") || log.contains("FAILED") -> Color(0xFFFF5252)
-                                log.startsWith("SUCCESS") -> Color(0xFF69F0AE)
-                                log.startsWith("AUTO") -> Color(0xFF40C4FF)
-                                log.startsWith("Validation") -> Color(0xFFFFD740)
-                                else -> Color(0xFFE0E0E0)
+                                log.startsWith("Error") || log.contains("FAILED") -> MaterialTheme.colorScheme.error
+                                log.startsWith("SUCCESS") -> Color(0xFF4CAF50)
+                                log.startsWith("AUTO") -> MaterialTheme.colorScheme.primary
+                                log.startsWith("Validation") -> MaterialTheme.colorScheme.tertiary
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
                             
-                            Row(modifier = Modifier.padding(bottom = 4.dp)) {
-                                Text(
-                                    text = "[SYS] ",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        color = Color.DarkGray
-                                    )
+                            val icon = when {
+                                log.startsWith("Error") || log.contains("FAILED") -> Icons.Default.Clear
+                                log.startsWith("SUCCESS") -> Icons.Default.CheckCircle
+                                log.startsWith("AUTO") -> Icons.Default.AutoAwesome
+                                log.startsWith("Validation") -> Icons.Default.Refresh
+                                else -> Icons.Default.History
+                            }
+
+                            Row(
+                                modifier = Modifier.padding(bottom = 8.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = color.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(14.dp).padding(top = 2.dp)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = log,
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        lineHeight = 16.sp
+                                        lineHeight = 16.sp,
+                                        fontWeight = if (log.startsWith("SUCCESS") || log.startsWith("AUTO")) FontWeight.Bold else FontWeight.Normal
                                     ),
                                     color = color
                                 )
@@ -265,38 +263,26 @@ fun AIEqualizerScreen(
                         modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
                     ) {
                         Surface(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(16.dp),
+                            shadowElevation = 4.dp
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val infiniteTransition = rememberInfiniteTransition(label = "terminalPulse")
-                                val glowAlpha by infiniteTransition.animateFloat(
-                                    initialValue = 0.3f,
-                                    targetValue = 1f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(800, easing = LinearEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "glowAlpha"
-                                )
-                                
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha), CircleShape)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = autoStatus ?: "",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontFamily = FontFamily.Monospace,
+                                    style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -308,7 +294,7 @@ fun AIEqualizerScreen(
                             onClick = { aiService.clearLogs() },
                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Clear", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Delete, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
                         }
                     }
                 }

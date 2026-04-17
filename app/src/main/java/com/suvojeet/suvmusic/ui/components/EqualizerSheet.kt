@@ -211,7 +211,7 @@ fun EqualizerSheet(
         val labelLargeStyle = typography.labelLarge
         
         val resetEnabledColor = finalAccentColor
-        val resetDisabledColor = onSurfaceVariantColor.copy(alpha = 0.38f)
+        val resetDisabledColor = finalContentColor.copy(alpha = 0.38f)
         
         val switchColors = SwitchDefaults.colors(
             checkedThumbColor = Color.White,
@@ -271,35 +271,6 @@ fun EqualizerSheet(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(contentAlignment = Alignment.TopEnd) {
-                        androidx.compose.material3.IconButton(
-                            onClick = {
-                                onDismiss()
-                                onAIEqualizerClick()
-                            },
-                            enabled = isEnabled
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Equalizer",
-                                tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
-                            )
-                        }
-                        if (isEnabled) {
-                            BetaBadge(
-                                modifier = Modifier
-                                    .padding(top = 2.dp, end = 2.dp)
-                                    .graphicsLayer { 
-                                        scaleX = 0.65f
-                                        scaleY = 0.65f
-                                        transformOrigin = TransformOrigin.Center
-                                    },
-                                containerColor = finalAccentColor,
-                                contentColor = Color.White
-                            )
-                        }
-                    }
-
                     androidx.compose.material3.TextButton(
                         onClick = {
                             onReset()
@@ -319,6 +290,35 @@ fun EqualizerSheet(
                             style = labelLargeStyle,
                             color = if (isEnabled) resetEnabledColor else resetDisabledColor
                         )
+                    }
+
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                onDismiss()
+                                onAIEqualizerClick()
+                            },
+                            enabled = isEnabled
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "AI Equalizer",
+                                tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.38f)
+                            )
+                        }
+                        if (isEnabled) {
+                            BetaBadge(
+                                modifier = Modifier
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .graphicsLayer { 
+                                        scaleX = 0.65f
+                                        scaleY = 0.65f
+                                        transformOrigin = TransformOrigin.Center
+                                    },
+                                containerColor = finalAccentColor,
+                                contentColor = Color.White
+                            )
+                        }
                     }
                     
                     Switch(
