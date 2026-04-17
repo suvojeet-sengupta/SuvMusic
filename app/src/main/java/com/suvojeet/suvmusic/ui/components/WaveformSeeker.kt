@@ -79,6 +79,8 @@ enum class SeekbarStyle {
     CLASSIC,       // Simple progress bar
     DOTS,          // Animated dots
     GRADIENT_BAR,  // Gradient progress bar with glow
+    NEON,          // Neon glowing line
+    BLOCKS,        // Pixel/Block progress
     MATERIAL,      // Standard Material 3 Slider
     M3E_WAVY       // Material 3 Expressive LinearWavyProgressIndicator
 }
@@ -114,7 +116,8 @@ fun WaveformSeeker(
         currentStyle == SeekbarStyle.WAVEFORM ||
             currentStyle == SeekbarStyle.WAVE_LINE ||
             currentStyle == SeekbarStyle.DOTS ||
-            currentStyle == SeekbarStyle.M3E_WAVY
+            currentStyle == SeekbarStyle.M3E_WAVY ||
+            currentStyle == SeekbarStyle.NEON
     )
     
     // Animation for wave movement only when needed
@@ -206,6 +209,15 @@ fun WaveformSeeker(
                 .graphicsLayer { clip = false }
                 .padding(horizontal = 8.dp)
                 .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            // Gestures are handled below via specialized detect functions
+                            // This empty block is just to ensure pointer input is initialized
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = { offset ->
                             val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
@@ -288,6 +300,67 @@ fun WaveformSeeker(
                                         isDragging = isDragging
                                     )
                                 }
+                                SeekbarStyle.NEON -> {
+                                    val centerY = size.height / 2
+                                    val strokeWidth = if (isDragging) 8.dp.toPx() else 4.dp.toPx()
+                                    
+                                    // Inactive line
+                                    drawLine(
+                                        color = inactiveColor.copy(alpha = 0.3f),
+                                        start = Offset(0f, centerY),
+                                        end = Offset(size.width, centerY),
+                                        strokeWidth = strokeWidth,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                    )
+                                    
+                                    // Active glowing line
+                                    val progressX = currentProgress * size.width
+                                    
+                                    // Glow effect
+                                    drawIntoCanvas { c ->
+                                        val paint = Paint().asFrameworkPaint().apply {
+                                            color = activeColor.toArgb()
+                                            setShadowLayer(15f, 0f, 0f, activeColor.toArgb())
+                                        }
+                                        c.nativeCanvas.drawLine(0f, centerY, progressX, centerY, paint)
+                                    }
+                                    
+                                    drawLine(
+                                        color = activeColor,
+                                        start = Offset(0f, centerY),
+                                        end = Offset(progressX, centerY),
+                                        strokeWidth = strokeWidth,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                    )
+                                    
+                                    // Animated pulse on end of progress
+                                    if (isPlaying) {
+                                        val pulseSize = (12.dp.toPx() * (1f + sin(wavePhase * 0.1f) * 0.2f))
+                                        drawCircle(
+                                            color = activeColor,
+                                            radius = pulseSize / 2,
+                                            center = Offset(progressX, centerY)
+                                        )
+                                    }
+                                }
+                                SeekbarStyle.BLOCKS -> {
+                                    val blockCount = 30
+                                    val blockWidth = size.width / blockCount
+                                    val padding = 4.dp.toPx()
+                                    
+                                    for (i in 0 until blockCount) {
+                                        val startX = i * blockWidth + padding / 2
+                                        val blockProgress = (i + 1).toFloat() / blockCount
+                                        val color = if (currentProgress >= blockProgress) activeColor else inactiveColor.copy(alpha = 0.3f)
+                                        
+                                        drawRoundRect(
+                                            color = color,
+                                            topLeft = Offset(startX, size.height * 0.2f),
+                                            size = Size(blockWidth - padding, size.height * 0.6f),
+                                            cornerRadius = CornerRadius(4.dp.toPx())
+                                        )
+                                    }
+                                }
                                 SeekbarStyle.MATERIAL -> {
                                     // Handled outside canvas via Slider
                                 }
@@ -296,7 +369,7 @@ fun WaveformSeeker(
                                 }
                             }
 
-                            // Draw Sponsor segments overlay (inside the waveform/bar)
+                            // Draw Sponsor segments overlay
                             if (duration > 0 && sponsorSegments.isNotEmpty()) {
                                 val durationSec = duration / 1000f
                                 sponsorSegments.forEach { segment ->
@@ -311,7 +384,7 @@ fun WaveformSeeker(
                                         val categoryColor = SponsorCategory.fromKey(segment.category)?.color ?: Color.Yellow
 
                                         drawRect(
-                                            color = categoryColor, // Full color
+                                            color = categoryColor,
                                             topLeft = Offset(startX, 0f),
                                             size = Size(segWidth, size.height),
                                             blendMode = BlendMode.SrcAtop
@@ -320,7 +393,6 @@ fun WaveformSeeker(
                                 }
                             }
                         } finally {
-                            // Always restore to the specific count to avoid underflow
                             nativeCanvas.restoreToCount(saveCount)
                         }
                     }
@@ -344,8 +416,6 @@ fun WaveformSeeker(
                         value = currentProgress,
                         onValueChange = {
                             currentProgress = it
-                            // Live seeking or wait for drag end depending on preference
-                            // Typically Slider updates live
                             onSeek(it)
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -366,8 +436,6 @@ fun WaveformSeeker(
                         .height(60.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Seek-interactive layer — tap & long-press only
-                    // (horizontal drag is handled by the outer Box pointerInput)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -409,7 +477,7 @@ fun WaveformSeeker(
             Popup(
                 alignment = Alignment.Center,
                 onDismissRequest = { showStyleMenu = false },
-                properties = PopupProperties(focusable = true)
+                properties = PopupProperties(focusable = false) // FIX: Set to false to prevent interaction issues
             ) {
                 SeekbarStyleMenu(
                     currentStyle = currentStyle,
@@ -503,6 +571,8 @@ private fun StylePreviewItem(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.NEON -> "Neon Glow"
+        SeekbarStyle.BLOCKS -> "Blocks"
         SeekbarStyle.MATERIAL -> "Material 3"
         SeekbarStyle.M3E_WAVY -> "M3 Expressive"
     }
@@ -544,6 +614,21 @@ private fun StylePreviewItem(
                 }
                 SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
                     drawPreview(previewProgress, activeColor, inactiveColor)
+                }
+                SeekbarStyle.NEON -> {
+                    val centerY = size.height / 2
+                    val stroke = 3.dp.toPx()
+                    drawLine(inactiveColor.copy(alpha = 0.3f), Offset(0f, centerY), Offset(size.width, centerY), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    drawLine(activeColor, Offset(0f, centerY), Offset(previewProgress * size.width, centerY), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    drawCircle(activeColor, radius = 5.dp.toPx(), center = Offset(previewProgress * size.width, centerY))
+                }
+                SeekbarStyle.BLOCKS -> {
+                    val count = 10
+                    val w = size.width / count
+                    for (i in 0 until count) {
+                        val color = if (previewProgress >= (i + 1).toFloat() / count) activeColor else inactiveColor.copy(alpha = 0.3f)
+                        drawRoundRect(color, Offset(i * w + 1.dp.toPx(), 5.dp.toPx()), Size(w - 2.dp.toPx(), size.height - 10.dp.toPx()), CornerRadius(2.dp.toPx()))
+                    }
                 }
                 SeekbarStyle.MATERIAL -> {
                     val centerY = size.height / 2
