@@ -550,11 +550,18 @@ fun NavGraph(
         
         composable<Destination.ListeningStats> {
             com.suvojeet.suvmusic.ui.screens.ListeningStatsScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onWrappedClick = { navController.navigate(Destination.Wrapped) }
             )
         }
-        
-        
+
+        composable<Destination.Wrapped> {
+            com.suvojeet.suvmusic.ui.screens.wrapped.WrappedScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
         composable<Destination.YouTubeLogin> {
             YouTubeLoginScreen(
                 sessionManager = sessionManager,

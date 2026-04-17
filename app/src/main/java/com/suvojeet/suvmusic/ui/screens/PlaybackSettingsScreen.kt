@@ -238,10 +238,44 @@ fun PlaybackSettingsScreen(
                         checked = uiState.automixEnabled,
                         onCheckedChange = { viewModel.setAutomix(it) }
                     )
+
+                    HorizontalDivider()
+
+                    // Crossfade
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Crossfade",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            val crossLabel = if (uiState.crossfadeMs <= 0) "Off" else "${uiState.crossfadeMs / 1000f}s"
+                            Text(
+                                text = crossLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Slider(
+                            value = uiState.crossfadeMs.toFloat(),
+                            onValueChange = { viewModel.setCrossfadeMs(it.toInt()) },
+                            valueRange = 0f..12000f,
+                            steps = 23 // 0, 500, 1000, ... 12000
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
-            
+
             // Volume Controls
             item {
                 PlaybackSectionTitle("Volume")
