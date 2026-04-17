@@ -12,11 +12,12 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
@@ -121,18 +122,16 @@ fun LiquidGlassSurface(
                 .drawWithContent {
                     drawRect(color = effectiveTint)
                     // Subtle grain for realism
-                    drawIntoCanvas { canvas ->
-                        val paint = android.graphics.Paint().apply {
-                            alpha = if (isDarkTheme) 8 else 5
-                        }
-                        val rand = Random(42)
-                        val count = 800
-                        for (n in 0 until count) {
-                            val x = rand.nextFloat() * size.width
-                            val y = rand.nextFloat() * size.height
-                            canvas.nativeCanvas.drawPoint(x, y, paint)
-                        }
+                    val rand = Random(42)
+                    val grainPoints = List(800) {
+                        Offset(rand.nextFloat() * size.width, rand.nextFloat() * size.height)
                     }
+                    drawPoints(
+                        points = grainPoints,
+                        pointMode = PointMode.Points,
+                        color = Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.02f),
+                        strokeWidth = 1f
+                    )
                     drawContent()
                 }
         )
