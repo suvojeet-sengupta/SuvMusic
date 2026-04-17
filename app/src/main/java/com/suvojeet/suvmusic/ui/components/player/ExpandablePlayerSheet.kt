@@ -66,6 +66,7 @@ import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import kotlinx.coroutines.launch
 
+import com.suvojeet.suvmusic.ui.components.player.miniplayer.LiquidGlassMiniPlayer
 import com.suvojeet.suvmusic.ui.components.player.miniplayer.PillMiniPlayer
 import com.suvojeet.suvmusic.ui.components.player.miniplayer.StandardMiniPlayer
 import com.suvojeet.suvmusic.ui.components.player.miniplayer.YTMusicMiniPlayer
@@ -103,6 +104,7 @@ fun ExpandablePlayerSheet(
     swipeDownToDismissEnabled: Boolean = true,
     style: MiniPlayerStyle = MiniPlayerStyle.YT_MUSIC,
     artworkShape: String = "ROUNDED_SQUARE",
+    glassBlurAmount: Float = 50f,
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
     val song = playerState.currentSong ?: return
@@ -131,9 +133,13 @@ fun ExpandablePlayerSheet(
     val miniPlayerHeightPx = with(density) { MiniPlayerHeight.toPx() }
 
     // Total drag range from (MiniPlayer + Nav Bar) to Full Screen
-    // For YT_MUSIC, we reduce the visual gap (approx 12dp) 
+    // For YT_MUSIC, we reduce the visual gap (approx 12dp)
     // to sit flush against the navbar content.
-    val stylePaddingOffset = if (style == MiniPlayerStyle.YT_MUSIC) with(density) { 14.dp.toPx() } else with(density) { 2.dp.toPx() }
+    val stylePaddingOffset = when (style) {
+        MiniPlayerStyle.YT_MUSIC -> with(density) { 14.dp.toPx() }
+        MiniPlayerStyle.LIQUID_GLASS -> with(density) { 6.dp.toPx() }
+        else -> with(density) { 2.dp.toPx() }
+    }
     val adjustedBottomPadding = (bottomPadding - stylePaddingOffset).coerceAtLeast(0f)
 
     val collapsedHeightPx = miniPlayerHeightPx + adjustedBottomPadding
@@ -181,6 +187,7 @@ fun ExpandablePlayerSheet(
                 userAlpha = userAlpha,
                 style = style,
                 artworkShape = artworkShape,
+                glassBlurAmount = glassBlurAmount,
                 onTap = {
                     coroutineScope.launch {
                         expansion.animateTo(
@@ -344,9 +351,26 @@ private fun CollapsedMiniPlayer(
     userAlpha: Float = 0f,
     style: MiniPlayerStyle = MiniPlayerStyle.YT_MUSIC,
     artworkShape: String = "ROUNDED_SQUARE",
+    glassBlurAmount: Float = 50f,
     modifier: Modifier = Modifier
 ) {
     when (style) {
+        MiniPlayerStyle.LIQUID_GLASS -> {
+            LiquidGlassMiniPlayer(
+                song = song,
+                playerState = playerState,
+                dominantColors = dominantColors,
+                progress = progress,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onClose = onClose,
+                onTap = onTap,
+                userAlpha = userAlpha,
+                artworkShape = artworkShape,
+                blurAmount = glassBlurAmount,
+                modifier = modifier
+            )
+        }
         MiniPlayerStyle.FLOATING_PILL -> {
             PillMiniPlayer(
                 song = song,

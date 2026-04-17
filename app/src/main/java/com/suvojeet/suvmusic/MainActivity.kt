@@ -361,6 +361,7 @@ fun SuvMusicApp(
     val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
+    val miniPlayerGlassBlur by sessionManager.miniPlayerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 50f)
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
@@ -459,6 +460,27 @@ fun SuvMusicApp(
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromLocalUri -> {
                     playerViewModel.playFromLocalUri(context, event.uri)
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToAlbum -> {
+                    navController.navigate(
+                        com.suvojeet.suvmusic.navigation.Destination.Album(
+                            albumId = event.browseId, name = null, thumbnailUrl = null
+                        )
+                    )
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToPlaylist -> {
+                    navController.navigate(
+                        com.suvojeet.suvmusic.navigation.Destination.Playlist(
+                            playlistId = event.playlistId, name = null, thumbnailUrl = null
+                        )
+                    )
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToArtist -> {
+                    navController.navigate(com.suvojeet.suvmusic.navigation.Destination.Artist(event.channelId))
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToSearch -> {
+                    navController.navigate(com.suvojeet.suvmusic.navigation.Destination.Search)
+                    // TODO: pre-fill search with event.query once Search screen exposes a seed param.
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
                     com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(event.message)
@@ -859,6 +881,7 @@ fun SuvMusicApp(
             userAlpha = miniPlayerAlpha,
             style = miniPlayerStyle,
             artworkShape = artworkShape,
+            glassBlurAmount = miniPlayerGlassBlur,
             swipeDownToDismissEnabled = swipeDownToDismissEnabled,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()

@@ -131,12 +131,24 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
             
-            <!-- Custom SuvMusic URL scheme for sharing (suvmusic://play?id=VIDEO_ID) -->
+            <!-- Custom SuvMusic URL scheme for sharing.
+                 Supported hosts:
+                   play       → legacy: suvmusic://play?id=VIDEO_ID
+                   song       → suvmusic://song/{videoId}
+                   album      → suvmusic://album/{browseId}
+                   playlist   → suvmusic://playlist/{playlistId}
+                   artist     → suvmusic://artist/{channelId}
+                   search     → suvmusic://search?q={query} -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="suvmusic" android:host="play" />
+                <data android:scheme="suvmusic" android:host="song" />
+                <data android:scheme="suvmusic" android:host="album" />
+                <data android:scheme="suvmusic" android:host="playlist" />
+                <data android:scheme="suvmusic" android:host="artist" />
+                <data android:scheme="suvmusic" android:host="search" />
             </intent-filter>
 
             <!-- Last.fm Authentication Callback (suvmusic://lastfm-auth) -->
