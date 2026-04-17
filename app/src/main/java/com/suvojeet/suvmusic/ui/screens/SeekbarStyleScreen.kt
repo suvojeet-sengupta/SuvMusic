@@ -165,6 +165,8 @@ private fun SeekbarStylePreviewCard(
         SeekbarStyle.CLASSIC -> "Classic"
         SeekbarStyle.DOTS -> "Dots"
         SeekbarStyle.GRADIENT_BAR -> "Gradient"
+        SeekbarStyle.NEON -> "Neon Glow"
+        SeekbarStyle.BLOCKS -> "Blocks"
         SeekbarStyle.MATERIAL -> "Material 3"
         SeekbarStyle.M3E_WAVY -> "M3 Expressive"
     }
@@ -198,6 +200,8 @@ private fun SeekbarStylePreviewCard(
                     SeekbarStyle.CLASSIC -> drawClassicPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.DOTS -> drawDotsPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.GRADIENT_BAR -> drawGradientPreview(progress, primaryColor, surfaceColor)
+                    SeekbarStyle.NEON -> drawNeonPreview(progress, primaryColor, surfaceColor)
+                    SeekbarStyle.BLOCKS -> drawBlocksPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.MATERIAL -> drawClassicPreview(progress, primaryColor, surfaceColor)
                     SeekbarStyle.M3E_WAVY -> drawM3EWavyPreview(progress, primaryColor, surfaceColor)
                 }
@@ -227,6 +231,31 @@ private fun SeekbarStylePreviewCard(
 }
 
 // Preview drawing functions
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNeonPreview(
+    progress: Float,
+    activeColor: Color,
+    inactiveColor: Color
+) {
+    val centerY = size.height / 2
+    val stroke = 3.dp.toPx()
+    drawLine(inactiveColor.copy(alpha = 0.3f), Offset(0f, centerY), Offset(size.width, centerY), stroke, cap = StrokeCap.Round)
+    drawLine(activeColor, Offset(0f, centerY), Offset(progress * size.width, centerY), stroke, cap = StrokeCap.Round)
+    drawCircle(activeColor, radius = 5.dp.toPx(), center = Offset(progress * size.width, centerY))
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBlocksPreview(
+    progress: Float,
+    activeColor: Color,
+    inactiveColor: Color
+) {
+    val count = 10
+    val w = size.width / count
+    for (i in 0 until count) {
+        val color = if (progress >= (i + 1).toFloat() / count) activeColor else inactiveColor.copy(alpha = 0.3f)
+        drawRoundRect(color, Offset(i * w + 1.dp.toPx(), size.height * 0.2f), Size(w - 2.dp.toPx(), size.height * 0.6f), CornerRadius(2.dp.toPx()))
+    }
+}
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWaveformPreview(
     progress: Float,
     amplitudes: List<Float>,
