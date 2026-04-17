@@ -125,6 +125,8 @@ data class SettingsUiState(
     // Preloading
     val nextSongPreloadingEnabled: Boolean = true,
     val nextSongPreloadDelay: Int = 3, // seconds
+    // Crossfade (smooth volume-fade between tracks)
+    val crossfadeMs: Int = 0,
     // Crossfeed
     val crossfeedEnabled: Boolean = true,
     // Equalizer
@@ -517,6 +519,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.nextSongPreloadDelayFlow.collect { delay ->
                 _uiState.update { it.copy(nextSongPreloadDelay = delay) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.crossfadeMsFlow.collect { ms ->
+                _uiState.update { it.copy(crossfadeMs = ms) }
             }
         }
 
@@ -1012,6 +1020,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setNextSongPreloadDelay(seconds)
             _uiState.update { it.copy(nextSongPreloadDelay = seconds) }
+        }
+    }
+
+    fun setCrossfadeMs(ms: Int) {
+        viewModelScope.launch {
+            sessionManager.setCrossfadeMs(ms)
+            _uiState.update { it.copy(crossfadeMs = ms.coerceIn(0, 12000)) }
         }
     }
 

@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
@@ -149,6 +151,15 @@ class MusicPlayer @Inject constructor(
     // Configurable Preloading
     private var nextSongPreloadingEnabled = true
     private var nextSongPreloadDelay = 3
+
+    // Crossfade
+    private val crossfadeController = CrossfadeController(scope)
+    private var crossfadeMs: Int = 0
+    @Volatile private var crossfadeTriggered: Boolean = false
+
+    // Queue mutation lock — serializes toggleShuffle / playSong / radio-append races
+    // that desync ExoPlayer internal state (see suvmusic_shuffle*.log).
+    private val queueMutex = Mutex()
     
     init {
         // Initialize video quality from settings
@@ -164,7 +175,10 @@ class MusicPlayer @Inject constructor(
         scope.launch {
             sessionManager.nextSongPreloadDelayFlow.collect { nextSongPreloadDelay = it }
         }
-        
+        scope.launch {
+            sessionManager.crossfadeMsFlow.collect { crossfadeMs = it.coerceIn(0, 12000) }
+        }
+
         connectToService()
         
         // Setup sleep timer callback
@@ -628,6 +642,10 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            // Reset crossfade guard + restore volume for the incoming track.
+            crossfadeTriggered = false
+            mediaController?.let { c -> if (c.volume < 1f) c.volume = 1f }
+
             mediaItem?.let { item ->
                 val controller = mediaController ?: return@let
                 val index = controller.currentMediaItemIndex
@@ -1363,7 +1381,7 @@ class MusicPlayer @Inject constructor(
                     // Check if we need to preload next song for gapless playback
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
-                        
+
                         // Early transition logic
                         val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
                         if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
@@ -1379,6 +1397,22 @@ class MusicPlayer @Inject constructor(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // Crossfade: fade out current track and skip to next when we're within
+                    // `crossfadeMs` of the end. Respects Repeat One, ignores near-zero durations,
+                    // and only fires once per track.
+                    if (crossfadeMs > 0 && !crossfadeTriggered && duration > (crossfadeMs + 1000)) {
+                        val remaining = duration - currentPos
+                        val hasNext = controller.hasNextMediaItem()
+                        if (hasNext && remaining in 0..crossfadeMs.toLong() &&
+                            _playerState.value.repeatMode != RepeatMode.ONE
+                        ) {
+                            crossfadeTriggered = true
+                            crossfadeController.fadeOut(controller, crossfadeMs) {
+                                mediaController?.seekToNextMediaItem()
                             }
                         }
                     }
@@ -1614,14 +1648,21 @@ class MusicPlayer @Inject constructor(
                     }.awaitAll()
                 }
 
-                mediaController?.let { controller ->
-                    controller.setMediaItems(mediaItems, startIndex, 0L)
-                    controller.prepare()
-                    if (autoPlay) {
-                        controller.play()
+                queueMutex.withLock {
+                    mediaController?.let { controller ->
+                        // Cancel any in-flight crossfade so the incoming track starts at full volume.
+                        crossfadeController.cancel()
+                        crossfadeTriggered = false
+                        if (controller.volume < 1f) controller.volume = 1f
+
+                        controller.setMediaItems(mediaItems, startIndex, 0L)
+                        controller.prepare()
+                        if (autoPlay) {
+                            controller.play()
+                        }
+                    } ?: run {
+                        _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                     }
-                } ?: run {
-                    _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                 }
             } catch (e: Exception) {
                 // Ignore cancellations
@@ -1894,10 +1935,17 @@ class MusicPlayer @Inject constructor(
     }
     
     fun toggleShuffle() {
-        mediaController?.let { controller ->
-            val newShuffleState = !controller.shuffleModeEnabled
-            controller.shuffleModeEnabled = newShuffleState
-            _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+        // Serialize against queue mutations (playSong / radio-append) so ExoPlayer's
+        // internal timeline isn't reshuffled while another queue change is in-flight.
+        scope.launch {
+            queueMutex.withLock {
+                mediaController?.let { controller ->
+                    val newShuffleState = !controller.shuffleModeEnabled
+                    // Do NOT seek — shuffle toggle should preserve current playback position.
+                    controller.shuffleModeEnabled = newShuffleState
+                    _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+                }
+            }
         }
     }
     

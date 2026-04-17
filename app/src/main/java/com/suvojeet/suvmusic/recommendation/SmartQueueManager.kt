@@ -34,12 +34,39 @@ class SmartQueueManager @Inject constructor(
 
         /** Maximum retries for finding new songs */
         private const val MAX_SEED_RETRIES = 3
+
+        /** Dedup window — last N songs served by this manager in the current session. */
+        private const val RECENTLY_SERVED_CAPACITY = 80
+
+        /** Early-warning threshold: refill the queue when this many songs or fewer remain. */
+        const val EARLY_WARNING_LOOKAHEAD = 8
     }
 
     /** Last seed used for radio/autoplay fetching */
     @Volatile
     var lastSeedId: String? = null
         private set
+
+    /**
+     * Ring buffer of recently-served song IDs (both appended to queue and played-from-queue).
+     * Used to prevent the radio/autoplay loop from pushing the same songs back within a session.
+     */
+    private val recentlyServed = java.util.ArrayDeque<String>(RECENTLY_SERVED_CAPACITY)
+    private val recentlyServedLock = Any()
+
+    private fun markServed(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        synchronized(recentlyServedLock) {
+            for (id in ids) {
+                if (recentlyServed.size >= RECENTLY_SERVED_CAPACITY) recentlyServed.pollFirst()
+                recentlyServed.addLast(id)
+            }
+        }
+    }
+
+    private fun recentlyServedSnapshot(): Set<String> {
+        synchronized(recentlyServedLock) { return recentlyServed.toSet() }
+    }
 
     /**
      * Check if the queue needs more songs and fetch them if so.
@@ -61,31 +88,36 @@ class SmartQueueManager @Inject constructor(
         if (!isRadioMode && !isAutoplayEnabled) return@withContext emptyList()
         
         val remainingSongs = queue.size - currentIndex - 1
-        // Keep at least 15 songs ahead
-        if (remainingSongs >= MIN_LOOKAHEAD) return@withContext emptyList()
+        // Early-warning trigger — refill well before the queue drains.
+        if (remainingSongs > EARLY_WARNING_LOOKAHEAD && remainingSongs >= MIN_LOOKAHEAD) {
+            return@withContext emptyList()
+        }
 
         Log.d(TAG, "Queue health check: $remainingSongs songs remaining, fetching more...")
 
         val existingIds = queue.map { it.id }.toSet()
+        val recentlyServedIds = recentlyServedSnapshot()
+        // Any song we've served this session OR that's already in the queue is blocked.
+        val blockedIds = existingIds + recentlyServedIds
+
         var seedId = lastSeedId ?: currentSong.id
         var attempt = 0
-        var allNewSongs = mutableListOf<Song>()
+        val allNewSongs = mutableListOf<Song>()
 
         while (allNewSongs.size < BATCH_SIZE && attempt < MAX_SEED_RETRIES) {
             attempt++
 
-            // Use RecommendationEngine's smart up-next logic
             val candidates = if (isRadioMode) {
-                recommendationEngine.getMoreForRadio(seedId, existingIds, BATCH_SIZE)
+                recommendationEngine.getMoreForRadio(seedId, blockedIds, BATCH_SIZE)
             } else {
                 recommendationEngine.getUpNext(currentSong, queue, BATCH_SIZE)
             }
 
-            val filtered = candidates.filter { it.id !in existingIds && it.id !in allNewSongs.map { s -> s.id } }
+            val addedIds = allNewSongs.map { it.id }.toSet()
+            val filtered = candidates.filter { it.id !in blockedIds && it.id !in addedIds }
             allNewSongs.addAll(filtered)
 
             if (filtered.isEmpty()) {
-                // Try different seed — use a random song from the middle of the queue
                 val midIndex = (queue.size / 2).coerceIn(0, queue.size - 1)
                 seedId = queue.getOrNull(midIndex)?.id ?: currentSong.id
                 Log.d(TAG, "No new songs from seed, trying alternative seed (attempt $attempt)")
@@ -96,6 +128,7 @@ class SmartQueueManager @Inject constructor(
 
         if (allNewSongs.isNotEmpty()) {
             lastSeedId = allNewSongs.last().id
+            markServed(allNewSongs.map { it.id })
             Log.d(TAG, "Fetched ${allNewSongs.size} new songs for queue")
         } else {
             Log.w(TAG, "Could not find new songs after $MAX_SEED_RETRIES attempts")
@@ -137,5 +170,6 @@ class SmartQueueManager @Inject constructor(
      */
     fun reset() {
         lastSeedId = null
+        synchronized(recentlyServedLock) { recentlyServed.clear() }
     }
 }

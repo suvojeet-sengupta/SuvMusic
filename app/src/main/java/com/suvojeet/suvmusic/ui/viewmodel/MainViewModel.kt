@@ -24,6 +24,10 @@ sealed class MainEvent {
     data class PlayFromDeepLink(val videoId: String) : MainEvent()
     data class PlayFromLocalUri(val uri: Uri) : MainEvent()
     data class ShowToast(val message: String) : MainEvent()
+    data class NavigateToAlbum(val browseId: String) : MainEvent()
+    data class NavigateToPlaylist(val playlistId: String) : MainEvent()
+    data class NavigateToArtist(val channelId: String) : MainEvent()
+    data class NavigateToSearch(val query: String) : MainEvent()
 }
 
 data class MainUiState(
@@ -93,10 +97,19 @@ class MainViewModel @Inject constructor(
                             }
                     }
                 }
-                uri.scheme == "suvmusic" && uri.host == "play" -> {
-                    val id = uri.getQueryParameter("id")
-                    if (id != null) {
-                        _events.emit(MainEvent.PlayFromDeepLink(id))
+                uri.scheme == "suvmusic" -> {
+                    when (val target = com.suvojeet.suvmusic.deeplink.DeepLinkHandler.parse(uri)) {
+                        is com.suvojeet.suvmusic.deeplink.DeepLinkTarget.Song ->
+                            _events.emit(MainEvent.PlayFromDeepLink(target.id))
+                        is com.suvojeet.suvmusic.deeplink.DeepLinkTarget.Album ->
+                            _events.emit(MainEvent.NavigateToAlbum(target.id))
+                        is com.suvojeet.suvmusic.deeplink.DeepLinkTarget.Playlist ->
+                            _events.emit(MainEvent.NavigateToPlaylist(target.id))
+                        is com.suvojeet.suvmusic.deeplink.DeepLinkTarget.Artist ->
+                            _events.emit(MainEvent.NavigateToArtist(target.id))
+                        is com.suvojeet.suvmusic.deeplink.DeepLinkTarget.Search ->
+                            _events.emit(MainEvent.NavigateToSearch(target.query))
+                        null -> Unit // unknown suvmusic:// URI — ignore
                     }
                 }
                 // Handle YouTube links

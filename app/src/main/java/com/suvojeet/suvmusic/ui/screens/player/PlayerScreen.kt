@@ -78,6 +78,7 @@ import com.suvojeet.suvmusic.ui.screens.player.FullScreenVideoPlayer
 import com.suvojeet.suvmusic.data.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.YTMusicPlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.ClassicPlayerStyle
+import com.suvojeet.suvmusic.ui.screens.player.styles.LiquidGlassPlayerStyle
 
 import com.suvojeet.suvmusic.ui.screens.player.components.RelatedSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
@@ -198,6 +199,8 @@ fun PlayerScreen(
     val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)
     val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.WAVEFORM.name)
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val playerGlassBlur by sessionManager.playerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 60f)
+    val playerGlassIntensity by sessionManager.playerGlassIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
@@ -330,8 +333,10 @@ fun PlayerScreen(
         PiPPlayerContent(song = song, isVideoMode = playerState.isVideoMode, player = player)
     } else {
         Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
-            // Background
-            if (animatedBackgroundEnabled && !playerState.isVideoMode) {
+            // Background — skip the mesh gradient for Liquid Glass; it draws its own blurred backdrop.
+            if (playerStyle == PlayerStyle.LIQUID_GLASS) {
+                // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
+            } else if (animatedBackgroundEnabled && !playerState.isVideoMode) {
                 MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
             } else {
                 Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
@@ -375,6 +380,38 @@ fun PlayerScreen(
                                         isAIEnabled = isAIAutoModeEnabled,
                                         aiStatus = aiAutoStatus,
                                         windowSizeClass = windowSizeClass
+                                    )
+                                }
+                                PlayerStyle.LIQUID_GLASS -> {
+                                    LiquidGlassPlayerStyle(
+                                        song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                        currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                        player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
+                                        onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                        onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                        onShowRelated = { activeOverlay = PlayerOverlay.Related },
+                                        onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                        onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                        onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                        onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                        onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                        handleDoubleTapSeek = handleDoubleTapSeek,
+                                        onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                        onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                        onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                        onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                        isSwitchingMode = isSwitchingMode,
+                                        sleepTimerOption = state.sleepTimerOption,
+                                        sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                        currentProgress = currentProgress,
+                                        currentPosition = currentPosition,
+                                        currentDuration = currentDuration,
+                                        isAIEnabled = isAIAutoModeEnabled,
+                                        aiStatus = aiAutoStatus,
+                                        windowSizeClass = windowSizeClass,
+                                        blurRadius = playerGlassBlur,
+                                        intensity = playerGlassIntensity
                                     )
                                 }
                                 PlayerStyle.CLASSIC -> {
