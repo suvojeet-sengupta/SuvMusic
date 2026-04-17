@@ -64,10 +64,26 @@ val NewReleaseCardShape = RoundedCornerShape(
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 object ExpressiveShapes {
+    // Existing artwork + surface shapes
     val AlbumArt = MaterialShapes.Cookie9Sided
     val Fab = MaterialShapes.Clover4Leaf
     val MiniPlayer = MaterialShapes.Arch
     val NowPlaying = MaterialShapes.Cookie6Sided
     val ActionChip = MaterialShapes.Pill
     val GenreCard = MaterialShapes.Fan
+
+    // Morph pairs — semantic aliases for press-state shape morphing.
+    // Resting → Pressed pairs drive the M3 Expressive "squish on tap" motion.
+    val Button = MaterialShapes.Pill
+    val ButtonPressed = MaterialShapes.Cookie6Sided
+    val FabResting = MaterialShapes.Clover4Leaf
+    val FabPressed = MaterialShapes.Cookie9Sided
+    val IconButton = MaterialShapes.Pill
+    val IconButtonPressed = MaterialShapes.Cookie6Sided
 }
+
+// Standard-shape semantic aliases — use when you need a plain RoundedCornerShape
+// that matches our token scale, without opting into M3E morph shapes.
+val CardShapeToken = RoundedCornerShape(20.dp)
+val SheetShapeToken = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+val ChipShapeToken = RoundedCornerShape(16.dp)
