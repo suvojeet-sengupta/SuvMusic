@@ -579,18 +579,19 @@ class PlayerViewModel @Inject constructor(
      * top-played / liked songs, giving a fully personalized "Your Radio" experience.
      */
     fun startPersonalizedRadio() {
-        val currentSong = playerState.value.currentSong
-        if (currentSong != null) {
-            startRadio(currentSong)
-        } else {
-            viewModelScope.launch {
-                try {
-                    val recommendations = recommendationEngine.getPersonalizedRecommendations(5)
-                    val seed = recommendations.firstOrNull() ?: return@launch
-                    startRadio(seed, recommendations)
-                } catch (e: Exception) {
-                    Log.e("PlayerViewModel", "Failed to start personalized radio", e)
-                }
+        viewModelScope.launch {
+            try {
+                val currentSong = playerState.value.currentSong
+                val recommendations = recommendationEngine.getPersonalizedRecommendations(10)
+                
+                // Pick a seed that's NOT the current song to ensure variety
+                val seed = recommendations.firstOrNull { it.id != currentSong?.id } 
+                    ?: recommendations.firstOrNull() 
+                    ?: return@launch
+                    
+                startRadio(seed, recommendations)
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Failed to start personalized radio", e)
             }
         }
     }
@@ -741,26 +742,14 @@ class PlayerViewModel @Inject constructor(
             // Notify recommendation engine of the new context
             recommendationEngine.onSongPlayed(song)
             
-            // Check if song is already playing to avoid restarting
-            val currentSongId = playerState.value.currentSong?.id
-            if (currentSongId != song.id) {
-                // ALWAYS play the song with its (potentially new) radio queue to clear the current queue
-                // and start a fresh radio session based on the selected song.
-                if (initialQueue != null && initialQueue.isNotEmpty()) {
-                    val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                    musicPlayer.playSong(song, initialQueue, index)
-                } else {
-                    musicPlayer.playSong(song)
-                }
+            // For a "Radio" feel, we want a fresh start. 
+            // If the song is already playing, we'll still 'restart' it with a new radio queue
+            // to ensure it feels like a fresh generation session.
+            if (initialQueue != null && initialQueue.isNotEmpty()) {
+                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                musicPlayer.playSong(song, initialQueue, index)
             } else {
-                // Song is already playing. We just need to replace the queue.
-                if (initialQueue != null && initialQueue.isNotEmpty()) {
-                    // Filter out the current song as it's already playing, then add the rest
-                    musicPlayer.replaceQueue(initialQueue)
-                } else {
-                    // Clear the current queue except for the playing song to start a fresh radio session
-                    musicPlayer.replaceQueue(listOf(song))
-                }
+                musicPlayer.playSong(song)
             }
             
             try {
@@ -772,12 +761,11 @@ class PlayerViewModel @Inject constructor(
                 
                 // Add recommendations to queue
                 if (radioSongs.isNotEmpty()) {
-                    musicPlayer.addToQueue(radioSongs)
+                    musicPlayer.replaceQueue(listOf(song) + radioSongs)
                     radioBaseSongId = smartQueueManager.lastSeedId ?: song.id
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error starting radio", e)
-                // Already playing, so no fallback needed
             }
         }
     }
