@@ -1,45 +1,65 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suvojeet.suvmusic.ai.AIEqualizerService
 import com.suvojeet.suvmusic.ai.AIProvider
-import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.components.BetaBadge
+import com.suvojeet.suvmusic.ui.screens.ai_equalizer.AIEqLogsPanel
+import com.suvojeet.suvmusic.ui.screens.ai_equalizer.AIEqPromptHistoryDialog
+import com.suvojeet.suvmusic.ui.screens.ai_equalizer.AIEqPromptInput
+import com.suvojeet.suvmusic.ui.screens.ai_equalizer.AIEqResultActions
+import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,39 +76,39 @@ fun AIEqualizerScreen(
     val isAutoModeEnabled by aiService.isAutoModeEnabled.collectAsState()
     val promptHistory by aiService.promptHistory.collectAsState()
     val autoStatus by aiService.autoStatus.collectAsState()
-    
+    val lastResult by aiService.lastResult.collectAsState()
+
     var prompt by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    // Load prompt history on enter
-    LaunchedEffect(Unit) {
-        aiService.loadPromptHistory()
-    }
+    LaunchedEffect(Unit) { aiService.loadPromptHistory() }
 
-    // Auto-scroll logs
     LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.size - 1)
-        }
+        if (logs.isNotEmpty()) listState.animateScrollToItem(logs.size - 1)
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Neural Equalizer", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                            Text(
+                                "Neural Equalizer",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 20.sp
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             BetaBadge()
                         }
                         Text(
                             text = if (isAutoModeEnabled) "Auto-Tuning Active" else "Manual Mode",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isAutoModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isAutoModeEnabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -98,12 +118,13 @@ fun AIEqualizerScreen(
                     }
                 },
                 actions = {
-                    if (aiService.lastResult.value != null) {
+                    if (lastResult != null) {
                         IconButton(onClick = { aiService.toggleABCompare() }) {
                             Icon(
                                 Icons.Default.Compare,
                                 contentDescription = "A/B Compare",
-                                tint = if (isABCompareActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                tint = if (isABCompareActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -123,7 +144,6 @@ fun AIEqualizerScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            // Auto Mode Toggle Card
             AutoModeToggleCard(
                 isEnabled = isAutoModeEnabled,
                 onToggle = { aiService.setAutoModeEnabled(it) }
@@ -131,7 +151,6 @@ fun AIEqualizerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Prompt Input Section
             Text(
                 "Sound Architecture Prompt",
                 style = MaterialTheme.typography.labelLarge,
@@ -140,59 +159,37 @@ fun AIEqualizerScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            OutlinedTextField(
-                value = prompt,
-                onValueChange = { prompt = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("e.g., 'Make it feel like a live stadium concert'") },
-                maxLines = 3,
-                shape = RoundedCornerShape(20.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                ),
-                trailingIcon = {
-                    if (isProcessing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    val provider = when (uiState.selectedAiProvider) {
-                                        "OPENAI" -> AIProvider.OPENAI
-                                        "ANTHROPIC" -> AIProvider.ANTHROPIC
-                                        "CHAT_PROXY" -> AIProvider.CHAT_PROXY
-                                        else -> AIProvider.GEMINI
-                                    }
-                                    val apiKey = when (provider) {
-                                        AIProvider.OPENAI -> uiState.openaiApiKey
-                                        AIProvider.ANTHROPIC -> uiState.anthropicApiKey
-                                        else -> "" 
-                                    }
-                                    val model = when (provider) {
-                                        AIProvider.OPENAI -> uiState.openaiModel
-                                        AIProvider.ANTHROPIC -> uiState.anthropicModel
-                                        AIProvider.CHAT_PROXY -> uiState.chatProxyModel
-                                        AIProvider.GEMINI -> uiState.geminiModel
-                                    }
-                                    aiService.processPrompt(prompt, provider, apiKey, model)
-                                }
-                            },
-                            enabled = prompt.isNotBlank() && !isAutoModeEnabled
-                        ) {
-                            Icon(Icons.Default.Send, contentDescription = "Process")
+            AIEqPromptInput(
+                prompt = prompt,
+                onPromptChange = { prompt = it },
+                isProcessing = isProcessing,
+                isAutoModeEnabled = isAutoModeEnabled,
+                onSend = {
+                    scope.launch {
+                        val provider = when (uiState.selectedAiProvider) {
+                            "OPENAI" -> AIProvider.OPENAI
+                            "ANTHROPIC" -> AIProvider.ANTHROPIC
+                            "CHAT_PROXY" -> AIProvider.CHAT_PROXY
+                            else -> AIProvider.GEMINI
                         }
+                        val apiKey = when (provider) {
+                            AIProvider.OPENAI -> uiState.openaiApiKey
+                            AIProvider.ANTHROPIC -> uiState.anthropicApiKey
+                            else -> ""
+                        }
+                        val model = when (provider) {
+                            AIProvider.OPENAI -> uiState.openaiModel
+                            AIProvider.ANTHROPIC -> uiState.anthropicModel
+                            AIProvider.CHAT_PROXY -> uiState.chatProxyModel
+                            AIProvider.GEMINI -> uiState.geminiModel
+                        }
+                        aiService.processPrompt(prompt, provider, apiKey, model)
                     }
                 }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Neural Activity Log
             Text(
                 "Neural Processing History",
                 style = MaterialTheme.typography.labelLarge,
@@ -200,202 +197,42 @@ fun AIEqualizerScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            Surface(
+            AIEqLogsPanel(
+                logs = logs,
+                autoStatus = autoStatus,
+                listState = listState,
+                onClearLogs = { aiService.clearLogs() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            ) {
-                Box {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        items(logs) { log ->
-                            val color = when {
-                                log.startsWith("Error") || log.contains("FAILED") -> MaterialTheme.colorScheme.error
-                                log.startsWith("SUCCESS") -> Color(0xFF4CAF50)
-                                log.startsWith("AUTO") -> MaterialTheme.colorScheme.primary
-                                log.startsWith("Validation") -> MaterialTheme.colorScheme.tertiary
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                            
-                            val icon = when {
-                                log.startsWith("Error") || log.contains("FAILED") -> Icons.Default.Clear
-                                log.startsWith("SUCCESS") -> Icons.Default.CheckCircle
-                                log.startsWith("AUTO") -> Icons.Default.AutoAwesome
-                                log.startsWith("Validation") -> Icons.Default.Refresh
-                                else -> Icons.Default.History
-                            }
+                    .padding(vertical = 8.dp)
+            )
 
-                            Row(
-                                modifier = Modifier.padding(bottom = 8.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    tint = color.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(14.dp).padding(top = 2.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = log,
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        lineHeight = 16.sp,
-                                        fontWeight = if (log.startsWith("SUCCESS") || log.startsWith("AUTO")) FontWeight.Bold else FontWeight.Normal
-                                    ),
-                                    color = color
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Neural Link Overlay (Active when Auto Mode is processing)
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = autoStatus != null,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically(),
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
-                    ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(16.dp),
-                            shadowElevation = 4.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.5.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = autoStatus ?: "",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Clear logs overlay
-                    if (logs.isNotEmpty()) {
-                        IconButton(
-                            onClick = { aiService.clearLogs() },
-                            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-
-            val lastResult by aiService.lastResult.collectAsState()
             if (lastResult != null) {
-                // Optimized Result Card
                 AIResultCard(lastResult!!)
-                
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Action buttons row
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { aiService.revertAIChanges() },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Revert")
+                AIEqResultActions(
+                    onRevert = { aiService.revertAIChanges() },
+                    onSave = {
+                        scope.launch {
+                            aiService.saveCurrentAISettings(prompt.ifBlank { "Neural Optimized" })
+                        }
                     }
-                    
-                    Button(
-                        onClick = { 
-                            scope.launch {
-                                aiService.saveCurrentAISettings(prompt.ifBlank { "Neural Optimized" })
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save Profile")
-                    }
-                }
+                )
             } else {
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 
-    // Prompt History Modal
     if (showHistory) {
-        AlertDialog(
-            onDismissRequest = { showHistory = false },
-            title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Neural History", fontWeight = FontWeight.Bold)
-                    if (promptHistory.entries.isNotEmpty()) {
-                        TextButton(onClick = { 
-                            scope.launch { aiService.clearPromptHistory() }
-                        }) {
-                            Text("Clear All")
-                        }
-                    }
-                }
-            },
-            text = {
-                if (promptHistory.entries.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No history yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 400.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(promptHistory.entries) { _, entry ->
-                            PromptHistoryItem(
-                                entry = entry,
-                                onClick = {
-                                    prompt = entry.prompt
-                                    showHistory = false
-                                },
-                                onDelete = {
-                                    // Individual delete could be implemented
-                                }
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showHistory = false }) {
-                    Text("Close")
-                }
+        AIEqPromptHistoryDialog(
+            promptHistory = promptHistory,
+            onDismiss = { showHistory = false },
+            onClearAll = { scope.launch { aiService.clearPromptHistory() } },
+            onEntryClick = { selectedPrompt ->
+                prompt = selectedPrompt
+                showHistory = false
             }
         )
     }
@@ -407,13 +244,13 @@ fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled) 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
-            else 
+            containerColor = if (isEnabled)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp, 
+        border = BorderStroke(
+            1.dp,
             if (isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else Color.Transparent
         )
     ) {
@@ -427,7 +264,8 @@ fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
                     modifier = Modifier
                         .size(42.dp)
                         .background(
-                            if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                            if (isEnabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
                             RoundedCornerShape(12.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -435,7 +273,8 @@ fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
                     Icon(
                         Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -466,7 +305,9 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f)
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -474,15 +315,25 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Current Architecture", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF69F0AE), modifier = Modifier.size(16.dp))
+                Text(
+                    "Current Architecture",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF69F0AE),
+                    modifier = Modifier.size(16.dp)
+                )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Micro-Visualizer for EQ
             Row(
-                modifier = Modifier.fillMaxWidth().height(40.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
@@ -492,17 +343,23 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(heightFactor.coerceIn(0.1f, 1f))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                RoundedCornerShape(2.dp)
+                            )
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 ParameterTag("Bass", "${(state.safeBassBoost * 100).toInt()}%")
                 ParameterTag("Echo", "${(state.safeVirtualizer * 100).toInt()}%")
-                ParameterTag("Spatial", if(state.isSpatialEnabled) "ON" else "OFF")
+                ParameterTag("Spatial", if (state.isSpatialEnabled) "ON" else "OFF")
                 ParameterTag("Limiter", "${state.safeLimiterMakeupGain.toInt()}dB")
             }
         }
@@ -512,7 +369,11 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
 @Composable
 fun ParameterTag(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
     }
 }
@@ -525,7 +386,7 @@ fun PromptHistoryItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
     val timeString = remember(entry.timestamp) { dateFormat.format(Date(entry.timestamp)) }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,

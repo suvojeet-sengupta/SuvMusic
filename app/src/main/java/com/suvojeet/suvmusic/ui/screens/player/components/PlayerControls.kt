@@ -2,7 +2,6 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,15 +9,11 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -30,21 +25,14 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
-
 import com.suvojeet.suvmusic.ui.components.bounceClick
+import com.suvojeet.suvmusic.ui.components.primitives.AnimatedPlayerButton
 
 @Composable
 fun PlaybackControls(
@@ -71,36 +59,26 @@ fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .bounceClick(onClick = onShuffleToggle),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Shuffle,
-                contentDescription = "Shuffle",
-                modifier = Modifier.size(secondaryIconSize),
-                tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f)
-            )
-        }
+        AnimatedPlayerButton(
+            icon = Icons.Default.Shuffle,
+            contentDescription = "Shuffle",
+            tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
+            onClick = onShuffleToggle,
+            size = 48.dp,
+            iconSize = secondaryIconSize
+        )
 
         // Previous
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .bounceClick(onClick = onPrevious),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.SkipPrevious,
-                contentDescription = "Previous",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
-            )
-        }
+        AnimatedPlayerButton(
+            icon = Icons.Default.SkipPrevious,
+            contentDescription = "Previous",
+            tint = dominantColors.onBackground,
+            onClick = onPrevious,
+            size = 56.dp,
+            iconSize = skipIconSize
+        )
 
-        // Play/Pause
+        // Play/Pause — keeps its animated background ring + icon swap, so stays bespoke.
         Box(
             modifier = Modifier
                 .size(playSize)
@@ -133,21 +111,16 @@ fun PlaybackControls(
         }
 
         // Next
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .bounceClick(onClick = onNext),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.SkipNext,
-                contentDescription = "Next",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(skipIconSize)
-            )
-        }
+        AnimatedPlayerButton(
+            icon = Icons.Default.SkipNext,
+            contentDescription = "Next",
+            tint = dominantColors.onBackground,
+            onClick = onNext,
+            size = 56.dp,
+            iconSize = skipIconSize
+        )
 
-        // Repeat
+        // Repeat — keeps AnimatedContent for icon swap between Repeat/RepeatOne modes.
         Box(
             modifier = Modifier
                 .size(48.dp)

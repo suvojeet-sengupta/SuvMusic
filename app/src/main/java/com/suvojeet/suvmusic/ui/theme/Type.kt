@@ -1,126 +1,148 @@
 package com.suvojeet.suvmusic.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.suvojeet.suvmusic.R
 
-// Using system fonts (can be replaced with custom fonts later)
-// To use custom fonts: download Outfit and Inter from Google Fonts
-// and place them in res/font/
+/**
+ * Typography — Material 3 Expressive scale powered by Outfit (variable font).
+ * Variable font support requires API 26+, which matches our minSdk.
+ *
+ * A single `R.font.outfit` TTF covers the full weight axis (400–700); we bind
+ * logical weights via `FontVariation.weight(...)` so the text system can request
+ * intermediate weights without extra files.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun outfit(weight: Int): Font = Font(
+    resId = R.font.outfit,
+    weight = FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight))
+)
 
-// Typography with expressive, music-focused styles
+private val Outfit: FontFamily = FontFamily(
+    outfit(400),
+    outfit(500),
+    outfit(600),
+    outfit(700),
+    outfit(800)
+)
+
 val Typography = Typography(
-    // Display styles - for big headlines
+    // Display — big headlines
     displayLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.25).sp
     ),
     displayMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
         letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
         letterSpacing = 0.sp
     ),
-    
-    // Headlines - for section titles
+
+    // Headlines — section titles
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
         letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
-    
-    // Titles - for cards, dialogs
+
+    // Titles — cards, dialogs
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Medium,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
-    
-    // Body text
+
+    // Body
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
-    
+
     // Labels
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = Outfit,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
