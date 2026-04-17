@@ -597,7 +597,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 144.dp),
+                .padding(end = 20.dp, bottom = 174.dp),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -781,27 +781,33 @@ private fun HomeSpeedDialAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-        modifier = Modifier.clickable(onClick = onClick)
+    com.suvojeet.suvmusic.ui.components.BounceButton(
+        onClick = onClick,
+        modifier = Modifier.padding(vertical = 4.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+            tonalElevation = 8.dp
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

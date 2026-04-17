@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.3.0.0",
+      "versionCode": 26,
+      "date": "April 17, 2026",
+      "description": "• Expressive Player Experience: Added a professional 'bounce' feel to all main player controls (Play/Pause, Skip) for tactile feedback. Expanded Waveform Seeker with new 'Neon Glow' and 'Blocks' styles.\n• Professional Video Suite: Major overhaul of the Full-screen Video Player with high-fidelity gesture feedback. Added YouTube-style double-tap to seek with visual indicators, and improved brightness/volume gesture overlays.\n• Smarter Artist Insights: Redesigned artist matching to prioritize official channels and higher follower counts. Tapping artist names now accurately navigates to official profiles first.\n• UI Refinements & Polish: Moved Home Screen FAB higher for better accessibility. Redesigned Home Speed Dial to match YT Music's aesthetic with semi-transparent rounded cards and bouncy feedback.\n• About SuvMusic: Completely refreshed the About screen with personalized developer 'Vibe Coder' info and a new vision-focused app description.\n• Bug Fixes & Stability: Fixed a critical bug where long-pressing the seekbar would stop working after the first use. Improved playlist drawer stability and resolved various UI glitches in landscape video mode.",
+      "isMajorUpdate": true
+    },
+    {
       "versionName": "2.2.2.0",
       "versionCode": 25,
       "date": "April 08, 2026",

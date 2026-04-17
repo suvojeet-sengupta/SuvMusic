@@ -47,13 +47,17 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.model.SponsorCategory
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.components.seekbar.ClassicStyle
@@ -63,10 +67,6 @@ import com.suvojeet.suvmusic.ui.components.seekbar.WaveLineStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveformStyle
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.WavyProgressIndicatorDefaults
 import kotlin.random.Random
 import kotlin.math.sin
 
