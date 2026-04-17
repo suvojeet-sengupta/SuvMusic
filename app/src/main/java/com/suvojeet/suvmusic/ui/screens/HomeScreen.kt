@@ -4,6 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -18,6 +24,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -104,6 +111,14 @@ fun HomeScreen(
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
     var isSpeedDialExpanded by remember { mutableStateOf(false) }
+    var isRadioGenerating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isRadioGenerating) {
+        if (isRadioGenerating) {
+            delay(2500)
+            isRadioGenerating = false
+        }
+    }
 
     // Stable callback reference — avoids creating new lambdas per section item
     val onSongMoreClickHandler = remember {
@@ -582,7 +597,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 124.dp),
+                .padding(end = 20.dp, bottom = 144.dp),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -612,6 +627,7 @@ fun HomeScreen(
                         icon = Icons.Default.Radio,
                         onClick = {
                             isSpeedDialExpanded = false
+                            isRadioGenerating = true
                             onStartRadio()
                         }
                     )
@@ -692,6 +708,69 @@ fun HomeScreen(
                     playlistViewModel.showCreatePlaylistDialog()
                 }
             )
+        }
+
+        // Generating Radio Overlay
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isRadioGenerating,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .pointerInput(Unit) { detectTapGestures { } }, // Prevent clicks behind
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "radioPulse")
+                    val pulse by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                        ),
+                        label = "pulse"
+                    )
+                    
+                    Surface(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .graphicsLayer {
+                                scaleX = pulse
+                                scaleY = pulse
+                            },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 8.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Radio,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "Radio is generating...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Tailoring tunes for your vibe",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
     }
 }

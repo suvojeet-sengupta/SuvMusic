@@ -248,15 +248,15 @@ private fun AnimatedEntry(
     var visible by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!visible) {
-            kotlinx.coroutines.delay(delay.toLong())
+            kotlinx.coroutines.delay((delay / 2).toLong()) // Half the delay for faster load
             visible = true
         }
     }
     
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(600)) + 
-                slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(600))
+        enter = fadeIn(animationSpec = tween(400)) + 
+                slideInVertically(initialOffsetY = { 20 }, animationSpec = tween(400))
     ) {
         content()
     }
@@ -268,94 +268,120 @@ fun SpotifyWrappedShareCard(
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.tertiary
     
     Box(
         modifier = modifier
             .width(360.dp)
             .height(640.dp)
             .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        primaryColor.copy(alpha = 0.9f),
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
-                        Color.Black
-                    )
+                Brush.sweepGradient(
+                    0.0f to primaryColor.copy(alpha = 0.8f),
+                    0.3f to Color(0xFF1DB954), // Spotify Green
+                    0.6f to secondaryColor.copy(alpha = 0.8f),
+                    1.0f to primaryColor.copy(alpha = 0.8f)
                 )
             )
-            .padding(24.dp)
+            .background(Color.Black.copy(alpha = 0.2f)) // Tint
+            .padding(28.dp)
     ) {
-        // Background patterns
+        // Geometric abstract background patterns
         Canvas(modifier = Modifier.fillMaxSize()) {
+            drawPath(
+                path = Path().apply {
+                    moveTo(0f, size.height * 0.7f)
+                    quadraticTo(size.width * 0.5f, size.height * 0.8f, size.width, size.height * 0.6f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                },
+                color = Color.White.copy(alpha = 0.1f)
+            )
             drawCircle(
                 color = Color.White.copy(alpha = 0.05f),
-                radius = 400.dp.toPx(),
-                center = Offset(size.width, 0f)
+                radius = 200.dp.toPx(),
+                center = Offset(size.width * 0.8f, size.height * 0.2f)
             )
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Audiotrack,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
+                Surface(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = CircleShape,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Audiotrack,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "SuvMusic Insights",
-                    style = MaterialTheme.typography.titleLarge,
+                    "SUVMUSIC",
+                    style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
                 )
             }
             
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(60.dp))
             
             Text(
-                "My music personality is",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
+                "My music\npersonality is",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White.copy(alpha = 0.9f),
+                fontWeight = FontWeight.Normal,
+                lineHeight = 32.sp
             )
             Text(
-                uiState.musicPersonality.title,
+                uiState.musicPersonality.title.uppercase(),
                 style = MaterialTheme.typography.displayMedium,
                 color = Color.White,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp
             )
             
             Spacer(Modifier.height(40.dp))
             
-            // Stats Grid
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    StatValue("Total Minutes", (uiState.totalListeningTimeMs / 60000).toString())
-                    Spacer(Modifier.height(24.dp))
-                    StatValue("Top Songs", uiState.totalSongsPlayed.toString())
+            // Stats Grid with better layout
+            Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    StatValue("Total Minutes", (uiState.totalListeningTimeMs / 60000).toString(), Modifier.weight(1f))
+                    StatValue("Top Songs", uiState.totalSongsPlayed.toString(), Modifier.weight(1f))
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    StatValue("Months Listened", String.format("%.1f", uiState.totalMonthsListened))
-                    Spacer(Modifier.height(24.dp))
-                    StatValue("Top Artist", uiState.topArtists.firstOrNull()?.artist ?: "None")
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    StatValue("Months Listened", String.format("%.1f", uiState.totalMonthsListened), Modifier.weight(1f))
+                    StatValue("Top Artist", uiState.topArtists.firstOrNull()?.artist ?: "None", Modifier.weight(1f))
                 }
             }
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Branding Footer
-            Row(
+            // Modern Branding Footer
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "SUVMUSIC",
+                    "2026 INSIGHTS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "VIBE CODER CREATION",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 4.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 5.sp
                 )
             }
         }
@@ -363,10 +389,21 @@ fun SpotifyWrappedShareCard(
 }
 
 @Composable
-private fun StatValue(label: String, value: String) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+private fun StatValue(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = label.uppercase(), 
+            style = MaterialTheme.typography.labelSmall, 
+            color = Color.White.copy(alpha = 0.7f),
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+        Text(
+            text = value, 
+            style = MaterialTheme.typography.headlineSmall, 
+            color = Color.White, 
+            fontWeight = FontWeight.Black
+        )
     }
 }
 

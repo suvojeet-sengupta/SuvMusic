@@ -156,13 +156,13 @@ fun AboutScreen(
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "SuvMusic is a cutting-edge, open-source music player developed in India. Our focus is to deliver a premium, interruption-free music experience by leveraging the vast library of YouTube Music.",
-                            style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
+                            text = "Suvmusic is the indian music streaming app (YT Music Client) that provides best UI unique features that not present anywhere and full control and better implementation.",
+                            style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "With support for high-fidelity streaming and advanced audio normalization, SuvMusic ensures a superior auditory journey tailored for audiophiles.",
+                            text = "Built with a vision to provide a seamless, high-fidelity auditory journey, SuvMusic bridges the gap between massive content availability and a truly personalized user experience.",
                             style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
                             color = onSurfaceVariant
                         )
@@ -175,15 +175,13 @@ fun AboutScreen(
             item {
                 SettingsSectionTitle("Features")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    FeatureListItem(icon = Icons.Outlined.Palette, title = "Premium Design", subtitle = "Modern, clean M3E interface")
+                    FeatureListItem(icon = Icons.Outlined.Palette, title = "Best-in-Class UI", subtitle = "Unique and fluid Material 3 Experience")
                     M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    FeatureListItem(icon = Icons.Outlined.Block, title = "100% Ad-Free", subtitle = "No interruptions, ever")
+                    FeatureListItem(icon = Icons.Outlined.Block, title = "100% Ad-Free", subtitle = "Zero interruptions, complete focus")
                     M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    FeatureListItem(icon = Icons.Default.CloudDownload, title = "Offline Mode", subtitle = "Download for offline listening")
+                    FeatureListItem(icon = Icons.Default.HighQuality, title = "High Fidelity", subtitle = "Premium audio quality and full control")
                     M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    FeatureListItem(icon = Icons.Default.HighQuality, title = "High Quality", subtitle = "Up to 256 kbps audio")
-                    M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    FeatureListItem(icon = Icons.Default.Language, title = "Spatial Audio", subtitle = "Audio AR support for headphones")
+                    FeatureListItem(icon = Icons.Default.AutoAwesome, title = "AI Equalizer", subtitle = "Neural processing for perfect sound")
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -198,20 +196,22 @@ fun AboutScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(96.dp)
+                                .size(110.dp)
                                 .clip(SquircleShape)
                                 .background(
                                     brush = Brush.linearGradient(
-                                        colors = listOf(primaryColor, primaryColor.copy(alpha = 0.6f))
+                                        colors = listOf(primaryColor, colorScheme.tertiary)
                                     )
-                                ),
+                                )
+                                .padding(3.dp)
+                                .background(colorScheme.surface, SquircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             coil3.compose.AsyncImage(
                                 model = "https://avatars.githubusercontent.com/u/107928380?v=4",
                                 contentDescription = "Suvojeet Sengupta",
                                 modifier = Modifier
-                                    .size(90.dp)
+                                    .size(100.dp)
                                     .clip(SquircleShape),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 error = painterResource(id = R.drawable.logo)
@@ -222,18 +222,29 @@ fun AboutScreen(
                         
                         Text(
                             text = "Suvojeet Sengupta",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         
                         Text(
-                            text = "Android Developer",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = onSurfaceVariant
+                            text = "Vibe Coder",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = primaryColor,
+                            fontWeight = FontWeight.Bold
                         )
                         
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "Thinking matters. I'm a self-taught Kotlin learner who believes architecture and creativity are my true + points. Delivering what AI can't—human touch in code.",
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                            color = onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
                         
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SocialIconBadge(icon = com.suvojeet.suvmusic.ui.utils.SocialIcons.GitHub, onClick = { uriHandler.openUri("https://github.com/suvojeet-sengupta") })
