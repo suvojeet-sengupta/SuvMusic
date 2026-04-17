@@ -133,7 +133,7 @@ fun ExpandablePlayerSheet(
     // Total drag range from (MiniPlayer + Nav Bar) to Full Screen
     // For YT_MUSIC, we reduce the visual gap (approx 12dp) 
     // to sit flush against the navbar content.
-    val stylePaddingOffset = if (style == MiniPlayerStyle.YT_MUSIC) with(density) { 12.dp.toPx() } else 0f
+    val stylePaddingOffset = if (style == MiniPlayerStyle.YT_MUSIC) with(density) { 14.dp.toPx() } else with(density) { 2.dp.toPx() }
     val adjustedBottomPadding = (bottomPadding - stylePaddingOffset).coerceAtLeast(0f)
 
     val collapsedHeightPx = miniPlayerHeightPx + adjustedBottomPadding
@@ -163,7 +163,12 @@ fun ExpandablePlayerSheet(
         val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
         if (miniPlayerAlpha > 0f) {
             // When collapsed (expansion=0), offset the mini player down to close the gap
-            val collapsedOffsetPx = (bottomPadding - adjustedBottomPadding) * (1f - expansion.value.coerceAtLeast(0f))
+            // Using a more stable calculation to prevent jumping
+            val collapsedOffsetPx = if (expansion.value >= 0f) {
+                (bottomPadding - adjustedBottomPadding) * (1f - expansion.value)
+            } else {
+                0f
+            }
             
             CollapsedMiniPlayer(
                 song = song,
