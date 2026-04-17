@@ -171,6 +171,13 @@ class MusicPlayer @Inject constructor(
         sleepTimerManager.setOnTimerFinished {
             pause()
         }
+        sleepTimerManager.setOnFadeStep {
+            scope.launch {
+                val controller = mediaController ?: return@launch
+                val nextVolume = (controller.volume - 0.05f).coerceIn(0f, 1f)
+                controller.volume = nextVolume
+            }
+        }
 
         // Initial device scan on background thread
         scope.launch(Dispatchers.Default) {
