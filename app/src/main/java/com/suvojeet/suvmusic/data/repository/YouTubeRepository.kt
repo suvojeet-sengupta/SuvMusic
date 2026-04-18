@@ -2591,16 +2591,38 @@ class YouTubeRepository @Inject constructor(
 
             items.forEach { item ->
                 try {
-                    // Try to get videoId from standard runs/endpoints first
-                    var videoId = extractValueFromRuns(item, "videoId") 
-                        ?: item.optString("videoId").takeIf { it.isNotEmpty() }
-                    
-                    // Fallback to playlistItemData (common in playlists)
-                    if (videoId == null) {
-                        videoId = item.optJSONObject("playlistItemData")?.optString("videoId")
+                    // 1. Determine if this item is a song or a video
+                    // musicResponsiveListItemRenderer can be many things, check navigationEndpoint
+                    val navEndpoint = item.optJSONObject("navigationEndpoint")
+                    val watchEndpoint = navEndpoint?.optJSONObject("watchEndpoint")
+                        ?: item.optJSONObject("watchEndpoint")
+                        ?: item.optJSONObject("playlistItemData") // Fallback for some lists
+
+                    // If it has a browseEndpoint, it's likely an album or artist, not a song
+                    val browseEndpoint = navEndpoint?.optJSONObject("browseEndpoint")
+                    if (browseEndpoint != null && watchEndpoint == null) {
+                        return@forEach
+                    }
+
+                    var videoId = watchEndpoint?.optString("videoId")
+                        ?: item.optString("videoId")
+
+                    if (videoId.isNullOrBlank()) {
+                        // Fallback to searching all watchEndpoints but only if we haven't ruled it out
+                        videoId = extractValueFromRuns(item, "videoId")
                     }
                     
-                    if (videoId != null) {
+                    if (!videoId.isNullOrBlank()) {
+                        val duration = extractDuration(item)
+                        
+                        // musicTwoRowItemRenderer specific check: 
+                        // If it's a two-row item (grid), it MUST have a duration or be a video to be considered a song here.
+                        // Albums/Playlists in two-row grid don't have duration in the same way.
+                        val isTwoRow = item.has("title") && item.has("subtitle") && !item.has("flexColumns")
+                        if (isTwoRow && duration <= 0) {
+                            return@forEach
+                        }
+
                         val title = extractTitle(item)
                         val artist = extractArtist(item)
                         val thumbnailUrl = extractThumbnail(item)
@@ -2612,7 +2634,7 @@ class YouTubeRepository @Inject constructor(
                             title = title,
                             artist = artist,
                             album = "",
-                            duration = extractDuration(item),
+                            duration = duration,
                             thumbnailUrl = thumbnailUrl,
                             setVideoId = setVideoId,
                             releaseDate = year
