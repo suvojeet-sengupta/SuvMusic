@@ -32,15 +32,15 @@ This document explains SuvMusic’s adaptive layout system that optimizes the us
 
 ## Project Structure
 SuvMusic organizes adaptive UI under the Compose UI layer with dedicated screens for each device family and shared utilities for device detection and responsive sizing. Key areas:
-- Device detection and responsive utilities: WindowSizeUtils.kt, TvUtils.kt
-- Screens: HomeScreen.kt (phone), TabletHomeScreen.kt (tablet), TvHomeScreen.kt (TV)
+- Device detection and responsive utilities: DeviceFormFactorDetector.kt, DeviceFormFactorComposition.kt, TvUtils.kt
+- Screens: HomeScreen.kt (phone/large phone), TabletHomeScreen.kt (tablet/foldable), TvHomeScreen.kt (TV)
 - Seekbar: WaveformSeeker.kt (Compose) and DynamicSeekbarView.kt (Android View)
 - Supporting components: HomeComponents.kt, HomeSections.kt
-- Orchestrator: MainActivity.kt determines device type and switches UI accordingly
+- Orchestrator: MainActivity.kt determines device form factor and switches UI accordingly
 
 ```mermaid
 graph TB
-MainActivity["MainActivity.kt<br/>Determines device type and orchestrates UI"] --> Utils["WindowSizeUtils.kt<br/>Window size & device type"]
+MainActivity["MainActivity.kt<br/>Determines device form factor and orchestrates UI"] --> Utils["DeviceFormFactorDetector.kt<br/>Form factor detection"]
 MainActivity --> TvCheck["TvUtils.kt<br/>TV detection"]
 MainActivity --> Phone["HomeScreen.kt<br/>Phone home"]
 MainActivity --> Tablet["TabletHomeScreen.kt<br/>Tablet home"]
@@ -134,21 +134,23 @@ end
   - Expanded: ≥ 840
 - DeviceType:
   - TV: detected via UiModeManager
-  - Tablet: smallestScreenWidthDp ≥ 600 OR Expanded window
+  - Tablet: (smallestScreenWidthDp ≥ 600 AND aspectRatio < 1.75) OR smallestScreenWidthDp ≥ 720
   - Phone: otherwise
-- Landscape detection supports responsive grids and lists.
+
+...
 
 ```mermaid
 flowchart TD
 Start(["rememberDeviceType"]) --> CheckTV["isTv(context)"]
 CheckTV --> |Yes| TV["DeviceType.TV"]
 CheckTV --> |No| CheckSW["smallestScreenWidthDp >= 600"]
-CheckSW --> |Yes| CheckWin["screenWidthDp >= 840"]
-CheckWin --> |Yes| Tablet["DeviceType.Tablet (Expanded)"]
-CheckWin --> |No| TabletMed["DeviceType.Tablet (Medium)"]
-CheckSW --> |No| Phone["DeviceType.Phone"]
+CheckSW --> |Yes| CheckAR["aspectRatio < 1.75?"]
+CheckAR --> |Yes| Tablet["DeviceType.Tablet"]
+CheckAR --> |No| CheckLarge["smallestScreenWidthDp >= 720?"]
+CheckLarge --> |Yes| Tablet
+CheckLarge --> |No| Phone["DeviceType.Phone"]
+CheckSW --> |No| Phone
 ```
-
 **Diagram sources**
 - [WindowSizeUtils.kt:99-112](file://app/src/main/java/com/suvojeet/suvmusic/ui/utils/WindowSizeUtils.kt#L99-L112)
 - [TvUtils.kt:8-11](file://app/src/main/java/com/suvojeet/suvmusic/util/TvUtils.kt#L8-L11)
@@ -283,7 +285,7 @@ WaveformSeeker --> DynamicSeekbarView : "fallback/view bridge"
   - Expanded: ≥ 840dp width
 - Device type switching:
   - TV: UiMode TELEVISION
-  - Tablet: smallestScreenWidthDp ≥ 600 OR Expanded window
+  - Tablet: smallestScreenWidthDp ≥ 600
   - Phone: default
 - Navigation:
   - Phone: bottom navigation
@@ -296,11 +298,14 @@ B --> |Yes| E["Expanded"]
 B --> |No| C{">= 600?"}
 C --> |Yes| F["Medium"]
 C --> |No| G["Compact"]
-A --> H["smallestScreenWidthDp"]
-H --> I{">= 600?"}
-I --> |Yes| J["Tablet"]
-I --> |No| K["Phone or TV"]
-K --> L{"isTv?"}
+H["smallestScreenWidthDp"] --> I{">= 600?"}
+I --> |Yes| J{ "aspectRatio < 1.75?" }
+J --> |Yes| Tablet["Tablet"]
+J --> |No| K{ "smallestScreenWidthDp >= 720?" }
+K --> |Yes| Tablet
+K --> |No| Phone["Phone or TV"]
+I --> |No| Phone
+Phone --> L{"isTv?"}
 L --> |Yes| M["TV"]
 L --> |No| N["Phone"]
 ```
