@@ -420,6 +420,30 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Start a "Random Mix" based on the user's personalized recommendations.
+     * Fetches a larger set of recommended songs, shuffles them, and starts playback.
+     */
+    fun playRandomMix() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                // Fetch a broader pool of recommendations (e.g., 50 songs)
+                val recommendations = recommendationEngine.getPersonalizedRecommendations(50)
+                if (recommendations.isNotEmpty()) {
+                    val shuffled = recommendations.shuffled()
+                    musicPlayer.playSong(shuffled[0], shuffled, 0)
+                } else {
+                    _uiState.update { it.copy(error = "No recommendations available for a random mix") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to start random mix") }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
     // ============================================================================================
     // Genre-Based Recommendation Sections
     // ============================================================================================

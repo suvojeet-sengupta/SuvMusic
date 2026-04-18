@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -612,6 +613,14 @@ fun HomeScreen(
                         onClick = {
                             isSpeedDialExpanded = false
                             onExploreClick("FEmusic_moods_and_genres", "Moods & genres")
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Random",
+                        icon = Icons.Default.Shuffle,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            viewModel.playRandomMix()
                         }
                     )
                     HomeSpeedDialAction(
