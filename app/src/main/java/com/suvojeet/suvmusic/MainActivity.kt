@@ -91,6 +91,14 @@ import com.suvojeet.suvmusic.pip.PipHelper
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.toRoute
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.suvojeet.suvmusic.ui.utils.LocalDeviceFormFactor
+import com.suvojeet.suvmusic.ui.utils.rememberDeviceFormFactor
+import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
@@ -212,25 +220,45 @@ class MainActivity : ComponentActivity() {
                 pureBlack = pureBlackEnabled,
                 albumArtColors = if (albumArtDynamicColorsEnabled && playerState.currentSong != null) albumArtColors else null
             ) {
-                SuvMusicApp(
-                    intent = intent,
-                    networkMonitor = networkMonitor,
-                    audioManager = audioManager,
-                    volumeKeyEvents = _volumeKeyEvents,
-                    downloadRepository = downloadRepository,
-                    sessionManager = sessionManager, // Pass the injected instance
-                    youTubeRepository = youTubeRepository,
-                    updateViewModel = updateViewModel,
-                    onPlaybackStateChanged = { hasSong -> 
-                        isSongPlaying = hasSong
-                        // Update PiP params whenever playback state changes
-                        // so the play/pause icon stays in sync
-                        pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
-                    },
-                    onVolumeSliderEnabledChanged = { enabled ->
-                        isVolumeSliderEnabled = enabled
-                    }
+                val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+                val foldingFeature by produceState<FoldingFeature?>(null) {
+                    WindowInfoTracker.getOrCreate(this@MainActivity)
+                        .windowLayoutInfo(this@MainActivity)
+                        .collect { info ->
+                            value = info.displayFeatures
+                                .filterIsInstance<FoldingFeature>()
+                                .firstOrNull()
+                        }
+                }
+                
+                val formFactor = rememberDeviceFormFactor(
+                    windowSizeClass = windowSizeClass,
+                    foldingFeature = foldingFeature
                 )
+
+                CompositionLocalProvider(
+                    LocalDeviceFormFactor provides formFactor
+                ) {
+                    SuvMusicApp(
+                        intent = intent,
+                        networkMonitor = networkMonitor,
+                        audioManager = audioManager,
+                        volumeKeyEvents = _volumeKeyEvents,
+                        downloadRepository = downloadRepository,
+                        sessionManager = sessionManager, // Pass the injected instance
+                        youTubeRepository = youTubeRepository,
+                        updateViewModel = updateViewModel,
+                        onPlaybackStateChanged = { hasSong -> 
+                            isSongPlaying = hasSong
+                            // Update PiP params whenever playback state changes
+                            // so the play/pause icon stays in sync
+                            pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
+                        },
+                        onVolumeSliderEnabledChanged = { enabled ->
+                            isVolumeSliderEnabled = enabled
+                        }
+                    )
+                }
             }
         }
     }
@@ -651,8 +679,8 @@ fun SuvMusicApp(
         }
     }
     
-    // Determine device type for adaptive layouts
-    val deviceType = com.suvojeet.suvmusic.ui.utils.rememberDeviceType()
+    // Determine device form factor for adaptive layouts
+    val formFactor = LocalDeviceFormFactor.current
 
     if (showWelcomeDialog) {
         com.suvojeet.suvmusic.ui.components.WelcomeOnboardingDialog(
@@ -671,7 +699,7 @@ fun SuvMusicApp(
 
         val density = androidx.compose.ui.platform.LocalDensity.current
         val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val navBarHeight = if (showBottomNav && formFactor != DeviceFormFactor.TV) 80.dp else 0.dp
         val miniPlayerHeight = if (showMiniPlayer) 64.dp else 0.dp
         val snackbarBottomPadding = when {
             isPlayerExpanded -> navBarPadding + 12.dp
@@ -683,7 +711,7 @@ fun SuvMusicApp(
              Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 bottomBar = {
-                    if (showBottomNav && deviceType == com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
+                    if (showBottomNav && formFactor.isPhoneLike) {
                         Column {
                             // Bottom navigation (phone only)
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
@@ -742,9 +770,9 @@ fun SuvMusicApp(
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Side navigation rail for TV and Tablet
-                    if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
-                        when (deviceType) {
-                            com.suvojeet.suvmusic.ui.utils.DeviceType.TV -> {
+                    if (showBottomNav && !formFactor.isPhoneLike) {
+                        when {
+                            formFactor == DeviceFormFactor.TV -> {
                                 com.suvojeet.suvmusic.ui.components.TvNavigationRail(
                                     currentDestination = currentDestination,
                                     onDestinationChange = { dest ->
@@ -758,7 +786,7 @@ fun SuvMusicApp(
                                     }
                                 )
                             }
-                            com.suvojeet.suvmusic.ui.utils.DeviceType.Tablet -> {
+                            formFactor.isTabletLike -> {
                                 com.suvojeet.suvmusic.ui.components.AdaptiveNavigationRail(
                                     currentDestination = currentDestination,
                                     onDestinationChange = { dest ->
@@ -850,7 +878,6 @@ fun SuvMusicApp(
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
-                            deviceType = deviceType,
                             dominantColors = currentDominantColors,
                             snackbarHostState = snackbarHostState
                         )
@@ -866,7 +893,7 @@ fun SuvMusicApp(
     if (showMiniPlayer) {
         val density = LocalDensity.current
         val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val navBarHeight = if (showBottomNav && formFactor != DeviceFormFactor.TV) 80.dp else 0.dp
         val bottomPaddingPx = with(density) { navBarPadding.toPx() + navBarHeight.toPx() }
 
         ExpandablePlayerSheet(
