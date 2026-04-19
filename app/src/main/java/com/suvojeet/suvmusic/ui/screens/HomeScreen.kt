@@ -734,7 +734,7 @@ fun HomeScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val infiniteTransition = rememberInfiniteTransition(label = "radioPulse")
-                    val pulse by infiniteTransition.animateFloat(
+                    val pulseState = infiniteTransition.animateFloat(
                         initialValue = 1f,
                         targetValue = 1.3f,
                         animationSpec = infiniteRepeatable(
@@ -748,6 +748,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(100.dp)
                             .graphicsLayer {
+                                val pulse = pulseState.value
                                 scaleX = pulse
                                 scaleY = pulse
                             },
