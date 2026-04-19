@@ -111,14 +111,20 @@ class HomeViewModel @Inject constructor(
      */
     private fun loadHomeContent(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            // Load base data first (HomeSections from YouTube/JioSaavn)
+            // 1. Prioritize base data (HomeSections from YouTube/JioSaavn)
+            // This ensures the primary UI components show up as fast as possible.
             loadData(forceRefresh)
             
-            // Parallelize remaining taste-profile-driven content
-            // We use separate launches here but they are coordinated from a single parent call
-            // to allow for incremental UI updates as they arrive.
+            // 2. Stagger background taste-profile-driven content.
+            // By delaying these, we give loadData priority for the API semaphore (max 5 concurrent).
+            kotlinx.coroutines.delay(1200L) 
+            
             launch { loadRecommendations() }
             launch { loadPersonalizedSections() }
+            
+            // 3. Further stagger secondary metadata and low-priority detections.
+            kotlinx.coroutines.delay(1000L)
+            
             launch { loadGenreSections() }
             launch { loadContextSections() }
             launch { loadLastFmRecommendations() }
@@ -249,7 +255,7 @@ class HomeViewModel @Inject constructor(
             
             // 2. Throttled Fresh Data Fetching
             val lastFetchTime = sessionManager.getLastHomeFetchTime(source)
-            val cooldown = 5 * 60 * 1000L // 5 minutes cooldown
+            val cooldown = 30 * 60 * 1000L // 30 minutes cooldown
             val isCooldownActive = System.currentTimeMillis() - lastFetchTime < cooldown
             
             if (forceRefresh || !isCooldownActive || _uiState.value.homeSections.isEmpty()) {
