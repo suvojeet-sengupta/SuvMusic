@@ -52,7 +52,7 @@ class RecommendationEngine @Inject constructor(
     companion object {
         private const val TAG = "RecommendationEngine"
         /** Max concurrent YouTube API calls to prevent throttling */
-        private const val MAX_CONCURRENT_API_CALLS = 3
+        private const val MAX_CONCURRENT_API_CALLS = 5
     }
 
     /** Application-scoped coroutine scope with SupervisorJob — survives child failures */
