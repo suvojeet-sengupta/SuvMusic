@@ -109,6 +109,10 @@ android {
     ndkVersion = "27.0.12077973" // Stable NDK 27
 }
 
+composeCompiler {
+    stabilityConfigurationFile = rootProject.file("compose-stability.conf")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
