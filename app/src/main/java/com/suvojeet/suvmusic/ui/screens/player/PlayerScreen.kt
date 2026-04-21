@@ -221,11 +221,6 @@ fun PlayerScreen(
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 24f)
     val lyricsBlur by sessionManager.lyricsBlurFlow.collectAsStateWithLifecycle(initialValue = 0f)
 
-    // Seek/Progress State
-    val currentProgress = playerState.progress
-    val currentPosition = playerState.currentPosition
-    val currentDuration = playerState.duration
-
     // Audio Effects State
     val eqEnabled by playerViewModel.getEqEnabled().collectAsStateWithLifecycle(initialValue = false)
     val eqBands by playerViewModel.getEqBands().collectAsStateWithLifecycle(initialValue = FloatArray(10) { 0f })
@@ -313,17 +308,27 @@ fun PlayerScreen(
     var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
     var seekDebounceJob by remember { mutableStateOf<Job?>(null) }
 
-    val handleDoubleTapSeek: (Boolean) -> Unit = { forward ->
-        val current = pendingSeekPosition ?: playerState.currentPosition
-        val seekAmount = 10000L // default
-        val newPos = if (forward) (current + seekAmount).coerceAtMost(playerState.duration) else (current - seekAmount).coerceAtLeast(0)
-        pendingSeekPosition = newPos
-        seekDebounceJob?.cancel()
-        seekDebounceJob = coroutineScope.launch {
-            delay(400)
-            actions.onSeekTo(newPos)
-            delay(600)
-            pendingSeekPosition = null
+    val playerStateProvider by androidx.compose.runtime.rememberUpdatedState(playerState)
+
+    val progressProvider = remember { { playerStateProvider.progress } }
+    val positionProvider = remember { { playerStateProvider.currentPosition } }
+    val durationProvider = remember { { playerStateProvider.duration } }
+
+    val handleDoubleTapSeek: (Boolean) -> Unit = remember {
+        { forward ->
+            val currentPos = playerStateProvider.currentPosition
+            val duration = playerStateProvider.duration
+            val current = pendingSeekPosition ?: currentPos
+            val seekAmount = 10000L // default
+            val newPos = if (forward) (current + seekAmount).coerceAtMost(duration) else (current - seekAmount).coerceAtLeast(0)
+            pendingSeekPosition = newPos
+            seekDebounceJob?.cancel()
+            seekDebounceJob = coroutineScope.launch {
+                delay(400)
+                actions.onSeekTo(newPos)
+                delay(600)
+                pendingSeekPosition = null
+            }
         }
     }
 
@@ -374,9 +379,9 @@ fun PlayerScreen(
                                         isSwitchingMode = isSwitchingMode,
                                         sleepTimerOption = state.sleepTimerOption,
                                         sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        currentProgress = currentProgress,
-                                        currentPosition = currentPosition,
-                                        currentDuration = currentDuration,
+                                        progressProvider = progressProvider,
+                                        positionProvider = positionProvider,
+                                        durationProvider = durationProvider,
                                         isAIEnabled = isAIAutoModeEnabled,
                                         aiStatus = aiAutoStatus,
                                         windowSizeClass = windowSizeClass
@@ -404,9 +409,9 @@ fun PlayerScreen(
                                         isSwitchingMode = isSwitchingMode,
                                         sleepTimerOption = state.sleepTimerOption,
                                         sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        currentProgress = currentProgress,
-                                        currentPosition = currentPosition,
-                                        currentDuration = currentDuration,
+                                        progressProvider = progressProvider,
+                                        positionProvider = positionProvider,
+                                        durationProvider = durationProvider,
                                         isAIEnabled = isAIAutoModeEnabled,
                                         aiStatus = aiAutoStatus,
                                         windowSizeClass = windowSizeClass,
@@ -436,9 +441,9 @@ fun PlayerScreen(
                                         isSwitchingMode = isSwitchingMode,
                                         sleepTimerOption = state.sleepTimerOption,
                                         sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        currentProgress = currentProgress,
-                                        currentPosition = currentPosition,
-                                        currentDuration = currentDuration,
+                                        progressProvider = progressProvider,
+                                        positionProvider = positionProvider,
+                                        durationProvider = durationProvider,
                                         isAIEnabled = isAIAutoModeEnabled,
                                         aiStatus = aiAutoStatus,
                                         windowSizeClass = windowSizeClass
@@ -618,7 +623,7 @@ fun BoxScope.OverlaysContent(
         // Lyrics View
         AnimatedVisibility(visible = activeOverlay is PlayerOverlay.Lyrics, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
             LyricsScreen(
-                lyrics = state.lyrics, isFetching = state.isFetchingLyrics, currentTimeProvider = { playerState.currentPosition }, artworkUrl = song?.thumbnailUrl,
+                lyrics = state.lyrics, isFetching = state.isFetchingLyrics, currentTimeProvider = positionProvider, artworkUrl = song?.thumbnailUrl,
                 onClose = { if (currentOverlay is PlayerOverlay.Lyrics) onOverlayChange(PlayerOverlay.None) }, isDarkTheme = isAppInDarkTheme, onSeekTo = actions.onSeekTo, songTitle = song?.title ?: "",
                 artistName = song?.artist ?: "", songId = song?.id ?: "", duration = playerState.duration, selectedProvider = state.selectedLyricsProvider,
                 enabledProviders = state.enabledLyricsProviders, onProviderChange = actions.onLyricsProviderChange, onImportLyrics = actions.onImportLyrics, lyricsTextPosition = lyricsTextPosition,
