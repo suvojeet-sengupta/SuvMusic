@@ -463,7 +463,10 @@ fun PlayerScreen(
                             isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                             lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
                             lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
-                            sessionManager = sessionManager, coroutineScope = coroutineScope
+                            sessionManager = sessionManager, coroutineScope = coroutineScope,
+                            progressProvider = progressProvider,
+                            positionProvider = positionProvider,
+                            durationProvider = durationProvider
                         )
                     }
                 }
@@ -482,7 +485,10 @@ fun PlayerScreen(
                     lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
                     sessionManager = sessionManager, coroutineScope = coroutineScope, isFullScreen = isFullScreen,
                     eqEnabled = eqEnabled, eqBands = eqBands, eqPreamp = eqPreamp, bassBoost = bassBoost, virtualizer = virtualizer,
-                    isExpanded = isExpanded
+                    isExpanded = isExpanded,
+                    progressProvider = progressProvider,
+                    positionProvider = positionProvider,
+                    durationProvider = durationProvider
                 )
             }
         }
@@ -498,7 +504,10 @@ fun AdaptiveSupportingContent(
     lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition,
     lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
     lyricsLineSpacing: Float, lyricsFontSize: Float, lyricsBlur: Float, sessionManager: SessionManager,
-    coroutineScope: kotlinx.coroutines.CoroutineScope
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    progressProvider: () -> Float,
+    positionProvider: () -> Long,
+    durationProvider: () -> Long
 ) {
     val song = state.playbackInfo.currentSong
     val playerState = state.playerState
@@ -523,7 +532,7 @@ fun AdaptiveSupportingContent(
         }
         is PlayerOverlay.Lyrics -> {
             LyricsScreen(
-                lyrics = state.lyrics, isFetching = state.isFetchingLyrics, currentTimeProvider = { playerState.currentPosition }, artworkUrl = song?.thumbnailUrl,
+                lyrics = state.lyrics, isFetching = state.isFetchingLyrics, currentTimeProvider = positionProvider, artworkUrl = song?.thumbnailUrl,
                 onClose = { onOverlayChange(PlayerOverlay.None) }, isDarkTheme = isAppInDarkTheme, onSeekTo = actions.onSeekTo, songTitle = song?.title ?: "",
                 artistName = song?.artist ?: "", songId = song?.id ?: "", duration = playerState.duration, selectedProvider = state.selectedLyricsProvider,
                 enabledProviders = state.enabledLyricsProviders, onProviderChange = actions.onLyricsProviderChange, onImportLyrics = actions.onImportLyrics, lyricsTextPosition = lyricsTextPosition,
@@ -580,7 +589,10 @@ fun BoxScope.OverlaysContent(
     lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
     lyricsLineSpacing: Float, lyricsFontSize: Float, lyricsBlur: Float, sessionManager: SessionManager, coroutineScope: kotlinx.coroutines.CoroutineScope,
     isFullScreen: Boolean, eqEnabled: Boolean, eqBands: FloatArray, eqPreamp: Float, bassBoost: Float, virtualizer: Float,
-    isExpanded: Boolean = false
+    isExpanded: Boolean = false,
+    progressProvider: () -> Float,
+    positionProvider: () -> Long,
+    durationProvider: () -> Long
 ) {
     val context = LocalContext.current
     val song = state.playbackInfo.currentSong
