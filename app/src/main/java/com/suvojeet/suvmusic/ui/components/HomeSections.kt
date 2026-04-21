@@ -150,18 +150,23 @@ fun VerticalListSection(
             displayItems.forEach { item ->
                 when (item) {
                     is HomeItem.SongItem -> {
+                         val onCardClick = remember(item.song, songs) {
+                             {
+                                 val index = songs.indexOf(item.song)
+                                 if (index != -1) onSongClick(songs, index)
+                             }
+                         }
+                         val onMoreClick = remember(item.song) { { onSongMoreClick(item.song) } }
+                         
                          MusicCard(
                             song = item.song,
-                            onClick = {
-                                val index = songs.indexOf(item.song)
-                                if (index != -1) onSongClick(songs, index)
-                            },
-                             onMoreClick = { onSongMoreClick(item.song) },
+                            onClick = onCardClick,
+                             onMoreClick = onMoreClick,
                              backgroundColor = Color.Transparent
                         )
                     }
                     is HomeItem.PlaylistItem -> {
-                        val tempSong = remember(item.playlist.id) {
+                        val tempSong = remember(item.playlist) {
                             Song(
                                 id = item.playlist.id,
                                 title = item.playlist.name,
@@ -172,14 +177,15 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
+                        val onPlaylistCardClick = remember(item.playlist) { { onPlaylistClick(item.playlist) } }
                          MusicCard(
                             song = tempSong,
-                            onClick = { onPlaylistClick(item.playlist) },
+                            onClick = onPlaylistCardClick,
                             backgroundColor = Color.Transparent
                         )
                     }
                     is HomeItem.AlbumItem -> {
-                        val tempSong = remember(item.album.id) {
+                        val tempSong = remember(item.album) {
                             Song(
                                 id = item.album.id,
                                 title = item.album.title,
@@ -190,9 +196,10 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
+                        val onAlbumCardClick = remember(item.album) { { onAlbumClick(item.album) } }
                         MusicCard(
                             song = tempSong,
-                            onClick = { onAlbumClick(item.album) },
+                            onClick = onAlbumCardClick,
                             backgroundColor = Color.Transparent
                         )
                     }
@@ -256,30 +263,42 @@ fun LargeCardWithListSection(
                 otherItems.forEach { item ->
                     when (item) {
                         is HomeItem.SongItem -> {
-                            MusicCard(
-                                song = item.song,
-                                onClick = {
+                            val onCardClick = remember(item.song) {
+                                {
                                     val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
                                     val index = songs.indexOf(item.song)
                                     if (index != -1) onSongClick(songs, index)
-                                },
-                                onMoreClick = { onSongMoreClick(item.song) },
+                                }
+                            }
+                            val onMoreClick = remember(item.song) { { onSongMoreClick(item.song) } }
+                            MusicCard(
+                                song = item.song,
+                                onClick = onCardClick,
+                                onMoreClick = onMoreClick,
                                 modifier = Modifier.height(60.dp)
                             )
                         }
                         is HomeItem.PlaylistItem -> {
                              // Simplified rendering for list items if not Song
+                             val tempSong = remember(item.playlist) {
+                                 Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                             }
+                             val onPlaylistCardClick = remember(item.playlist) { { onPlaylistClick(item.playlist) } }
                              MusicCard(
-                                song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                onClick = { onPlaylistClick(item.playlist) },
+                                song = tempSong,
+                                onClick = onPlaylistCardClick,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
                         }
                          is HomeItem.AlbumItem -> {
+                             val tempSong = remember(item.album) {
+                                 Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                             }
+                             val onAlbumCardClick = remember(item.album) { { onAlbumClick(item.album) } }
                              MusicCard(
-                                song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                onClick = { onAlbumClick(item.album) },
+                                song = tempSong,
+                                onClick = onAlbumCardClick,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
@@ -870,10 +889,12 @@ fun NewReleaseCard(
         ImageUtils.getHighResThumbnailUrl(imageUrl, size = 544)
     }
     
-    val imageRequest = ImageRequest.Builder(context)
-        .data(highResThumbnail)
-        .crossfade(true)
-        .build()
+    val imageRequest = remember(highResThumbnail, context) {
+        ImageRequest.Builder(context)
+            .data(highResThumbnail)
+            .crossfade(true)
+            .build()
+    }
 
     androidx.compose.material3.Card(
         modifier = modifier

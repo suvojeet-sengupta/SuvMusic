@@ -85,9 +85,9 @@ fun YTMusicPlayerStyle(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -100,7 +100,7 @@ fun YTMusicPlayerStyle(
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, playerState.isVideoMode,
             actions.onToggleVideoMode, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, player, isFullScreen, onSetFullScreen, isSwitchingMode,
-            sleepTimerOption, sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration,
+            sleepTimerOption, sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider,
             isAIEnabled, aiStatus, windowSizeClass
         )
     } else {
@@ -112,7 +112,7 @@ fun YTMusicPlayerStyle(
             onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration,
+            sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider,
             isAIEnabled, aiStatus, windowSizeClass
         )
     }
@@ -151,9 +151,9 @@ private fun YTMusicPortraitContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -290,9 +290,9 @@ private fun YTMusicPortraitContent(
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
 
-            SeekbarSection(combinedLoading, dominantColors, currentProgress, playbackInfo.isPlaying, actions, currentDuration, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
 
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.05f else 0.08f))
 
@@ -330,9 +330,9 @@ private fun YTMusicLandscapeContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -427,9 +427,9 @@ private fun YTMusicLandscapeContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            SeekbarSection(combinedLoading, dominantColors, currentProgress, playbackInfo.isPlaying, actions, currentDuration, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
             
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(12.dp))
             
             Box(modifier = Modifier.graphicsLayer { alpha = controlsAlpha }) {
@@ -457,10 +457,10 @@ private fun YTMusicLandscapeContent(
 private fun SeekbarSection(
     combinedLoading: Boolean,
     dominantColors: DominantColors,
-    currentProgress: Float,
+    progressProvider: () -> Float,
     isPlaying: Boolean,
     actions: PlayerScreenActions,
-    currentDuration: Long,
+    durationProvider: () -> Long,
     currentSeekbarStyle: SeekbarStyle,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
     sponsorSegments: List<SponsorSegment>
@@ -472,13 +472,14 @@ private fun SeekbarSection(
         if (combinedLoading) {
             M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
         } else {
+            val duration = durationProvider()
             WaveformSeeker(
-                progressProvider = { currentProgress }, isPlaying = isPlaying,
-                onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
+                progressProvider = progressProvider, isPlaying = isPlaying,
+                onSeek = { actions.onSeekTo((it * duration).toLong()) },
                 modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
                 inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
                 initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
-                duration = currentDuration, sponsorSegments = sponsorSegments
+                duration = duration, sponsorSegments = sponsorSegments
             )
         }
     }

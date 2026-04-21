@@ -89,9 +89,9 @@ fun ClassicPlayerStyle(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -103,7 +103,7 @@ fun ClassicPlayerStyle(
             onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
             onSetFullScreen, isSwitchingMode, sleepTimerOption, sleepTimerRemainingMs,
-            currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus, windowSizeClass
+            progressProvider, positionProvider, durationProvider, isAIEnabled, aiStatus, windowSizeClass
         )
     } else {
         ClassicPortraitContent(
@@ -113,7 +113,7 @@ fun ClassicPlayerStyle(
             onShowRelated, onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus, windowSizeClass
+            sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider, isAIEnabled, aiStatus, windowSizeClass
         )
     }
 }
@@ -151,9 +151,9 @@ private fun ClassicPortraitContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -254,22 +254,9 @@ private fun ClassicPortraitContent(
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
 
-            Box(modifier = Modifier.fillMaxWidth().height(if (isVeryShort) 44.dp else 60.dp), contentAlignment = Alignment.Center) {
-                if (combinedLoading) {
-                    M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
-                } else {
-                    WaveformSeeker(
-                        progressProvider = { currentProgress }, isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
-                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                        initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
-                        duration = currentDuration, sponsorSegments = sponsorSegments
-                    )
-                }
-            }
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments, isVeryShort)
 
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
 
@@ -302,9 +289,9 @@ private fun ClassicLandscapeContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
     aiStatus: String? = null,
     windowSizeClass: WindowSizeClass? = null
@@ -345,22 +332,9 @@ private fun ClassicLandscapeContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
-                if (combinedLoading) {
-                    M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
-                } else {
-                    WaveformSeeker(
-                        progressProvider = { currentProgress }, isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
-                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                        initialStyle = currentSeekbarStyle, onStyleChange = { },
-                        duration = currentDuration, sponsorSegments = sponsorSegments
-                    )
-                }
-            }
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, { }, sponsorSegments, false)
             
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(12.dp))
             
             ClassicPlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
@@ -596,6 +570,39 @@ private fun ClassicBottomActions(
             IconButton(onClick = onQueueClick, modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
+        }
+    }
+}
+
+@Composable
+private fun SeekbarSection(
+    combinedLoading: Boolean,
+    dominantColors: DominantColors,
+    progressProvider: () -> Float,
+    isPlaying: Boolean,
+    actions: PlayerScreenActions,
+    durationProvider: () -> Long,
+    currentSeekbarStyle: SeekbarStyle,
+    onSeekbarStyleChange: (SeekbarStyle) -> Unit,
+    sponsorSegments: List<SponsorSegment>,
+    isVeryShort: Boolean
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(if (isVeryShort) 44.dp else 60.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (combinedLoading) {
+            M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
+        } else {
+            val duration = durationProvider()
+            WaveformSeeker(
+                progressProvider = progressProvider, isPlaying = isPlaying,
+                onSeek = { actions.onSeekTo((it * duration).toLong()) },
+                modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
+                inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
+                duration = duration, sponsorSegments = sponsorSegments
+            )
         }
     }
 }

@@ -1,11 +1,13 @@
 package com.suvojeet.suvmusic.core.model
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 
 /**
  * Represents a song/track that can be played.
  * Can originate from YouTube, YouTube Music, or local storage.
  */
+@Immutable
 data class Song(
     val id: String,
     val title: String,
