@@ -42,16 +42,6 @@ jobs:
         LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
         LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
 
-    - name: Build Release AAB
-      run: ./gradlew bundleRelease --no-daemon
-      env:
-        KEYSTORE_PATH: ${{ github.workspace }}/release-keystore.jks
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
-        LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
-
     - name: Generate Release Notes
       id: release_notes
       run: |
@@ -110,13 +100,10 @@ jobs:
       run: |
         VERSION="${{ steps.release_notes.outputs.version }}"
         APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-        AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
-        
+
         cp "$APK_FILE" "SuvMusic-v$VERSION.apk"
-        cp "$AAB_FILE" "SuvMusic-v$VERSION.aab"
-        
+
         echo "apk_path=SuvMusic-v$VERSION.apk" >> $GITHUB_OUTPUT
-        echo "aab_path=SuvMusic-v$VERSION.aab" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
@@ -130,6 +117,5 @@ jobs:
         fail_on_unmatched_files: true
         files: |
           ${{ steps.extract_builds.outputs.apk_path }}
-          ${{ steps.extract_builds.outputs.aab_path }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
