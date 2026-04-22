@@ -16,7 +16,8 @@ object DotsStyle {
         isPlaying: Boolean,
         wavePhase: Float,
         activeColor: Color,
-        inactiveColor: Color
+        inactiveColor: Color,
+        isDragging: Boolean
     ) {
         val width = size.width
         val height = size.height
@@ -24,13 +25,14 @@ object DotsStyle {
         val progressX = progress * width
         val dotCount = 30
         val dotSpacing = width / dotCount
+        val trackHeight = 6.dp.toPx()
         
         // Draw unplayed straight line
         drawLine(
             color = inactiveColor.copy(alpha = 0.3f),
             start = Offset(progressX, centerY),
             end = Offset(width, centerY),
-            strokeWidth = 4.dp.toPx(),
+            strokeWidth = trackHeight,
             cap = androidx.compose.ui.graphics.StrokeCap.Round
         )
 
@@ -39,7 +41,7 @@ object DotsStyle {
             val isPast = x < progressX
             
             if (isPast) {
-                val baseRadius = 4.dp.toPx()
+                val baseRadius = 3.dp.toPx()
                 val animatedRadius = if (isPlaying) {
                     val phase = (wavePhase + i * 20) % 360
                     val wave = sin(Math.toRadians(phase.toDouble())).toFloat()
@@ -56,17 +58,7 @@ object DotsStyle {
             }
         }
         
-        // Main indicator
-        drawCircle(
-            color = Color.White,
-            radius = 10.dp.toPx(),
-            center = Offset(progressX, centerY)
-        )
-        drawCircle(
-            color = activeColor,
-            radius = 7.dp.toPx(),
-            center = Offset(progressX, centerY)
-        )
+        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
     }
     
     fun DrawScope.drawPreview(
