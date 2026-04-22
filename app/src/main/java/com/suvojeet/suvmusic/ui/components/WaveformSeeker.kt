@@ -65,6 +65,7 @@ import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveLineStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveformStyle
+import com.suvojeet.suvmusic.ui.components.seekbar.drawProgressIndicator
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import kotlin.random.Random
@@ -272,7 +273,8 @@ fun WaveformSeeker(
                                         isPlaying = isPlaying,
                                         wavePhase = wavePhase,
                                         activeColor = activeColor,
-                                        inactiveColor = inactiveColor
+                                        inactiveColor = inactiveColor,
+                                        isDragging = isDragging
                                     )
                                 }
                                 SeekbarStyle.CLASSIC -> with(ClassicStyle) {
@@ -289,7 +291,8 @@ fun WaveformSeeker(
                                         isPlaying = isPlaying,
                                         wavePhase = wavePhase,
                                         activeColor = activeColor,
-                                        inactiveColor = inactiveColor
+                                        inactiveColor = inactiveColor,
+                                        isDragging = isDragging
                                     )
                                 }
                                 SeekbarStyle.GRADIENT_BAR -> with(GradientBarStyle) {
@@ -302,20 +305,19 @@ fun WaveformSeeker(
                                 }
                                 SeekbarStyle.NEON -> {
                                     val centerY = size.height / 2
-                                    val strokeWidth = if (isDragging) 8.dp.toPx() else 4.dp.toPx()
+                                    val trackHeight = 6.dp.toPx()
+                                    val progressX = currentProgress * size.width
                                     
                                     // Inactive line
                                     drawLine(
                                         color = inactiveColor.copy(alpha = 0.3f),
                                         start = Offset(0f, centerY),
                                         end = Offset(size.width, centerY),
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = trackHeight,
                                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                                     )
                                     
                                     // Active glowing line
-                                    val progressX = currentProgress * size.width
-                                    
                                     // Glow effect
                                     drawIntoCanvas { c ->
                                         val paint = Paint().asFrameworkPaint().apply {
@@ -329,24 +331,18 @@ fun WaveformSeeker(
                                         color = activeColor,
                                         start = Offset(0f, centerY),
                                         end = Offset(progressX, centerY),
-                                        strokeWidth = strokeWidth,
+                                        strokeWidth = trackHeight,
                                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                                     )
                                     
-                                    // Animated pulse on end of progress
-                                    if (isPlaying) {
-                                        val pulseSize = (12.dp.toPx() * (1f + sin(wavePhase * 0.1f) * 0.2f))
-                                        drawCircle(
-                                            color = activeColor,
-                                            radius = pulseSize / 2,
-                                            center = Offset(progressX, centerY)
-                                        )
-                                    }
+                                    drawProgressIndicator(progressX, centerY, activeColor, isDragging)
                                 }
                                 SeekbarStyle.BLOCKS -> {
                                     val blockCount = 30
                                     val blockWidth = size.width / blockCount
                                     val padding = 4.dp.toPx()
+                                    val progressX = currentProgress * size.width
+                                    val centerY = size.height / 2
                                     
                                     for (i in 0 until blockCount) {
                                         val startX = i * blockWidth + padding / 2
@@ -355,11 +351,13 @@ fun WaveformSeeker(
                                         
                                         drawRoundRect(
                                             color = color,
-                                            topLeft = Offset(startX, size.height * 0.2f),
-                                            size = Size(blockWidth - padding, size.height * 0.6f),
-                                            cornerRadius = CornerRadius(4.dp.toPx())
+                                            topLeft = Offset(startX, size.height * 0.25f),
+                                            size = Size(blockWidth - padding, size.height * 0.5f),
+                                            cornerRadius = CornerRadius(2.dp.toPx())
                                         )
                                     }
+                                    
+                                    drawProgressIndicator(progressX, centerY, activeColor, isDragging)
                                 }
                                 SeekbarStyle.MATERIAL -> {
                                     // Handled outside canvas via Slider
