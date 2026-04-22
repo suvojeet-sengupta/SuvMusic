@@ -45,6 +45,9 @@ import com.suvojeet.suvmusic.core.model.ArtistPreview
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.BounceButton
+import com.suvojeet.suvmusic.ui.components.bounceClick
+import com.suvojeet.suvmusic.util.ImageUtils
+import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.components.NewReleaseCard
 import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.components.player.MultipleArtistsDialog
@@ -439,15 +442,11 @@ fun ImmersiveArtistHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(400.dp) // Reduced height
+            .height(420.dp)
     ) {
-        val highResThumbnail = artist.thumbnailUrl?.let { url ->
-            url.replace(Regex("w\\d+-h\\d+"), "w1200-h1200")
-                .replace(Regex("=w\\d+"), "=w1200")
-                .replace(Regex("=s\\d+"), "=s1200")
-        }
+        val highResThumbnail = ImageUtils.getHighResThumbnailUrl(artist.thumbnailUrl, size = 1200)
 
-        // Background Image with Parallax-ready feel
+        // Background Image
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(highResThumbnail)
@@ -458,7 +457,7 @@ fun ImmersiveArtistHeader(
             contentScale = ContentScale.Crop
         )
 
-        // Multi-layered Gradient Overlay
+        // Standardized Gradient Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -466,11 +465,11 @@ fun ImmersiveArtistHeader(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Transparent,
-                            dominantColors.primary.copy(alpha = 0.4f),
+                            dominantColors.primary.copy(alpha = 0.2f),
                             dominantColors.primary.copy(alpha = 0.8f),
                             MaterialTheme.colorScheme.background
-                        )
+                        ),
+                        startY = 100f
                     )
                 )
         )
@@ -484,34 +483,36 @@ fun ImmersiveArtistHeader(
         ) {
             
             if (artist.subscribers != null) {
-                 Row(
-                     verticalAlignment = Alignment.CenterVertically,
-                     modifier = Modifier
-                         .clip(RoundedCornerShape(50))
-                         .background(dominantColors.accent.copy(alpha = 0.2f))
-                         .padding(horizontal = 8.dp, vertical = 4.dp)
+                 Surface(
+                     shape = PillShape,
+                     color = dominantColors.accent.copy(alpha = 0.2f),
+                     modifier = Modifier.padding(bottom = 8.dp)
                  ) {
-                     Icon(
-                         imageVector = Icons.Default.Verified,
-                         contentDescription = null,
-                         tint = dominantColors.accent,
-                         modifier = Modifier.size(14.dp)
-                     )
-                     Spacer(modifier = Modifier.width(4.dp))
-                     Text(
-                         text = "Official Artist",
-                         style = MaterialTheme.typography.labelSmall,
-                         color = Color.White.copy(alpha = 0.9f),
-                         fontWeight = FontWeight.Bold
-                     )
+                     Row(
+                         verticalAlignment = Alignment.CenterVertically,
+                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                     ) {
+                         Icon(
+                             imageVector = Icons.Default.Verified,
+                             contentDescription = null,
+                             tint = dominantColors.accent,
+                             modifier = Modifier.size(14.dp)
+                         )
+                         Spacer(modifier = Modifier.width(6.dp))
+                         Text(
+                             text = "OFFICIAL ARTIST",
+                             style = MaterialTheme.typography.labelSmall,
+                             color = Color.White.copy(alpha = 0.9f),
+                             fontWeight = FontWeight.ExtraBold,
+                             letterSpacing = 1.sp
+                         )
+                     }
                  }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = artist.name,
-                style = MaterialTheme.typography.headlineLarge.copy( // Reduced from displayLarge
+                style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-1.5).sp,
                     lineHeight = 44.sp
@@ -523,7 +524,7 @@ fun ImmersiveArtistHeader(
 
             if (artist.subscribers != null) {
                 Text(
-                    text = "${artist.subscribers} fans",
+                    text = "${artist.subscribers} listeners",
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(top = 4.dp)
@@ -538,7 +539,7 @@ fun ImmersiveArtistHeader(
             ) {
                 BounceButton(
                     onClick = onPlayAll,
-                    size = 56.dp, // Reduced from 64
+                    size = 56.dp,
                     shape = CircleShape,
                     modifier = Modifier.background(dominantColors.accent, CircleShape)
                 ) {
@@ -552,44 +553,44 @@ fun ImmersiveArtistHeader(
                 
                 Row(
                     modifier = Modifier
-                        .height(48.dp) // Reduced from 56
-                        .clip(RoundedCornerShape(24.dp))
+                        .height(48.dp)
+                        .clip(PillShape)
                         .background(Color.White.copy(alpha = 0.15f)),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
                         onClick = onShuffle,
-                        modifier = Modifier.padding(horizontal = 2.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
                         Icon(
                              imageVector = Icons.Default.Shuffle,
                              contentDescription = stringResource(R.string.action_shuffle),
                              tint = Color.White,
-                             modifier = Modifier.size(20.dp)
+                             modifier = Modifier.size(22.dp)
                         )
                     }
                     
                     VerticalDivider(
-                        modifier = Modifier.height(20.dp).width(1.dp),
+                        modifier = Modifier.height(24.dp).width(1.dp),
                         color = Color.White.copy(alpha = 0.2f)
                     )
 
                     IconButton(
                         onClick = onStartRadio,
-                        modifier = Modifier.padding(horizontal = 2.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
                          Icon(
                              imageVector = Icons.Default.Radio,
                              contentDescription = stringResource(R.string.action_start_radio),
                              tint = Color.White,
-                             modifier = Modifier.size(20.dp)
+                             modifier = Modifier.size(22.dp)
                          )
                     }
                 }
 
                 Button(
                     onClick = onSubscribe,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = PillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isSubscribed) Color.White.copy(alpha = 0.2f) else Color.White,
                         contentColor = if (isSubscribed) Color.White else Color.Black
@@ -604,9 +605,10 @@ fun ImmersiveArtistHeader(
                         )
                     } else {
                         Text(
-                            text = if (isSubscribed) stringResource(R.string.action_following) else stringResource(R.string.action_follow),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            text = if (isSubscribed) stringResource(R.string.action_following).uppercase() else stringResource(R.string.action_follow).uppercase(),
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.labelLarge,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
@@ -625,29 +627,33 @@ fun LatestReleaseSection(
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Text(
-            text = "Latest from $artistName",
-            style = MaterialTheme.typography.titleMedium, // Reduced
+            text = "LATEST FROM $artistName",
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.sp
         )
         Spacer(modifier = Modifier.height(12.dp))
 
         Surface(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp), // Reduced
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .bounceClick(onClick = onClick)
+                .dpadFocusable(onClick = onClick, shape = SquircleShape),
+            shape = SquircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            tonalElevation = 2.dp
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = album.thumbnailUrl,
+                    model = ImageUtils.getHighResThumbnailUrl(album.thumbnailUrl, size = 160),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(80.dp) // Reduced from 100
-                        .clip(RoundedCornerShape(12.dp)),
+                        .size(80.dp)
+                        .clip(SquircleShape),
                     contentScale = ContentScale.Crop
                 )
                 
@@ -677,7 +683,7 @@ fun LatestReleaseSection(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
                     tint = dominantColors.accent,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -693,73 +699,81 @@ fun TopSongRow(
     onArtistClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp), // Reduced
-        verticalAlignment = Alignment.CenterVertically
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = RoundedCornerShape(12.dp)),
+        color = Color.Transparent
     ) {
-        Text(
-            text = index.toString(),
-            style = MaterialTheme.typography.bodyMedium, // Reduced
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.width(28.dp),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold
-        )
-
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(song.thumbnailUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
+        Row(
             modifier = Modifier
-                .size(48.dp) // Reduced from 52
-                .clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop
-        )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge, // Reduced
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.SemiBold
+                text = index.toString(),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.width(32.dp),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Black
             )
+
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 120))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = dominantColors.accent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { onArtistClick() },
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            
             Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodySmall,
-                color = dominantColors.accent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable { onArtistClick() },
+                text = formatDuration(song.duration),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp),
                 fontWeight = FontWeight.Medium
             )
-        }
-        
-        Text(
-            text = formatDuration(song.duration),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-        
-        IconButton(
-            onClick = { /* More options */ },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
+            
+            IconButton(
+                onClick = { /* More options */ },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -772,31 +786,35 @@ fun ArtistContentCard(
     imageUrl: String?,
     dominantColors: DominantColors,
     onClick: () -> Unit,
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(14.dp)
+    shape: androidx.compose.ui.graphics.Shape = SquircleShape
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(140.dp) // Reduced from 164
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .width(150.dp)
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.size(150.dp),
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            tonalElevation = 2.dp
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(ImageUtils.getHighResThumbnailUrl(imageUrl, size = 300))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -808,7 +826,8 @@ fun ArtistContentCard(
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -823,26 +842,31 @@ fun ArtistCircleCard(
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(110.dp) // Reduced from 132
-            .clickable(onClick = onClick),
+            .width(120.dp)
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = CircleShape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(artist.thumbnailUrl)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(110.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.size(120.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            tonalElevation = 2.dp
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(ImageUtils.getHighResThumbnailUrl(artist.thumbnailUrl, size = 240))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = artist.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -862,51 +886,54 @@ fun ArtistVideoCard(
     val context = LocalContext.current
     Column(
         modifier = Modifier
-            .width(240.dp) // Reduced from 280
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .width(260.dp)
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
     ) {
-        Box(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f/9f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black)
+                .aspectRatio(16f/9f),
+            shape = SquircleShape,
+            color = Color.Black,
+            tonalElevation = 4.dp
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(video.thumbnailUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                 Icon(
-                     imageVector = Icons.Default.PlayCircleFilled,
-                     contentDescription = null,
-                     tint = Color.White.copy(alpha = 0.9f),
-                     modifier = Modifier.size(40.dp)
-                 )
+            Box {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(ImageUtils.getHighResThumbnailUrl(video.thumbnailUrl, size = 520))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                     Icon(
+                         imageVector = Icons.Default.PlayCircleFilled,
+                         contentDescription = null,
+                         tint = Color.White.copy(alpha = 0.9f),
+                         modifier = Modifier.size(48.dp)
+                     )
+                }
             }
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         
         Text(
             text = video.title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -914,9 +941,11 @@ fun ArtistVideoCard(
         )
         
         Text(
-            text = "Music Video",
+            text = "MUSIC VIDEO",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.5.sp
         )
     }
 }
@@ -928,58 +957,72 @@ fun AboutArtistCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-     Box(
+     Surface(
          modifier = Modifier
              .fillMaxWidth()
              .padding(horizontal = 20.dp)
-             .height(280.dp) // Reduced from 320
-             .clip(RoundedCornerShape(24.dp)) // Reduced from 32
-             .clickable(onClick = onClick)
+             .height(300.dp)
+             .bounceClick(onClick = onClick)
+             .dpadFocusable(onClick = onClick, shape = SquircleShape),
+         shape = SquircleShape,
+         tonalElevation = 4.dp
      ) {
-         AsyncImage(
-             model = ImageRequest.Builder(context)
-                 .data(artist.thumbnailUrl)
-                 .crossfade(true)
-                 .build(),
-             contentDescription = null,
-             modifier = Modifier.fillMaxSize(),
-             contentScale = ContentScale.Crop
-         )
-         
-         Box(
-             modifier = Modifier
-                 .fillMaxSize()
-                 .background(
-                     Brush.verticalGradient(
-                         colors = listOf(
-                             Color.Transparent,
-                             Color.Black.copy(alpha = 0.4f),
-                             Color.Black.copy(alpha = 0.9f)
+         Box {
+             AsyncImage(
+                 model = ImageRequest.Builder(context)
+                     .data(ImageUtils.getHighResThumbnailUrl(artist.thumbnailUrl, size = 800))
+                     .crossfade(true)
+                     .build(),
+                 contentDescription = null,
+                 modifier = Modifier.fillMaxSize(),
+                 contentScale = ContentScale.Crop
+             )
+             
+             Box(
+                 modifier = Modifier
+                     .fillMaxSize()
+                     .background(
+                         Brush.verticalGradient(
+                             colors = listOf(
+                                 Color.Transparent,
+                                 Color.Black.copy(alpha = 0.4f),
+                                 Color.Black.copy(alpha = 0.9f)
+                             ),
+                             startY = 100f
                          )
                      )
+             )
+             
+             Column(
+                 modifier = Modifier
+                     .align(Alignment.BottomStart)
+                     .padding(24.dp)
+             ) {
+                 Surface(
+                     color = dominantColors.accent,
+                     shape = PillShape,
+                     modifier = Modifier.padding(bottom = 8.dp)
+                 ) {
+                     Text(
+                         text = "${artist.views ?: "Millions"} Monthly Listeners".uppercase(),
+                         style = MaterialTheme.typography.labelSmall,
+                         fontWeight = FontWeight.Black,
+                         color = if (dominantColors.accent.luminance() > 0.5f) Color.Black else Color.White,
+                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                         letterSpacing = 1.sp
+                     )
+                 }
+                 
+                 Text(
+                     text = artist.description ?: "Biography currently unavailable.",
+                     style = MaterialTheme.typography.bodyMedium,
+                     color = Color.White.copy(alpha = 0.9f),
+                     maxLines = 3,
+                     overflow = TextOverflow.Ellipsis,
+                     lineHeight = 22.sp,
+                     fontWeight = FontWeight.Medium
                  )
-         )
-         
-         Column(
-             modifier = Modifier
-                 .align(Alignment.BottomStart)
-                 .padding(24.dp)
-         ) {
-             Text(
-                 text = "${artist.views ?: "Millions of"} monthly listeners",
-                 style = MaterialTheme.typography.bodyLarge,
-                 fontWeight = FontWeight.Black,
-                 color = Color.White
-             )
-             Spacer(modifier = Modifier.height(8.dp))
-             Text(
-                 text = artist.description ?: "Biography currently unavailable.",
-                 style = MaterialTheme.typography.bodyMedium,
-                 color = Color.White.copy(alpha = 0.8f),
-                 maxLines = 3,
-                 overflow = TextOverflow.Ellipsis,
-                 lineHeight = 20.sp
-             )
+             }
          }
      }
 }
@@ -1000,24 +1043,30 @@ fun SectionHeader(
         verticalAlignment = Alignment.Bottom
     ) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge.copy( // Reduced from headlineMedium
+            text = title.uppercase(),
+            style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Black,
-                letterSpacing = (-0.5).sp
+                letterSpacing = 1.2.sp
             ),
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         if (showSeeAll) {
-            TextButton(
+            Surface(
                 onClick = onSeeAllClick,
-                colors = ButtonDefaults.textButtonColors(contentColor = dominantColors.accent),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                shape = PillShape,
+                color = dominantColors.accent.copy(alpha = 0.1f),
+                modifier = Modifier
+                    .bounceClick(onClick = onSeeAllClick)
+                    .dpadFocusable(onClick = onSeeAllClick, shape = PillShape)
             ) {
                 Text(
-                    text = stringResource(R.string.action_see_all),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.action_see_all).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black,
+                    color = dominantColors.accent,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    letterSpacing = 1.sp
                 )
             }
         }
@@ -1097,7 +1146,7 @@ private fun ArtistErrorView(
             Spacer(modifier = Modifier.height(32.dp))
             Button(
                 onClick = onRetry,
-                shape = RoundedCornerShape(50)
+                shape = PillShape
             ) {
                 Text(text = buttonText)
             }
