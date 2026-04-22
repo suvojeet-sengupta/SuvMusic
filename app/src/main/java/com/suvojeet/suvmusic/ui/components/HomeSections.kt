@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
+import com.suvojeet.suvmusic.util.dpadFocusable
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import com.suvojeet.suvmusic.ui.theme.NewReleaseCardShape
 import androidx.compose.foundation.background
@@ -377,7 +378,7 @@ fun QuickPickItem(
         modifier = modifier
             .fillMaxWidth()
             .bounceClick(onClick = onClick)
-            .com.suvojeet.suvmusic.util.dpadFocusable(onClick = onClick, shape = RoundedCornerShape(12.dp)),
+            .dpadFocusable(onClick = onClick, shape = RoundedCornerShape(12.dp)),
         color = Color.Transparent,
         shape = RoundedCornerShape(12.dp)
     ) {
