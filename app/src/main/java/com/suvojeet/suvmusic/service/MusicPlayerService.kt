@@ -1373,8 +1373,19 @@ class MusicPlayerService : MediaLibraryService() {
             onNotificationChangedCallback: MediaNotification.Provider.Callback
         ): MediaNotification {
             val mediaNotification = defaultProvider.createNotification(session, customLayout, actionFactory, onNotificationChangedCallback)
-            mediaNotification.notification.flags = mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
-            return mediaNotification
+            
+            // Android 14 requirement: Explicitly pass the foreground service type to the MediaNotification
+            return MediaNotification(
+                mediaNotification.notificationId,
+                mediaNotification.notification.apply {
+                    flags = flags or android.app.Notification.FLAG_ONGOING_EVENT
+                },
+                if (android.os.Build.VERSION.SDK_INT >= 34) {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                } else {
+                    0
+                }
+            )
         }
 
         override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo {
@@ -1614,7 +1625,21 @@ class MusicPlayerService : MediaLibraryService() {
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "ACTION_CANCEL_SLEEP_TIMER") sleepTimerManager.cancelTimer()
-        return super.onStartCommand(intent, flags, startId)
+        
+        return try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: Exception) {
+            // Android 14 (API 34) and above restriction: 
+            // ForegroundServiceStartNotAllowedException is thrown if the app is in the background.
+            // Catching it prevents the app from crashing.
+            if (android.os.Build.VERSION.SDK_INT >= 31 && 
+                e.toString().contains("ForegroundServiceStartNotAllowedException")) {
+                android.util.Log.w("MusicPlayerService", "Foreground service start not allowed (likely background start). Skipping super.onStartCommand.", e)
+                START_NOT_STICKY
+            } else {
+                throw e
+            }
+        }
     }
 
     companion object {
