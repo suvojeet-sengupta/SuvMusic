@@ -68,7 +68,8 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                response.body.string()
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
             }
         } catch (e: Exception) {
             ""
@@ -108,7 +109,8 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                response.body.string()
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
             }
         } catch (e: Exception) {
             ""
@@ -118,8 +120,8 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch authenticated YouTube Music internal API with a custom body.
      */
-    suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
-        val cookies = sessionManager.getCookies() ?: return ""
+    suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
+        val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
         val url = "${YouTubeConfig.BASE_URL}/$endpoint"
@@ -155,8 +157,11 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
+            }
         } catch (e: Exception) {
             ""
         }
@@ -165,8 +170,8 @@ class YouTubeApiClient @Inject constructor(
     /**
      * Fetch with browse parameters (for category browsing).
      */
-    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String {
-        val cookies = sessionManager.getCookies() ?: return ""
+    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
+        val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
         
         val jsonBody = """
@@ -194,8 +199,11 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
+            }
         } catch (e: Exception) {
             ""
         }
@@ -205,7 +213,7 @@ class YouTubeApiClient @Inject constructor(
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
      */
-    suspend fun fetchPublicApi(browseId: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = "IN"): String {
+    suspend fun fetchPublicApi(browseId: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = "IN"): String = withContext(Dispatchers.IO) {
         val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
         
         val jsonBody = """
@@ -230,8 +238,11 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Referer", "https://music.youtube.com/")
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
+            }
         } catch (e: Exception) {
             ""
         }
@@ -246,7 +257,7 @@ class YouTubeApiClient @Inject constructor(
         params: String,
         hl: String = YouTubeConfig.DEFAULT_HL,
         gl: String = "IN"
-    ): String {
+    ): String = withContext(Dispatchers.IO) {
         val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
 
         val jsonBody = """
@@ -272,8 +283,11 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("Referer", "https://music.youtube.com/")
             .build()
 
-        return try {
-            okHttpClient.newCall(request).execute().body.string()
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext ""
+                response.body?.string() ?: ""
+            }
         } catch (e: Exception) {
             ""
         }
@@ -284,12 +298,12 @@ class YouTubeApiClient @Inject constructor(
      * @param endpoint API endpoint path (e.g., "like/like", "playlist/create")
      * @param innerBody JSON body content (without context wrapper)
      */
-    suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean {
-        if (!sessionManager.isLoggedIn()) return false
-        val cookies = sessionManager.getCookies() ?: return false
+    suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean = withContext(Dispatchers.IO) {
+        if (!sessionManager.isLoggedIn()) return@withContext false
+        val cookies = sessionManager.getCookies() ?: return@withContext false
         
         val url = "${YouTubeConfig.BASE_URL}/$endpoint"
-        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: return false
+        val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: return@withContext false
 
         val cleanedBody = innerBody.trim()
         val processedBody = if (cleanedBody.startsWith("{") && cleanedBody.endsWith("}")) {
@@ -322,14 +336,15 @@ class YouTubeApiClient @Inject constructor(
             .addHeader("X-Goog-AuthUser", sessionManager.getAuthUserIndex().toString())
             .build()
 
-        return try {
-            val response = okHttpClient.newCall(request).execute()
-            if (!response.isSuccessful) {
-                val errorBody = response.body.string()
-                android.util.Log.e("YouTubeApiClient", "Action failed: $endpoint. Code: ${response.code}, Body: $errorBody")
-                return false
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = try { response.body?.string() } catch (e: Exception) { null }
+                    android.util.Log.e("YouTubeApiClient", "Action failed: $endpoint. Code: ${response.code}, Body: $errorBody")
+                    return@withContext false
+                }
+                true
             }
-            true
         } catch (e: Exception) {
             android.util.Log.e("YouTubeApiClient", "Action error: $endpoint", e)
             false

@@ -113,24 +113,32 @@ class HomeViewModel @Inject constructor(
     private fun loadHomeContent(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             // 1. Prioritize base data (HomeSections from YouTube/JioSaavn)
-            // This ensures the primary UI components show up as fast as possible.
             loadData(forceRefresh)
             
-            // 2. Stagger background taste-profile-driven content.
-            // By delaying these, we give loadData priority for the API semaphore (max 5 concurrent).
-            kotlinx.coroutines.delay(1200L) 
-            
+            // 2. Stagger background taste-profile-driven content with larger delays to prevent memory spikes
+            kotlinx.coroutines.delay(2000L) 
             launch { loadRecommendations() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadPersonalizedSections() }
             
             // 3. Further stagger secondary metadata and low-priority detections.
-            kotlinx.coroutines.delay(1000L)
-            
+            kotlinx.coroutines.delay(2000L)
             launch { loadGenreSections() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadContextSections() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadLastFmRecommendations() }
             launch { detectMood() }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Clear memory-heavy recommendation caches when leaving Home
+        recommendationEngine.onAuthStateChanged() // This clears all caches
     }
     
     private fun observeSession() {
