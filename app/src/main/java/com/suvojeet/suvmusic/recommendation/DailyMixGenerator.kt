@@ -75,19 +75,19 @@ class DailyMixGenerator @Inject constructor(
             val clusters = clusterArtists(artistVectors)
 
             val allHistory = listeningHistoryDao.getAllHistory()
+            val mixes = mutableListOf<HomeSection>()
 
-            // Expand each cluster into a Daily Mix.
-            val jobs = clusters.take(MAX_MIXES).mapIndexed { index, cluster ->
-                async {
-                    try {
-                        buildMixForCluster(index + 1, cluster, allHistory)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to build Daily Mix for cluster $index", e)
-                        null
+            // Expand each cluster into a Daily Mix SEQUENTIALLY to save memory.
+            clusters.take(MAX_MIXES).forEachIndexed { index, cluster ->
+                try {
+                    buildMixForCluster(index + 1, cluster, allHistory)?.let {
+                        mixes.add(it)
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to build Daily Mix for cluster $index", e)
                 }
             }
-            jobs.awaitAll().filterNotNull()
+            mixes
         } catch (e: Exception) {
             Log.e(TAG, "buildMixes failed", e)
             emptyList()
@@ -98,7 +98,7 @@ class DailyMixGenerator @Inject constructor(
         index: Int,
         artists: List<String>,
         allHistory: List<com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory>
-    ): HomeSection? = coroutineScope {
+    ): HomeSection? = withContext(Dispatchers.IO) {
         // 60% familiar — favorite songs from these artists that the user has played repeatedly.
         val artistLower = artists.map { it.lowercase() }.toSet()
         val familiar = allHistory
@@ -109,18 +109,20 @@ class DailyMixGenerator @Inject constructor(
 
         // 40% fresh — pull related songs from seed artists.
         val freshTarget = SONGS_PER_MIX - familiar.size
-        val freshJobs = artists.map { artist ->
-            async {
-                try {
-                    val results = youTubeRepository.search(artist, YouTubeRepository.FILTER_SONGS)
-                    val seed = results.firstOrNull() ?: return@async emptyList()
-                    youTubeRepository.getRelatedSongs(seed.id).take(10)
-                } catch (e: Exception) {
-                    emptyList()
-                }
+        val freshRaw = mutableListOf<Song>()
+        
+        // Fetch fresh songs sequentially per artist in the cluster
+        artists.forEach { artist ->
+            try {
+                val results = youTubeRepository.search(artist, YouTubeRepository.FILTER_SONGS)
+                val seed = results.firstOrNull() ?: return@forEach
+                val related = youTubeRepository.getRelatedSongs(seed.id).take(10)
+                freshRaw.addAll(related)
+            } catch (e: Exception) {
+                // Ignore individual artist failures
             }
         }
-        val freshRaw = freshJobs.awaitAll().flatten()
+        
         val familiarIds = familiar.map { it.id }.toSet()
         val fresh = freshRaw
             .distinctBy { it.id }
@@ -129,7 +131,7 @@ class DailyMixGenerator @Inject constructor(
             .take(freshTarget)
 
         val combined = (familiar + fresh).distinctBy { it.id }.take(SONGS_PER_MIX)
-        if (combined.isEmpty()) return@coroutineScope null
+        if (combined.isEmpty()) return@withContext null
 
         val title = buildString {
             append("Daily Mix $index: ")
