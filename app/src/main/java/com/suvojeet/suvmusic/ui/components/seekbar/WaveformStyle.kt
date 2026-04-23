@@ -72,7 +72,38 @@ object WaveformStyle {
             }
         }
         
-        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+        // Custom vertical pill thumb for Waveform style
+        val thumbWidth = barWidth * 1.5f
+        val thumbHeight = maxBarHeight * 1.2f
+        val thumbRect = Size(thumbWidth, thumbHeight)
+        val thumbTopLeft = Offset(progressX - thumbWidth / 2, centerY - thumbHeight / 2)
+        
+        // Subtle Glow for the thumb
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(activeColor.copy(alpha = 0.4f), Color.Transparent),
+                center = Offset(progressX, centerY),
+                radius = thumbHeight * 0.8f
+            ),
+            radius = thumbHeight * 0.8f,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Solid vertical pill
+        drawRoundRect(
+            color = activeColor,
+            topLeft = thumbTopLeft,
+            size = thumbRect,
+            cornerRadius = CornerRadius(thumbWidth / 2)
+        )
+        
+        // Inner highlight for premium look
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.5f),
+            topLeft = Offset(progressX - (thumbWidth * 0.2f) / 2, centerY - (thumbHeight * 0.6f) / 2),
+            size = Size(thumbWidth * 0.2f, thumbHeight * 0.6f),
+            cornerRadius = CornerRadius(thumbWidth * 0.1f)
+        )
     }
     
     fun DrawScope.drawPreview(
@@ -102,41 +133,4 @@ object WaveformStyle {
             )
         }
     }
-}
-
-/**
- * Common progress indicator drawing
- */
-fun DrawScope.drawProgressIndicator(
-    progressX: Float,
-    centerY: Float,
-    activeColor: Color,
-    isDragging: Boolean
-) {
-    val indicatorRadius = if (isDragging) 10.dp.toPx() else 7.dp.toPx()
-    
-    // Subtle Glow around thumb
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(activeColor.copy(alpha = 0.3f), Color.Transparent),
-            center = Offset(progressX, centerY),
-            radius = indicatorRadius * 2.5f
-        ),
-        radius = indicatorRadius * 2.5f,
-        center = Offset(progressX, centerY)
-    )
-    
-    // Solid filled circular thumb
-    drawCircle(
-        color = activeColor,
-        radius = indicatorRadius,
-        center = Offset(progressX, centerY)
-    )
-    
-    // Subtle inner shadow/highlight effect to make it look premium
-    drawCircle(
-        color = Color.White.copy(alpha = 0.8f),
-        radius = indicatorRadius * 0.3f,
-        center = Offset(progressX, centerY)
-    )
 }

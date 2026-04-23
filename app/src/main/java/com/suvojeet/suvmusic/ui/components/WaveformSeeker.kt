@@ -65,7 +65,6 @@ import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveLineStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.WaveformStyle
-import com.suvojeet.suvmusic.ui.components.seekbar.drawProgressIndicator
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import kotlin.random.Random
@@ -335,7 +334,20 @@ fun WaveformSeeker(
                                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                                     )
                                     
-                                    drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+                                    // Custom Neon thumb - High glow diamond
+                                    val thumbSize = if (isDragging) 12.dp.toPx() else 9.dp.toPx()
+                                    drawIntoCanvas { c ->
+                                        val paint = Paint().asFrameworkPaint().apply {
+                                            color = Color.White.toArgb()
+                                            setShadowLayer(20f, 0f, 0f, activeColor.toArgb())
+                                        }
+                                        c.nativeCanvas.drawCircle(progressX, centerY, thumbSize, paint)
+                                    }
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = thumbSize * 0.5f,
+                                        center = Offset(progressX, centerY)
+                                    )
                                 }
                                 SeekbarStyle.BLOCKS -> {
                                     val blockCount = 30
@@ -357,7 +369,25 @@ fun WaveformSeeker(
                                         )
                                     }
                                     
-                                    drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+                                    // Custom Block thumb
+                                    val thumbHeight = size.height * 0.7f
+                                    val thumbWidth = blockWidth * 1.2f
+                                    drawRoundRect(
+                                        color = activeColor,
+                                        topLeft = Offset(progressX - thumbWidth / 2, centerY - thumbHeight / 2),
+                                        size = Size(thumbWidth, thumbHeight),
+                                        cornerRadius = CornerRadius(2.dp.toPx())
+                                    )
+                                    // Glow for block
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(activeColor.copy(alpha = 0.3f), Color.Transparent),
+                                            center = Offset(progressX, centerY),
+                                            radius = thumbHeight
+                                        ),
+                                        radius = thumbHeight,
+                                        center = Offset(progressX, centerY)
+                                    )
                                 }
                                 SeekbarStyle.MATERIAL -> {
                                     // Handled outside canvas via Slider
