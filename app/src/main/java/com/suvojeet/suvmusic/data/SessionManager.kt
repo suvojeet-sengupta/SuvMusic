@@ -97,6 +97,7 @@ class SessionManager @Inject constructor(
         
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
         private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
+        private val QUICK_PICKS_CACHE_KEY = stringPreferencesKey("quick_picks_cache")
         private val LAST_FETCH_TIME_YOUTUBE_KEY = longPreferencesKey("last_fetch_time_youtube")
         private val LAST_FETCH_TIME_JIOSAAVN_KEY = longPreferencesKey("last_fetch_time_jiosaavn")
         
@@ -2318,6 +2319,49 @@ class SessionManager @Inject constructor(
         val json = encryptedPrefs.getString("jiosaavn_home_cache", null)
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
+        }
+    }
+
+    suspend fun saveQuickPicksCache(songs: List<Song>) {
+        val json = withContext(Dispatchers.Default) {
+            val array = JSONArray()
+            songs.forEach { song -> array.put(songToJson(song)) }
+            array.toString()
+        }
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("quick_picks_cache", json).apply()
+        }
+        context.dataStore.edit { it.remove(QUICK_PICKS_CACHE_KEY) }
+    }
+
+    fun getCachedQuickPicks(): Flow<List<Song>> = context.dataStore.data
+        .map { encryptedPrefs.getString("quick_picks_cache", null) }
+        .flowOn(Dispatchers.IO)
+        .map { json ->
+            withContext(Dispatchers.Default) {
+                if (json == null) return@withContext emptyList()
+                try {
+                    val array = JSONArray(json)
+                    (0 until array.length()).mapNotNull { i ->
+                        jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+        }
+
+    suspend fun getCachedQuickPicksSync(): List<Song> = withContext(Dispatchers.IO) {
+        val json = encryptedPrefs.getString("quick_picks_cache", null) ?: return@withContext emptyList()
+        withContext(Dispatchers.Default) {
+            try {
+                val array = JSONArray(json)
+                (0 until array.length()).mapNotNull { i ->
+                    jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 

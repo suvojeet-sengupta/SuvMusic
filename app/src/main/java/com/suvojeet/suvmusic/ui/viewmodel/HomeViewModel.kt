@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -228,29 +229,29 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             val source = sessionManager.getMusicSource()
-            _uiState.update { it.copy(currentSource = source, isLoading = _uiState.value.homeSections.isEmpty()) }
+            _uiState.update { it.copy(currentSource = source) }
             
-            // 1. Reactive Cache Loading
-            // Optimization: Collect cache asynchronously to keep UI snappy
-            launch {
-                val cacheFlow = if (source == MusicSource.JIOSAAVN) {
-                    sessionManager.getCachedJioSaavnHomeSections()
-                } else {
-                    sessionManager.getCachedHomeSections()
+            // 1. Load Cache Synchronously (from DataStore first emission)
+            val cachedSections = if (source == MusicSource.JIOSAAVN) {
+                sessionManager.getCachedJioSaavnHomeSections().first()
+            } else {
+                sessionManager.getCachedHomeSections().first()
+            }
+            
+            val cachedQuickPicks = sessionManager.getCachedQuickPicks().first()
+            
+            if (cachedSections.isNotEmpty() || cachedQuickPicks.isNotEmpty()) {
+                _uiState.update { 
+                    it.copy(
+                        homeSections = cachedSections, 
+                        filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                        recommendations = cachedQuickPicks,
+                        isLoading = false,
+                        error = null
+                    ) 
                 }
-                
-                cacheFlow.collect { cachedSections ->
-                    if (cachedSections.isNotEmpty()) {
-                        _uiState.update { 
-                            it.copy(
-                                homeSections = cachedSections, 
-                                filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
-                                isLoading = false,
-                                error = null
-                            ) 
-                        }
-                    }
-                }
+            } else {
+                _uiState.update { it.copy(isLoading = true) }
             }
             
             // 2. Throttled Fresh Data Fetching
@@ -258,10 +259,11 @@ class HomeViewModel @Inject constructor(
             val cooldown = 30 * 60 * 1000L // 30 minutes cooldown
             val isCooldownActive = System.currentTimeMillis() - lastFetchTime < cooldown
             
+            // Only fetch if forced, cooldown expired, or we have absolutely no data
             if (forceRefresh || !isCooldownActive || _uiState.value.homeSections.isEmpty()) {
                 fetchFreshData(source)
             } else {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             }
         }
     }
@@ -344,6 +346,11 @@ class HomeViewModel @Inject constructor(
                 // Use the enhanced recommendation engine for Quick Picks
                 val recommendations = recommendationEngine.getPersonalizedRecommendations(20)
                 _uiState.update { it.copy(recommendations = recommendations) }
+                
+                // Save to cache
+                if (recommendations.isNotEmpty()) {
+                    sessionManager.saveQuickPicksCache(recommendations)
+                }
             } catch (e: Exception) {
                 // Silently fail - recommendations are optional
                 _uiState.update { it.copy(recommendations = emptyList()) }
