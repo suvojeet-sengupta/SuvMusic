@@ -43,7 +43,33 @@ object ClassicStyle {
             cornerRadius = CornerRadius(trackHeight / 2)
         )
         
-        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+        // Custom circular thumb for Classic style
+        val indicatorRadius = if (isDragging) 10.dp.toPx() else 7.dp.toPx()
+        
+        // Subtle Glow around thumb
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(activeColor.copy(alpha = 0.3f), Color.Transparent),
+                center = Offset(progressX, centerY),
+                radius = indicatorRadius * 2.5f
+            ),
+            radius = indicatorRadius * 2.5f,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Solid filled circular thumb
+        drawCircle(
+            color = activeColor,
+            radius = indicatorRadius,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Subtle inner highlight
+        drawCircle(
+            color = Color.White.copy(alpha = 0.8f),
+            radius = indicatorRadius * 0.3f,
+            center = Offset(progressX, centerY)
+        )
     }
     
     fun DrawScope.drawPreview(

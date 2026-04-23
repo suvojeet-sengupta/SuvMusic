@@ -65,7 +65,35 @@ object WaveLineStyle {
             style = Stroke(width = trackHeight, cap = StrokeCap.Round)
         )
         
-        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+        // Custom glowing orb thumb that rides the wave for Wave Line style
+        val waveAmp = if (isPlaying) amplitude else amplitude * 0.2f
+        val currentWaveY = centerY + sin(progressX * frequency + (if (isPlaying) phase else 0f)) * waveAmp
+        val thumbRadius = if (isDragging) 8.dp.toPx() else 6.dp.toPx()
+        
+        // Wave-aligned Glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(activeColor.copy(alpha = 0.5f), Color.Transparent),
+                center = Offset(progressX, currentWaveY),
+                radius = thumbRadius * 3f
+            ),
+            radius = thumbRadius * 3f,
+            center = Offset(progressX, currentWaveY)
+        )
+        
+        // Solid orb
+        drawCircle(
+            color = activeColor,
+            radius = thumbRadius,
+            center = Offset(progressX, currentWaveY)
+        )
+        
+        // Inner bright spot
+        drawCircle(
+            color = Color.White.copy(alpha = 0.9f),
+            radius = thumbRadius * 0.4f,
+            center = Offset(progressX, currentWaveY)
+        )
     }
     
     fun DrawScope.drawPreview(
