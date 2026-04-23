@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.components.seekbar
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
@@ -58,7 +59,33 @@ object DotsStyle {
             }
         }
         
-        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+        // Custom glowing large dot thumb for Dots style
+        val thumbRadius = if (isDragging) 8.dp.toPx() else 6.dp.toPx()
+        
+        // Outer Glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(activeColor.copy(alpha = 0.5f), Color.Transparent),
+                center = Offset(progressX, centerY),
+                radius = thumbRadius * 3f
+            ),
+            radius = thumbRadius * 3f,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Solid dot
+        drawCircle(
+            color = activeColor,
+            radius = thumbRadius,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Inner bright core
+        drawCircle(
+            color = Color.White.copy(alpha = 0.9f),
+            radius = thumbRadius * 0.4f,
+            center = Offset(progressX, centerY)
+        )
     }
     
     fun DrawScope.drawPreview(
