@@ -1936,9 +1936,13 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun isAutomixEnabled(): Boolean = 
+    suspend fun isAutomixEnabled(): Boolean =
         context.dataStore.data.first()[AUTOMIX_KEY] ?: true
-    
+
+    val automixEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUTOMIX_KEY] ?: true
+    }
+
     suspend fun setAutomix(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUTOMIX_KEY] = enabled

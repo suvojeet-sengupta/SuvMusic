@@ -234,7 +234,7 @@ fun PlaybackSettingsScreen(
                     PlaybackSwitchItem(
                         icon = Icons.Default.Refresh,
                         title = "Automix",
-                        subtitle = "Allows seamless transitions between songs on certain playlists",
+                        subtitle = "Keep the queue playing by adding related songs when autoplay or radio is on",
                         checked = uiState.automixEnabled,
                         onCheckedChange = { viewModel.setAutomix(it) }
                     )
