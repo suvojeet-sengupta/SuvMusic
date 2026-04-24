@@ -837,6 +837,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun getLastFmAuthUrl(): String {
+        // Record that auth was initiated from inside the app; the deep-link
+        // callback refuses to consume a token unless this flag is fresh.
+        sessionManager.markLastFmAuthStarted()
         return lastFmRepository.getAuthUrl()
     }
 

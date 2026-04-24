@@ -80,7 +80,7 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun downloadAndInstallUpdate(info: UpdateInfo) {
-        downloader.downloadAndInstall(info.downloadUrl, info.versionName)
+        downloader.downloadAndInstall(info.downloadUrl, info.versionName, info.sha256)
     }
 
     fun dismissDialog() {
