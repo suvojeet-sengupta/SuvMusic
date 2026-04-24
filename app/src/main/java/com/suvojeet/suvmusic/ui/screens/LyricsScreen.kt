@@ -137,10 +137,8 @@ fun LyricsScreen(
     val scope = rememberCoroutineScope()
     
     // Lyrics Settings State
-    // Lyrics Settings State
     var syncOffset by remember { mutableStateOf(0L) }
-    var keepScreenOn by remember { mutableStateOf(true) } // Default to true for lyrics
-    
+
     // File Picker for Lyrics
     val filePicker = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -162,15 +160,6 @@ fun LyricsScreen(
         }
     }
 
-    // Keep Screen On Effect
-    val currentView = androidx.compose.ui.platform.LocalView.current
-    DisposableEffect(keepScreenOn) {
-        currentView.keepScreenOn = keepScreenOn
-        onDispose {
-            currentView.keepScreenOn = false
-        }
-    }
-    
     // Formatting helper for seek bar
     fun formatTime(ms: Long): String {
         val totalSeconds = ms / 1000
@@ -615,80 +604,46 @@ fun LyricsScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Alignment & Behavior
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    // Alignment Selection
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .padding(16.dp)
                     ) {
-                        // Alignment Selection
-                        Column(
+                        Text(
+                            text = "Alignment",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        Row(
                             modifier = Modifier
-                                .weight(1.3f)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .padding(16.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Text(
-                                text = "Alignment", 
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .padding(4.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                LyricsTextPosition.entries.forEach { position ->
-                                    val isSelected = lyricsTextPosition == position
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                                            .clickable { onTextPositionChange(position) }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = position.name.lowercase().replaceFirstChar { it.uppercase() },
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
-                                        )
-                                    }
+                            LyricsTextPosition.entries.forEach { position ->
+                                val isSelected = lyricsTextPosition == position
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                                        .clickable { onTextPositionChange(position) }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = position.name.lowercase().replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
+                                    )
                                 }
                             }
-                        }
-                        
-                        // Screen On Toggle
-                        Column(
-                            modifier = Modifier
-                                .weight(0.7f)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Screen On", 
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Switch(
-                                checked = keepScreenOn, 
-                                onCheckedChange = { keepScreenOn = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color.White.copy(alpha = 0.4f),
-                                    uncheckedThumbColor = Color.White.copy(alpha = 0.4f),
-                                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f),
-                                    uncheckedBorderColor = Color.Transparent
-                                )
-                            )
                         }
                     }
 
