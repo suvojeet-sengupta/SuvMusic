@@ -244,13 +244,20 @@ class PlayerViewModel @Inject constructor(
     private var currentSongPlayTime: Long = 0
     private var isHistorySyncEnabled = false
     private val HISTORY_SYNC_THRESHOLD_MS = 30000L // 30 seconds
-    
+
+    // Automix master switch — gates automatic queue extension when autoplay/radio is active.
+    @Volatile private var automixEnabled: Boolean = true
+
     init {
         observeCurrentSong()
         observeDownloads()
         observeDownloadStateConsistency()
         observeQueuePositionForAutoplay()
         observeLyricsProviderSettings()
+
+        viewModelScope.launch {
+            sessionManager.automixEnabledFlow.collect { automixEnabled = it }
+        }
         
         // Observe history sync setting
         viewModelScope.launch {
@@ -784,8 +791,9 @@ class PlayerViewModel @Inject constructor(
                 Pair(triple, radioMode)
             }.collect { (triple, radioMode) ->
                 val (currentIndex, queueSize, isAutoplayEnabled) = triple
-                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more
-                if ((isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
+                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more.
+                // Automix master switch must also be on — disabling it stops the queue from auto-extending.
+                if (automixEnabled && (isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
                     loadMoreAutoplaySongs()
                 }
             }
@@ -801,7 +809,9 @@ class PlayerViewModel @Inject constructor(
         val isAutoplayEnabled = state.isAutoplayEnabled
         val radioMode = _isRadioMode.value
         
-        // Allow loading if radio mode OR autoplay is enabled
+        // Allow loading if radio mode OR autoplay is enabled — but only when the Automix
+        // master switch is on. Disabling Automix halts all automatic queue extension.
+        if (!automixEnabled) return
         if (!radioMode && !isAutoplayEnabled) return
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         

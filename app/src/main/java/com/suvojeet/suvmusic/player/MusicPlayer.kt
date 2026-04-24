@@ -160,6 +160,10 @@ class MusicPlayer @Inject constructor(
     private var nextSongPreloadingEnabled = true
     private var nextSongPreloadDelay = 3
 
+    // Automix master switch (Playback Settings -> Automix). Gates automatic queue
+    // extension when autoplay/radio is active. Default matches SessionManager.
+    @Volatile private var automixEnabled: Boolean = true
+
     // Crossfade
     private val crossfadeController = CrossfadeController(scope)
     private var crossfadeMs: Int = 0
@@ -185,6 +189,9 @@ class MusicPlayer @Inject constructor(
         }
         scope.launch {
             sessionManager.crossfadeMsFlow.collect { crossfadeMs = it.coerceIn(0, 12000) }
+        }
+        scope.launch {
+            sessionManager.automixEnabledFlow.collect { automixEnabled = it }
         }
 
         connectToService()
@@ -602,7 +609,7 @@ class MusicPlayer @Inject constructor(
                             resolveAndPlayCurrentItem(firstSong, 0, shouldPlay = true)
                         }
                     }
-                } else if (state.isAutoplayEnabled || state.isRadioMode) {
+                } else if ((state.isAutoplayEnabled || state.isRadioMode) && automixEnabled) {
                     // Autoplay/Radio: Queue ended but more songs should be loaded.
                     // Wait for the observer to add more songs, then play the next one.
                     scope.launch {
@@ -1883,7 +1890,7 @@ class MusicPlayer @Inject constructor(
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
                  playSong(queue[0], queue, 0)
-             } else if (state.isAutoplayEnabled || state.isRadioMode) {
+             } else if ((state.isAutoplayEnabled || state.isRadioMode) && automixEnabled) {
                  // Infinite Autoplay/Radio: The ViewModel automatically loads more songs when nearing the end.
                  // Wait with retry loop for new songs to be added by the autoplay observer.
                  val originalQueueSize = queue.size
