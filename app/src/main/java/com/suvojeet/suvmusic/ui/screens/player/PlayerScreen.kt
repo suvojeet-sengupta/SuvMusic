@@ -347,130 +347,144 @@ fun PlayerScreen(
                 Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
             }
 
-            SupportingPaneScaffold(
-                directive = navigator.scaffoldDirective,
-                value = navigator.scaffoldValue,
-                mainPane = {
-                    AnimatedPane(modifier = Modifier.fillMaxSize()) {
-                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                            val useWideLayout = maxWidth > 500.dp || isExpanded
-                            val isCompactHeight = maxHeight < 600.dp
+            val playerMainContent: @Composable () -> Unit = {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val useWideLayout = maxWidth > 500.dp || isExpanded
+                    val isCompactHeight = maxHeight < 600.dp
 
-                            when (playerStyle) {
-                                PlayerStyle.YT_MUSIC -> {
-                                    YTMusicPlayerStyle(
-                                        song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
-                                        currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
-                                        player, isFullScreen, isCompactHeight, useWideLayout, actions,
-                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
-                                        onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                                        onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                                        onShowRelated = { activeOverlay = PlayerOverlay.Related },
-                                        onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                                        onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                                        onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                                        onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                                        onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                                        handleDoubleTapSeek = handleDoubleTapSeek,
-                                        onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                                        onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                                        onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                                        onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                                        isSwitchingMode = isSwitchingMode,
-                                        sleepTimerOption = state.sleepTimerOption,
-                                        sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        progressProvider = progressProvider,
-                                        positionProvider = positionProvider,
-                                        durationProvider = durationProvider,
-                                        isAIEnabled = isAIAutoModeEnabled,
-                                        aiStatus = aiAutoStatus,
-                                        windowSizeClass = windowSizeClass
-                                    )
-                                }
-                                PlayerStyle.LIQUID_GLASS -> {
-                                    LiquidGlassPlayerStyle(
-                                        song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
-                                        currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
-                                        player, isFullScreen, isCompactHeight, useWideLayout, actions,
-                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
-                                        onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                                        onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                                        onShowRelated = { activeOverlay = PlayerOverlay.Related },
-                                        onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                                        onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                                        onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                                        onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                                        onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                                        handleDoubleTapSeek = handleDoubleTapSeek,
-                                        onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                                        onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                                        onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                                        onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                                        isSwitchingMode = isSwitchingMode,
-                                        sleepTimerOption = state.sleepTimerOption,
-                                        sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        progressProvider = progressProvider,
-                                        positionProvider = positionProvider,
-                                        durationProvider = durationProvider,
-                                        isAIEnabled = isAIAutoModeEnabled,
-                                        aiStatus = aiAutoStatus,
-                                        windowSizeClass = windowSizeClass,
-                                        blurRadius = playerGlassBlur,
-                                        intensity = playerGlassIntensity
-                                    )
-                                }
-                                PlayerStyle.CLASSIC -> {
-                                    ClassicPlayerStyle(
-                                        song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
-                                        currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
-                                        player, isFullScreen, isCompactHeight, useWideLayout, actions,
-                                        onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
-                                        onShowQueue = { activeOverlay = PlayerOverlay.Queue },
-                                        onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
-                                        onShowRelated = { activeOverlay = PlayerOverlay.Related },
-                                        onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
-                                        onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
-                                        onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
-                                        onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
-                                        onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                                        handleDoubleTapSeek = handleDoubleTapSeek,
-                                        onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
-                                        onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
-                                        onRecenterAr = { playerViewModel.calibrateAudioAr() },
-                                        onSetFullScreen = { playerViewModel.setFullScreen(it) },
-                                        isSwitchingMode = isSwitchingMode,
-                                        sleepTimerOption = state.sleepTimerOption,
-                                        sleepTimerRemainingMs = state.sleepTimerRemainingMs,
-                                        progressProvider = progressProvider,
-                                        positionProvider = positionProvider,
-                                        durationProvider = durationProvider,
-                                        isAIEnabled = isAIAutoModeEnabled,
-                                        aiStatus = aiAutoStatus,
-                                        windowSizeClass = windowSizeClass
-                                    )
-                                }
-                            }
+                    when (playerStyle) {
+                        PlayerStyle.YT_MUSIC -> {
+                            YTMusicPlayerStyle(
+                                song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowRelated = { activeOverlay = PlayerOverlay.Related },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                progressProvider = progressProvider,
+                                positionProvider = positionProvider,
+                                durationProvider = durationProvider,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus,
+                                windowSizeClass = windowSizeClass
+                            )
+                        }
+                        PlayerStyle.LIQUID_GLASS -> {
+                            LiquidGlassPlayerStyle(
+                                song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowRelated = { activeOverlay = PlayerOverlay.Related },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                progressProvider = progressProvider,
+                                positionProvider = positionProvider,
+                                durationProvider = durationProvider,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus,
+                                windowSizeClass = windowSizeClass,
+                                blurRadius = playerGlassBlur,
+                                intensity = playerGlassIntensity
+                            )
+                        }
+                        PlayerStyle.CLASSIC -> {
+                            ClassicPlayerStyle(
+                                song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
+                                currentSeekbarStyle, sponsorSegments, audioArEnabled, rotatingVinylAnimationEnabled,
+                                player, isFullScreen, isCompactHeight, useWideLayout, actions,
+                                onShowActions = { activeOverlay = PlayerOverlay.Actions(song!!) },
+                                onShowQueue = { activeOverlay = PlayerOverlay.Queue },
+                                onShowLyrics = { activeOverlay = PlayerOverlay.Lyrics },
+                                onShowRelated = { activeOverlay = PlayerOverlay.Related },
+                                onShowDevices = { activeOverlay = PlayerOverlay.OutputDevice },
+                                onShowSleepTimer = { activeOverlay = PlayerOverlay.SleepTimer },
+                                onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
+                                onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
+                                onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                handleDoubleTapSeek = handleDoubleTapSeek,
+                                onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
+                                onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
+                                onRecenterAr = { playerViewModel.calibrateAudioAr() },
+                                onSetFullScreen = { playerViewModel.setFullScreen(it) },
+                                isSwitchingMode = isSwitchingMode,
+                                sleepTimerOption = state.sleepTimerOption,
+                                sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+                                progressProvider = progressProvider,
+                                positionProvider = positionProvider,
+                                durationProvider = durationProvider,
+                                isAIEnabled = isAIAutoModeEnabled,
+                                aiStatus = aiAutoStatus,
+                                windowSizeClass = windowSizeClass
+                            )
                         }
                     }
-                },
-                supportingPane = {
-                    AnimatedPane(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 24.dp)) {
-                        AdaptiveSupportingContent(
-                            state = state, actions = actions, activeOverlay = activeOverlay,
-                            onOverlayChange = { activeOverlay = it }, dominantColors = dominantColors,
-                            playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
-                            upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
-                            isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
-                            lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
-                            lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
-                            sessionManager = sessionManager, coroutineScope = coroutineScope,
-                            progressProvider = progressProvider,
-                            positionProvider = positionProvider,
-                            durationProvider = durationProvider
-                        )
-                    }
                 }
-            )
+            }
+
+            // Only use SupportingPaneScaffold when the device actually has room for two
+            // side-by-side panes (tablets / large foldables / desktop). On phones the
+            // scaffold's directive in material3.adaptive 1.3-alpha10 could split the
+            // screen into two vertical panes on some OEMs (reported on Poco X6 Neo and
+            // X5 Pro 5G), which shrank the main pane height and made the player layout
+            // treat itself as "very short" — collapsing the artwork to a tiny thumbnail.
+            if (isExpanded) {
+                SupportingPaneScaffold(
+                    directive = navigator.scaffoldDirective,
+                    value = navigator.scaffoldValue,
+                    mainPane = {
+                        AnimatedPane(modifier = Modifier.fillMaxSize()) {
+                            playerMainContent()
+                        }
+                    },
+                    supportingPane = {
+                        AnimatedPane(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 24.dp)) {
+                            AdaptiveSupportingContent(
+                                state = state, actions = actions, activeOverlay = activeOverlay,
+                                onOverlayChange = { activeOverlay = it }, dominantColors = dominantColors,
+                                playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
+                                upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                                isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
+                                lyricsTextPosition = lyricsTextPosition, lyricsAnimationType = lyricsAnimationType,
+                                lyricsLineSpacing = lyricsLineSpacing, lyricsFontSize = lyricsFontSize, lyricsBlur = lyricsBlur,
+                                sessionManager = sessionManager, coroutineScope = coroutineScope,
+                                progressProvider = progressProvider,
+                                positionProvider = positionProvider,
+                                durationProvider = durationProvider
+                            )
+                        }
+                    }
+                )
+            } else {
+                playerMainContent()
+            }
 
             // Modals and non-pane overlays (always floating)
             Box(modifier = Modifier.fillMaxSize()) {
