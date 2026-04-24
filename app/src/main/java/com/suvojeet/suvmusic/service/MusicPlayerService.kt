@@ -1378,19 +1378,14 @@ class MusicPlayerService : MediaLibraryService() {
             onNotificationChangedCallback: MediaNotification.Provider.Callback
         ): MediaNotification {
             val mediaNotification = defaultProvider.createNotification(session, customLayout, actionFactory, onNotificationChangedCallback)
-            
-            // Android 14 requirement: Explicitly pass the foreground service type to the MediaNotification
-            return MediaNotification(
-                mediaNotification.notificationId,
-                mediaNotification.notification.apply {
-                    flags = flags or android.app.Notification.FLAG_ONGOING_EVENT
-                },
-                if (android.os.Build.VERSION.SDK_INT >= 34) {
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                } else {
-                    0
-                }
-            )
+
+            // Android 14+ FGS type is declared via android:foregroundServiceType
+            // in AndroidManifest.xml ("mediaPlayback") — Media3 propagates that
+            // to startForeground() automatically. MediaNotification itself only
+            // has a (id, notification) constructor in Media3 1.10.0.
+            mediaNotification.notification.flags =
+                mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
+            return mediaNotification
         }
 
         override fun getNotificationChannelInfo(): MediaNotification.Provider.NotificationChannelInfo {
