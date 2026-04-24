@@ -108,7 +108,8 @@
                 <data android:scheme="https" android:host="music.youtube.com" />
             </intent-filter>
             
-            <!-- YouTube deep linking -->
+            <!-- YouTube deep linking (HTTPS only — HTTP was removed to prevent
+                 MITM swapping video IDs on open WiFi.) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -116,9 +117,6 @@
                 <data android:scheme="https" android:host="www.youtube.com" />
                 <data android:scheme="https" android:host="youtube.com" />
                 <data android:scheme="https" android:host="youtu.be" />
-                <data android:scheme="http" android:host="www.youtube.com" />
-                <data android:scheme="http" android:host="youtube.com" />
-                <data android:scheme="http" android:host="youtu.be" />
             </intent-filter>
             
             <!-- Audio file handling from external apps (mp3, wav, m4a, etc.) -->
