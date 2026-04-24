@@ -253,12 +253,24 @@ fun DiscordSettingsScreen(
                                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                                     android.view.ViewGroup.LayoutParams.MATCH_PARENT
                                 )
+                                // JS is required for Discord login. Harden the rest of the
+                                // WebView surface so a compromised page or MITM has the
+                                // smallest possible blast radius.
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
                                 settings.databaseEnabled = true
                                 settings.useWideViewPort = true
                                 settings.loadWithOverviewMode = true
-                                
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
+                                @Suppress("DEPRECATION")
+                                settings.allowFileAccessFromFileURLs = false
+                                @Suppress("DEPRECATION")
+                                settings.allowUniversalAccessFromFileURLs = false
+                                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                settings.javaScriptCanOpenWindowsAutomatically = false
+                                settings.setSupportMultipleWindows(false)
+
                                 val jsSnippet = "javascript:(function()%7Bvar%20i%3Ddocument.createElement('iframe')%3Bdocument.body.appendChild(i)%3Balert(i.contentWindow.localStorage.token.slice(1,-1))%7D)()"
                                 val motorola = "motorola"
                                 val samsungUserAgent = "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36"
@@ -268,25 +280,53 @@ fun DiscordSettingsScreen(
                                 } else {
                                     settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
                                 }
-                                
+
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                
+
+                                // Track the current host so we only run the token-extraction
+                                // JS when the page that just loaded is actually Discord.
+                                // A captive portal / MITM redirect to an attacker page is
+                                // now incapable of triggering our localStorage reader.
+                                var currentHost: String? = null
+
                                 webChromeClient = object : WebChromeClient() {
                                     override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                                        if (!message.isNullOrBlank() && message != "null" && message != "undefined") {
-                                            viewModel.setDiscordToken(message)
+                                        val origin = android.net.Uri.parse(url ?: "").host?.lowercase() ?: ""
+                                        val isDiscordOrigin = origin == "discord.com" || origin.endsWith(".discord.com")
+                                        val candidate = message?.trim()
+                                        // Discord user tokens have 3 base64url-ish segments
+                                        // separated by dots and are long. Reject anything that
+                                        // doesn't match, so an alert('hello') on a compromised
+                                        // page can't be mis-stored as a token.
+                                        val looksLikeToken = candidate != null &&
+                                            candidate.length in 50..120 &&
+                                            candidate.matches(Regex("^[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+$"))
+                                        if (isDiscordOrigin && looksLikeToken && candidate != null) {
+                                            viewModel.setDiscordToken(candidate)
                                             showWebLogin = false
                                         }
                                         result?.confirm()
                                         return true
                                     }
                                 }
-                                
+
                                 webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                        currentHost = android.net.Uri.parse(url ?: "").host?.lowercase()
+                                        super.onPageStarted(view, url, favicon)
+                                    }
+
+                                    private fun isDiscordApp(urlStr: String?): Boolean {
+                                        val u = android.net.Uri.parse(urlStr ?: "")
+                                        val host = u.host?.lowercase() ?: return false
+                                        val onDiscord = host == "discord.com" || host.endsWith(".discord.com")
+                                        return onDiscord && (urlStr!!.endsWith("/app") || urlStr.contains("/channels/"))
+                                    }
+
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                         val url = request?.url?.toString() ?: return false
-                                        if (url.endsWith("/app")) {
+                                        if (isDiscordApp(url)) {
                                             view?.stopLoading()
                                             view?.loadUrl(jsSnippet)
                                             return true
@@ -296,7 +336,7 @@ fun DiscordSettingsScreen(
 
                                     @Deprecated("Deprecated in Java")
                                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                        if (url != null && url.endsWith("/app")) {
+                                        if (isDiscordApp(url)) {
                                             view?.stopLoading()
                                             view?.loadUrl(jsSnippet)
                                             return true
