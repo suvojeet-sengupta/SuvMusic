@@ -145,10 +145,51 @@ class MusicPlayer @Inject constructor(
     private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
             scheduleDeviceRefresh(primaryDelayMs = 1000L, secondaryDelayMs = 2000L)
+
+            val btAdded = addedDevices?.any { d ->
+                d.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                d.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                (android.os.Build.VERSION.SDK_INT >= 31 && (
+                    d.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                    d.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                    d.type == 30 /* TYPE_BLE_BROADCAST */
+                ))
+            } == true
+            if (btAdded) {
+                onBluetoothAudioConnected()
+            }
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
             scheduleDeviceRefresh(primaryDelayMs = 500L, secondaryDelayMs = 2000L)
+        }
+    }
+
+    private fun onBluetoothAudioConnected() {
+        scope.launch {
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val volumePercent = if (maxVolume > 0) currentVolume.toFloat() / maxVolume else 0f
+            if (volumePercent > 0.7f) {
+                val targetVolume = (maxVolume * 0.5f).toInt()
+                scope.launch {
+                    var v = currentVolume
+                    while (v > targetVolume) {
+                        v--
+                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
+                        delay(50)
+                    }
+                }
+            }
+
+            if (sessionManager.isBluetoothAutoplayEnabled()) {
+                // Give the audio route a moment to settle before starting playback
+                delay(800)
+                val state = _playerState.value
+                if (state.queue.isNotEmpty() && !state.isPlaying) {
+                    play()
+                }
+            }
         }
     }
     
@@ -249,40 +290,9 @@ class MusicPlayer @Inject constructor(
         deviceReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
                 // Debounce refresh so rapid connect/disconnect bursts don't stack coroutines.
+                // Bluetooth autoplay + safe-volume ducking are handled by the AudioDeviceCallback,
+                // which fires reliably without requiring BLUETOOTH_CONNECT permission.
                 scheduleDeviceRefresh(primaryDelayMs = 2000L, secondaryDelayMs = 3000L)
-
-                scope.launch {
-                    // Bluetooth Autoplay
-                    if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
-                        // Improvement (5): Safe Volume Ducking
-                        // Prevent ear damage if Bluetooth device connects with high volume
-                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                        val volumePercent = currentVolume.toFloat() / maxVolume
-                        
-                        if (volumePercent > 0.7f) {
-                            android.util.Log.i("MusicPlayer", "Safe Volume: Ducking volume from ${ (volumePercent * 100).toInt() }% to 50%")
-                            val targetVolume = (maxVolume * 0.5f).toInt()
-                            
-                            // Smoothly duck volume over 1 second
-                            scope.launch {
-                                var v = currentVolume
-                                while (v > targetVolume) {
-                                    v--
-                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
-                                    delay(50)
-                                }
-                            }
-                        }
-
-                        if (sessionManager.isBluetoothAutoplayEnabled()) {
-                            // Check if we have media to play
-                            if (_playerState.value.queue.isNotEmpty() && !_playerState.value.isPlaying) {
-                                play()
-                            }
-                        }
-                    }
-                }
             }
         }
         

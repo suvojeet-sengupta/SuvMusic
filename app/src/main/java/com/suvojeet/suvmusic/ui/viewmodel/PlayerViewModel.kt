@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -1135,6 +1136,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _isFetchingComments.value = true
             _commentsState.value = null
+            _commentReplies.value = emptyMap()
+            _loadingReplies.value = emptySet()
             
             // Only fetch for YouTube/Downloaded source which have valid video IDs
             val currentSong = playerState.value.currentSong
@@ -1150,7 +1153,7 @@ class PlayerViewModel @Inject constructor(
     fun loadMoreComments() {
         if (_isLoadingMoreComments.value || _isFetchingComments.value) return
         val currentSong = playerState.value.currentSong ?: return
-        
+
         viewModelScope.launch {
             _isLoadingMoreComments.value = true
             val moreComments = youTubeRepository.getMoreComments(currentSong.id)
@@ -1159,6 +1162,39 @@ class PlayerViewModel @Inject constructor(
                 _commentsState.value = currentComments + moreComments
             }
             _isLoadingMoreComments.value = false
+        }
+    }
+
+    // Per-comment replies state keyed by comment id.
+    private val _commentReplies = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
+    val commentReplies: StateFlow<Map<String, List<Comment>>> = _commentReplies.asStateFlow()
+
+    private val _loadingReplies = MutableStateFlow<Set<String>>(emptySet())
+    val loadingReplies: StateFlow<Set<String>> = _loadingReplies.asStateFlow()
+
+    fun loadReplies(commentId: String) {
+        if (_loadingReplies.value.contains(commentId)) return
+        if (_commentReplies.value.containsKey(commentId)) return
+        viewModelScope.launch {
+            _loadingReplies.update { it + commentId }
+            val replies = youTubeRepository.getCommentReplies(commentId)
+            _commentReplies.update { it + (commentId to replies) }
+            _loadingReplies.update { it - commentId }
+        }
+    }
+
+    fun loadMoreReplies(commentId: String) {
+        if (_loadingReplies.value.contains(commentId)) return
+        viewModelScope.launch {
+            _loadingReplies.update { it + commentId }
+            val more = youTubeRepository.getMoreCommentReplies(commentId)
+            if (more.isNotEmpty()) {
+                _commentReplies.update { map ->
+                    val existing = map[commentId].orEmpty()
+                    map + (commentId to existing + more)
+                }
+            }
+            _loadingReplies.update { it - commentId }
         }
     }
 

@@ -178,6 +178,13 @@ private fun LiquidGlassNavBar(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(72.dp)
+            // Consume taps that miss individual items so clicks don't pass through
+            // to controls rendered behind a translucent navigation bar.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
     ) {
         // Layer 1: Enhanced shadow
         Box(
@@ -393,6 +400,13 @@ private fun StandardNavBar(
             .fillMaxWidth()
             .background(containerColor)
             .navigationBarsPadding()
+            // Consume taps that miss individual items so clicks don't pass through
+            // to controls rendered behind a translucent navigation bar.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
     ) {
         Row(
             modifier = Modifier
