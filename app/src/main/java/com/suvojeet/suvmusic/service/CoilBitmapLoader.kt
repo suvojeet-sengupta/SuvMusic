@@ -72,15 +72,37 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
         val future = SettableFuture.create<Bitmap>()
         scope.launch {
             try {
-                val bitmap = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
+                // Probe dimensions first, pick inSampleSize so the decoded bitmap
+                // fits within DEFAULT_BITMAP_SIZE. Avoids OOM on 4000×4000 art.
+                val probe = android.graphics.BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, probe)
+
+                val decodeOpts = android.graphics.BitmapFactory.Options().apply {
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                    inSampleSize = calculateInSampleSize(probe.outWidth, probe.outHeight, DEFAULT_BITMAP_SIZE)
+                }
+                val bitmap = try {
+                    android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, decodeOpts)
+                } catch (oom: OutOfMemoryError) {
+                    // Retry at lower resolution rather than crash the notification pipeline.
+                    decodeOpts.inSampleSize = (decodeOpts.inSampleSize * 2).coerceAtLeast(2)
+                    try {
+                        android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, decodeOpts)
+                    } catch (_: OutOfMemoryError) {
+                        null
+                    }
+                }
+
                 if (bitmap != null) {
                     val drawable = BitmapDrawable(context.resources, bitmap)
                     val safeBitmap = createSafeBitmapFromDrawable(drawable)
-                    
+
                     if (safeBitmap != null && safeBitmap != bitmap && !bitmap.isRecycled) {
                         bitmap.recycle()
                     }
-                    
+
                     if (safeBitmap != null) future.set(safeBitmap)
                     else future.setException(Exception("Safe conversion failed"))
                 } else {
@@ -91,6 +113,16 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
             }
         }
         return future
+    }
+
+    private fun calculateInSampleSize(srcWidth: Int, srcHeight: Int, targetMax: Int): Int {
+        if (srcWidth <= 0 || srcHeight <= 0 || targetMax <= 0) return 1
+        var sample = 1
+        val longer = maxOf(srcWidth, srcHeight)
+        while (longer / sample > targetMax * 2) {
+            sample *= 2
+        }
+        return sample
     }
 
     override fun supportsMimeType(mimeType: String): Boolean = true

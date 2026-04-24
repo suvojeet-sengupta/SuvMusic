@@ -126,21 +126,29 @@ class MusicPlayer @Inject constructor(
     private var currentSongStartPosition: Long = 0L
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
-    
+
+    // Debounced device refresh — collapses bursts of Bluetooth/headset events
+    // into a single refresh so the Main dispatcher doesn't pile up delay() jobs.
+    private var deviceRefreshJob: Job? = null
+    private fun scheduleDeviceRefresh(primaryDelayMs: Long = 1000L, secondaryDelayMs: Long = 3000L) {
+        deviceRefreshJob?.cancel()
+        deviceRefreshJob = scope.launch {
+            delay(primaryDelayMs)
+            updateAvailableDevices()
+            // Second attempt after longer delay for slower devices
+            delay(secondaryDelayMs)
+            updateAvailableDevices()
+        }
+    }
+
     // Modern Audio Device Callback
     private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
-            scope.launch {
-                delay(1000)
-                updateAvailableDevices()
-            }
+            scheduleDeviceRefresh(primaryDelayMs = 1000L, secondaryDelayMs = 2000L)
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
-            scope.launch {
-                delay(500)
-                updateAvailableDevices()
-            }
+            scheduleDeviceRefresh(primaryDelayMs = 500L, secondaryDelayMs = 2000L)
         }
     }
     
@@ -233,15 +241,10 @@ class MusicPlayer @Inject constructor(
         
         deviceReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
-                // Small delay to allow system to update device list
-                scope.launch {
-                    delay(2000)
-                    updateAvailableDevices()
-                    
-                    // Second attempt after longer delay for slower devices
-                    delay(3000)
-                    updateAvailableDevices()
+                // Debounce refresh so rapid connect/disconnect bursts don't stack coroutines.
+                scheduleDeviceRefresh(primaryDelayMs = 2000L, secondaryDelayMs = 3000L)
 
+                scope.launch {
                     // Bluetooth Autoplay
                     if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
                         // Improvement (5): Safe Volume Ducking
@@ -277,9 +280,14 @@ class MusicPlayer @Inject constructor(
         }
         
         try {
-            deviceReceiver?.let { context.registerReceiver(it, filter) }
+            deviceReceiver?.let {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    context, it, filter,
+                    androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+            }
         } catch (e: Exception) {
-            // Log error
+            android.util.Log.e("MusicPlayer", "registerReceiver failed", e)
         }
     }
 
@@ -424,11 +432,14 @@ class MusicPlayer @Inject constructor(
         val isInGracePeriod = manualSelectedDeviceId != null && (System.currentTimeMillis() - lastManualSelectionTime < 10000)
 
         // If we are in grace period but device isn't in list, MANUALLY add it to the list
-        // so the UI stays stable and shows it as "Connecting/Active"
-        if (!hasSelection && isInGracePeriod && manualSelectedDeviceId != null && manualSelectedDeviceName != null) {
+        // so the UI stays stable and shows it as "Connecting/Active".
+        // Capture to locals to avoid race with concurrent nullification of the fields.
+        val capturedId = manualSelectedDeviceId
+        val capturedName = manualSelectedDeviceName
+        if (!hasSelection && isInGracePeriod && capturedId != null && capturedName != null) {
             val placeholderDevice = OutputDevice(
-                id = manualSelectedDeviceId!!,
-                name = manualSelectedDeviceName!!,
+                id = capturedId,
+                name = capturedName,
                 type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
                 isSelected = true
             )
@@ -825,8 +836,9 @@ class MusicPlayer @Inject constructor(
                     // Fast path: if we pre-resolved this song's URL during preloading
                     // (in shuffle mode, we cache the URL without calling replaceMediaItem
                     // to avoid disrupting ExoPlayer's internal state). Apply it now.
-                    if (needsResolution && preloadedNextSongId == song.id && preloadedStreamUrl != null) {
-                        val cachedUrl = preloadedStreamUrl!!
+                    val capturedPreloadUrl = preloadedStreamUrl
+                    if (needsResolution && preloadedNextSongId == song.id && capturedPreloadUrl != null) {
+                        val cachedUrl = capturedPreloadUrl
                         val cachedIsVideo = preloadedIsVideoMode
                         preloadedNextSongId = null
                         preloadedStreamUrl = null
@@ -2489,8 +2501,22 @@ class MusicPlayer @Inject constructor(
             val newParameters = parameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, isBackground)
                 .build()
-            
+
             player.trackSelectionParameters = newParameters
         }
+    }
+
+    /**
+     * Release system registrations (broadcast receiver, audio-device callback)
+     * and cancel the player scope. Call when the process/app is tearing down.
+     */
+    fun release() {
+        try { deviceReceiver?.let { context.unregisterReceiver(it) } } catch (_: Exception) {}
+        deviceReceiver = null
+        try { audioManager.unregisterAudioDeviceCallback(audioDeviceCallback) } catch (_: Exception) {}
+        try { controllerFuture?.let { MediaController.releaseFuture(it) } } catch (_: Exception) {}
+        mediaController = null
+        controllerFuture = null
+        scope.cancel()
     }
 }

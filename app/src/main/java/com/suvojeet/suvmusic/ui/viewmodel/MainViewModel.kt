@@ -87,7 +87,16 @@ class MainViewModel @Inject constructor(
             when {
                 uri.scheme == "suvmusic" && uri.host == "lastfm-auth" -> {
                     val token = uri.getQueryParameter("token")
-                    if (token != null) {
+                    // CSRF guard: refuse tokens that arrive without a recent
+                    // in-app auth handshake. Blocks malicious apps / phishing
+                    // pages that fire suvmusic://lastfm-auth?token=... to sign
+                    // the victim into an attacker-controlled Last.fm account.
+                    if (token == null) {
+                        _events.emit(MainEvent.ShowToast("Invalid Last.fm callback"))
+                    } else if (!sessionManager.isLastFmAuthPending()) {
+                        _events.emit(MainEvent.ShowToast("Ignored unsolicited Last.fm login"))
+                    } else {
+                        sessionManager.clearLastFmAuthPending()
                         lastFmRepository.fetchSession(token)
                             .onSuccess { auth ->
                                 sessionManager.setLastFmSession(auth.session.key, auth.session.name)

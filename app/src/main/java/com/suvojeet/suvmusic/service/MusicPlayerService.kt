@@ -1313,7 +1313,12 @@ class MusicPlayerService : MediaLibraryService() {
         .setBitmapLoader(CoilBitmapLoader(this))
         .build()
 
-        registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            volumeReceiver,
+            android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         serviceScope.launch {
             sessionManager.sponsorBlockEnabledFlow.collect { enabled ->
                 sponsorBlockRepository.setEnabled(enabled)
