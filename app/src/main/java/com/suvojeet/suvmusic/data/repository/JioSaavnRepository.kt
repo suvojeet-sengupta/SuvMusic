@@ -221,12 +221,13 @@ class JioSaavnRepository @Inject constructor(
                     ?: song.get("more_info")?.asJsonObject?.get("encrypted_media_url")?.asString
                 
                 encryptedUrl?.let { encrypted ->
-                    val decrypted = decryptUrl(encrypted)
-                    // Replace quality suffix based on requested quality
-                    when (quality) {
-                        320 -> decrypted.replace(QUALITY_96, QUALITY_320).replace(QUALITY_160, QUALITY_320)
-                        160 -> decrypted.replace(QUALITY_96, QUALITY_160).replace(QUALITY_320, QUALITY_160)
-                        else -> decrypted
+                    decryptUrl(encrypted)?.let { decrypted ->
+                        // Replace quality suffix based on requested quality
+                        when (quality) {
+                            320 -> decrypted.replace(QUALITY_96, QUALITY_320).replace(QUALITY_160, QUALITY_320)
+                            160 -> decrypted.replace(QUALITY_96, QUALITY_160).replace(QUALITY_320, QUALITY_160)
+                            else -> decrypted
+                        }
                     }
                 }
             }
@@ -909,24 +910,29 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
-     * Decrypt JioSaavn's encrypted media URL using DES.
+     * Decrypt JioSaavn's encrypted media URL.
+     *
+     * Note: the algorithm (DES-ECB) is dictated by JioSaavn's server format and
+     * is not something we control. The defensive posture here is to fail hard
+     * on decrypt errors and return null, rather than silently returning the
+     * encrypted blob which the caller would then attempt to use as a URL.
      */
-    private fun decryptUrl(encryptedUrl: String): String {
+    private fun decryptUrl(encryptedUrl: String): String? {
         return try {
             val keySpec = DESKeySpec(DES_KEY.toByteArray())
             val keyFactory = SecretKeyFactory.getInstance("DES")
             val secretKey = keyFactory.generateSecret(keySpec)
-            
+
             val cipher = Cipher.getInstance("DES/ECB/PKCS5Padding")
             cipher.init(Cipher.DECRYPT_MODE, secretKey)
-            
+
             val decoded = Base64.decode(encryptedUrl, Base64.DEFAULT)
             val decrypted = cipher.doFinal(decoded)
-            
+
             String(decrypted)
         } catch (e: Exception) {
-            e.printStackTrace()
-            encryptedUrl
+            android.util.Log.w("JioSaavnRepository", "decryptUrl failed: ${e.javaClass.simpleName}")
+            null
         }
     }
     
