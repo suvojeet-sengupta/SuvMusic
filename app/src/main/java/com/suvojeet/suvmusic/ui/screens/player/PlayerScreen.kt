@@ -105,6 +105,8 @@ data class PlayerScreenState(
     val isLoggedIn: Boolean = false,
     val isPostingComment: Boolean = false,
     val isLoadingMoreComments: Boolean = false,
+    val commentReplies: Map<String, List<com.suvojeet.suvmusic.data.model.Comment>> = emptyMap(),
+    val loadingReplies: Set<String> = emptySet(),
     val sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     val sleepTimerRemainingMs: Long? = null,
     val isRadioMode: Boolean = false,
@@ -136,6 +138,8 @@ data class PlayerScreenActions(
     val onLoadMoreRadioSongs: () -> Unit,
     val onPostComment: (String) -> Unit,
     val onLoadMoreComments: () -> Unit,
+    val onLoadReplies: (String) -> Unit = {},
+    val onLoadMoreReplies: (String) -> Unit = {},
     val onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit,
     val onSwitchDevice: (OutputDevice) -> Unit,
     val onRefreshDevices: () -> Unit,
@@ -712,6 +716,8 @@ fun BoxScope.OverlaysContent(
         isVisible = activeOverlay is PlayerOverlay.Comments, comments = state.comments, isLoading = state.isFetchingComments,
         onDismiss = { if (currentOverlay is PlayerOverlay.Comments) onOverlayChange(PlayerOverlay.None) }, accentColor = dominantColors.accent, isLoggedIn = state.isLoggedIn,
         isPostingComment = state.isPostingComment, onPostComment = actions.onPostComment, isLoadingMore = state.isLoadingMoreComments, onLoadMore = actions.onLoadMoreComments,
+        commentReplies = state.commentReplies, loadingReplies = state.loadingReplies,
+        onLoadReplies = actions.onLoadReplies, onLoadMoreReplies = actions.onLoadMoreReplies,
         dominantColors = dominantColors, isDarkTheme = isAppInDarkTheme
     )
 
