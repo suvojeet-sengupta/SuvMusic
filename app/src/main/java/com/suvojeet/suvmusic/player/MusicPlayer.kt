@@ -2505,18 +2505,4 @@ class MusicPlayer @Inject constructor(
             player.trackSelectionParameters = newParameters
         }
     }
-
-    /**
-     * Release system registrations (broadcast receiver, audio-device callback)
-     * and cancel the player scope. Call when the process/app is tearing down.
-     */
-    fun release() {
-        try { deviceReceiver?.let { context.unregisterReceiver(it) } } catch (_: Exception) {}
-        deviceReceiver = null
-        try { audioManager.unregisterAudioDeviceCallback(audioDeviceCallback) } catch (_: Exception) {}
-        try { controllerFuture?.let { MediaController.releaseFuture(it) } } catch (_: Exception) {}
-        mediaController = null
-        controllerFuture = null
-        scope.cancel()
-    }
 }
