@@ -52,21 +52,32 @@ class CrossfadeController(
         }
 
         val startVolume = player.volume
+        val startIndex = player.currentMediaItemIndex
         val tickMs = 30L
         val steps = (durationMs / tickMs).coerceAtLeast(1)
 
         fadeJob = scope.launch {
+            var autoAdvanced = false
             for (step in 0..steps) {
                 if (!isActive) return@launch
+                // If ExoPlayer auto-advanced to the next item during the fade,
+                // stop attenuating — otherwise we clip the beginning of the next track.
+                if (player.currentMediaItemIndex != startIndex) {
+                    autoAdvanced = true
+                    break
+                }
                 val t = step.toFloat() / steps.toFloat()
                 val gain = if (equalPower) cos(t * (PI / 2)).toFloat() else (1f - t)
                 player.volume = (startVolume * gain).coerceIn(0f, 1f)
                 delay(tickMs)
             }
-            player.volume = 0f
-            onFadeComplete()
-            // Restore volume so the next track starts at full level.
+            // Restore volume first so whichever item is now current plays at full level.
             player.volume = startVolume
+            // Only advance manually if ExoPlayer hasn't already done so naturally —
+            // otherwise we'd skip an extra track.
+            if (!autoAdvanced && player.currentMediaItemIndex == startIndex) {
+                onFadeComplete()
+            }
         }
     }
 

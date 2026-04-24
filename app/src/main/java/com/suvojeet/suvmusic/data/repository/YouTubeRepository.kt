@@ -108,6 +108,21 @@ class YouTubeRepository @Inject constructor(
     private var currentCommentsPage: org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage<*>? = null
     private var currentVideoIdForComments: String? = null
 
+    // Replies: initial Page per top-level comment + next-page state per comment id
+    private val commentRepliesInitialPage = mutableMapOf<String, org.schabi.newpipe.extractor.Page>()
+    private val commentRepliesNextPage = mutableMapOf<String, org.schabi.newpipe.extractor.Page?>()
+
+    /**
+     * Convert YouTube comment HTML (`<br>`, anchor tags, entities) to display-ready plain text.
+     * NewPipe returns HTML-typed `Description.content` for comments, so rendering it raw shows
+     * literal tags like `<br>` in the UI.
+     */
+    private fun cleanCommentHtml(raw: String?): String {
+        if (raw.isNullOrBlank()) return ""
+        val html = android.text.Html.fromHtml(raw, android.text.Html.FROM_HTML_MODE_COMPACT)
+        return html.toString().trim()
+    }
+
     init {
         externalScope.launch {
             initializeNewPipe()
@@ -2109,9 +2124,11 @@ class YouTubeRepository @Inject constructor(
         if (videoId.isBlank()) return@withContext emptyList()
         try {
             currentVideoIdForComments = videoId
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            commentRepliesInitialPage.clear()
+            commentRepliesNextPage.clear()
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val extractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
             if (extractor == null) {
                 currentCommentsExtractor = null
@@ -2128,14 +2145,16 @@ class YouTubeRepository @Inject constructor(
             if (currentCommentsPage == null) return@withContext emptyList()
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
+                val id = item.url ?: java.util.UUID.randomUUID().toString()
+                item.replies?.let { commentRepliesInitialPage[id] = it }
                 Comment(
-                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    id = id,
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
-                    text = item.commentText.content ?: "",
+                    text = cleanCommentHtml(item.commentText.content),
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
-                    replyCount = 0
+                    replyCount = item.replyCount.coerceAtLeast(0)
                 )
             } ?: emptyList()
         } catch (e: Exception) {
@@ -2161,17 +2180,70 @@ class YouTubeRepository @Inject constructor(
             if (nextPage == null) return@withContext emptyList()
 
             nextPage.items.filterIsInstance<CommentsInfoItem>().map { item ->
+                val id = item.url ?: java.util.UUID.randomUUID().toString()
+                item.replies?.let { commentRepliesInitialPage[id] = it }
+                Comment(
+                    id = id,
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = cleanCommentHtml(item.commentText.content),
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = item.replyCount.coerceAtLeast(0)
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 
+    /**
+     * Fetch the first page of replies for a given top-level comment.
+     */
+    suspend fun getCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        val extractor = currentCommentsExtractor ?: return@withContext emptyList()
+        val initial = commentRepliesInitialPage[commentId] ?: return@withContext emptyList()
+        try {
+            val page = runCatching { extractor.getPage(initial) }.getOrNull() ?: return@withContext emptyList()
+            commentRepliesNextPage[commentId] = if (page.hasNextPage()) page.nextPage else null
+            page.items.filterIsInstance<CommentsInfoItem>().map { item ->
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
-                    text = item.commentText.content ?: "",
+                    text = cleanCommentHtml(item.commentText.content),
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0
                 )
-            } ?: emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch more replies for a given top-level comment (paginated).
+     */
+    suspend fun getMoreCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        val extractor = currentCommentsExtractor ?: return@withContext emptyList()
+        val next = commentRepliesNextPage[commentId] ?: return@withContext emptyList()
+        try {
+            val page = runCatching { extractor.getPage(next) }.getOrNull() ?: return@withContext emptyList()
+            commentRepliesNextPage[commentId] = if (page.hasNextPage()) page.nextPage else null
+            page.items.filterIsInstance<CommentsInfoItem>().map { item ->
+                Comment(
+                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = cleanCommentHtml(item.commentText.content),
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = 0
+                )
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
