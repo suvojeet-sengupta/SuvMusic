@@ -225,6 +225,13 @@ class PlayerViewModel @Inject constructor(
     private val _selectedQueueIndices = MutableStateFlow<Set<Int>>(emptySet())
     val selectedQueueIndices: StateFlow<Set<Int>> = _selectedQueueIndices.asStateFlow()
 
+    // Per-comment replies state keyed by comment id.
+    private val _commentReplies = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
+    val commentReplies: StateFlow<Map<String, List<Comment>>> = _commentReplies.asStateFlow()
+
+    private val _loadingReplies = MutableStateFlow<Set<String>>(emptySet())
+    val loadingReplies: StateFlow<Set<String>> = _loadingReplies.asStateFlow()
+
     // Derived Queue Sections
     /** Songs from index 0 to currentIndex - 1 — already played */
     val historySongs: StateFlow<List<Song>> = playerState.map { state ->
@@ -1164,13 +1171,6 @@ class PlayerViewModel @Inject constructor(
             _isLoadingMoreComments.value = false
         }
     }
-
-    // Per-comment replies state keyed by comment id.
-    private val _commentReplies = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
-    val commentReplies: StateFlow<Map<String, List<Comment>>> = _commentReplies.asStateFlow()
-
-    private val _loadingReplies = MutableStateFlow<Set<String>>(emptySet())
-    val loadingReplies: StateFlow<Set<String>> = _loadingReplies.asStateFlow()
 
     fun loadReplies(commentId: String) {
         if (_loadingReplies.value.contains(commentId)) return
