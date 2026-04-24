@@ -537,6 +537,24 @@ class SessionManager @Inject constructor(
         return@withContext encryptedPrefs.getString("last_fm_username", null)
     }
 
+    /** Mark the start of a Last.fm auth handshake so the deep-link callback can
+     *  verify the flow was actually initiated from inside the app (CSRF guard). */
+    fun markLastFmAuthStarted() {
+        encryptedPrefs.edit()
+            .putLong("last_fm_auth_started_at", System.currentTimeMillis())
+            .apply()
+    }
+
+    /** True if markLastFmAuthStarted() was called within [windowMs]. */
+    fun isLastFmAuthPending(windowMs: Long = 5 * 60 * 1000L): Boolean {
+        val ts = encryptedPrefs.getLong("last_fm_auth_started_at", 0L)
+        return ts > 0 && System.currentTimeMillis() - ts <= windowMs
+    }
+
+    fun clearLastFmAuthPending() {
+        encryptedPrefs.edit().remove("last_fm_auth_started_at").apply()
+    }
+
     suspend fun clearLastFmSession() {
         withContext(Dispatchers.IO) {
             encryptedPrefs.edit()
@@ -1715,14 +1733,17 @@ class SessionManager @Inject constructor(
     private var _encryptedPrefs: android.content.SharedPreferences? = null
     private val encryptedPrefs: android.content.SharedPreferences
         get() {
-            if (_encryptedPrefs == null) {
-                synchronized(this) {
-                    if (_encryptedPrefs == null) {
-                        _encryptedPrefs = createEncryptedPrefs()
-                    }
+            val existing = _encryptedPrefs
+            if (existing != null) return existing
+            return synchronized(this) {
+                val existingLocked = _encryptedPrefs
+                if (existingLocked != null) existingLocked
+                else {
+                    val created = createEncryptedPrefs()
+                    _encryptedPrefs = created
+                    created
                 }
             }
-            return _encryptedPrefs!!
         }
 
     private fun createEncryptedPrefs(): android.content.SharedPreferences {
@@ -1735,9 +1756,13 @@ class SessionManager @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // This happens after restoring backup on different device or OS reinstall
-            // where keystore keys are lost but preference file remains.
-            // We must clear the file to prevent continuous crashing.
+            // Happens after restoring backup on different device or OS reinstall
+            // where Keystore keys are lost but the preference file remains.
+            // Clearing the file and retrying creates a fresh Keystore-bound key.
+            // If that ALSO fails, the device's Keystore is broken — we must still
+            // return a prefs instance so the app can launch and prompt re-auth,
+            // but we clear any lingering secrets first and do NOT silently write
+            // new secrets to plaintext.
             try {
                 context.deleteSharedPreferences("suvmusic_secure_session")
                 EncryptedSharedPreferences.create(
@@ -1748,7 +1773,16 @@ class SessionManager @Inject constructor(
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e2: Exception) {
-                // Fallback to normal prefs if encryption is completely broken
+                android.util.Log.e(
+                    "SessionManager",
+                    "Keystore unavailable; session storage running in degraded mode",
+                    e2
+                )
+                // Wipe any stale plaintext fallback file so we never persist
+                // secrets unencrypted on disk.
+                try {
+                    context.deleteSharedPreferences("suvmusic_secure_session_fallback")
+                } catch (_: Exception) {}
                 context.getSharedPreferences("suvmusic_secure_session_fallback", Context.MODE_PRIVATE)
             }
         }

@@ -143,15 +143,29 @@ object KuGou {
             parameter("accesskey", accessKey)
         }.body<DownloadLyricsResponse>()
 
-    private fun normalizeTitle(title: String) =
-        title.replace("\\(.*\\)".toRegex(), "").replace("（.*）".toRegex(), "")
-            .replace("「.*」".toRegex(), "").replace("『.*』".toRegex(), "")
-            .replace("<.*>".toRegex(), "").replace("《.*》".toRegex(), "")
-            .replace("〈.*〉".toRegex(), "").replace("＜.*＞".toRegex(), "")
+    // Compiled once — these were previously .toRegex()'d on every call,
+    // producing noticeable jank during lyric fetch on low-end devices.
+    private val TITLE_STRIP_REGEXES = listOf(
+        "\\(.*\\)".toRegex(), "（.*）".toRegex(),
+        "「.*」".toRegex(), "『.*』".toRegex(),
+        "<.*>".toRegex(), "《.*》".toRegex(),
+        "〈.*〉".toRegex(), "＜.*＞".toRegex()
+    )
+    private val ARTIST_STRIP_REGEXES = listOf(
+        "\\(.*\\)".toRegex(), "（.*）".toRegex()
+    )
 
-    private fun normalizeArtist(artist: String) =
-        artist.replace(", ", "、").replace(" & ", "、").replace(".", "").replace("和", "、")
-            .replace("\\(.*\\)".toRegex(), "").replace("（.*）".toRegex(), "")
+    private fun normalizeTitle(title: String): String {
+        var t = title
+        for (r in TITLE_STRIP_REGEXES) t = t.replace(r, "")
+        return t
+    }
+
+    private fun normalizeArtist(artist: String): String {
+        var a = artist.replace(", ", "、").replace(" & ", "、").replace(".", "").replace("和", "、")
+        for (r in ARTIST_STRIP_REGEXES) a = a.replace(r, "")
+        return a
+    }
 
     fun generateKeyword(title: String, artist: String, album: String? = null) =
         Keyword(normalizeTitle(title), normalizeArtist(artist), album)

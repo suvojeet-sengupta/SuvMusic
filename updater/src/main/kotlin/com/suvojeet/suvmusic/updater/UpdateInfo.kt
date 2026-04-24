@@ -10,7 +10,10 @@ data class UpdateInfo(
     val downloadUrl: String,
     val forceUpdate: Boolean,
     val size: String = "",
-    val releaseNotesUrl: String = ""
+    val releaseNotesUrl: String = "",
+    /** Optional hex SHA-256 of the APK. When present, UpdateDownloader aborts
+     *  install on mismatch — defends against MITM swap of the downloaded file. */
+    val sha256: String? = null
 )
 
 @Serializable

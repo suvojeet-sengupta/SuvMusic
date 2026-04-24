@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,10 +40,21 @@ class UpdateDownloader @Inject constructor(
     private var downloadId: Long = -1
     private var progressJob: Job? = null
 
+    // Expected SHA-256 of the APK being downloaded (hex, lowercase). When set,
+    // the downloaded file is verified before install; mismatch aborts install.
+    private var expectedSha256: String? = null
+
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
-    fun downloadAndInstall(url: String, versionName: String) {
+    /**
+     * @param sha256 Optional hex-encoded SHA-256 of the expected APK. If supplied,
+     *               the installer refuses to run if the downloaded file's digest
+     *               does not match — protects against MITM swap attacks.
+     */
+    fun downloadAndInstall(url: String, versionName: String, sha256: String? = null) {
+        expectedSha256 = sha256?.lowercase()
+
         val fileName = "SuvMusic-v$versionName.apk"
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("Downloading SuvMusic Update")
@@ -57,22 +71,30 @@ class UpdateDownloader @Inject constructor(
 
         downloadId = downloadManager.enqueue(request)
         _downloadState.value = DownloadState.Downloading(0f, 0, 0)
-        
+
         startProgressTracking()
 
-        // Register receiver for when download is complete
-        context.registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
+        // Register the completion receiver privately — system DownloadManager
+        // dispatches to registered receivers, but NOT_EXPORTED blocks other apps
+        // from spoofing ACTION_DOWNLOAD_COMPLETE with a malicious download id.
+        val completionReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
                 val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
                 if (id == downloadId) {
                     stopProgressTracking()
                     val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
                     _downloadState.value = DownloadState.Completed(file)
                     installApk(file)
-                    context.unregisterReceiver(this)
+                    try { ctx.unregisterReceiver(this) } catch (_: Exception) {}
                 }
             }
-        }, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED)
+        }
+        ContextCompat.registerReceiver(
+            context,
+            completionReceiver,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     private fun startProgressTracking() {
@@ -117,6 +139,17 @@ class UpdateDownloader @Inject constructor(
     private fun installApk(file: File) {
         if (!file.exists()) return
 
+        // Refuse to launch the installer if an expected hash was supplied and
+        // the downloaded file doesn't match — defends against MITM swaps.
+        expectedSha256?.let { expected ->
+            val actual = sha256(file)
+            if (actual == null || !actual.equals(expected, ignoreCase = true)) {
+                try { file.delete() } catch (_: Exception) {}
+                _downloadState.value = DownloadState.Error("Update rejected: signature check failed")
+                return
+            }
+        }
+
         val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
         } else {
@@ -131,7 +164,22 @@ class UpdateDownloader @Inject constructor(
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            _downloadState.value = DownloadState.Error("Error starting installation: ${e.message}")
+            _downloadState.value = DownloadState.Error("Error starting installation")
         }
+    }
+
+    private fun sha256(file: File): String? = try {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n <= 0) break
+                digest.update(buf, 0, n)
+            }
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    } catch (_: Exception) {
+        null
     }
 }
