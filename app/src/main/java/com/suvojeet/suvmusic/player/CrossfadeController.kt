@@ -30,6 +30,13 @@ class CrossfadeController(
 ) {
     private var fadeJob: Job? = null
 
+    /** True while a crossfade coroutine is owning the player's volume — set during
+     *  crossfadeTo's fade-in phase so external listeners can refrain from restoring volume.
+     */
+    @Volatile
+    var isFadingIn: Boolean = false
+        private set
+
     /**
      * Kick off a fade-out on [player] over [durationMs].
      * The caller is responsible for advancing the queue / starting the next item
@@ -77,6 +84,78 @@ class CrossfadeController(
             // otherwise we'd skip an extra track.
             if (!autoAdvanced && player.currentMediaItemIndex == startIndex) {
                 onFadeComplete()
+            }
+        }
+    }
+
+    /**
+     * Symmetric crossfade: fade the current track out over the first half of [durationMs],
+     * advance to the next track via [onSwitch], then fade the new track in over the second
+     * half. Done in a single coroutine so the transition is sequenced correctly even when
+     * ExoPlayer auto-advances mid-fade.
+     *
+     * The single-player constraint means there's no actual audio overlap, but perceptually
+     * the user hears: "song 1 fades out → song 2 fades in", which matches expectations of a
+     * crossfade much better than the bare fade-out-then-cut behaviour.
+     */
+    fun crossfadeTo(
+        player: Player,
+        durationMs: Int,
+        onSwitch: () -> Unit
+    ) {
+        cancel()
+        if (durationMs <= 0) {
+            onSwitch()
+            return
+        }
+
+        val startVolume = player.volume
+        val startIndex = player.currentMediaItemIndex
+        val tickMs = 30L
+        // Bias slightly toward fade-out so song 1's tail is what we lose first; the
+        // incoming track gets the leaner half so it reaches full volume promptly.
+        val outDurationMs = durationMs * 60 / 100
+        val inDurationMs = durationMs - outDurationMs
+        val outSteps = (outDurationMs / tickMs).coerceAtLeast(1)
+        val inSteps = (inDurationMs / tickMs).coerceAtLeast(1)
+
+        fadeJob = scope.launch {
+            // Fade out current track
+            var autoAdvanced = false
+            for (step in 0..outSteps) {
+                if (!isActive) return@launch
+                if (player.currentMediaItemIndex != startIndex) {
+                    autoAdvanced = true
+                    break
+                }
+                val t = step.toFloat() / outSteps.toFloat()
+                val gain = cos(t * (PI / 2)).toFloat()
+                player.volume = (startVolume * gain).coerceIn(0f, 1f)
+                delay(tickMs)
+            }
+
+            // Switch to next track (unless ExoPlayer already did)
+            if (!autoAdvanced && player.currentMediaItemIndex == startIndex) {
+                player.volume = 0f
+                onSwitch()
+            }
+
+            // Fade in new track from 0 → startVolume.
+            // ExoPlayer's transition listener may try to restore volume to 1.0; the
+            // isFadingIn flag tells the listener to leave the volume alone while we ramp.
+            isFadingIn = true
+            try {
+                player.volume = 0f
+                for (step in 0..inSteps) {
+                    if (!isActive) return@launch
+                    val t = step.toFloat() / inSteps.toFloat()
+                    val gain = sin(t * (PI / 2)).toFloat()
+                    player.volume = (startVolume * gain).coerceIn(0f, 1f)
+                    delay(tickMs)
+                }
+                player.volume = startVolume
+            } finally {
+                isFadingIn = false
             }
         }
     }

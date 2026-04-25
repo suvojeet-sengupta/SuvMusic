@@ -26,6 +26,8 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -302,27 +304,47 @@ class YouTubeRepository @Inject constructor(
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
     suspend fun getRelatedSongs(videoId: String): List<Song> {
-        // Fetch from multiple sources to increase the number of related songs
+        // Two sources:
+        //   1. searchService.getRelatedSongs — YouTube Music's "next" API, returns
+        //      proper music tracks (Topic-channel uploads, official singles).
+        //   2. streamingService.getRelatedItems — vanilla YouTube watch-page sidebar,
+        //      which mixes in regular videos (lyric edits, fan covers, vlogs, podcasts).
+        //
+        // Source 1 is what we want; source 2 was causing non-music videos to leak into
+        // the autoplay queue. We now only use source 2 as a thin fallback when source 1
+        // returns nothing, and even then only when the uploader looks like a music
+        // channel (Topic / VEVO / Records / Music) so we don't pull in random vlogs.
         val internalResults = try { searchService.getRelatedSongs(videoId) } catch (e: Exception) { emptyList() }
-        val streamingResults = try { streamingService.getRelatedItems(videoId) } catch (e: Exception) { emptyList() }
-        
-        // Combine all results
-        val results = internalResults + streamingResults
-        
+
+        val musicySources = internalResults.ifEmpty {
+            try {
+                val raw = streamingService.getRelatedItems(videoId)
+                raw.filter { song ->
+                    val artist = song.artist.lowercase()
+                    artist.contains(" - topic") ||
+                    artist.contains("vevo") ||
+                    artist.contains("records") ||
+                    artist.contains(" music")
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
         // Comprehensive deduplication: by ID and by Title/Artist fingerprint
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
         val fingerprintRegex = Regex("[^a-z0-9]")
-        
-        return results.filter { song ->
+
+        return musicySources.filter { song ->
             val id = song.id
             val title = song.title.lowercase().replace(fingerprintRegex, "")
             val artist = song.artist.lowercase().replace(fingerprintRegex, "")
             val fingerprint = "$title|$artist"
-            
+
             val isNewId = seenIds.add(id)
             val isNewFingerprint = seenFingerprints.add(fingerprint)
-            
+
             // Only keep if both ID and Title/Artist are new
             isNewId && isNewFingerprint
         }
@@ -434,24 +456,27 @@ class YouTubeRepository @Inject constructor(
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
             
-            try {
-                val chartsResponse = fetchPublicApi("FEmusic_charts", hl = hl)
-                if (chartsResponse.isNotEmpty()) {
-                    sections.addAll(parseChartsSectionsFromJson(chartsResponse))
+            // Fetch charts and home in parallel — both are independent network calls
+            // and running them sequentially doubles the wall-clock cold start.
+            kotlinx.coroutines.coroutineScope {
+                val chartsDeferred = async(Dispatchers.IO) {
+                    try {
+                        val chartsResponse = fetchPublicApi("FEmusic_charts", hl = hl)
+                        if (chartsResponse.isNotEmpty()) parseChartsSectionsFromJson(chartsResponse) else emptyList()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            } catch (e: Exception) {
-                // Charts failed, continue
-            }
-            
-            // 2. Try fetching public home browse (may work without auth for some content)
-            try {
-                val homeResponse = fetchPublicApi("FEmusic_home", hl = hl)
-                if (homeResponse.isNotEmpty()) {
-                    val homeSections = parseHomeSectionsFromInternalJson(homeResponse)
-                    sections.addAll(homeSections)
+                val homeDeferred = async(Dispatchers.IO) {
+                    try {
+                        val homeResponse = fetchPublicApi("FEmusic_home", hl = hl)
+                        if (homeResponse.isNotEmpty()) parseHomeSectionsFromInternalJson(homeResponse) else emptyList()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            } catch (e: Exception) {
-                // Home failed, continue
+                sections.addAll(chartsDeferred.await())
+                sections.addAll(homeDeferred.await())
             }
             
             // 3. If we got sections from public API, return them
@@ -491,26 +516,34 @@ class YouTubeRepository @Inject constructor(
                 }.map { it.first to it.second }
             }
             
-            for ((title, query) in sectionQueries) {
-                try {
-                    val songs = search(query, FILTER_SONGS).take(10)
-                        .map { HomeItem.SongItem(it) }
-                    if (songs.isNotEmpty()) {
-                        val type = when {
-                            title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
-                            title.contains("Fresh finds", ignoreCase = true) || 
-                            title.contains("Listen again", ignoreCase = true) -> HomeSectionType.Grid
-                            title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
-                            title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
-                             else -> HomeSectionType.HorizontalCarousel
+            // Parallelize the per-section search calls. Logged-out users were waiting
+            // for up to 14 sequential network round-trips before the home screen had
+            // anything to show. Running them concurrently in a coroutineScope cuts the
+            // wall time from `sum(roundtrips)` down to roughly `max(roundtrips)`.
+            kotlinx.coroutines.coroutineScope {
+                val deferred = sectionQueries.map { (title, query) ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val songs = search(query, FILTER_SONGS).take(10)
+                                .map { HomeItem.SongItem(it) }
+                            if (songs.isEmpty()) return@async null
+                            val type = when {
+                                title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
+                                title.contains("Fresh finds", ignoreCase = true) ||
+                                title.contains("Listen again", ignoreCase = true) -> HomeSectionType.Grid
+                                title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
+                                title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
+                                else -> HomeSectionType.HorizontalCarousel
+                            }
+                            HomeSection(title, songs, type)
+                        } catch (e: Exception) {
+                            null
                         }
-                        sections.add(HomeSection(title, songs, type))
                     }
-                } catch (e: Exception) {
-                    // Skip failed section
                 }
+                deferred.awaitAll().forEach { it?.let { sections.add(it) } }
             }
-            
+
             return@withContext sections
         }
 
