@@ -32,9 +32,13 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
     private val imageLoader = context.imageLoader
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // Standard high-quality size for modern notification shades.
-    // 720px is crisp on 1440p screens and safe for IPC when using RGB_565.
-    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 720
+    // Notification artwork is upscaled by SystemUI on tablets, lock screens with
+    // larger media players, and Android 14's expanded media controls. 720 RGB_565
+    // looks soft on those surfaces compared to YT Music / Spotify, so we bump to
+    // 1024 — RGB_565 keeps the Binder payload at ~2 MB which is safe for the
+    // MediaSession transaction on modern Android (the legacy 1 MB cap only
+    // applies to plain notifications, not foreground media services).
+    private val DEFAULT_BITMAP_SIZE = if (isAndroidAuto()) 256 else 1024
 
     // --- Media3 API Implementation ---
 
@@ -150,9 +154,9 @@ class CoilBitmapLoader(private val context: Context) : BitmapLoader {
 
             // Google User Content (YT Music): Proactively try high-res sizing
             uriString.contains("googleusercontent.com") || uriString.contains("ggpht.com") -> {
-                uris.add(upgradeGoogleUri(uriString, 720)) // High
-                uris.add(upgradeGoogleUri(uriString, 544)) // Standard
-                uris.add(upgradeGoogleUri(uriString, 400)) // Low
+                uris.add(upgradeGoogleUri(uriString, 1080)) // High
+                uris.add(upgradeGoogleUri(uriString, 720))  // Mid
+                uris.add(upgradeGoogleUri(uriString, 544))  // Fallback
             }
 
             else -> uris.add(originalUri)
