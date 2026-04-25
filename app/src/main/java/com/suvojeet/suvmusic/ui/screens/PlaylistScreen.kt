@@ -1100,9 +1100,16 @@ private fun LazyItemScope.SongListItem(
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(index)
     val onReorderState by androidx.compose.runtime.rememberUpdatedState(onReorder)
 
+    // Selection tint when not dragging; opaque surface while dragging so the
+    // lifted tile reads cleanly in light mode (shadow alone is too faint there).
+    val draggingSurface = MaterialTheme.colorScheme.surfaceContainerHigh
+    val selectionTint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     val backgroundColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
-                      else Color.Transparent,
+        targetValue = when {
+            isDragging -> draggingSurface
+            isSelected -> selectionTint
+            else -> Color.Transparent
+        },
         label = "ItemSelectionBackground"
     )
 
@@ -1123,6 +1130,7 @@ private fun LazyItemScope.SongListItem(
                 this.clip = true
                 this.shape = SquircleShape
             }
+            .clip(SquircleShape)
             .background(backgroundColor)
             .combinedClickable(
                 onClick = onClick,

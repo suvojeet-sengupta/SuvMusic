@@ -671,8 +671,12 @@ class MusicPlayer @Inject constructor(
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             // Reset crossfade guard + restore volume for the incoming track.
+            // Skip the volume restore while a crossfade is mid fade-in; otherwise we
+            // overwrite the ramp and the new track jumps to full volume instantly.
             crossfadeTriggered = false
-            mediaController?.let { c -> if (c.volume < 1f) c.volume = 1f }
+            if (!crossfadeController.isFadingIn) {
+                mediaController?.let { c -> if (c.volume < 1f) c.volume = 1f }
+            }
 
             mediaItem?.let { item ->
                 val controller = mediaController ?: return@let
@@ -1407,13 +1411,19 @@ class MusicPlayer @Inject constructor(
                         saveCurrentPlaybackState()
                     }
                     
-                    // Check if we need to preload next song for gapless playback
+                    // Check if we need to preload next song for gapless playback.
+                    // Skip the early-transition seek when a crossfade is already in flight
+                    // for this track — otherwise the gapless skip races the crossfade and
+                    // the new track ends up at full volume before the fade-in plays.
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
 
                         // Early transition logic
                         val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
-                        if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                        if (!crossfadeTriggered && crossfadeMs == 0 &&
+                            duration >= 10_000L && wallPlayTime >= 5_000L &&
+                            currentPos >= duration - 1500 &&
+                            preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
                                 val nextIndex = controller.nextMediaItemIndex
@@ -1430,9 +1440,9 @@ class MusicPlayer @Inject constructor(
                         }
                     }
 
-                    // Crossfade: fade out current track and skip to next when we're within
-                    // `crossfadeMs` of the end. Respects Repeat One, ignores near-zero durations,
-                    // and only fires once per track.
+                    // Crossfade: when within `crossfadeMs` of the end, fade song 1 out then
+                    // fade song 2 in. Respects Repeat One, ignores near-zero durations, and
+                    // only fires once per track.
                     if (crossfadeMs > 0 && !crossfadeTriggered && duration > (crossfadeMs + 1000)) {
                         val remaining = duration - currentPos
                         val hasNext = controller.hasNextMediaItem()
@@ -1440,7 +1450,7 @@ class MusicPlayer @Inject constructor(
                             _playerState.value.repeatMode != RepeatMode.ONE
                         ) {
                             crossfadeTriggered = true
-                            crossfadeController.fadeOut(controller, crossfadeMs) {
+                            crossfadeController.crossfadeTo(controller, crossfadeMs) {
                                 mediaController?.seekToNextMediaItem()
                             }
                         }
@@ -2479,8 +2489,14 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
-     * Convert a YouTube thumbnail URL to high resolution for better notification artwork quality.
-     * Converts hqdefault, mqdefault, sddefault to maxresdefault format.
+     * Convert a YouTube / Google thumbnail URL to high resolution for notification,
+     * lock screen, Android Auto, and Wear artwork.
+     *
+     * Notification panels (especially on tablets) and Android Auto upscale the artwork
+     * to ~720–1080px. The previous 544px cap looked soft compared to apps like
+     * YouTube Music or Spotify; bumping the request to 1080 gives crisp art on
+     * high-DPI panels while still being well under the bitmap-size limit MediaSession
+     * accepts (~10MB / 4096px).
      */
     private fun getHighResThumbnail(url: String?): String? {
         return url?.let {
@@ -2489,17 +2505,16 @@ class MusicPlayer @Inject constructor(
                     .replace("hqdefault", "maxresdefault")
                     .replace("mqdefault", "maxresdefault")
                     .replace("sddefault", "maxresdefault")
-                    // Fix: use path-aware replacement so we only upgrade the bare "default"
-                    // thumbnail (e.g. "/default.jpg") and never corrupt "maxresdefault" which
-                    // was already set by the replacements above (plain .replace("default",…)
-                    // would turn "maxresdefault" → "maxresmaxresdefault" — an invalid URL).
+                    // Path-aware replace: only upgrade the bare "default" thumbnail
+                    // (e.g. "/default.jpg"); bare .replace("default",…) would corrupt
+                    // "maxresdefault" → "maxresmaxresdefault".
                     .replace("/default.", "/maxresdefault.")
-                    .replace(Regex("w\\d+-h\\d+"), "w544-h544")
-                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") -> 
-                    it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
-                      .replace(Regex("=s\\d+"), "=s544")
-                      .replace(Regex("=w\\d+"), "=w544")
-                else -> it.replace(Regex("w\\d+-h\\d+"), "w544-h544")
+                    .replace(Regex("w\\d+-h\\d+"), "w1080-h1080")
+                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") ->
+                    it.replace(Regex("=w\\d+-h\\d+(-[a-z0-9]+)?"), "=w1080-h1080")
+                      .replace(Regex("=s\\d+(-[a-z0-9]+)?"), "=s1080")
+                      .replace(Regex("=w\\d+(-[a-z0-9]+)?"), "=w1080")
+                else -> it.replace(Regex("w\\d+-h\\d+"), "w1080-h1080")
             }
         }
     }
