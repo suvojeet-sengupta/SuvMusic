@@ -145,9 +145,6 @@ class ListenTogetherClient @Inject constructor(
     init {
         setInstance(this)
         ensureNotificationChannel()
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            loadPersistedSession()
-        }
     }
     
     /**
@@ -289,6 +286,14 @@ class ListenTogetherClient @Inject constructor(
 
     private val _blockedUsers = MutableStateFlow<Set<String>>(emptySet())
     val blockedUsers: StateFlow<Set<String>> = _blockedUsers.asStateFlow()
+
+    // Second init: runs AFTER all MutableStateFlow fields above are initialized,
+    // so the IO coroutine cannot race ahead and hit a null _userId/_blockedUsers.
+    init {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            loadPersistedSession()
+        }
+    }
 
     fun blockUser(userId: String) {
         _blockedUsers.value = _blockedUsers.value + userId

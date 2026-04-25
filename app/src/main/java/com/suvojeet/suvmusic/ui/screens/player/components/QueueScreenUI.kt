@@ -260,7 +260,15 @@ fun ModernQueueView(
 
                 if (upNextSongs.isNotEmpty()) {
                     item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", secondaryContentColor) }
-                    itemsIndexed(upNextSongs, key = { _, s -> s.id }) { indexInList, song ->
+                    // Compose's LazyList requires unique keys. The queue can legitimately
+                    // contain the same song twice (manual "Add to queue" of a track that
+                    // is already enqueued, repeat-one transitions, autoplay echoes), so we
+                    // combine the absolute queue index with the id instead of using the
+                    // bare id — a duplicate id otherwise crashes the list on next render.
+                    itemsIndexed(
+                        upNextSongs,
+                        key = { idx, s -> "${currentIndex + 1 + idx}_${s.id}" }
+                    ) { indexInList, song ->
                         val actualIndex = currentIndex + 1 + indexInList
                         ModernQueueListItem(
                             song = song,
@@ -411,11 +419,20 @@ private fun LazyItemScope.ModernQueueListItem(
         targetValue = if (isDragging) 8.dp else 0.dp,
         label = "DragElevation"
     )
-    
+
     // Remember updated values for indices to prevent stale state capture in the drag lambda
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
     val onDragMoveState by androidx.compose.runtime.rememberUpdatedState(onDragMove)
-    
+
+    // While dragging the row needs an opaque surface so the shadow elevation
+    // reads as a "lifted" tile in light mode (where shadow is faint against
+    // a near-white background) instead of a translucent floating row.
+    val rowBackground = when {
+        isDragging -> MaterialTheme.colorScheme.surfaceContainerHigh
+        isSelected -> dominantColors.accent.copy(alpha = 0.15f)
+        else -> Color.Transparent
+    }
+
     @OptIn(ExperimentalFoundationApi::class)
     Row(
         modifier = Modifier
@@ -435,7 +452,7 @@ private fun LazyItemScope.ModernQueueListItem(
                 this.shape = RoundedCornerShape(12.dp)
             }
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) dominantColors.accent.copy(alpha = 0.15f) else Color.Transparent)
+            .background(rowBackground)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
