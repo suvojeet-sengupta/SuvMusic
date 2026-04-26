@@ -205,10 +205,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // Retrofit
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    
+    // Retrofit removed in KMP phase 3a — last consumer (SponsorBlockRepository)
+    // moved to Ktor. Drop converter-gson too.
+
+
     // Image Loading
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
