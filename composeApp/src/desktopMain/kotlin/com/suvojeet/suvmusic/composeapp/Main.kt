@@ -6,6 +6,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import java.awt.Desktop
+import java.awt.FileDialog
+import java.awt.Frame
+import java.io.File
 import java.net.URI
 
 private const val APP_VERSION = "2.3.0.0"
@@ -19,6 +22,7 @@ fun main() = application {
         App(
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
+            onPickAudioFile = ::pickAudioFile,
         )
     }
 }
@@ -37,4 +41,25 @@ private fun openInBrowser(url: String) {
     } catch (t: Throwable) {
         // Best-effort only.
     }
+}
+
+/**
+ * Open a native file picker for an audio file. Returns the absolute path
+ * of the selected file, or null if the user cancelled.
+ *
+ * Uses [java.awt.FileDialog] which delegates to the OS-native chooser on
+ * Windows / macOS / Linux (XDG portals). Compose Desktop doesn't ship a
+ * built-in file picker, so this is the cleanest option without pulling
+ * in a third-party library like FileKit.
+ */
+private fun pickAudioFile(): String? {
+    val dialog = FileDialog(null as Frame?, "Select audio file", FileDialog.LOAD).apply {
+        // OS-dependent filter hint. Windows ignores it; macOS NSOpenPanel
+        // and most Linux file choosers honour it.
+        file = "*.mp3;*.flac;*.m4a;*.ogg;*.opus;*.wav"
+    }
+    dialog.isVisible = true
+    val dir = dialog.directory ?: return null
+    val name = dialog.file ?: return null
+    return File(dir, name).absolutePath
 }
