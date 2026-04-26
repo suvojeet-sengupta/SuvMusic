@@ -125,6 +125,8 @@ data class SettingsUiState(
     // Preloading
     val nextSongPreloadingEnabled: Boolean = true,
     val nextSongPreloadDelay: Int = 3, // seconds
+    // Crossfade (smooth volume-fade between tracks)
+    val crossfadeMs: Int = 0,
     // Crossfeed
     val crossfeedEnabled: Boolean = true,
     // Equalizer
@@ -521,6 +523,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.crossfadeMsFlow.collect { ms ->
+                _uiState.update { it.copy(crossfadeMs = ms) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.crossfeedEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(crossfeedEnabled = enabled) }
             }
@@ -829,6 +837,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun getLastFmAuthUrl(): String {
+        // Record that auth was initiated from inside the app; the deep-link
+        // callback refuses to consume a token unless this flag is fresh.
+        sessionManager.markLastFmAuthStarted()
         return lastFmRepository.getAuthUrl()
     }
 
@@ -1012,6 +1023,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setNextSongPreloadDelay(seconds)
             _uiState.update { it.copy(nextSongPreloadDelay = seconds) }
+        }
+    }
+
+    fun setCrossfadeMs(ms: Int) {
+        viewModelScope.launch {
+            sessionManager.setCrossfadeMs(ms)
+            _uiState.update { it.copy(crossfadeMs = ms.coerceIn(0, 12000)) }
         }
     }
 

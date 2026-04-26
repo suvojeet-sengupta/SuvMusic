@@ -79,33 +79,3 @@ fun screenHeightDp(): Int {
     val configuration = LocalConfiguration.current
     return configuration.screenHeightDp
 }
-
-/**
- * Device form factor for adaptive layout decisions.
- */
-enum class DeviceType {
-    /** Standard phone (portrait or landscape) */
-    Phone,
-    /** Tablet (smallest width >= 600dp, or expanded window) */
-    Tablet,
-    /** Android TV or set-top box */
-    TV
-}
-
-/**
- * Returns the current device type by combining TV detection,
- * tablet detection, and window size class.
- */
-@Composable
-fun rememberDeviceType(): DeviceType {
-    val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    return remember(configuration.screenWidthDp, configuration.smallestScreenWidthDp) {
-        when {
-            TvUtils.isTv(context) -> DeviceType.TV
-            configuration.smallestScreenWidthDp >= 600 -> DeviceType.Tablet
-            configuration.screenWidthDp >= 840 -> DeviceType.Tablet
-            else -> DeviceType.Phone
-        }
-    }
-}

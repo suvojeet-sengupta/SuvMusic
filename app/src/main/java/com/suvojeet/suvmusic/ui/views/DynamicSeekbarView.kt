@@ -58,6 +58,8 @@ class DynamicSeekbarView @JvmOverloads constructor(
             SeekbarStyle.CLASSIC -> drawClassic(canvas)
             SeekbarStyle.DOTS -> drawDots(canvas)
             SeekbarStyle.GRADIENT_BAR -> drawGradient(canvas)
+            SeekbarStyle.NEON -> drawClassic(canvas) // Simpler version for island
+            SeekbarStyle.BLOCKS -> drawDots(canvas) // Simpler version for island
             SeekbarStyle.MATERIAL -> drawClassic(canvas)
             SeekbarStyle.M3E_WAVY -> drawWaveLine(canvas) // M3E not available in View, use wave line
         }
@@ -88,6 +90,18 @@ class DynamicSeekbarView @JvmOverloads constructor(
                 paint
             )
         }
+
+        // Custom vertical pill thumb for Waveform style
+        val thumbWidth = barWidth * 1.5f
+        val thumbHeight = height * 0.8f
+        paint.color = activeColor
+        paint.style = Paint.Style.FILL
+        canvas.drawRoundRect(
+            progressX - thumbWidth / 2, centerY - thumbHeight / 2,
+            progressX + thumbWidth / 2, centerY + thumbHeight / 2,
+            thumbWidth / 2, thumbWidth / 2,
+            paint
+        )
     }
 
     private fun drawWaveLine(canvas: Canvas) {
@@ -96,6 +110,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         val centerY = height / 2f
         val amplitude = height * 0.3f
         val progressX = progress * width
+        val frequency = 0.1f
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 4f
@@ -106,7 +121,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         path.moveTo(0f, centerY)
         var x = 0f
         while (x <= width) {
-            val y = centerY + sin(x * 0.1f) * amplitude
+            val y = centerY + sin(x * frequency) * amplitude
             path.lineTo(x, y)
             x += 5f
         }
@@ -118,12 +133,17 @@ class DynamicSeekbarView @JvmOverloads constructor(
         path.moveTo(0f, centerY)
         x = 0f
         while (x <= progressX) {
-            val y = centerY + sin(x * 0.1f) * amplitude
+            val y = centerY + sin(x * frequency) * amplitude
             path.lineTo(x, y)
             x += 5f
         }
         paint.color = activeColor
         canvas.drawPath(path, paint)
+
+        // Custom glowing orb thumb riding the wave
+        val currentWaveY = centerY + sin(progressX * frequency) * amplitude
+        paint.style = Paint.Style.FILL
+        canvas.drawCircle(progressX, currentWaveY, 10f, paint)
     }
 
     private fun drawClassic(canvas: Canvas) {
@@ -144,7 +164,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         canvas.drawRoundRect(0f, centerY - trackHeight/2, progress * width, centerY + trackHeight/2, trackHeight/2, trackHeight/2, paint)
 
         // Thumb
-        canvas.drawCircle(progress * width, centerY, 12f, paint)
+        canvas.drawCircle(progress * width, centerY, 14f, paint)
     }
 
     private fun drawDots(canvas: Canvas) {
@@ -163,6 +183,10 @@ class DynamicSeekbarView @JvmOverloads constructor(
             paint.color = if (cx < progressX) activeColor else inactiveColor
             canvas.drawCircle(cx, centerY, radius, paint)
         }
+
+        // Custom larger dot thumb
+        paint.color = activeColor
+        canvas.drawCircle(progressX, centerY, radius * 1.5f, paint)
     }
 
     private fun drawGradient(canvas: Canvas) {
@@ -170,6 +194,7 @@ class DynamicSeekbarView @JvmOverloads constructor(
         val height = height.toFloat()
         val centerY = height / 2f
         val trackHeight = 10f
+        val progressX = progress * width
 
         paint.style = Paint.Style.FILL
         paint.strokeCap = Paint.Cap.ROUND
@@ -187,10 +212,18 @@ class DynamicSeekbarView @JvmOverloads constructor(
         )
         paint.shader = gradient
         
-        // We need to clip or draw rect for progress
-        canvas.drawRoundRect(0f, centerY - trackHeight/2, progress * width, centerY + trackHeight/2, trackHeight/2, trackHeight/2, paint)
+        canvas.drawRoundRect(0f, centerY - trackHeight/2, progressX, centerY + trackHeight/2, trackHeight/2, trackHeight/2, paint)
         
         paint.shader = null // Reset shader
+
+        // Custom vertical pill thumb for gradient style
+        paint.color = Color.WHITE
+        canvas.drawRoundRect(
+            progressX - 4f, centerY - trackHeight * 1.5f,
+            progressX + 4f, centerY + trackHeight * 1.5f,
+            4f, 4f,
+            paint
+        )
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

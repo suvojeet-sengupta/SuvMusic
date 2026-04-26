@@ -46,7 +46,7 @@ fun HomeItemCard(
 ) {
     when (item) {
         is HomeItem.SongItem -> {
-            MediumSongCard(
+            SquareSongCard(
                 song = item.song,
                 onClick = { 
                     // Extract all songs from the section for the queue
@@ -54,7 +54,8 @@ fun HomeItemCard(
                     val index = songs.indexOf(item.song)
                     if (index != -1) onSongClick(songs, index)
                 },
-                onMoreClick = { onSongMoreClick(item.song) }
+                onMoreClick = { onSongMoreClick(item.song) },
+                size = 170.dp
             )
         }
         is HomeItem.PlaylistItem -> {
@@ -147,99 +148,6 @@ fun PlaylistDisplayCard(
                     color = Color.White.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MediumSongCard(
-    song: Song,
-    onClick: () -> Unit,
-    onMoreClick: () -> Unit = {}
-) {
-    val context = LocalContext.current
-    
-    // Get high-res thumbnail (replace w120 or similar with w544)
-    val highResThumbnail = ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
-    
-    Column(
-        modifier = Modifier
-            .width(170.dp)
-            .bounceClick(onClick = onClick)
-    ) {
-
-        Box(
-            modifier = Modifier.size(170.dp)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(highResThumbnail)
-                    .crossfade(true)
-                    .size(544)  // Request high-res
-                    .build(),
-                contentDescription = song.title,
-                modifier = Modifier
-                    .size(170.dp)
-                    .clip(SquircleShape),
-                contentScale = ContentScale.Crop
-            )
-            
-            // Members Only Badge
-            if (song.isMembersOnly) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(
-                        topStart = 0.dp,
-                        topEnd = 20.dp,
-                        bottomStart = 16.dp,
-                        bottomEnd = 0.dp
-                    ),
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Text(
-                        text = "Members Only",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            
-            IconButton(
-                onClick = onMoreClick,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "More",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
                 )
             }
         }

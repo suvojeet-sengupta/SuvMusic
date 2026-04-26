@@ -34,7 +34,9 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Lock
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
@@ -90,6 +93,14 @@ import com.suvojeet.suvmusic.pip.PipHelper
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.toRoute
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.suvojeet.suvmusic.ui.utils.LocalDeviceFormFactor
+import com.suvojeet.suvmusic.ui.utils.rememberDeviceFormFactor
+import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
@@ -211,25 +222,45 @@ class MainActivity : ComponentActivity() {
                 pureBlack = pureBlackEnabled,
                 albumArtColors = if (albumArtDynamicColorsEnabled && playerState.currentSong != null) albumArtColors else null
             ) {
-                SuvMusicApp(
-                    intent = intent,
-                    networkMonitor = networkMonitor,
-                    audioManager = audioManager,
-                    volumeKeyEvents = _volumeKeyEvents,
-                    downloadRepository = downloadRepository,
-                    sessionManager = sessionManager, // Pass the injected instance
-                    youTubeRepository = youTubeRepository,
-                    updateViewModel = updateViewModel,
-                    onPlaybackStateChanged = { hasSong -> 
-                        isSongPlaying = hasSong
-                        // Update PiP params whenever playback state changes
-                        // so the play/pause icon stays in sync
-                        pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
-                    },
-                    onVolumeSliderEnabledChanged = { enabled ->
-                        isVolumeSliderEnabled = enabled
-                    }
+                val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+                val foldingFeature by produceState<FoldingFeature?>(null) {
+                    WindowInfoTracker.getOrCreate(this@MainActivity)
+                        .windowLayoutInfo(this@MainActivity)
+                        .collect { info ->
+                            value = info.displayFeatures
+                                .filterIsInstance<FoldingFeature>()
+                                .firstOrNull()
+                        }
+                }
+                
+                val formFactor = rememberDeviceFormFactor(
+                    windowSizeClass = windowSizeClass,
+                    foldingFeature = foldingFeature
                 )
+
+                CompositionLocalProvider(
+                    LocalDeviceFormFactor provides formFactor
+                ) {
+                    SuvMusicApp(
+                        intent = intent,
+                        networkMonitor = networkMonitor,
+                        audioManager = audioManager,
+                        volumeKeyEvents = _volumeKeyEvents,
+                        downloadRepository = downloadRepository,
+                        sessionManager = sessionManager, // Pass the injected instance
+                        youTubeRepository = youTubeRepository,
+                        updateViewModel = updateViewModel,
+                        onPlaybackStateChanged = { hasSong -> 
+                            isSongPlaying = hasSong
+                            // Update PiP params whenever playback state changes
+                            // so the play/pause icon stays in sync
+                            pipHelper.updatePipParams(this@MainActivity, isPipEnabled)
+                        },
+                        onVolumeSliderEnabledChanged = { enabled ->
+                            isVolumeSliderEnabled = enabled
+                        }
+                    )
+                }
             }
         }
     }
@@ -360,6 +391,7 @@ fun SuvMusicApp(
     val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
+    val miniPlayerGlassBlur by sessionManager.miniPlayerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 50f)
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
@@ -409,7 +441,17 @@ fun SuvMusicApp(
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
+    val keepScreenOnEnabled by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()
+
+    val rootView = LocalView.current
+    val shouldKeepScreenOn = keepScreenOnEnabled && isPlayerExpanded
+    DisposableEffect(shouldKeepScreenOn) {
+        rootView.keepScreenOn = shouldKeepScreenOn
+        onDispose {
+            rootView.keepScreenOn = false
+        }
+    }
     
     val lyrics by playerViewModel.lyricsState.collectAsStateWithLifecycle(initialValue = null)
     val isFetchingLyrics by playerViewModel.isFetchingLyrics.collectAsStateWithLifecycle(initialValue = false)
@@ -425,6 +467,8 @@ fun SuvMusicApp(
     val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle(initialValue = false)
     val isPostingComment by playerViewModel.isPostingComment.collectAsStateWithLifecycle(initialValue = false)
     val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsStateWithLifecycle(initialValue = false)
+    val commentReplies by playerViewModel.commentReplies.collectAsStateWithLifecycle(initialValue = emptyMap())
+    val loadingReplies by playerViewModel.loadingReplies.collectAsStateWithLifecycle(initialValue = emptySet())
     
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
@@ -458,6 +502,27 @@ fun SuvMusicApp(
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromLocalUri -> {
                     playerViewModel.playFromLocalUri(context, event.uri)
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToAlbum -> {
+                    navController.navigate(
+                        com.suvojeet.suvmusic.navigation.Destination.Album(
+                            albumId = event.browseId, name = null, thumbnailUrl = null
+                        )
+                    )
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToPlaylist -> {
+                    navController.navigate(
+                        com.suvojeet.suvmusic.navigation.Destination.Playlist(
+                            playlistId = event.playlistId, name = null, thumbnailUrl = null
+                        )
+                    )
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToArtist -> {
+                    navController.navigate(com.suvojeet.suvmusic.navigation.Destination.Artist(event.channelId))
+                }
+                is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.NavigateToSearch -> {
+                    navController.navigate(com.suvojeet.suvmusic.navigation.Destination.Search)
+                    // TODO: pre-fill search with event.query once Search screen exposes a seed param.
                 }
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
                     com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(event.message)
@@ -628,8 +693,8 @@ fun SuvMusicApp(
         }
     }
     
-    // Determine device type for adaptive layouts
-    val deviceType = com.suvojeet.suvmusic.ui.utils.rememberDeviceType()
+    // Determine device form factor for adaptive layouts
+    val formFactor = LocalDeviceFormFactor.current
 
     if (showWelcomeDialog) {
         com.suvojeet.suvmusic.ui.components.WelcomeOnboardingDialog(
@@ -648,7 +713,7 @@ fun SuvMusicApp(
 
         val density = androidx.compose.ui.platform.LocalDensity.current
         val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val navBarHeight = if (showBottomNav && formFactor != DeviceFormFactor.TV) 80.dp else 0.dp
         val miniPlayerHeight = if (showMiniPlayer) 64.dp else 0.dp
         val snackbarBottomPadding = when {
             isPlayerExpanded -> navBarPadding + 12.dp
@@ -660,7 +725,7 @@ fun SuvMusicApp(
              Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 bottomBar = {
-                    if (showBottomNav && deviceType == com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
+                    if (showBottomNav && formFactor.isPhoneLike) {
                         Column {
                             // Bottom navigation (phone only)
                             val navBarAlpha by sessionManager.navBarAlphaFlow.collectAsStateWithLifecycle(initialValue = 1.0f)
@@ -719,9 +784,9 @@ fun SuvMusicApp(
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Side navigation rail for TV and Tablet
-                    if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.Phone) {
-                        when (deviceType) {
-                            com.suvojeet.suvmusic.ui.utils.DeviceType.TV -> {
+                    if (showBottomNav && !formFactor.isPhoneLike) {
+                        when {
+                            formFactor == DeviceFormFactor.TV -> {
                                 com.suvojeet.suvmusic.ui.components.TvNavigationRail(
                                     currentDestination = currentDestination,
                                     onDestinationChange = { dest ->
@@ -735,7 +800,7 @@ fun SuvMusicApp(
                                     }
                                 )
                             }
-                            com.suvojeet.suvmusic.ui.utils.DeviceType.Tablet -> {
+                            formFactor.isTabletLike -> {
                                 com.suvojeet.suvmusic.ui.components.AdaptiveNavigationRail(
                                     currentDestination = currentDestination,
                                     onDestinationChange = { dest ->
@@ -827,7 +892,6 @@ fun SuvMusicApp(
                             onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
-                            deviceType = deviceType,
                             dominantColors = currentDominantColors,
                             snackbarHostState = snackbarHostState
                         )
@@ -843,7 +907,7 @@ fun SuvMusicApp(
     if (showMiniPlayer) {
         val density = LocalDensity.current
         val navBarPadding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val navBarHeight = if (showBottomNav && deviceType != com.suvojeet.suvmusic.ui.utils.DeviceType.TV) 80.dp else 0.dp
+        val navBarHeight = if (showBottomNav && formFactor != DeviceFormFactor.TV) 80.dp else 0.dp
         val bottomPaddingPx = with(density) { navBarPadding.toPx() + navBarHeight.toPx() }
 
         ExpandablePlayerSheet(
@@ -858,6 +922,7 @@ fun SuvMusicApp(
             userAlpha = miniPlayerAlpha,
             style = miniPlayerStyle,
             artworkShape = artworkShape,
+            glassBlurAmount = miniPlayerGlassBlur,
             swipeDownToDismissEnabled = swipeDownToDismissEnabled,
             onExpandChange = { expanded ->
                 if (expanded) playerViewModel.expandPlayer() else playerViewModel.collapsePlayer()
@@ -877,6 +942,8 @@ fun SuvMusicApp(
                     isLoggedIn = isLoggedIn,
                     isPostingComment = isPostingComment,
                     isLoadingMoreComments = isLoadingMoreComments,
+                    commentReplies = commentReplies,
+                    loadingReplies = loadingReplies,
                     isRadioMode = isRadioMode,
                     isLoadingMoreSongs = isLoadingMoreSongs,
                     selectedLyricsProvider = selectedLyricsProvider,
@@ -910,7 +977,7 @@ fun SuvMusicApp(
                             playerViewModel.playSong(playerState.queue[index], playerState.queue, index)
                         }
                     },
-                    onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
+                    onSwitchDevice = { device -> playerViewModel.switchOutputDevice(device) },
                     onRefreshDevices = { playerViewModel.refreshDevices() },
                     onArtistClick = { artistIdOrName ->
                         if (artistCredits.size > 1) {
@@ -928,6 +995,8 @@ fun SuvMusicApp(
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                     onPostComment = { commentText -> playerViewModel.postComment(commentText) },
                     onLoadMoreComments = { playerViewModel.loadMoreComments() },
+                    onLoadReplies = { id -> playerViewModel.loadReplies(id) },
+                    onLoadMoreReplies = { id -> playerViewModel.loadMoreReplies(id) },
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                     onImportLyrics = { playerViewModel.importLyrics(it) },
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },

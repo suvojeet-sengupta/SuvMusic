@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +54,10 @@ fun CommentsSheet(
     onPostComment: (String) -> Unit = {},
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {},
+    commentReplies: Map<String, List<Comment>> = emptyMap(),
+    loadingReplies: Set<String> = emptySet(),
+    onLoadReplies: (String) -> Unit = {},
+    onLoadMoreReplies: (String) -> Unit = {},
     dominantColors: DominantColors? = null,
     isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
@@ -211,10 +217,14 @@ fun CommentsSheet(
                                 ) { index, comment ->
                                     val isHighlighted = comment.id.startsWith("temp_")
                                     CommentItem(
-                                        comment = comment, 
+                                        comment = comment,
                                         accentColor = finalAccentColor,
                                         contentColor = contentColor,
                                         isHighlighted = isHighlighted,
+                                        replies = commentReplies[comment.id],
+                                        isLoadingReplies = loadingReplies.contains(comment.id),
+                                        onLoadReplies = { onLoadReplies(comment.id) },
+                                        onLoadMoreReplies = { onLoadMoreReplies(comment.id) },
                                         modifier = Modifier.animateItem()
                                     )
                                 }
@@ -392,8 +402,13 @@ fun CommentItem(
     accentColor: Color,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     isHighlighted: Boolean = false,
+    replies: List<Comment>? = null,
+    isLoadingReplies: Boolean = false,
+    onLoadReplies: () -> Unit = {},
+    onLoadMoreReplies: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var repliesExpanded by rememberSaveable(comment.id) { mutableStateOf(false) }
     val context = LocalContext.current
     
     Surface(
@@ -500,16 +515,142 @@ fun CommentItem(
                         }
                     }
                     
-                    // Reply Count (if available)
+                    // Reply toggle (if available)
                     if (comment.replyCount > 0) {
                         Text(
-                            text = "${comment.replyCount} replies",
+                            text = when {
+                                repliesExpanded -> "Hide replies"
+                                replies != null -> "${comment.replyCount} replies"
+                                else -> "View ${comment.replyCount} replies"
+                            },
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.ExtraBold
                             ),
-                            color = accentColor
+                            color = accentColor,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    if (!repliesExpanded && replies == null) onLoadReplies()
+                                    repliesExpanded = !repliesExpanded
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
+                }
+
+                AnimatedVisibility(visible = repliesExpanded) {
+                    Column(modifier = Modifier.padding(top = 10.dp)) {
+                        val loaded = replies
+                        if (loaded.isNullOrEmpty() && isLoadingReplies) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    color = accentColor,
+                                    strokeWidth = 2.5.dp
+                                )
+                            }
+                        } else if (loaded != null) {
+                            loaded.forEach { reply ->
+                                ReplyItem(
+                                    reply = reply,
+                                    accentColor = accentColor,
+                                    contentColor = contentColor
+                                )
+                            }
+                            if (loaded.size < comment.replyCount) {
+                                Text(
+                                    text = if (isLoadingReplies) "Loading..." else "Load more replies",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = accentColor,
+                                    modifier = Modifier
+                                        .padding(start = 54.dp, top = 4.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(enabled = !isLoadingReplies) { onLoadMoreReplies() }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReplyItem(
+    reply: Comment,
+    accentColor: Color,
+    contentColor: Color
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, top = 6.dp, bottom = 6.dp)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(reply.authorThumbnailUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = null,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(contentColor.copy(alpha = 0.1f)),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = reply.authorName,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Text(
+                    text = reply.timestamp,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.5f)
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = reply.text,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    lineHeight = 18.sp,
+                    letterSpacing = 0.1.sp
+                ),
+                color = contentColor
+            )
+            if (reply.likeCount.isNotEmpty() && reply.likeCount != "0") {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.ThumbUp,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = reply.likeCount,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.7f)
+                    )
                 }
             }
         }

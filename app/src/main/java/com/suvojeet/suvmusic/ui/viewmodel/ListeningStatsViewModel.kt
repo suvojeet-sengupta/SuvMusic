@@ -22,6 +22,7 @@ import javax.inject.Inject
 data class ListeningStatsUiState(
     val totalSongsPlayed: Int = 0,
     val totalListeningTimeMs: Long = 0L,
+    val totalMonthsListened: Double = 0.0,
     val averageDailyMs: Long = 0L,
     val topSongs: List<ListeningHistory> = emptyList(),
     val topArtists: List<ArtistStats> = emptyList(),
@@ -81,9 +82,17 @@ class ListeningStatsViewModel @Inject constructor(
                 
                 val monthTopArtist = calculateTopArtistFromHistory(recentHistory)
                 
+                // Calculate months based on first ever track to now
+                val firstTrack = listeningHistoryRepository.getFirstEverTrack()
+                val totalMonths = firstTrack?.let {
+                    val diff = System.currentTimeMillis() - it.lastPlayed
+                    diff.toDouble() / (1000.0 * 60 * 60 * 24 * 30.44)
+                } ?: 0.0
+
                 ListeningStatsUiState(
                     totalSongsPlayed = globalStats.totalSongsPlayed,
                     totalListeningTimeMs = globalStats.totalListeningTimeMs,
+                    totalMonthsListened = totalMonths,
                     averageDailyMs = avgDaily,
                     topSongs = topSongs,
                     topArtists = topArtists,

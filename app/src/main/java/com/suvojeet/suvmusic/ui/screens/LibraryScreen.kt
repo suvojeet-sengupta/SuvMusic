@@ -136,7 +136,7 @@ fun LibraryScreen(
 
     Scaffold(
         floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
+            com.suvojeet.suvmusic.ui.components.primitives.ExpressiveFab(
                 onClick = { showAddMenu = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,

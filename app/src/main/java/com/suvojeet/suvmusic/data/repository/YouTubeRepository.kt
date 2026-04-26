@@ -26,6 +26,8 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -72,6 +74,7 @@ class YouTubeRepository @Inject constructor(
         const val FILTER_ALBUMS = "music_albums"
         const val FILTER_PLAYLISTS = "music_playlists"
         const val FILTER_ARTISTS = "music_artists"
+        private const val SEARCH_BROWSE_PREFIX = "SEARCH::"
 
         /**
          * Map language names to YouTube Music ISO codes (hl).
@@ -106,6 +109,21 @@ class YouTubeRepository @Inject constructor(
     private var currentCommentsExtractor: org.schabi.newpipe.extractor.comments.CommentsExtractor? = null
     private var currentCommentsPage: org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage<*>? = null
     private var currentVideoIdForComments: String? = null
+
+    // Replies: initial Page per top-level comment + next-page state per comment id
+    private val commentRepliesInitialPage = mutableMapOf<String, org.schabi.newpipe.extractor.Page>()
+    private val commentRepliesNextPage = mutableMapOf<String, org.schabi.newpipe.extractor.Page?>()
+
+    /**
+     * Convert YouTube comment HTML (`<br>`, anchor tags, entities) to display-ready plain text.
+     * NewPipe returns HTML-typed `Description.content` for comments, so rendering it raw shows
+     * literal tags like `<br>` in the UI.
+     */
+    private fun cleanCommentHtml(raw: String?): String {
+        if (raw.isNullOrBlank()) return ""
+        val html = android.text.Html.fromHtml(raw, android.text.Html.FROM_HTML_MODE_COMPACT)
+        return html.toString().trim()
+    }
 
     init {
         externalScope.launch {
@@ -286,27 +304,47 @@ class YouTubeRepository @Inject constructor(
     suspend fun getSongDetails(videoId: String): Song? = streamingService.getSongDetails(videoId)
 
     suspend fun getRelatedSongs(videoId: String): List<Song> {
-        // Fetch from multiple sources to increase the number of related songs
+        // Two sources:
+        //   1. searchService.getRelatedSongs — YouTube Music's "next" API, returns
+        //      proper music tracks (Topic-channel uploads, official singles).
+        //   2. streamingService.getRelatedItems — vanilla YouTube watch-page sidebar,
+        //      which mixes in regular videos (lyric edits, fan covers, vlogs, podcasts).
+        //
+        // Source 1 is what we want; source 2 was causing non-music videos to leak into
+        // the autoplay queue. We now only use source 2 as a thin fallback when source 1
+        // returns nothing, and even then only when the uploader looks like a music
+        // channel (Topic / VEVO / Records / Music) so we don't pull in random vlogs.
         val internalResults = try { searchService.getRelatedSongs(videoId) } catch (e: Exception) { emptyList() }
-        val streamingResults = try { streamingService.getRelatedItems(videoId) } catch (e: Exception) { emptyList() }
-        
-        // Combine all results
-        val results = internalResults + streamingResults
-        
+
+        val musicySources = internalResults.ifEmpty {
+            try {
+                val raw = streamingService.getRelatedItems(videoId)
+                raw.filter { song ->
+                    val artist = song.artist.lowercase()
+                    artist.contains(" - topic") ||
+                    artist.contains("vevo") ||
+                    artist.contains("records") ||
+                    artist.contains(" music")
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
         // Comprehensive deduplication: by ID and by Title/Artist fingerprint
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
         val fingerprintRegex = Regex("[^a-z0-9]")
-        
-        return results.filter { song ->
+
+        return musicySources.filter { song ->
             val id = song.id
             val title = song.title.lowercase().replace(fingerprintRegex, "")
             val artist = song.artist.lowercase().replace(fingerprintRegex, "")
             val fingerprint = "$title|$artist"
-            
+
             val isNewId = seenIds.add(id)
             val isNewFingerprint = seenFingerprints.add(fingerprint)
-            
+
             // Only keep if both ID and Title/Artist are new
             isNewId && isNewFingerprint
         }
@@ -418,24 +456,27 @@ class YouTubeRepository @Inject constructor(
             val preferredLanguages = sessionManager.getPreferredLanguages()
             val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
             
-            try {
-                val chartsResponse = fetchPublicApi("FEmusic_charts", hl = hl)
-                if (chartsResponse.isNotEmpty()) {
-                    sections.addAll(parseChartsSectionsFromJson(chartsResponse))
+            // Fetch charts and home in parallel — both are independent network calls
+            // and running them sequentially doubles the wall-clock cold start.
+            kotlinx.coroutines.coroutineScope {
+                val chartsDeferred = async(Dispatchers.IO) {
+                    try {
+                        val chartsResponse = fetchPublicApi("FEmusic_charts", hl = hl)
+                        if (chartsResponse.isNotEmpty()) parseChartsSectionsFromJson(chartsResponse) else emptyList()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            } catch (e: Exception) {
-                // Charts failed, continue
-            }
-            
-            // 2. Try fetching public home browse (may work without auth for some content)
-            try {
-                val homeResponse = fetchPublicApi("FEmusic_home", hl = hl)
-                if (homeResponse.isNotEmpty()) {
-                    val homeSections = parseHomeSectionsFromInternalJson(homeResponse)
-                    sections.addAll(homeSections)
+                val homeDeferred = async(Dispatchers.IO) {
+                    try {
+                        val homeResponse = fetchPublicApi("FEmusic_home", hl = hl)
+                        if (homeResponse.isNotEmpty()) parseHomeSectionsFromInternalJson(homeResponse) else emptyList()
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            } catch (e: Exception) {
-                // Home failed, continue
+                sections.addAll(chartsDeferred.await())
+                sections.addAll(homeDeferred.await())
             }
             
             // 3. If we got sections from public API, return them
@@ -475,26 +516,34 @@ class YouTubeRepository @Inject constructor(
                 }.map { it.first to it.second }
             }
             
-            for ((title, query) in sectionQueries) {
-                try {
-                    val songs = search(query, FILTER_SONGS).take(10)
-                        .map { HomeItem.SongItem(it) }
-                    if (songs.isNotEmpty()) {
-                        val type = when {
-                            title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
-                            title.contains("Fresh finds", ignoreCase = true) || 
-                            title.contains("Listen again", ignoreCase = true) -> HomeSectionType.Grid
-                            title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
-                            title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
-                             else -> HomeSectionType.HorizontalCarousel
+            // Parallelize the per-section search calls. Logged-out users were waiting
+            // for up to 14 sequential network round-trips before the home screen had
+            // anything to show. Running them concurrently in a coroutineScope cuts the
+            // wall time from `sum(roundtrips)` down to roughly `max(roundtrips)`.
+            kotlinx.coroutines.coroutineScope {
+                val deferred = sectionQueries.map { (title, query) ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val songs = search(query, FILTER_SONGS).take(10)
+                                .map { HomeItem.SongItem(it) }
+                            if (songs.isEmpty()) return@async null
+                            val type = when {
+                                title.contains("Quick picks", ignoreCase = true) -> HomeSectionType.VerticalList
+                                title.contains("Fresh finds", ignoreCase = true) ||
+                                title.contains("Listen again", ignoreCase = true) -> HomeSectionType.Grid
+                                title.contains("Community", ignoreCase = true) -> HomeSectionType.LargeCardWithList
+                                title.contains("Trending", ignoreCase = true) -> HomeSectionType.HorizontalCarousel
+                                else -> HomeSectionType.HorizontalCarousel
+                            }
+                            HomeSection(title, songs, type)
+                        } catch (e: Exception) {
+                            null
                         }
-                        sections.add(HomeSection(title, songs, type))
                     }
-                } catch (e: Exception) {
-                    // Skip failed section
                 }
+                deferred.awaitAll().forEach { it?.let { sections.add(it) } }
             }
-            
+
             return@withContext sections
         }
 
@@ -591,12 +640,31 @@ class YouTubeRepository @Inject constructor(
             
             if (category != null) {
                 // 3. Fetch specific mood page
+                if (category.browseId.startsWith(SEARCH_BROWSE_PREFIX)) {
+                    val songs = search(
+                        category.browseId.removePrefix(SEARCH_BROWSE_PREFIX),
+                        FILTER_SONGS
+                    )
+                    if (songs.isNotEmpty()) {
+                        return@withContext listOf(
+                            HomeSection(
+                                title = category.title,
+                                items = songs.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            )
+                        )
+                    }
+                }
+
                 val json = if (category.params != null) {
                     fetchInternalApiWithParams(category.browseId, category.params)
                 } else {
                     fetchInternalApi(category.browseId)
                 }
-                return@withContext parseHomeSectionsFromInternalJson(json)
+                val sections = parseHomeSectionsFromInternalJson(json)
+                if (sections.isNotEmpty()) {
+                    return@withContext sections
+                }
             }
             
             // 4. Fallback: Search (High accuracy fallback)
@@ -1224,28 +1292,95 @@ class YouTubeRepository @Inject constructor(
      */
     suspend fun getMoodsAndGenres(): List<BrowseCategory> = withContext(Dispatchers.IO) {
         try {
-            val json = fetchInternalApi("FEmusic_moods_and_genres")
-            parseMoodsAndGenresFromJson(json)
+            if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+            val categories = mutableListOf<BrowseCategory>()
+
+            // Authenticated path
+            if (sessionManager.isLoggedIn()) {
+                val internalJson = fetchInternalApi("FEmusic_moods_and_genres", hl = hl)
+                if (internalJson.isNotBlank()) {
+                    categories.addAll(parseMoodsAndGenresFromJson(internalJson))
+                }
+            }
+
+            // Public fallback / enhancement path (also used for logged-out users)
+            if (categories.isEmpty()) {
+                val publicJson = fetchPublicApi("FEmusic_moods_and_genres", hl = hl)
+                if (publicJson.isNotBlank()) {
+                    categories.addAll(parseMoodsAndGenresFromJson(publicJson))
+                }
+            }
+
+            if (categories.isNotEmpty()) {
+                categories
+                    .distinctBy { "${it.browseId}:${it.params ?: ""}:${it.title.lowercase()}" }
+                    .filter { it.title.isNotBlank() && it.browseId.isNotBlank() }
+            } else {
+                getFallbackMoodCategories()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            getFallbackMoodCategories()
         }
     }
 
     /**
      * Get songs/content for a specific mood/genre category.
      */
-    suspend fun getCategoryContent(browseId: String, params: String? = null): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun getCategoryContent(
+        browseId: String,
+        params: String? = null,
+        title: String? = null
+    ): List<Song> = withContext(Dispatchers.IO) {
         try {
-            val json = if (params != null) {
-                fetchInternalApiWithParams(browseId, params)
-            } else {
-                fetchInternalApi(browseId)
+            if (!networkMonitor.isCurrentlyConnected()) return@withContext emptyList()
+
+            val preferredLanguages = sessionManager.getPreferredLanguages()
+            val hl = if (preferredLanguages.isNotEmpty()) getLanguageCode(preferredLanguages.first()) else "en"
+
+            // Search-backed virtual browse ID fallback
+            if (browseId.startsWith(SEARCH_BROWSE_PREFIX)) {
+                val query = browseId.removePrefix(SEARCH_BROWSE_PREFIX).ifBlank { title ?: "music" }
+                return@withContext search(query, FILTER_SONGS)
             }
-            parseSongsFromInternalJson(json)
+
+            var songs = emptyList<Song>()
+
+            if (sessionManager.isLoggedIn()) {
+                val internalJson = if (!params.isNullOrBlank()) {
+                    fetchInternalApiWithParams(browseId, params, hl = hl)
+                } else {
+                    fetchInternalApi(browseId, hl = hl)
+                }
+                if (internalJson.isNotBlank()) {
+                    songs = parseSongsFromInternalJson(internalJson)
+                }
+            }
+
+            if (songs.isEmpty()) {
+                val publicJson = if (!params.isNullOrBlank()) {
+                    fetchPublicApiWithParams(browseId, params, hl = hl)
+                } else {
+                    fetchPublicApi(browseId, hl = hl)
+                }
+                if (publicJson.isNotBlank()) {
+                    songs = parseSongsFromInternalJson(publicJson)
+                }
+            }
+
+            if (songs.isNotEmpty()) {
+                songs
+            } else {
+                val fallbackQuery = title?.takeIf { it.isNotBlank() } ?: "latest music"
+                search(fallbackQuery, FILTER_SONGS)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            val fallbackQuery = title?.takeIf { it.isNotBlank() } ?: "latest music"
+            search(fallbackQuery, FILTER_SONGS)
         }
     }
 
@@ -1408,67 +1543,59 @@ class YouTubeRepository @Inject constructor(
     private suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
         apiClient.fetchInternalApiWithParams(browseId, params, hl = hl, gl = gl)
 
-    private fun parseMoodsAndGenresFromJson(json: String): List<com.suvojeet.suvmusic.data.model.BrowseCategory> {
-        val categories = mutableListOf<com.suvojeet.suvmusic.data.model.BrowseCategory>()
+    private fun parseMoodsAndGenresFromJson(json: String): List<BrowseCategory> {
+        val categories = mutableListOf<BrowseCategory>()
         try {
             val root = JSONObject(json)
-            
-            // Navigate to the grid items
-            val contents = root.optJSONObject("contents")
-                ?.optJSONObject("singleColumnBrowseResultsRenderer")
-                ?.optJSONArray("tabs")
-                ?.optJSONObject(0)
-                ?.optJSONObject("tabRenderer")
-                ?.optJSONObject("content")
-                ?.optJSONObject("sectionListRenderer")
-                ?.optJSONArray("contents")
-            
-            if (contents != null) {
-                for (i in 0 until contents.length()) {
-                    val section = contents.optJSONObject(i)
-                    
-                    // Look for grid renderer
-                    val gridItems = section?.optJSONObject("gridRenderer")?.optJSONArray("items")
-                    
-                    if (gridItems != null) {
-                        for (j in 0 until gridItems.length()) {
-                            val item = gridItems.optJSONObject(j)
-                            val categoryRenderer = item?.optJSONObject("musicNavigationButtonRenderer")
-                            
-                            if (categoryRenderer != null) {
-                                val title = getRunText(categoryRenderer.optJSONObject("buttonText"))
-                                    ?: continue
-                                
-                                val clickEndpoint = categoryRenderer.optJSONObject("clickCommand")
-                                    ?.optJSONObject("browseEndpoint")
-                                
-                                val browseId = clickEndpoint?.optString("browseId") ?: continue
-                                val params = clickEndpoint.optString("params").takeIf { it.isNotEmpty() }
-                                
-                                // Extract color from solid background
-                                val colorValue = categoryRenderer.optJSONObject("solid")
-                                    ?.optJSONObject("leftStripeColor")
-                                    ?.optLong("value")
-                                
-                                categories.add(
-                                    com.suvojeet.suvmusic.data.model.BrowseCategory(
-                                        title = title,
-                                        browseId = browseId,
-                                        params = params,
-                                        thumbnailUrl = null,
-                                        color = colorValue
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
+
+            val buttonRenderers = mutableListOf<JSONObject>()
+            findAllObjects(root, "musicNavigationButtonRenderer", buttonRenderers)
+
+            buttonRenderers.forEach { categoryRenderer ->
+                val title = getRunText(categoryRenderer.optJSONObject("buttonText"))
+                    ?: getRunText(categoryRenderer.optJSONObject("title"))
+                    ?: return@forEach
+
+                val browseEndpoint = categoryRenderer.optJSONObject("clickCommand")
+                    ?.optJSONObject("browseEndpoint")
+                    ?: categoryRenderer.optJSONObject("navigationEndpoint")
+                        ?.optJSONObject("browseEndpoint")
+                    ?: return@forEach
+
+                val browseId = browseEndpoint.optString("browseId")
+                if (browseId.isBlank()) return@forEach
+
+                val params = browseEndpoint.optString("params").takeIf { it.isNotBlank() }
+                val colorValue = categoryRenderer.optJSONObject("solid")
+                    ?.optJSONObject("leftStripeColor")
+                    ?.optLong("value")
+
+                categories.add(
+                    BrowseCategory(
+                        title = title,
+                        browseId = browseId,
+                        params = params,
+                        thumbnailUrl = null,
+                        color = colorValue
+                    )
+                )
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return categories
+        return categories.distinctBy { "${it.browseId}:${it.params ?: ""}:${it.title.lowercase()}" }
     }
+
+    private fun getFallbackMoodCategories(): List<BrowseCategory> = listOf(
+        BrowseCategory(title = "Chill", browseId = "${SEARCH_BROWSE_PREFIX}chill music mix", params = null),
+        BrowseCategory(title = "Sleep", browseId = "${SEARCH_BROWSE_PREFIX}sleep music ambient", params = null),
+        BrowseCategory(title = "Focus", browseId = "${SEARCH_BROWSE_PREFIX}focus instrumental music", params = null),
+        BrowseCategory(title = "Workout", browseId = "${SEARCH_BROWSE_PREFIX}workout motivation songs", params = null),
+        BrowseCategory(title = "Party", browseId = "${SEARCH_BROWSE_PREFIX}party hits", params = null),
+        BrowseCategory(title = "Romance", browseId = "${SEARCH_BROWSE_PREFIX}romantic songs", params = null),
+        BrowseCategory(title = "Lo-fi", browseId = "${SEARCH_BROWSE_PREFIX}lofi beats", params = null),
+        BrowseCategory(title = "Trending", browseId = "${SEARCH_BROWSE_PREFIX}trending music", params = null)
+    )
 
     // ============================================================================================
     // Mutating Actions (Library Management)
@@ -2030,9 +2157,11 @@ class YouTubeRepository @Inject constructor(
         if (videoId.isBlank()) return@withContext emptyList()
         try {
             currentVideoIdForComments = videoId
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            commentRepliesInitialPage.clear()
+            commentRepliesNextPage.clear()
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val extractor = ytService.getCommentsExtractor("https://www.youtube.com/watch?v=$videoId")
             if (extractor == null) {
                 currentCommentsExtractor = null
@@ -2049,14 +2178,16 @@ class YouTubeRepository @Inject constructor(
             if (currentCommentsPage == null) return@withContext emptyList()
             
             currentCommentsPage?.items?.filterIsInstance<CommentsInfoItem>()?.map { item ->
+                val id = item.url ?: java.util.UUID.randomUUID().toString()
+                item.replies?.let { commentRepliesInitialPage[id] = it }
                 Comment(
-                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    id = id,
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
-                    text = item.commentText.content ?: "",
+                    text = cleanCommentHtml(item.commentText.content),
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
-                    replyCount = 0
+                    replyCount = item.replyCount.coerceAtLeast(0)
                 )
             } ?: emptyList()
         } catch (e: Exception) {
@@ -2082,17 +2213,70 @@ class YouTubeRepository @Inject constructor(
             if (nextPage == null) return@withContext emptyList()
 
             nextPage.items.filterIsInstance<CommentsInfoItem>().map { item ->
+                val id = item.url ?: java.util.UUID.randomUUID().toString()
+                item.replies?.let { commentRepliesInitialPage[id] = it }
+                Comment(
+                    id = id,
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = cleanCommentHtml(item.commentText.content),
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = item.replyCount.coerceAtLeast(0)
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 
+    /**
+     * Fetch the first page of replies for a given top-level comment.
+     */
+    suspend fun getCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        val extractor = currentCommentsExtractor ?: return@withContext emptyList()
+        val initial = commentRepliesInitialPage[commentId] ?: return@withContext emptyList()
+        try {
+            val page = runCatching { extractor.getPage(initial) }.getOrNull() ?: return@withContext emptyList()
+            commentRepliesNextPage[commentId] = if (page.hasNextPage()) page.nextPage else null
+            page.items.filterIsInstance<CommentsInfoItem>().map { item ->
                 Comment(
                     id = item.url ?: java.util.UUID.randomUUID().toString(),
                     authorName = item.uploaderName ?: "Unknown",
                     authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
-                    text = item.commentText.content ?: "",
+                    text = cleanCommentHtml(item.commentText.content),
                     timestamp = item.textualUploadDate ?: "",
                     likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
                     replyCount = 0
                 )
-            } ?: emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch more replies for a given top-level comment (paginated).
+     */
+    suspend fun getMoreCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+        val extractor = currentCommentsExtractor ?: return@withContext emptyList()
+        val next = commentRepliesNextPage[commentId] ?: return@withContext emptyList()
+        try {
+            val page = runCatching { extractor.getPage(next) }.getOrNull() ?: return@withContext emptyList()
+            commentRepliesNextPage[commentId] = if (page.hasNextPage()) page.nextPage else null
+            page.items.filterIsInstance<CommentsInfoItem>().map { item ->
+                Comment(
+                    id = item.url ?: java.util.UUID.randomUUID().toString(),
+                    authorName = item.uploaderName ?: "Unknown",
+                    authorThumbnailUrl = item.uploaderAvatars.firstOrNull()?.url,
+                    text = cleanCommentHtml(item.commentText.content),
+                    timestamp = item.textualUploadDate ?: "",
+                    likeCount = if (item.likeCount > 0) item.likeCount.toString() else "",
+                    replyCount = 0
+                )
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -2413,6 +2597,8 @@ class YouTubeRepository @Inject constructor(
     private suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchInternalApiWithBody(endpoint, bodyJson, hl = hl, gl = gl)
 
     private suspend fun fetchPublicApi(browseId: String, hl: String = "en", gl: String = "US"): String = apiClient.fetchPublicApi(browseId, hl = hl, gl = gl)
+    private suspend fun fetchPublicApiWithParams(browseId: String, params: String, hl: String = "en", gl: String = "US"): String =
+        apiClient.fetchPublicApiWithParams(browseId, params, hl = hl, gl = gl)
 
     private suspend fun performAuthenticatedAction(endpoint: String, innerBody: String): Boolean =
         apiClient.performAuthenticatedAction(endpoint, innerBody)
@@ -2510,16 +2696,38 @@ class YouTubeRepository @Inject constructor(
 
             items.forEach { item ->
                 try {
-                    // Try to get videoId from standard runs/endpoints first
-                    var videoId = extractValueFromRuns(item, "videoId") 
-                        ?: item.optString("videoId").takeIf { it.isNotEmpty() }
-                    
-                    // Fallback to playlistItemData (common in playlists)
-                    if (videoId == null) {
-                        videoId = item.optJSONObject("playlistItemData")?.optString("videoId")
+                    // 1. Determine if this item is a song or a video
+                    // musicResponsiveListItemRenderer can be many things, check navigationEndpoint
+                    val navEndpoint = item.optJSONObject("navigationEndpoint")
+                    val watchEndpoint = navEndpoint?.optJSONObject("watchEndpoint")
+                        ?: item.optJSONObject("watchEndpoint")
+                        ?: item.optJSONObject("playlistItemData") // Fallback for some lists
+
+                    // If it has a browseEndpoint, it's likely an album or artist, not a song
+                    val browseEndpoint = navEndpoint?.optJSONObject("browseEndpoint")
+                    if (browseEndpoint != null && watchEndpoint == null) {
+                        return@forEach
+                    }
+
+                    var videoId = watchEndpoint?.optString("videoId")
+                        ?: item.optString("videoId")
+
+                    if (videoId.isNullOrBlank()) {
+                        // Fallback to searching all watchEndpoints but only if we haven't ruled it out
+                        videoId = extractValueFromRuns(item, "videoId")
                     }
                     
-                    if (videoId != null) {
+                    if (!videoId.isNullOrBlank()) {
+                        val duration = extractDuration(item)
+                        
+                        // musicTwoRowItemRenderer specific check: 
+                        // If it's a two-row item (grid), it MUST have a duration or be a video to be considered a song here.
+                        // Albums/Playlists in two-row grid don't have duration in the same way.
+                        val isTwoRow = item.has("title") && item.has("subtitle") && !item.has("flexColumns")
+                        if (isTwoRow && duration <= 0) {
+                            return@forEach
+                        }
+
                         val title = extractTitle(item)
                         val artist = extractArtist(item)
                         val thumbnailUrl = extractThumbnail(item)
@@ -2531,7 +2739,7 @@ class YouTubeRepository @Inject constructor(
                             title = title,
                             artist = artist,
                             album = "",
-                            duration = extractDuration(item),
+                            duration = duration,
                             thumbnailUrl = thumbnailUrl,
                             setVideoId = setVideoId,
                             releaseDate = year

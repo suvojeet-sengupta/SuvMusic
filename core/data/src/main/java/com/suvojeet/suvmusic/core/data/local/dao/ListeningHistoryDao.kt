@@ -76,6 +76,9 @@ interface ListeningHistoryDao {
     """)
     suspend fun getTopArtists(limit: Int = 10): List<ArtistStats>
     
+    @Query("SELECT * FROM listening_history ORDER BY firstPlayed ASC LIMIT 1")
+    suspend fun getFirstEverTrack(): ListeningHistory?
+    
     /**
      * Delete all listening history.
      */

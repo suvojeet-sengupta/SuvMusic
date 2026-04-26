@@ -40,6 +40,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.window.core.layout.WindowSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowHeightSizeClass
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -86,11 +89,12 @@ fun ClassicPlayerStyle(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     if (useWideLayout) {
         ClassicLandscapeContent(
@@ -99,7 +103,7 @@ fun ClassicPlayerStyle(
             onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
             onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, player, isFullScreen,
             onSetFullScreen, isSwitchingMode, sleepTimerOption, sleepTimerRemainingMs,
-            currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
+            progressProvider, positionProvider, durationProvider, isAIEnabled, aiStatus, windowSizeClass
         )
     } else {
         ClassicPortraitContent(
@@ -109,7 +113,7 @@ fun ClassicPlayerStyle(
             onShowRelated, onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
             onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
-            sleepTimerRemainingMs, currentProgress, currentPosition, currentDuration, isAIEnabled, aiStatus
+            sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider, isAIEnabled, aiStatus, windowSizeClass
         )
     }
 }
@@ -147,17 +151,23 @@ private fun ClassicPortraitContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenHeight = maxHeight
-        val isVeryShort = screenHeight < 600.dp
+        
+        // WindowSizeClass based logic
+        val heightSizeClass = windowSizeClass?.windowHeightSizeClass ?: WindowHeightSizeClass.MEDIUM
+        
+        // Dynamic thresholds
+        val isVeryShort = heightSizeClass == WindowHeightSizeClass.COMPACT || screenHeight < 600.dp
         val isShort = screenHeight < 720.dp
 
         Column(
@@ -244,22 +254,9 @@ private fun ClassicPortraitContent(
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
 
-            Box(modifier = Modifier.fillMaxWidth().height(if (isVeryShort) 44.dp else 60.dp), contentAlignment = Alignment.Center) {
-                if (combinedLoading) {
-                    M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
-                } else {
-                    WaveformSeeker(
-                        progressProvider = { currentProgress }, isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
-                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                        initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
-                        duration = currentDuration, sponsorSegments = sponsorSegments
-                    )
-                }
-            }
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments, isVeryShort)
 
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
 
@@ -292,16 +289,20 @@ private fun ClassicLandscapeContent(
     isSwitchingMode: Boolean = false,
     sleepTimerOption: SleepTimerOption = SleepTimerOption.OFF,
     sleepTimerRemainingMs: Long? = null,
-    currentProgress: Float = 0f,
-    currentPosition: Long = 0L,
-    currentDuration: Long = 0L,
+    progressProvider: () -> Float = { 0f },
+    positionProvider: () -> Long = { 0L },
+    durationProvider: () -> Long = { 0L },
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    windowSizeClass: WindowSizeClass? = null
 ) {
     val combinedLoading = playerState.isLoading || isSwitchingMode
+    
+    val widthSizeClass = windowSizeClass?.windowWidthSizeClass ?: WindowWidthSizeClass.MEDIUM
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.EXPANDED
 
-    Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.weight(0.45f).fillMaxHeight().padding(end = 16.dp), contentAlignment = Alignment.Center) {
+    Row(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = if (isExpanded) 32.dp else 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(if (isExpanded) 0.4f else 0.45f).fillMaxHeight().padding(end = if (isExpanded) 32.dp else 16.dp), contentAlignment = Alignment.Center) {
             AlbumArtwork(
                 imageUrl = song?.thumbnailUrl, title = song?.title, dominantColors = dominantColors, isLoading = combinedLoading,
                 isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
@@ -331,22 +332,9 @@ private fun ClassicLandscapeContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
             
-            Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
-                if (combinedLoading) {
-                    M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
-                } else {
-                    WaveformSeeker(
-                        progressProvider = { currentProgress }, isPlaying = playbackInfo.isPlaying,
-                        onSeek = { actions.onSeekTo((it * currentDuration).toLong()) },
-                        modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
-                        inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
-                        initialStyle = currentSeekbarStyle, onStyleChange = { },
-                        duration = currentDuration, sponsorSegments = sponsorSegments
-                    )
-                }
-            }
+            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, { }, sponsorSegments, false)
             
-            TimeLabelsWithQuality(currentPositionProvider = { currentPosition }, durationProvider = { currentDuration }, dominantColors = dominantColors)
+            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
             Spacer(modifier = Modifier.height(12.dp))
             
             ClassicPlaybackControls(isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode, onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious, onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors)
@@ -370,72 +358,106 @@ private fun ClassicTopBar(
     onRecenter: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Back Button
         Box(
-            modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onBack),
+            modifier = Modifier
+                .size(44.dp)
+                .clip(SquircleShape)
+                .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                .clickable(onClick = onBack),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Close", tint = dominantColors.onBackground, modifier = Modifier.size(28.dp))
-        }
-
-        // Center Switch or Title
-        if (isYouTubeSong) {
-            Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                    .padding(2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Audio",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                        .clickable { if (!isVideoMode) onVideoToggle() }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Video",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                        fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
-        } else {
-            Text(
-                text = "NOW PLAYING",
-                style = MaterialTheme.typography.labelLarge,
-                color = dominantColors.onBackground.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Close",
+                tint = dominantColors.onBackground,
+                modifier = Modifier.size(28.dp)
             )
         }
 
-        // Right side
+        // Center: Switch or Title — uses weight to take available space, prevents overlap
+        Box(
+            modifier = Modifier.weight(1f, fill = false),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isYouTubeSong) {
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Audio",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (!isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Video",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
+                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "NOW PLAYING",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = dominantColors.onBackground.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Right side: Audio AR or Spacer
         if (audioArEnabled) {
-            Box(modifier = Modifier.size(44.dp).clip(SquircleShape).background(dominantColors.onBackground.copy(alpha = 0.1f)).clickable(onClick = onRecenter), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = "Recenter Audio", tint = dominantColors.onBackground, modifier = Modifier.size(22.dp))
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(SquircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .clickable(onClick = onRecenter),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Recenter Audio",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         } else {
             Spacer(modifier = Modifier.size(44.dp))
@@ -548,6 +570,39 @@ private fun ClassicBottomActions(
             IconButton(onClick = onQueueClick, modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
+        }
+    }
+}
+
+@Composable
+private fun SeekbarSection(
+    combinedLoading: Boolean,
+    dominantColors: DominantColors,
+    progressProvider: () -> Float,
+    isPlaying: Boolean,
+    actions: PlayerScreenActions,
+    durationProvider: () -> Long,
+    currentSeekbarStyle: SeekbarStyle,
+    onSeekbarStyleChange: (SeekbarStyle) -> Unit,
+    sponsorSegments: List<SponsorSegment>,
+    isVeryShort: Boolean
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(if (isVeryShort) 44.dp else 60.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (combinedLoading) {
+            M3ESeekbarShimmer(isVisible = true, dominantColors = dominantColors, modifier = Modifier.fillMaxWidth())
+        } else {
+            val duration = durationProvider()
+            WaveformSeeker(
+                progressProvider = progressProvider, isPlaying = isPlaying,
+                onSeek = { actions.onSeekTo((it * duration).toLong()) },
+                modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
+                inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
+                initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
+                duration = duration, sponsorSegments = sponsorSegments
+            )
         }
     }
 }

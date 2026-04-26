@@ -494,6 +494,7 @@ class MusicPlayerService : MediaLibraryService() {
                     if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
                         serviceScope.launch {
                             val autoResume = sessionManager.isAutoResumeAfterCallEnabled()
+                            android.util.Log.d("MusicPlayerService", "onPlayWhenReadyChanged: playWhenReady=$playWhenReady, autoResume=$autoResume")
                             if (!playWhenReady) {
                                 // Focus lost: if auto-resume is disabled, permanently pause so it won't resume later
                                 if (!autoResume) {
@@ -503,12 +504,21 @@ class MusicPlayerService : MediaLibraryService() {
                                     }
                                 }
                             } else {
-                                // Focus regained: if auto-resume is enabled, ensure the player actually starts
-                                if (autoResume) {
-                                    android.util.Log.d("MusicPlayerService", "Focus regained. Ensuring playback resumes.")
-                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        mediaLibrarySession?.player?.play()
-                                    }
+                                // Focus regained: Media3 automatically restores playWhenReady to true.
+                                android.util.Log.d("MusicPlayerService", "Focus regained. playWhenReady is now true. Auto-resume is $autoResume.")
+                            }
+                        }
+                    }
+                }
+
+                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                    super.onPlaybackSuppressionReasonChanged(playbackSuppressionReason)
+                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        serviceScope.launch {
+                            if (sessionManager.isAutoResumeAfterCallEnabled()) {
+                                android.util.Log.d("MusicPlayerService", "Suppression removed. Ensuring playback resumes.")
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    mediaLibrarySession?.player?.play()
                                 }
                             }
                         }
@@ -1303,7 +1313,12 @@ class MusicPlayerService : MediaLibraryService() {
         .setBitmapLoader(CoilBitmapLoader(this))
         .build()
 
-        registerReceiver(volumeReceiver, android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            volumeReceiver,
+            android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         serviceScope.launch {
             sessionManager.sponsorBlockEnabledFlow.collect { enabled ->
                 sponsorBlockRepository.setEnabled(enabled)
@@ -1363,7 +1378,13 @@ class MusicPlayerService : MediaLibraryService() {
             onNotificationChangedCallback: MediaNotification.Provider.Callback
         ): MediaNotification {
             val mediaNotification = defaultProvider.createNotification(session, customLayout, actionFactory, onNotificationChangedCallback)
-            mediaNotification.notification.flags = mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
+
+            // Android 14+ FGS type is declared via android:foregroundServiceType
+            // in AndroidManifest.xml ("mediaPlayback") — Media3 propagates that
+            // to startForeground() automatically. MediaNotification itself only
+            // has a (id, notification) constructor in Media3 1.10.0.
+            mediaNotification.notification.flags =
+                mediaNotification.notification.flags or android.app.Notification.FLAG_ONGOING_EVENT
             return mediaNotification
         }
 
@@ -1604,7 +1625,21 @@ class MusicPlayerService : MediaLibraryService() {
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "ACTION_CANCEL_SLEEP_TIMER") sleepTimerManager.cancelTimer()
-        return super.onStartCommand(intent, flags, startId)
+        
+        return try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: Exception) {
+            // Android 14 (API 34) and above restriction: 
+            // ForegroundServiceStartNotAllowedException is thrown if the app is in the background.
+            // Catching it prevents the app from crashing.
+            if (android.os.Build.VERSION.SDK_INT >= 31 && 
+                e.toString().contains("ForegroundServiceStartNotAllowedException")) {
+                android.util.Log.w("MusicPlayerService", "Foreground service start not allowed (likely background start). Skipping super.onStartCommand.", e)
+                START_NOT_STICKY
+            } else {
+                throw e
+            }
+        }
     }
 
     companion object {
