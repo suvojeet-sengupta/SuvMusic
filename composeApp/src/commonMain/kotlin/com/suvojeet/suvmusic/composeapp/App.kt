@@ -12,15 +12,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SortOrder
 import com.suvojeet.suvmusic.core.model.SortType
 
 @Composable
 fun App() {
     // Smoke test that :core:model commonMain is resolvable from desktop —
-    // these enums exist in the shared sourceSet now (chunk 2.1).
+    // these classes all exist in the shared sourceSet after chunk 2.3.
     val defaultSort = SortType.DATE_ADDED
     val defaultOrder = SortOrder.DESCENDING
+    val sampleSong = Song.fromYouTube(
+        videoId = "dQw4w9WgXcQ",
+        title = "Sample",
+        artist = "Sample Artist",
+        album = "Sample Album",
+        duration = 0L,
+        thumbnailUrl = null,
+    )
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -34,12 +43,16 @@ fun App() {
                         style = MaterialTheme.typography.headlineMedium,
                     )
                     Text(
-                        text = "Phase 2.1 — sharing :core:model with desktop",
+                        text = "Phase 2.3 — full :core:model in commonMain",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(8.dp),
                     )
                     Text(
                         text = "Default sort: $defaultSort $defaultOrder",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = "Built sample: ${sampleSong?.title} by ${sampleSong?.artist}",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
