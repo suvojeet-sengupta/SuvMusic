@@ -597,8 +597,9 @@ fun DownloadsScreen(
                             video = video,
                             index = index + 1,
                             onClick = {
-                                video.localUri?.let { uri ->
+                                video.localUri?.let { uriString ->
                                     try {
+                                        val uri = android.net.Uri.parse(uriString)
                                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
                                             setDataAndType(uri, "video/mp4")
                                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)

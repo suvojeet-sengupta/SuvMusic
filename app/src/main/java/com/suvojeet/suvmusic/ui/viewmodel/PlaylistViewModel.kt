@@ -867,7 +867,7 @@ class PlaylistViewModel @Inject constructor(
                     } catch (e: Exception) { 
                         com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE 
                     },
-                    localUri = history.localUri?.let { android.net.Uri.parse(it) },
+                    localUri = history.localUri,
                     artistId = history.artistId
                 )
                 if (cachedSongs.none { it.id == song.id }) {

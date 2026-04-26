@@ -1138,7 +1138,7 @@ class MusicPlayer @Inject constructor(
             while (streamUrl == null && attempts < 2) { // Retry 1 time (total 2 attempts)
                 val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) { // Increased timeout
                     when (song.source) {
-                        SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.toString(), null)
+                        SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.orEmpty(), null)
                         SongSource.JIOSAAVN -> Pair(jioSaavnRepository.getStreamUrl(song.id), null)
                         else -> {
                             if (_playerState.value.isVideoMode) {
@@ -1566,7 +1566,7 @@ class MusicPlayer @Inject constructor(
         preloadJob = scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
-                    SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
+                    SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
                     SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
                     else -> {
                         if (isVideoMode) {
@@ -1715,7 +1715,7 @@ class MusicPlayer @Inject constructor(
         var audioStreamUrl: String? = null
         
         val uri = when (song.source) {
-            SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+            SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
             SongSource.JIOSAAVN -> {
                 if (resolveStream) {
                     // Retry once if first attempt fails
@@ -1863,7 +1863,7 @@ class MusicPlayer @Inject constructor(
                     currentResolutionJob = scope.launch {
                         try {
                             val streamUrl = when (nextSong.source) {
-                                SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.toString()
+                                SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
                                 SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
                                 else -> {
                                     if (_playerState.value.isVideoMode) {
@@ -2370,7 +2370,7 @@ class MusicPlayer @Inject constructor(
                 } else {
                     // Switch back to audio stream - use original source logic
                     streamUrl = when (song.source) {
-                        SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.toString()
+                        SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
                         SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
                         else -> youTubeRepository.getStreamUrl(song.id)
                     }
