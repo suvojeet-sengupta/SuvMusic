@@ -25,6 +25,14 @@ import kotlinx.coroutines.flow.StateFlow
  *   constants into common code.
  */
 expect class MusicPlayer {
+    /**
+     * Whether the underlying playback engine is functional. False on
+     * Desktop when LibVLC isn't discoverable (no VLC installed on the
+     * host); always true on Android. UI surfaces this so a missing-VLC
+     * setup shows an install hint instead of a silent dead Play button.
+     */
+    val isAvailable: Boolean
+
     /** Currently loaded song, or null if the queue is empty. */
     val currentSong: StateFlow<Song?>
 

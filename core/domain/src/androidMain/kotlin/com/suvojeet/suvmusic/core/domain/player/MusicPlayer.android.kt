@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.update
  * but ignored.
  */
 actual class MusicPlayer {
+    actual val isAvailable: Boolean = true
+
     private val _currentSong = MutableStateFlow<Song?>(null)
     actual val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 

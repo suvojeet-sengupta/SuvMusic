@@ -55,6 +55,11 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
+                // NewPipe Extractor for YouTube search + stream URL
+                // resolution. Pure JVM library — works on Desktop without
+                // any Android-specific bits. Brings in jsoup + Mozilla
+                // Rhino transitively (~5 MB extra in the MSI).
+                implementation(libs.newpipe.extractor)
             }
         }
     }
