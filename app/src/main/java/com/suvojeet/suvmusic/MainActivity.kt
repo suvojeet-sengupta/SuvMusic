@@ -78,7 +78,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import com.suvojeet.suvmusic.updater.UpdateDialog
 import com.suvojeet.suvmusic.updater.UpdateState
-import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import com.suvojeet.suvmusic.util.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
@@ -106,8 +106,8 @@ import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     
-    private val mainViewModel: MainViewModel by viewModels()
-    private val updateViewModel: UpdateViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModel()
+    private val updateViewModel: UpdateViewModel by viewModel()
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
