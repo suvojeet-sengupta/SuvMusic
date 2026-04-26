@@ -101,7 +101,7 @@ fun HomeScreen(
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
     currentSong: Song? = null,
-    viewModel: HomeViewModel = hiltViewModel(),
+    viewModel: HomeViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()

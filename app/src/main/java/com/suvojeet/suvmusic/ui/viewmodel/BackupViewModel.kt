@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.BackupManager
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +20,6 @@ data class BackupUiState(
     val successMessage: String? = null
 )
 
-@HiltViewModel
 class BackupViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val backupManager: BackupManager

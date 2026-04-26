@@ -51,7 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
@@ -73,8 +73,8 @@ import com.suvojeet.suvmusic.ui.viewmodel.BackupViewModel
 fun MiscScreen(
     onBack: () -> Unit,
     onLyricsProvidersClick: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
-    backupViewModel: BackupViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = koinViewModel(),
+    backupViewModel: BackupViewModel = koinViewModel(),
     externalSnackbarHostState: SnackbarHostState? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
