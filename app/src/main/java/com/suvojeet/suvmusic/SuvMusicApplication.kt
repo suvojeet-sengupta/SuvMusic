@@ -90,6 +90,33 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             }
         }
 
+        // Phase 3b.3-A health check: force the SQLDelight database to open
+        // so we surface any driver/schema misconfiguration at app launch
+        // rather than the first time a real consumer queries it. The
+        // `listening_history` count is a no-op SELECT that exercises the
+        // generated query class end-to-end. Empty DB on a fresh install
+        // means count = 0; that's the success case.
+        //
+        // Wrapped in try/catch so an SQLDelight setup bug can't take the
+        // whole app down — we just log and move on.
+        applicationScope.launch {
+            try {
+                val db: com.suvojeet.suvmusic.core.db.SuvMusicDatabase =
+                    org.koin.java.KoinJavaComponent.getKoin().get()
+                val count = db.listeningHistoryQueries.countAll().executeAsOne()
+                android.util.Log.i(
+                    "SuvMusicApplication",
+                    "SQLDelight DB opened OK; listening_history rows = $count",
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e(
+                    "SuvMusicApplication",
+                    "SQLDelight DB health check failed",
+                    t,
+                )
+            }
+        }
+
         // Initialize any app-wide components here on a background thread
         applicationScope.launch {
             com.suvojeet.suvmusic.util.AppLog.d("SuvMusicApplication") { "Setting up workers" }

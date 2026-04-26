@@ -2,6 +2,9 @@ package com.suvojeet.suvmusic.di
 
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.Cache
+import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
+import com.suvojeet.suvmusic.core.db.SuvMusicDatabase
+import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import com.suvojeet.suvmusic.ui.screens.wrapped.WrappedViewModel
@@ -141,6 +144,23 @@ private val coroutineScopesModule: Module = module {
 }
 
 /**
+ * SQLDelight database — chunk 3b.3-A bindings. NOT routed through the
+ * Hilt bridge because Hilt knows nothing about SuvMusicDatabase; Koin owns
+ * construction directly.
+ *
+ * Both bindings are lazy — the SQLite file (`suvmusic.sqldelight.db`) only
+ * gets opened the first time something resolves [SuvMusicDatabase]. The
+ * health check in [com.suvojeet.suvmusic.SuvMusicApplication.onCreate]
+ * forces that resolution at startup so we know early if the driver is
+ * misconfigured (instead of finding out months later when a real consumer
+ * calls in).
+ */
+private val sqlDelightModule: Module = module {
+    single { DatabaseDriverFactory(androidContext()) }
+    single<SuvMusicDatabase> { buildDatabase(get<DatabaseDriverFactory>()) }
+}
+
+/**
  * ViewModels migrated to Koin in chunk 1c.1. These ARE Koin-owned (not
  * bridged) — Koin instantiates them with Hilt-bridged singletons as deps.
  * Each VM listed here also has its @HiltViewModel annotation removed and every
@@ -184,5 +204,6 @@ private val viewModelsModule: Module = module {
 val koinAppModules: List<Module> = listOf(
     hiltBridgedModule,
     coroutineScopesModule,
+    sqlDelightModule,
     viewModelsModule,
 )
