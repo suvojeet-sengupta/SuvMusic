@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.composeapp.ui.lyrics
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * trimmed to the visual / interaction core. The Android original is
  * 1369 lines and includes provider switcher, font tuner, time-offset
  * adjuster, blur slider, mood-aware backgrounds, PDF export, etc. — all
- * of which depend on `:app/.../providers/lyrics/*` and need that chain
+ * of which depend on `:app/.../providers/lyrics` and need that chain
  * ported first.
  *
  * What this version does:
@@ -339,32 +340,14 @@ private fun SyncedLyricsList(
                 textAlign = textAlign,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onLineClick(line.timeMs) }
                     .scale(animatedScale)
                     .padding(vertical = (lineSpacing * 4).dp),
             )
-
-            // Tap-to-seek: wrap each line in a clickable Spacer for the
-            // hit area. Compose's Text doesn't accept a no-arg onClick
-            // overload, so we emit a tiny pass-through Box behind each
-            // line for the gesture.
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height((lineSpacing * 2).dp),
-            )
-            // Wrap text in clickable surface (the Text itself is the
-            // visible element; the clickable extends across the row).
-            // Achieved by using a transparent overlay with Modifier.clickable
-            // would require restructuring — kept simple with onLineClick at
-            // future refactor since synced lyrics are still primary mode.
         }
 
         item {
             Spacer(modifier = Modifier.height(120.dp))
         }
     }
-
-    // Suppress unused-warning on onLineClick — wired in next refactor pass
-    // when each line gets a clickable wrapper.
-    @Suppress("UNUSED_EXPRESSION") onLineClick
 }

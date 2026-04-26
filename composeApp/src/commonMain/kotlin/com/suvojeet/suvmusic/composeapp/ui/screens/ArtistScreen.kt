@@ -335,9 +335,9 @@ private fun AlbumScroller(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (!album.year.isNullOrBlank()) {
+                album.year?.takeIf { it.isNotBlank() }?.let { year ->
                     Text(
-                        text = album.year,
+                        text = year,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

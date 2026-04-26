@@ -75,14 +75,6 @@ kotlin {
     }
 }
 
-// Compose Multiplatform resources — surface the generated `Res` class to
-// commonMain consumers (Type.kt loads `Res.font.outfit`). The default
-// generated package is `<namespace>.generated.resources` so consumers
-// import `com.suvojeet.suvmusic.composeapp.generated.resources.{Res,outfit}`.
-compose.resources {
-    publicResClass = true
-}
-
 compose.desktop {
     application {
         mainClass = "com.suvojeet.suvmusic.composeapp.MainKt"

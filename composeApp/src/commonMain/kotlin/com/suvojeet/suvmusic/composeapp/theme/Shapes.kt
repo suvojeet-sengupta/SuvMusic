@@ -1,15 +1,22 @@
 package com.suvojeet.suvmusic.composeapp.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * Material 3 Expressive shapes — verbatim port of
- * `app/.../ui/theme/Shapes.kt`. Lives in commonMain so both Android and
- * Desktop pull from the same shape tokens.
+ * Material 3 shapes — port of `app/.../ui/theme/Shapes.kt`. Lives in
+ * commonMain so both Android and Desktop pull from the same shape tokens.
+ *
+ * Note: the Android original also exposed an `ExpressiveShapes` object
+ * built from `androidx.compose.material3.MaterialShapes` (the M3
+ * Expressive morph shapes — Cookie9Sided, Clover4Leaf, Arch, Fan, etc.).
+ * Those symbols are marked **internal** in Compose Multiplatform 1.10's
+ * material3 artifact, so they're not callable from commonMain. The
+ * shapes themselves still ship; this file falls back to plain
+ * RoundedCornerShape tokens until CMP exposes the M3E API as stable.
+ * When that lands, restore the ExpressiveShapes object from
+ * `app/.../ui/theme/Shapes.kt` lines 65–83 verbatim.
  */
 val Shapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
@@ -45,28 +52,7 @@ val NewReleaseCardShape = RoundedCornerShape(
     bottomEnd = 12.dp,
 )
 
-/**
- * M3E Expressive shapes — morph-ready shapes from Material's shape library.
- * These are drawn from `androidx.compose.material3.MaterialShapes`. Compose
- * Multiplatform 1.10 + material3 1.4 surface them on commonMain.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-object ExpressiveShapes {
-    val AlbumArt = MaterialShapes.Cookie9Sided
-    val Fab = MaterialShapes.Clover4Leaf
-    val MiniPlayer = MaterialShapes.Arch
-    val NowPlaying = MaterialShapes.Cookie6Sided
-    val ActionChip = MaterialShapes.Pill
-    val GenreCard = MaterialShapes.Fan
-
-    val Button = MaterialShapes.Pill
-    val ButtonPressed = MaterialShapes.Cookie6Sided
-    val FabResting = MaterialShapes.Clover4Leaf
-    val FabPressed = MaterialShapes.Cookie9Sided
-    val IconButton = MaterialShapes.Pill
-    val IconButtonPressed = MaterialShapes.Cookie6Sided
-}
-
 val CardShapeToken = RoundedCornerShape(20.dp)
 val SheetShapeToken = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 val ChipShapeToken = RoundedCornerShape(16.dp)
+
