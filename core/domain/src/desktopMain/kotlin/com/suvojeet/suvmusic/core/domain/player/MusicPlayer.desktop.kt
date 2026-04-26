@@ -59,9 +59,15 @@ actual class MusicPlayer {
     private val _shuffleEnabled = MutableStateFlow(false)
     actual val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
 
+    private val _queue = MutableStateFlow<List<Song>>(emptyList())
+    actual val queue: StateFlow<List<Song>> = _queue.asStateFlow()
+
+    private val _currentIndex = MutableStateFlow(-1)
+    actual val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
     // --- Queue management (pure Kotlin) -------------------------------------
 
-    private var queue: List<Song> = emptyList()
+    private var queueList: List<Song> = emptyList()
 
     /**
      * Index into [queue] in linear order. -1 when no queue is loaded.
@@ -136,8 +142,19 @@ actual class MusicPlayer {
     // --- Public API ---------------------------------------------------------
 
     actual fun setQueue(songs: List<Song>, startIndex: Int) {
-        queue = songs
+        queueList = songs
+        _queue.value = songs
         canonicalIndex = startIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0))
+        _currentIndex.value = if (songs.isEmpty()) -1 else canonicalIndex
+        regenerateShuffleOrder()
+        loadCurrent(autoPlay = true)
+    }
+
+    actual fun playAt(index: Int) {
+        if (index !in queueList.indices) return
+        canonicalIndex = index
+        // Re-anchor the shuffle order on the new track so future next/prev
+        // pull from a fresh order starting here.
         regenerateShuffleOrder()
         loadCurrent(autoPlay = true)
     }
@@ -158,7 +175,7 @@ actual class MusicPlayer {
     }
 
     actual fun next() {
-        if (queue.isEmpty()) return
+        if (queueList.isEmpty()) return
         val nextIndex = nextIndexInPlayOrder()
         if (nextIndex >= 0) {
             canonicalIndex = nextIndex
@@ -167,7 +184,7 @@ actual class MusicPlayer {
     }
 
     actual fun previous() {
-        if (queue.isEmpty()) return
+        if (queueList.isEmpty()) return
         // Mirrors typical behaviour: if past 3s, restart current track instead of jumping back.
         if (_positionMs.value > 3000L) {
             seekTo(0L)
@@ -206,8 +223,9 @@ actual class MusicPlayer {
     // --- Internals ---------------------------------------------------------
 
     private fun loadCurrent(autoPlay: Boolean) {
-        val song = queue.getOrNull(canonicalIndex)
+        val song = queueList.getOrNull(canonicalIndex)
         _currentSong.value = song
+        _currentIndex.value = if (song == null) -1 else canonicalIndex
         _positionMs.value = 0L
         _durationMs.value = 0L
         if (song == null) return
@@ -244,7 +262,7 @@ actual class MusicPlayer {
     }
 
     private fun nextIndexInPlayOrder(): Int {
-        if (queue.isEmpty()) return -1
+        if (queueList.isEmpty()) return -1
         if (_shuffleEnabled.value) {
             val nextCursor = shuffleCursor + 1
             return when {
@@ -261,13 +279,13 @@ actual class MusicPlayer {
             }
         } else {
             val candidate = canonicalIndex + 1
-            return if (candidate < queue.size) candidate
+            return if (candidate < queueList.size) candidate
             else if (_repeatMode.value == RepeatMode.ALL) 0 else -1
         }
     }
 
     private fun previousIndexInPlayOrder(): Int {
-        if (queue.isEmpty()) return -1
+        if (queueList.isEmpty()) return -1
         if (_shuffleEnabled.value) {
             val prevCursor = shuffleCursor - 1
             return if (prevCursor >= 0) {

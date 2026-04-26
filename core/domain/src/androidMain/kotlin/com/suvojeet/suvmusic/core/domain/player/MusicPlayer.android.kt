@@ -45,9 +45,25 @@ actual class MusicPlayer {
     private val _shuffleEnabled = MutableStateFlow(false)
     actual val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
 
+    private val _queue = MutableStateFlow<List<Song>>(emptyList())
+    actual val queue: StateFlow<List<Song>> = _queue.asStateFlow()
+
+    private val _currentIndex = MutableStateFlow(-1)
+    actual val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
     actual fun setQueue(songs: List<Song>, startIndex: Int) {
         Log.d(TAG, "setQueue size=${songs.size} startIndex=$startIndex")
+        _queue.value = songs
+        _currentIndex.value = if (songs.isEmpty()) -1 else startIndex.coerceIn(0, songs.size - 1)
         _currentSong.value = songs.getOrNull(startIndex)
+    }
+
+    actual fun playAt(index: Int) {
+        Log.d(TAG, "playAt($index)")
+        val q = _queue.value
+        if (index !in q.indices) return
+        _currentIndex.value = index
+        _currentSong.value = q[index]
     }
 
     actual fun play() {

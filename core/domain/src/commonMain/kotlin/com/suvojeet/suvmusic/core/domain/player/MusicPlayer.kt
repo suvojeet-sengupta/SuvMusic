@@ -51,12 +51,20 @@ expect class MusicPlayer {
     /** Whether the queue plays in shuffled order. */
     val shuffleEnabled: StateFlow<Boolean>
 
+    /** The current queue, in canonical order (NOT shuffled). Empty when nothing is loaded. */
+    val queue: StateFlow<List<Song>>
+
+    /** Index into [queue] of the currently playing song, or -1 when nothing is loaded. */
+    val currentIndex: StateFlow<Int>
+
     fun setQueue(songs: List<Song>, startIndex: Int = 0)
     fun play()
     fun pause()
     fun togglePlayPause()
     fun next()
     fun previous()
+    /** Jump to a specific track by canonical-queue index. No-op if out of range. */
+    fun playAt(index: Int)
     fun seekTo(positionMs: Long)
     fun setRepeatMode(mode: RepeatMode)
     fun setShuffleEnabled(enabled: Boolean)
