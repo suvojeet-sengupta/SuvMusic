@@ -8,12 +8,11 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
 
 /**
  * Use case for saving a playlist to the library.
  */
-class SavePlaylistUseCase @Inject constructor(
+class SavePlaylistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<Playlist> {
     override suspend operator fun invoke(playlist: Playlist) {
@@ -24,7 +23,7 @@ class SavePlaylistUseCase @Inject constructor(
 /**
  * Use case for saving songs to a playlist.
  */
-class SavePlaylistSongsUseCase @Inject constructor(
+class SavePlaylistSongsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, songs: List<Song>) {
@@ -35,7 +34,7 @@ class SavePlaylistSongsUseCase @Inject constructor(
 /**
  * Use case for retrieving cached playlist songs.
  */
-class GetPlaylistSongsUseCase @Inject constructor(
+class GetPlaylistSongsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : UseCase<String, List<Song>> {
     override suspend operator fun invoke(playlistId: String): List<Song> {
@@ -46,7 +45,7 @@ class GetPlaylistSongsUseCase @Inject constructor(
 /**
  * Use case for retrieving playlist songs as a Flow.
  */
-class GetPlaylistSongsFlowUseCase @Inject constructor(
+class GetPlaylistSongsFlowUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : UseCase<String, Flow<List<Song>>> {
     override suspend operator fun invoke(playlistId: String): Flow<List<Song>> {
@@ -58,7 +57,7 @@ class GetPlaylistSongsFlowUseCase @Inject constructor(
 /**
  * Use case for checking if a song is in a playlist.
  */
-class IsSongInPlaylistUseCase @Inject constructor(
+class IsSongInPlaylistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, songId: String): Boolean {
@@ -69,7 +68,7 @@ class IsSongInPlaylistUseCase @Inject constructor(
 /**
  * Use case for removing a playlist from the library.
  */
-class RemovePlaylistUseCase @Inject constructor(
+class RemovePlaylistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<String> {
     override suspend operator fun invoke(playlistId: String) {
@@ -80,7 +79,7 @@ class RemovePlaylistUseCase @Inject constructor(
 /**
  * Use case for adding a song to a playlist.
  */
-class AddSongToPlaylistUseCase @Inject constructor(
+class AddSongToPlaylistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, song: Song) {
@@ -91,7 +90,7 @@ class AddSongToPlaylistUseCase @Inject constructor(
 /**
  * Use case for removing a song from a playlist.
  */
-class RemoveSongFromPlaylistUseCase @Inject constructor(
+class RemoveSongFromPlaylistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, songId: String) {
@@ -102,7 +101,7 @@ class RemoveSongFromPlaylistUseCase @Inject constructor(
 /**
  * Use case for checking if an album is saved.
  */
-class IsAlbumSavedUseCase @Inject constructor(
+class IsAlbumSavedUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : UseCase<String, Flow<Boolean>> {
     override suspend operator fun invoke(albumId: String): Flow<Boolean> {
@@ -113,7 +112,7 @@ class IsAlbumSavedUseCase @Inject constructor(
 /**
  * Use case for saving an album to the library.
  */
-class SaveAlbumUseCase @Inject constructor(
+class SaveAlbumUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<Album> {
     override suspend operator fun invoke(album: Album) {
@@ -124,7 +123,7 @@ class SaveAlbumUseCase @Inject constructor(
 /**
  * Use case for removing an album from the library.
  */
-class RemoveAlbumUseCase @Inject constructor(
+class RemoveAlbumUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<String> {
     override suspend operator fun invoke(albumId: String) {
@@ -135,7 +134,7 @@ class RemoveAlbumUseCase @Inject constructor(
 /**
  * Use case for getting saved playlists.
  */
-class GetSavedPlaylistsUseCase @Inject constructor(
+class GetSavedPlaylistsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ParameterlessUseCase<Flow<List<PlaylistDisplayItem>>> {
     override suspend operator fun invoke(): Flow<List<PlaylistDisplayItem>> {
@@ -146,7 +145,7 @@ class GetSavedPlaylistsUseCase @Inject constructor(
 /**
  * Use case for getting saved albums.
  */
-class GetSavedAlbumsUseCase @Inject constructor(
+class GetSavedAlbumsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ParameterlessUseCase<Flow<List<LibraryItem>>> {
     override suspend operator fun invoke(): Flow<List<LibraryItem>> {
@@ -157,7 +156,7 @@ class GetSavedAlbumsUseCase @Inject constructor(
 /**
  * Use case for getting saved artists.
  */
-class GetSavedArtistsUseCase @Inject constructor(
+class GetSavedArtistsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ParameterlessUseCase<Flow<List<LibraryItem>>> {
     override suspend operator fun invoke(): Flow<List<LibraryItem>> {
@@ -168,7 +167,7 @@ class GetSavedArtistsUseCase @Inject constructor(
 /**
  * Use case for saving an artist to the library.
  */
-class SaveArtistUseCase @Inject constructor(
+class SaveArtistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<Artist> {
     override suspend operator fun invoke(artist: Artist) {
@@ -179,7 +178,7 @@ class SaveArtistUseCase @Inject constructor(
 /**
  * Use case for removing an artist from the library.
  */
-class RemoveArtistUseCase @Inject constructor(
+class RemoveArtistUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : ConsumerUseCase<String> {
     override suspend operator fun invoke(artistId: String) {
@@ -190,7 +189,7 @@ class RemoveArtistUseCase @Inject constructor(
 /**
  * Use case for checking if an artist is saved.
  */
-class IsArtistSavedUseCase @Inject constructor(
+class IsArtistSavedUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : UseCase<String, Flow<Boolean>> {
     override suspend operator fun invoke(artistId: String): Flow<Boolean> {
@@ -201,7 +200,7 @@ class IsArtistSavedUseCase @Inject constructor(
 /**
  * Use case for getting a playlist by ID.
  */
-class GetPlaylistByIdUseCase @Inject constructor(
+class GetPlaylistByIdUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) : UseCase<String, LibraryItem?> {
     override suspend operator fun invoke(id: String): LibraryItem? {
@@ -212,7 +211,7 @@ class GetPlaylistByIdUseCase @Inject constructor(
 /**
  * Use case for updating a playlist thumbnail.
  */
-class UpdatePlaylistThumbnailUseCase @Inject constructor(
+class UpdatePlaylistThumbnailUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, thumbnailUrl: String?) {
@@ -223,7 +222,7 @@ class UpdatePlaylistThumbnailUseCase @Inject constructor(
 /**
  * Use case for updating a playlist name.
  */
-class UpdatePlaylistNameUseCase @Inject constructor(
+class UpdatePlaylistNameUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, name: String) {
@@ -234,7 +233,7 @@ class UpdatePlaylistNameUseCase @Inject constructor(
 /**
  * Use case for replacing all songs in a playlist.
  */
-class ReplacePlaylistSongsUseCase @Inject constructor(
+class ReplacePlaylistSongsUseCase constructor(
     private val libraryRepository: LibraryRepository
 ) {
     suspend operator fun invoke(playlistId: String, songs: List<Song>) {

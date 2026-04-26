@@ -6,12 +6,11 @@ import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Playlist
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
 
 /**
  * Use case for searching songs across available music sources.
  */
-class SearchSongsUseCase @Inject constructor(
+class SearchSongsUseCase constructor(
     private val searchRepository: SearchRepository
 ) : UseCase<String, Flow<List<Song>>> {
     override suspend operator fun invoke(query: String): Flow<List<Song>> {
@@ -22,7 +21,7 @@ class SearchSongsUseCase @Inject constructor(
 /**
  * Use case for searching albums.
  */
-class SearchAlbumsUseCase @Inject constructor(
+class SearchAlbumsUseCase constructor(
     private val searchRepository: SearchRepository
 ) : UseCase<String, Flow<List<Album>>> {
     override suspend operator fun invoke(query: String): Flow<List<Album>> {
@@ -33,7 +32,7 @@ class SearchAlbumsUseCase @Inject constructor(
 /**
  * Use case for searching artists.
  */
-class SearchArtistsUseCase @Inject constructor(
+class SearchArtistsUseCase constructor(
     private val searchRepository: SearchRepository
 ) : UseCase<String, Flow<List<Artist>>> {
     override suspend operator fun invoke(query: String): Flow<List<Artist>> {
@@ -44,7 +43,7 @@ class SearchArtistsUseCase @Inject constructor(
 /**
  * Use case for searching playlists.
  */
-class SearchPlaylistsUseCase @Inject constructor(
+class SearchPlaylistsUseCase constructor(
     private val searchRepository: SearchRepository
 ) : UseCase<String, Flow<List<Playlist>>> {
     override suspend operator fun invoke(query: String): Flow<List<Playlist>> {
@@ -55,7 +54,7 @@ class SearchPlaylistsUseCase @Inject constructor(
 /**
  * Use case for getting detailed song information.
  */
-class GetSongDetailsUseCase @Inject constructor(
+class GetSongDetailsUseCase constructor(
     private val searchRepository: SearchRepository
 ) : UseCase<String, Song?> {
     override suspend operator fun invoke(songId: String): Song? {

@@ -1,33 +1,32 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    alias(libs.plugins.ksp)
-}
-
-android {
-    namespace = "com.suvojeet.suvmusic.core.domain"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.core.domain"
+        compileSdk = 37
+        minSdk = 26
+        withHostTestBuilder { }
     }
-}
 
-dependencies {
-    implementation(project(":core:model"))
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    jvm("desktop") {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                }
+            }
+        }
+    }
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(project(":core:model"))
+                implementation(libs.kotlinx.coroutines.core)
+            }
+        }
+    }
 }
