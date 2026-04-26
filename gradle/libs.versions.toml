@@ -133,6 +133,9 @@ converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", ve
 # Image Loading
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+# Coil 3 KMP-friendly network engine (Ktor-based) — used by composeApp
+# commonMain so AsyncImage works the same on Android + Desktop.
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
 
 # Hilt DI
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

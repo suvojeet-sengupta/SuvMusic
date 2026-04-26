@@ -1,15 +1,11 @@
 package com.suvojeet.suvmusic.composeapp.ui
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +15,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -41,8 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -107,15 +100,18 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Album art placeholder — gradient using theme colours, with
-            // a music-note icon centered. Click toggles play/pause for
-            // discoverability.
-            ArtPlaceholder(
+            // Album art — Coil 3 fetches the URL when [Song.thumbnailUrl]
+            // is set; otherwise falls back to a gradient placeholder.
+            // Tapping toggles play/pause for discoverability.
+            AlbumArt(
+                thumbnailUrl = currentSong?.thumbnailUrl,
+                contentDescription = currentSong?.title,
                 onClick = { player.togglePlayPause() },
                 modifier = Modifier
                     .widthIn(max = 360.dp)
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(16.dp)),
             )
 
             Spacer(Modifier.height(32.dp))
@@ -232,38 +228,6 @@ fun NowPlayingScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ArtPlaceholder(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        primary.copy(alpha = 0.7f),
-                        secondary.copy(alpha = 0.6f),
-                        tertiary.copy(alpha = 0.7f),
-                    ),
-                ),
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.MusicNote,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.85f),
-            modifier = Modifier.fillMaxSize(0.4f),
-        )
     }
 }
 

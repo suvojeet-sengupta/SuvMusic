@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -36,11 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.setSingletonImageLoaderFactory
+import com.suvojeet.suvmusic.composeapp.image.buildAppImageLoader
 import com.suvojeet.suvmusic.composeapp.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.composeapp.ui.AboutTab
+import com.suvojeet.suvmusic.composeapp.ui.AlbumArt
 import com.suvojeet.suvmusic.composeapp.ui.HomeTab
 import com.suvojeet.suvmusic.composeapp.ui.LibraryTab
 import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
@@ -77,6 +83,8 @@ fun App(
     onSearchYouTube: (suspend (String) -> List<RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
 ) {
+    setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
+
     val musicPlayer = remember { MusicPlayer() }
     DisposableEffect(musicPlayer) {
         onDispose { musicPlayer.release() }
@@ -225,6 +233,13 @@ private fun BottomPlayerBar(player: MusicPlayer, onExpand: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            AlbumArt(
+                thumbnailUrl = currentSong?.thumbnailUrl,
+                contentDescription = currentSong?.title,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+            )
             Column(modifier = Modifier.weight(0.3f)) {
                 Text(
                     text = currentSong?.title ?: "Nothing playing",
