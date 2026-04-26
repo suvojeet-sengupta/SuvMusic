@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.core.model.fromLocal
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
