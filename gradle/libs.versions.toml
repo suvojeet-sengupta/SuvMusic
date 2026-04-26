@@ -209,6 +209,10 @@ ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.r
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+# AGP 9+ KMP-aware Android library plugin. Used for KMP modules with an
+# Android target (replaces `com.android.library` + `kotlin.multiplatform`
+# combo, which is deprecated and broken in AGP 9.1 / Kotlin 2.3).
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

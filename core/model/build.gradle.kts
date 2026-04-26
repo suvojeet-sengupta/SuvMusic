@@ -1,17 +1,18 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    // AGP 9+ KMP-aware Android library plugin. Replaces the
+    // `com.android.library` + `androidTarget()` combo which is deprecated and
+    // broken in AGP 9.1 / Kotlin 2.3 (gives "Missing androidTarget()" hard
+    // fail). https://kotl.in/gradle/agp-new-kmp
+    alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
 kotlin {
-    androidTarget {
-        compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-                }
-            }
-        }
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.core.model"
+        compileSdk = 37
+        minSdk = 26
+        withHostTestBuilder { }
     }
 
     jvm("desktop") {
@@ -33,36 +34,13 @@ kotlin {
 
         // androidMain holds model classes that still reference android.net.Uri
         // (Song + its consumers Album/Artist/Playlist). Migrated to common in
-        // chunk 2.3 once Song.localUri is refactored to String.
+        // chunk 2.3 once Song.localUri is refactored to String. The @Immutable
+        // Compose annotations were dropped in this same chunk — they were a
+        // recomposition-skipping hint, not a correctness requirement, and
+        // reintroducing them requires Compose Multiplatform's runtime artifact
+        // which we'll add in Phase 5 when UI moves to commonMain.
         val androidMain by getting {
-            dependencies {
-                implementation(platform(libs.androidx.compose.bom))
-                implementation(libs.androidx.compose.runtime)
-            }
+            // No deps for now.
         }
-    }
-}
-
-android {
-    namespace = "com.suvojeet.suvmusic.core.model"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 }
