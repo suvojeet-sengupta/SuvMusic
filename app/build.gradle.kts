@@ -217,6 +217,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // Koin DI (Phase 1 of KMP migration — coexists with Hilt during the swap)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose)
+    implementation(libs.koin.compose.viewmodel)
     
     // DataStore
     implementation(libs.androidx.datastore.preferences)
