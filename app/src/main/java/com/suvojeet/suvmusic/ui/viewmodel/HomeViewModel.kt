@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -111,19 +112,33 @@ class HomeViewModel @Inject constructor(
      */
     private fun loadHomeContent(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            // Load base data first (HomeSections from YouTube/JioSaavn)
+            // 1. Prioritize base data (HomeSections from YouTube/JioSaavn)
             loadData(forceRefresh)
             
-            // Parallelize remaining taste-profile-driven content
-            // We use separate launches here but they are coordinated from a single parent call
-            // to allow for incremental UI updates as they arrive.
+            // 2. Stagger background taste-profile-driven content with larger delays to prevent memory spikes
+            kotlinx.coroutines.delay(2000L) 
             launch { loadRecommendations() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadPersonalizedSections() }
+            
+            // 3. Further stagger secondary metadata and low-priority detections.
+            kotlinx.coroutines.delay(2000L)
             launch { loadGenreSections() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadContextSections() }
+            
+            kotlinx.coroutines.delay(1500L)
             launch { loadLastFmRecommendations() }
             launch { detectMood() }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Clear memory-heavy recommendation caches when leaving Home
+        recommendationEngine.onAuthStateChanged() // This clears all caches
     }
     
     private fun observeSession() {
@@ -222,40 +237,41 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             val source = sessionManager.getMusicSource()
-            _uiState.update { it.copy(currentSource = source, isLoading = _uiState.value.homeSections.isEmpty()) }
+            _uiState.update { it.copy(currentSource = source) }
             
-            // 1. Reactive Cache Loading
-            // Optimization: Collect cache asynchronously to keep UI snappy
-            launch {
-                val cacheFlow = if (source == MusicSource.JIOSAAVN) {
-                    sessionManager.getCachedJioSaavnHomeSections()
-                } else {
-                    sessionManager.getCachedHomeSections()
+            // 1. Load Cache Synchronously (from DataStore first emission)
+            val cachedSections = if (source == MusicSource.JIOSAAVN) {
+                sessionManager.getCachedJioSaavnHomeSections().first()
+            } else {
+                sessionManager.getCachedHomeSections().first()
+            }
+            
+            val cachedQuickPicks = sessionManager.getCachedQuickPicks().first()
+            
+            if (cachedSections.isNotEmpty() || cachedQuickPicks.isNotEmpty()) {
+                _uiState.update { 
+                    it.copy(
+                        homeSections = cachedSections, 
+                        filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
+                        recommendations = cachedQuickPicks,
+                        isLoading = false,
+                        error = null
+                    ) 
                 }
-                
-                cacheFlow.collect { cachedSections ->
-                    if (cachedSections.isNotEmpty()) {
-                        _uiState.update { 
-                            it.copy(
-                                homeSections = cachedSections, 
-                                filteredSections = cachedSections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
-                                isLoading = false,
-                                error = null
-                            ) 
-                        }
-                    }
-                }
+            } else {
+                _uiState.update { it.copy(isLoading = true) }
             }
             
             // 2. Throttled Fresh Data Fetching
             val lastFetchTime = sessionManager.getLastHomeFetchTime(source)
-            val cooldown = 5 * 60 * 1000L // 5 minutes cooldown
+            val cooldown = 30 * 60 * 1000L // 30 minutes cooldown
             val isCooldownActive = System.currentTimeMillis() - lastFetchTime < cooldown
             
+            // Only fetch if forced, cooldown expired, or we have absolutely no data
             if (forceRefresh || !isCooldownActive || _uiState.value.homeSections.isEmpty()) {
                 fetchFreshData(source)
             } else {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             }
         }
     }
@@ -338,6 +354,11 @@ class HomeViewModel @Inject constructor(
                 // Use the enhanced recommendation engine for Quick Picks
                 val recommendations = recommendationEngine.getPersonalizedRecommendations(20)
                 _uiState.update { it.copy(recommendations = recommendations) }
+                
+                // Save to cache
+                if (recommendations.isNotEmpty()) {
+                    sessionManager.saveQuickPicksCache(recommendations)
+                }
             } catch (e: Exception) {
                 // Silently fail - recommendations are optional
                 _uiState.update { it.copy(recommendations = emptyList()) }
@@ -417,6 +438,30 @@ class HomeViewModel @Inject constructor(
     fun addToPlaylist(song: Song) {
         viewModelScope.launch {
             _events.emit(HomeEvent.ShowAddToPlaylistSheet(song))
+        }
+    }
+
+    /**
+     * Start a "Random Mix" based on the user's personalized recommendations.
+     * Fetches a larger set of recommended songs, shuffles them, and starts playback.
+     */
+    fun playRandomMix() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                // Fetch a broader pool of recommendations (e.g., 50 songs)
+                val recommendations = recommendationEngine.getPersonalizedRecommendations(50)
+                if (recommendations.isNotEmpty()) {
+                    val shuffled = recommendations.shuffled()
+                    musicPlayer.playSong(shuffled[0], shuffled, 0)
+                } else {
+                    _uiState.update { it.copy(error = "No recommendations available for a random mix") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to start random mix") }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 

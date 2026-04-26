@@ -128,7 +128,7 @@ private fun LiquidGlassNavBar(
     val density = LocalDensity.current
 
     // Glass material colors – adaptive for dark/light
-    val glassBaseAlpha = if (isDarkTheme) 0.45f else 0.65f
+    val glassBaseAlpha = if (isDarkTheme) 0.45f else 0.35f
     val glassBaseColor = if (isDarkTheme) {
         surfaceColor.copy(alpha = glassBaseAlpha)
     } else {
@@ -137,21 +137,21 @@ private fun LiquidGlassNavBar(
 
     // Specular highlight (simulates light hitting the top of the glass)
     val specularHighlight = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.18f else 0.40f),
-        0.3f to Color.White.copy(alpha = if (isDarkTheme) 0.06f else 0.12f),
+        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.18f else 0.25f),
+        0.3f to Color.White.copy(alpha = if (isDarkTheme) 0.06f else 0.08f),
         0.5f to Color.Transparent,
-        1.0f to Color.Black.copy(alpha = if (isDarkTheme) 0.08f else 0.03f)
+        1.0f to Color.Black.copy(alpha = if (isDarkTheme) 0.08f else 0.02f)
     )
 
     // Border rim – luminous on top, fading to transparent
     val borderBrush = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.35f else 0.60f),
-        0.4f to Color.White.copy(alpha = if (isDarkTheme) 0.12f else 0.25f),
-        1.0f to Color.White.copy(alpha = if (isDarkTheme) 0.05f else 0.10f)
+        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.35f else 0.45f),
+        0.4f to Color.White.copy(alpha = if (isDarkTheme) 0.12f else 0.15f),
+        1.0f to Color.White.copy(alpha = if (isDarkTheme) 0.05f else 0.08f)
     )
 
     // Inner tint – subtle color wash from primary/accent
-    val innerTintColor = primaryColor.copy(alpha = if (isDarkTheme) 0.08f else 0.05f)
+    val innerTintColor = primaryColor.copy(alpha = if (isDarkTheme) 0.08f else 0.04f)
 
     // Track positions for morphing indicator
     var selectedItemIndex by remember { mutableIntStateOf(0) }
@@ -178,6 +178,13 @@ private fun LiquidGlassNavBar(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(72.dp)
+            // Consume taps that miss individual items so clicks don't pass through
+            // to controls rendered behind a translucent navigation bar.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
     ) {
         // Layer 1: Enhanced shadow
         Box(
@@ -393,6 +400,13 @@ private fun StandardNavBar(
             .fillMaxWidth()
             .background(containerColor)
             .navigationBarsPadding()
+            // Consume taps that miss individual items so clicks don't pass through
+            // to controls rendered behind a translucent navigation bar.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
     ) {
         Row(
             modifier = Modifier

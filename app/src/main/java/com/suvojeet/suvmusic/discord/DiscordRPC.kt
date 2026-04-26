@@ -155,7 +155,11 @@ class DiscordRPC(
     private fun Payload.handleDispatch() {
         when (this.t.toString()) {
             "READY" -> {
-                val ready = json.decodeFromJsonElement<Ready>(this.d!!)
+                val payload = this.d ?: run {
+                    AppLog.w(tag) { "Gateway READY frame missing 'd' payload; ignoring" }
+                    return
+                }
+                val ready = json.decodeFromJsonElement<Ready>(payload)
                 sessionId = ready.sessionId
                 resumeGatewayUrl = ready.resumeGatewayUrl + "/?v=10&encoding=json"
                 AppLog.i(tag) { "Gateway READY: resume_gateway_url updated to $resumeGatewayUrl, session_id updated to $sessionId" }
@@ -188,7 +192,13 @@ class DiscordRPC(
         } else {
             sendIdentify()
         }
-        heartbeatInterval = json.decodeFromJsonElement<Heartbeat>(this.d!!).heartbeatInterval
+        val payload = this.d ?: run {
+            AppLog.w(tag) { "Gateway HELLO frame missing 'd' payload; defaulting heartbeat to 41250ms" }
+            heartbeatInterval = 41_250L
+            startHeartbeatJob(heartbeatInterval)
+            return
+        }
+        heartbeatInterval = json.decodeFromJsonElement<Heartbeat>(payload).heartbeatInterval
         AppLog.i(tag) { "Gateway: Setting heartbeatInterval=$heartbeatInterval" }
         startHeartbeatJob(heartbeatInterval)
     }

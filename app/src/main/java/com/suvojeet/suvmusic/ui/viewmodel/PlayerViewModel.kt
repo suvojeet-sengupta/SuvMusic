@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -224,6 +225,13 @@ class PlayerViewModel @Inject constructor(
     private val _selectedQueueIndices = MutableStateFlow<Set<Int>>(emptySet())
     val selectedQueueIndices: StateFlow<Set<Int>> = _selectedQueueIndices.asStateFlow()
 
+    // Per-comment replies state keyed by comment id.
+    private val _commentReplies = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
+    val commentReplies: StateFlow<Map<String, List<Comment>>> = _commentReplies.asStateFlow()
+
+    private val _loadingReplies = MutableStateFlow<Set<String>>(emptySet())
+    val loadingReplies: StateFlow<Set<String>> = _loadingReplies.asStateFlow()
+
     // Derived Queue Sections
     /** Songs from index 0 to currentIndex - 1 — already played */
     val historySongs: StateFlow<List<Song>> = playerState.map { state ->
@@ -244,13 +252,20 @@ class PlayerViewModel @Inject constructor(
     private var currentSongPlayTime: Long = 0
     private var isHistorySyncEnabled = false
     private val HISTORY_SYNC_THRESHOLD_MS = 30000L // 30 seconds
-    
+
+    // Automix master switch — gates automatic queue extension when autoplay/radio is active.
+    @Volatile private var automixEnabled: Boolean = true
+
     init {
         observeCurrentSong()
         observeDownloads()
         observeDownloadStateConsistency()
         observeQueuePositionForAutoplay()
         observeLyricsProviderSettings()
+
+        viewModelScope.launch {
+            sessionManager.automixEnabledFlow.collect { automixEnabled = it }
+        }
         
         // Observe history sync setting
         viewModelScope.launch {
@@ -579,18 +594,19 @@ class PlayerViewModel @Inject constructor(
      * top-played / liked songs, giving a fully personalized "Your Radio" experience.
      */
     fun startPersonalizedRadio() {
-        val currentSong = playerState.value.currentSong
-        if (currentSong != null) {
-            startRadio(currentSong)
-        } else {
-            viewModelScope.launch {
-                try {
-                    val recommendations = recommendationEngine.getPersonalizedRecommendations(5)
-                    val seed = recommendations.firstOrNull() ?: return@launch
-                    startRadio(seed, recommendations)
-                } catch (e: Exception) {
-                    Log.e("PlayerViewModel", "Failed to start personalized radio", e)
-                }
+        viewModelScope.launch {
+            try {
+                val currentSong = playerState.value.currentSong
+                val recommendations = recommendationEngine.getPersonalizedRecommendations(10)
+                
+                // Pick a seed that's NOT the current song to ensure variety
+                val seed = recommendations.firstOrNull { it.id != currentSong?.id } 
+                    ?: recommendations.firstOrNull() 
+                    ?: return@launch
+                    
+                startRadio(seed, recommendations)
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Failed to start personalized radio", e)
             }
         }
     }
@@ -741,26 +757,14 @@ class PlayerViewModel @Inject constructor(
             // Notify recommendation engine of the new context
             recommendationEngine.onSongPlayed(song)
             
-            // Check if song is already playing to avoid restarting
-            val currentSongId = playerState.value.currentSong?.id
-            if (currentSongId != song.id) {
-                // ALWAYS play the song with its (potentially new) radio queue to clear the current queue
-                // and start a fresh radio session based on the selected song.
-                if (initialQueue != null && initialQueue.isNotEmpty()) {
-                    val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                    musicPlayer.playSong(song, initialQueue, index)
-                } else {
-                    musicPlayer.playSong(song)
-                }
+            // For a "Radio" feel, we want a fresh start. 
+            // If the song is already playing, we'll still 'restart' it with a new radio queue
+            // to ensure it feels like a fresh generation session.
+            if (initialQueue != null && initialQueue.isNotEmpty()) {
+                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                musicPlayer.playSong(song, initialQueue, index)
             } else {
-                // Song is already playing. We just need to replace the queue.
-                if (initialQueue != null && initialQueue.isNotEmpty()) {
-                    // Filter out the current song as it's already playing, then add the rest
-                    musicPlayer.replaceQueue(initialQueue)
-                } else {
-                    // Clear the current queue except for the playing song to start a fresh radio session
-                    musicPlayer.replaceQueue(listOf(song))
-                }
+                musicPlayer.playSong(song)
             }
             
             try {
@@ -772,12 +776,11 @@ class PlayerViewModel @Inject constructor(
                 
                 // Add recommendations to queue
                 if (radioSongs.isNotEmpty()) {
-                    musicPlayer.addToQueue(radioSongs)
+                    musicPlayer.replaceQueue(listOf(song) + radioSongs)
                     radioBaseSongId = smartQueueManager.lastSeedId ?: song.id
                 }
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error starting radio", e)
-                // Already playing, so no fallback needed
             }
         }
     }
@@ -796,8 +799,9 @@ class PlayerViewModel @Inject constructor(
                 Pair(triple, radioMode)
             }.collect { (triple, radioMode) ->
                 val (currentIndex, queueSize, isAutoplayEnabled) = triple
-                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more
-                if ((isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
+                // When autoplay is enabled OR radio mode is on, and we're within 3 songs of the end, load more.
+                // Automix master switch must also be on — disabling it stops the queue from auto-extending.
+                if (automixEnabled && (isAutoplayEnabled || radioMode) && queueSize > 0 && currentIndex >= queueSize - 3) {
                     loadMoreAutoplaySongs()
                 }
             }
@@ -813,7 +817,9 @@ class PlayerViewModel @Inject constructor(
         val isAutoplayEnabled = state.isAutoplayEnabled
         val radioMode = _isRadioMode.value
         
-        // Allow loading if radio mode OR autoplay is enabled
+        // Allow loading if radio mode OR autoplay is enabled — but only when the Automix
+        // master switch is on. Disabling Automix halts all automatic queue extension.
+        if (!automixEnabled) return
         if (!radioMode && !isAutoplayEnabled) return
         if (_isLoadingMoreSongs.value) return // Prevent duplicate loads
         
@@ -1137,6 +1143,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _isFetchingComments.value = true
             _commentsState.value = null
+            _commentReplies.value = emptyMap()
+            _loadingReplies.value = emptySet()
             
             // Only fetch for YouTube/Downloaded source which have valid video IDs
             val currentSong = playerState.value.currentSong
@@ -1152,7 +1160,7 @@ class PlayerViewModel @Inject constructor(
     fun loadMoreComments() {
         if (_isLoadingMoreComments.value || _isFetchingComments.value) return
         val currentSong = playerState.value.currentSong ?: return
-        
+
         viewModelScope.launch {
             _isLoadingMoreComments.value = true
             val moreComments = youTubeRepository.getMoreComments(currentSong.id)
@@ -1161,6 +1169,32 @@ class PlayerViewModel @Inject constructor(
                 _commentsState.value = currentComments + moreComments
             }
             _isLoadingMoreComments.value = false
+        }
+    }
+
+    fun loadReplies(commentId: String) {
+        if (_loadingReplies.value.contains(commentId)) return
+        if (_commentReplies.value.containsKey(commentId)) return
+        viewModelScope.launch {
+            _loadingReplies.update { it + commentId }
+            val replies = youTubeRepository.getCommentReplies(commentId)
+            _commentReplies.update { it + (commentId to replies) }
+            _loadingReplies.update { it - commentId }
+        }
+    }
+
+    fun loadMoreReplies(commentId: String) {
+        if (_loadingReplies.value.contains(commentId)) return
+        viewModelScope.launch {
+            _loadingReplies.update { it + commentId }
+            val more = youTubeRepository.getMoreCommentReplies(commentId)
+            if (more.isNotEmpty()) {
+                _commentReplies.update { map ->
+                    val existing = map[commentId].orEmpty()
+                    map + (commentId to existing + more)
+                }
+            }
+            _loadingReplies.update { it - commentId }
         }
     }
 
@@ -1439,7 +1473,7 @@ class PlayerViewModel @Inject constructor(
                 )
             }
             
-            // Fetch thumbnails
+            // Fetch thumbnails and better IDs
             val updatedCredits = artistNames.map { name ->
                 try {
                     val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
@@ -1448,7 +1482,11 @@ class PlayerViewModel @Inject constructor(
                         youTubeRepository.searchArtists(name)
                     }
                     
-                    val matchingArtist = searchResults.firstOrNull { 
+                    // Prioritize Official channels (those with subscriber text or specific ID format)
+                    // and sort by subscribers if possible (though searchResults is usually already ranked by relevance)
+                    val matchingArtist = searchResults.find { 
+                        (it.name.equals(name, ignoreCase = true)) && (it.subscribers != null)
+                    } ?: searchResults.firstOrNull { 
                         it.name.contains(name, ignoreCase = true) || 
                         name.contains(it.name, ignoreCase = true)
                     } ?: searchResults.firstOrNull()
