@@ -1,20 +1,16 @@
 package com.suvojeet.suvmusic.core.model
 
-import android.net.Uri
-
 /**
  * Represents a song/track that can be played.
  * Can originate from YouTube, YouTube Music, or local storage.
  *
- * KMP migration notes:
- * - @Immutable annotation removed in chunk 2.1: it was a Compose
- *   recomposition hint, not a correctness requirement. Re-add in Phase 5
- *   when this moves to commonMain alongside Compose Multiplatform runtime.
- * - localUri changed from android.net.Uri? to String? in chunk 2.2 so this
- *   class can move to commonMain in chunk 2.3. Callers that need a Uri
- *   wrap with `Uri.parse(song.localUri)` at the point of use. The
- *   `fromLocal()` factory still accepts Uri inputs (Android-only convenience)
- *   and converts internally with `.toString()`.
+ * Platform notes:
+ * - Pure Kotlin data class — moved to commonMain in chunk 2.3.
+ * - The Android-specific `fromLocal(albumArtUri: Uri, contentUri: Uri)`
+ *   factory lives as an extension on [Song.Companion] in androidMain
+ *   (see SongAndroid.kt) so call sites unchanged.
+ * - @Immutable Compose annotation will be re-added in Phase 5 once
+ *   Compose Multiplatform's runtime artifact is available here.
  */
 data class Song(
     val id: String,
@@ -25,7 +21,7 @@ data class Song(
     val thumbnailUrl: String?,
     val source: SongSource,
     val streamUrl: String? = null, // For YouTube, this is resolved at playback time
-    val localUri: String? = null, // Stringified URI for local files (was android.net.Uri?)
+    val localUri: String? = null, // Stringified URI for local files
     val setVideoId: String? = null, // Unique ID for this song instance in a playlist (for reordering)
     val artistId: String? = null, // Artist browse ID for navigation to artist screen
     val originalSource: SongSource? = null, // Original source before download (for credits display)
@@ -67,33 +63,6 @@ data class Song(
                 artistId = artistId,
                 isVideo = isVideo,
                 isMembersOnly = isMembersOnly,
-                releaseDate = releaseDate
-            )
-        }
-
-        /**
-         * Create a Song from local audio file. Accepts platform Uri values for
-         * caller convenience and stringifies them into the data model.
-         */
-        fun fromLocal(
-            id: Long,
-            title: String,
-            artist: String,
-            album: String,
-            duration: Long,
-            albumArtUri: Uri?,
-            contentUri: Uri,
-            releaseDate: String? = null
-        ): Song {
-            return Song(
-                id = id.toString(),
-                title = title,
-                artist = artist,
-                album = album,
-                duration = duration,
-                thumbnailUrl = albumArtUri?.toString(),
-                source = SongSource.LOCAL,
-                localUri = contentUri.toString(),
                 releaseDate = releaseDate
             )
         }
