@@ -4,18 +4,17 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.android.library)
+    // AGP 9+ KMP-aware Android library plugin (replaces com.android.library +
+    // androidTarget(); see :core:model/build.gradle.kts for context).
+    alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
 kotlin {
-    androidTarget {
-        compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-                }
-            }
-        }
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.composeapp"
+        compileSdk = 37
+        minSdk = 26
+        withHostTestBuilder { }
     }
 
     jvm("desktop") {
@@ -57,20 +56,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
             }
         }
-    }
-}
-
-android {
-    namespace = "com.suvojeet.suvmusic.composeapp"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 

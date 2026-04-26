@@ -1,8 +1,5 @@
 package com.suvojeet.suvmusic.core.model
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
 data class Album(
     val id: String,
     val title: String,

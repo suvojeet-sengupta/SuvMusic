@@ -1,13 +1,15 @@
 package com.suvojeet.suvmusic.core.model
 
 import android.net.Uri
-import androidx.compose.runtime.Immutable
 
 /**
  * Represents a song/track that can be played.
  * Can originate from YouTube, YouTube Music, or local storage.
+ *
+ * @Immutable annotation removed during KMP phase 2.1: it was a Compose
+ * recomposition hint, not a correctness requirement. Re-add in Phase 5
+ * when this moves to commonMain alongside Compose Multiplatform runtime.
  */
-@Immutable
 data class Song(
     val id: String,
     val title: String,
