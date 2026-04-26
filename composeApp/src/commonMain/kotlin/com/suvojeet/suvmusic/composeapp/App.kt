@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lyrics
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +50,7 @@ import com.suvojeet.suvmusic.composeapp.ui.AboutTab
 import com.suvojeet.suvmusic.composeapp.ui.AlbumArt
 import com.suvojeet.suvmusic.composeapp.ui.HomeTab
 import com.suvojeet.suvmusic.composeapp.ui.LibraryTab
+import com.suvojeet.suvmusic.composeapp.ui.LyricsTab
 import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.composeapp.ui.SearchTab
@@ -139,6 +141,7 @@ fun App(
                                         musicPlayer.setQueue(listOf(audioFileToSong(path)))
                                     },
                                 )
+                                Tab.Lyrics -> LyricsTab(player = musicPlayer)
                                 Tab.About -> AboutTab(
                                     appVersion = appVersion,
                                     onOpenUrl = onOpenUrl,
@@ -162,6 +165,7 @@ private enum class Tab(val label: String) {
     Home("Home"),
     Search("Search"),
     Library("Library"),
+    Lyrics("Lyrics"),
     About("About"),
 }
 
@@ -201,6 +205,12 @@ private fun AppNavRail(
             onClick = { onSelect(Tab.Library) },
             icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = "Library") },
             label = { Text("Library") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.Lyrics,
+            onClick = { onSelect(Tab.Lyrics) },
+            icon = { Icon(Icons.Outlined.Lyrics, contentDescription = "Lyrics") },
+            label = { Text("Lyrics") },
         )
         NavigationRailItem(
             selected = selected == Tab.About,

@@ -1,7 +1,10 @@
 package com.suvojeet.suvmusic.composeapp.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -38,8 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.composeapp.image.rememberDominantColors
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.domain.player.RepeatMode
 
@@ -68,9 +72,21 @@ fun NowPlayingScreen(
     val repeatMode by player.repeatMode.collectAsState()
     val shuffleEnabled by player.shuffleEnabled.collectAsState()
 
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = Modifier.fillMaxSize(),
+    val isDark = isSystemInDarkTheme()
+    val dominant = rememberDominantColors(currentSong?.thumbnailUrl, isDarkTheme = isDark)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        dominant.primary,
+                        dominant.secondary,
+                        MaterialTheme.colorScheme.background,
+                    ),
+                ),
+            ),
     ) {
         Column(
             modifier = Modifier
