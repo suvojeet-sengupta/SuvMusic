@@ -2,7 +2,6 @@
 -- Lives in a standalone KMP-only module to avoid the variant-attribute
 -- conflicts that caused 3b.1 to break Android consumers — :core:db has no
 -- Hilt/Room consumers and is intended for KMP-friendly drivers only.
--- Queries land in chunk 3b.2 alongside the migration coroutine.
 
 CREATE TABLE listening_history (
     songId TEXT NOT NULL PRIMARY KEY,
@@ -27,3 +26,72 @@ CREATE TABLE listening_history (
     source TEXT NOT NULL DEFAULT 'YOUTUBE',
     releaseDate TEXT
 );
+
+-- Reads -------------------------------------------------------------------
+
+selectAll:
+SELECT * FROM listening_history;
+
+selectBySongId:
+SELECT * FROM listening_history WHERE songId = ?;
+
+selectTopByPlayCount:
+SELECT * FROM listening_history
+ORDER BY playCount DESC
+LIMIT ?;
+
+selectRecentByLastPlayed:
+SELECT * FROM listening_history
+ORDER BY lastPlayed DESC
+LIMIT ?;
+
+selectAfterTimestamp:
+SELECT * FROM listening_history
+WHERE lastPlayed >= ?
+ORDER BY lastPlayed DESC;
+
+selectTopAfterTimestamp:
+SELECT * FROM listening_history
+WHERE lastPlayed > ?
+ORDER BY playCount DESC;
+
+selectFirstEver:
+SELECT * FROM listening_history
+ORDER BY firstPlayed ASC
+LIMIT 1;
+
+countAll:
+SELECT COUNT(*) FROM listening_history;
+
+sumTotalListeningTime:
+SELECT SUM(totalDurationMs) FROM listening_history;
+
+selectTopArtists:
+SELECT artist, SUM(playCount) AS totalPlays
+FROM listening_history
+GROUP BY artist
+ORDER BY totalPlays DESC
+LIMIT ?;
+
+-- Writes ------------------------------------------------------------------
+
+insertOrReplace:
+INSERT OR REPLACE INTO listening_history (
+    songId, songTitle, artist, thumbnailUrl,
+    album, duration, localUri,
+    playCount, totalDurationMs, lastPlayed, firstPlayed,
+    skipCount, completionRate, isLiked,
+    artistId, source, releaseDate
+) VALUES (
+    ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?, ?,
+    ?, ?, ?,
+    ?, ?, ?
+);
+
+deleteAll:
+DELETE FROM listening_history;
+
+deleteOlderThan:
+DELETE FROM listening_history WHERE lastPlayed < ?;

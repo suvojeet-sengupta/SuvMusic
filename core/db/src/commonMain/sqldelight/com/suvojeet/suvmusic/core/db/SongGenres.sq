@@ -1,10 +1,28 @@
 -- Mirrors @Entity SongGenre in :core:data Room. The genreVector stays as a
 -- comma-separated string of 20 floats (matches the existing
 -- SongGenre.toFloatArray() helper); parsing happens in Kotlin.
--- Queries land in chunk 3b.2.
 
 CREATE TABLE song_genres (
     songId TEXT NOT NULL PRIMARY KEY,
     genreVector TEXT NOT NULL,
     timestamp INTEGER NOT NULL
 );
+
+selectGenre:
+SELECT * FROM song_genres WHERE songId = ?;
+
+selectGenresByIds:
+SELECT * FROM song_genres WHERE songId IN ?;
+
+selectAll:
+SELECT * FROM song_genres;
+
+countAll:
+SELECT COUNT(*) FROM song_genres;
+
+insertOrReplace:
+INSERT OR REPLACE INTO song_genres (songId, genreVector, timestamp)
+VALUES (?, ?, ?);
+
+deleteAll:
+DELETE FROM song_genres;
