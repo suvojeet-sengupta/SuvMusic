@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.composeapp
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import com.suvojeet.suvmusic.composeapp.theme.SuvMusicTheme
 import com.suvojeet.suvmusic.composeapp.ui.AboutTab
 import com.suvojeet.suvmusic.composeapp.ui.HomeTab
 import com.suvojeet.suvmusic.composeapp.ui.LibraryTab
+import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.composeapp.ui.SearchTab
 import com.suvojeet.suvmusic.composeapp.ui.VlcWarningBanner
@@ -81,8 +83,17 @@ fun App(
     }
 
     var selectedTab by remember { mutableStateOf(Tab.Home) }
+    var playerExpanded by remember { mutableStateOf(false) }
 
     SuvMusicTheme {
+        if (playerExpanded) {
+            NowPlayingScreen(
+                player = musicPlayer,
+                onCollapse = { playerExpanded = false },
+            )
+            return@SuvMusicTheme
+        }
+
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -130,7 +141,10 @@ fun App(
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                BottomPlayerBar(player = musicPlayer)
+                BottomPlayerBar(
+                    player = musicPlayer,
+                    onExpand = { playerExpanded = true },
+                )
             }
         }
     }
@@ -190,16 +204,19 @@ private fun AppNavRail(
 }
 
 @Composable
-private fun BottomPlayerBar(player: MusicPlayer) {
+private fun BottomPlayerBar(player: MusicPlayer, onExpand: () -> Unit) {
     val currentSong by player.currentSong.collectAsState()
     val isPlaying by player.isPlaying.collectAsState()
     val positionMs by player.positionMs.collectAsState()
     val durationMs by player.durationMs.collectAsState()
 
+    val canExpand = currentSong != null
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 4.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { if (canExpand) it.clickable(onClick = onExpand) else it },
     ) {
         Row(
             modifier = Modifier
