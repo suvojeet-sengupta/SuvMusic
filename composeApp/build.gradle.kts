@@ -37,6 +37,7 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
                 // Coil 3 — KMP image loading. Network engine is Ktor so
                 // the same AsyncImage call works on Android + Desktop.
                 // ktor-client-cio is the JVM HTTP engine Coil uses to
