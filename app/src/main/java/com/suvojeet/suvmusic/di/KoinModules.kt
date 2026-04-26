@@ -1,10 +1,13 @@
 package com.suvojeet.suvmusic.di
 
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.cache.Cache
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import com.suvojeet.suvmusic.ui.screens.wrapped.WrappedViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AIEqualizerViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
@@ -23,6 +26,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
+import com.suvojeet.suvmusic.updater.UpdateViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -106,6 +110,22 @@ private val hiltBridgedModule: Module = module {
     single { bridge(androidContext()).aiEqualizerService() }
     single { bridge(androidContext()).wrappedGenerator() }
     single { bridge(androidContext()).backupManager() }
+
+    // chunk 1c.4 — PlayerViewModel + UpdateViewModel transitive @Inject classes
+    single { bridge(androidContext()).sleepTimerManager() }
+    single { bridge(androidContext()).smartQueueManager() }
+    single { bridge(androidContext()).sponsorBlockRepository() }
+    single { bridge(androidContext()).discordManager() }
+    single { bridge(androidContext()).spatialAudioProcessor() }
+    single { bridge(androidContext()).updateDownloader() }
+
+    // MainViewModel uses a deferred Cache accessor (was dagger.Lazy<Cache>) to
+    // avoid forcing SimpleCache initialization on app start. Provided as a
+    // factory function so MainViewModel constructor stays decoupled from
+    // dagger.* — same shape Hilt would have given via dagger.Lazy.
+    single<() -> Cache> {
+        { bridge(androidContext()).cache() }
+    }
 }
 
 /**
@@ -151,6 +171,10 @@ private val viewModelsModule: Module = module {
     viewModelOf(::RecentsViewModel)
     viewModelOf(::WrappedViewModel)
     viewModelOf(::BackupViewModel)
+    // chunk 1c.4 — last 3 VMs; after this, no @HiltViewModel remains
+    viewModelOf(::PlayerViewModel)
+    viewModelOf(::MainViewModel)
+    viewModelOf(::UpdateViewModel)
 }
 
 /**

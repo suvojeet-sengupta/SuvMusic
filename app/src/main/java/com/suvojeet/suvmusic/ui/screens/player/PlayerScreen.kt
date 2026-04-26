@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.media3.common.Player
@@ -171,8 +170,8 @@ fun PlayerScreen(
     player: Player? = null,
     playlistViewModel: PlaylistManagementViewModel = koinViewModel(),
     ringtoneViewModel: RingtoneViewModel = koinViewModel<RingtoneViewModel>(),
-    playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
-    mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = hiltViewModel(),
+    playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = koinViewModel(),
+    mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = koinViewModel(),
     volumeKeyEvents: SharedFlow<Unit>? = null
 ) {
     val playbackInfo = state.playbackInfo

@@ -2,7 +2,6 @@ package com.suvojeet.suvmusic.updater
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +16,6 @@ sealed class UpdateState {
     data class Error(val message: String) : UpdateState()
 }
 
-@HiltViewModel
 class UpdateViewModel @Inject constructor(
     private val checker: UpdateChecker,
     private val downloader: UpdateDownloader
