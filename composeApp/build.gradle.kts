@@ -36,11 +36,12 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(libs.kotlinx.coroutines.core)
-                // First KMP module dependency — proves the wiring end-to-end.
-                // Only the commonMain leaf model classes (5 files) are usable
-                // here; Song/Album/Artist/Playlist live in :core:model's
-                // androidMain until chunk 2.3.
                 implementation(project(":core:model"))
+                // :core:domain provides the MusicPlayer expect class
+                // (Phase 4) — backed by VLCJ on Desktop, by a stub on
+                // Android until Phase 4.2 wires the existing Media3
+                // player. Brings in kotlinx-coroutines transitively.
+                implementation(project(":core:domain"))
             }
         }
 
