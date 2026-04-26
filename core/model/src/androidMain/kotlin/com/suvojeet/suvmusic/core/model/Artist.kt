@@ -17,7 +17,6 @@ data class Artist(
     val featuredPlaylists: List<Playlist> = emptyList()
 )
 
-@Immutable
 data class ArtistPreview(
     val id: String,
     val name: String,
