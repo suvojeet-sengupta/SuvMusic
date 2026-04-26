@@ -40,6 +40,14 @@ detekt = "1.23.8"
 ktlint = "1.7.1"
 adaptive = "1.3.0-alpha10"
 
+# KMP migration (Phase 0)
+composeMultiplatform = "1.10.0"
+koin = "4.1.0"
+sqldelight = "2.1.0"
+multiplatformSettings = "1.3.0"
+vlcj = "4.10.1"
+kotlinxDatetime = "0.7.1"
+
 [libraries]
 # Core
 androidx-core = { group = "androidx.core", name = "core", version.ref = "coreKtx" }
@@ -174,6 +182,30 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 # Desugaring
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugarJdkLibs" }
 
+# --- KMP migration (Phase 0) -------------------------------------------------
+# Compose Multiplatform redistribution (Skiko + jvm runtime); commonMain composables
+compose-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+# Koin (multiplatform DI; replaces Hilt in later phases)
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+# SQLDelight (multiplatform DB; replaces Room in Phase 3b)
+sqldelight-android-driver = { group = "app.cash.sqldelight", name = "android-driver", version.ref = "sqldelight" }
+sqldelight-jvm-driver = { group = "app.cash.sqldelight", name = "sqlite-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { group = "app.cash.sqldelight", name = "coroutines-extensions", version.ref = "sqldelight" }
+# multiplatform-settings (replaces DataStore + EncryptedSharedPreferences in Phase 3c)
+multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
+multiplatform-settings-coroutines = { group = "com.russhwolf", name = "multiplatform-settings-coroutines", version.ref = "multiplatformSettings" }
+# kotlinx-datetime (replaces java.time on common code)
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+# VLCJ — Windows desktop audio backend (Phase 4)
+vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
+# Coroutines: swing dispatcher for Compose Desktop
+kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
+# Ktor: OkHttp engine for Android (Phase 3a). CIO already declared above for desktop.
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -183,3 +215,7 @@ hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+# KMP migration (Phase 0)
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
