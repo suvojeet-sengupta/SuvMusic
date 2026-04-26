@@ -28,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.androidx.compose.koinViewModel
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.app.Activity
@@ -169,7 +170,7 @@ fun PlayerScreen(
     actions: PlayerScreenActions,
     player: Player? = null,
     playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
-    ringtoneViewModel: RingtoneViewModel = hiltViewModel<RingtoneViewModel>(),
+    ringtoneViewModel: RingtoneViewModel = koinViewModel<RingtoneViewModel>(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
     mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = hiltViewModel(),
     volumeKeyEvents: SharedFlow<Unit>? = null
@@ -495,7 +496,7 @@ fun PlayerScreen(
                 OverlaysContent(
                     state = state, actions = actions.copy(onClearQueue = { playerViewModel.clearQueue() }), activeOverlay = activeOverlay, onOverlayChange = { activeOverlay = it },
                     dominantColors = dominantColors, playerViewModel = playerViewModel, playlistViewModel = playlistViewModel,
-                    ringtoneViewModel = hiltViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
+                    ringtoneViewModel = koinViewModel<RingtoneViewModel>(), // Explicit type for clarity and to fix inference errors
                     upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
                     isAppInDarkTheme = isAppInDarkTheme, animatedBackgroundEnabled = animatedBackgroundEnabled,
                     volumeSliderEnabled = volumeSliderEnabled, volumeKeyEvents = volumeKeyEvents,

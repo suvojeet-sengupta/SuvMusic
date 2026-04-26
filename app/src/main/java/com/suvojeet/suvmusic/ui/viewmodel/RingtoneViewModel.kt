@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.util.RingtoneHelper
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +24,6 @@ data class RingtoneUiState(
     val ringtoneUri: Uri? = null
 )
 
-@HiltViewModel
 class RingtoneViewModel @Inject constructor(
     val ringtoneHelper: RingtoneHelper,
     private val youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository

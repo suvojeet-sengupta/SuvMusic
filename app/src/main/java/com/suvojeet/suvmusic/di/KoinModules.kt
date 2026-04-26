@@ -18,18 +18,32 @@ import com.suvojeet.suvmusic.core.data.local.AppDatabase
 import com.suvojeet.suvmusic.core.data.repository.LibraryRepositoryImpl
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
+import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
+import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
+import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
 import com.suvojeet.suvmusic.lastfm.LastFmClient
 import com.suvojeet.suvmusic.lastfm.LastFmConfig
 import com.suvojeet.suvmusic.lastfm.LastFmConfigImpl
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.shareplay.ListenTogetherClient
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
+import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.ExploreViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PickMusicViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
 import com.suvojeet.suvmusic.updater.UpdateChecker
 import com.suvojeet.suvmusic.util.MusicHapticsManager
+import com.suvojeet.suvmusic.util.NetworkMonitor
+import com.suvojeet.suvmusic.util.RingtoneHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +51,8 @@ import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import java.io.File
@@ -228,6 +244,55 @@ private val updaterModule: Module = module {
 }
 
 /**
+ * Transitive @Inject constructor classes whose Koin bindings are required by
+ * the ViewModels migrated in chunk 1c.1. Each addition here unlocks a slice of
+ * VMs to switch from hiltViewModel() to koinViewModel(). Grow this module as
+ * later 1c batches reveal more deps; consolidate with the parent module in 1d
+ * once Hilt is removed.
+ */
+private val transitiveSingletonsModule: Module = module {
+    singleOf(::YouTubeJsonParser)
+    singleOf(::YouTubeApiClient)
+    singleOf(::YouTubeStreamingService)
+    singleOf(::YouTubeSearchService)
+    singleOf(::NetworkMonitor)
+    singleOf(::ListeningHistoryRepository)
+
+    single {
+        RingtoneHelper(
+            get(),  // youTubeRepository
+            get(),  // downloadRepository
+            get(named(Q_DOWNLOAD_DATA_SOURCE)),
+        )
+    }
+
+    single {
+        DownloadRepository(
+            androidContext(),
+            get(),  // youTubeRepository
+            get(),  // jioSaavnRepository
+            get(),  // sessionManager
+            get(named(Q_DOWNLOAD_DATA_SOURCE)),
+        )
+    }
+}
+
+/**
+ * ViewModels migrated in chunk 1c.1. SavedStateHandle params are injected by
+ * Koin automatically when using viewModelOf. Each VM listed here also has its
+ * @HiltViewModel annotation removed and every hiltViewModel<X>() call site
+ * switched to koinViewModel<X>() in the same commit.
+ */
+private val viewModelsModule: Module = module {
+    viewModelOf(::AboutViewModel)
+    viewModelOf(::PickMusicViewModel)
+    viewModelOf(::SongInfoViewModel)
+    viewModelOf(::ExploreViewModel)
+    viewModelOf(::ArtistViewModel)
+    viewModelOf(::RingtoneViewModel)
+}
+
+/**
  * Aggregated Koin module list registered with `startKoin` in
  * [com.suvojeet.suvmusic.SuvMusicApplication]. Hilt remains the active DI
  * framework — nothing yet resolves through Koin.
@@ -240,4 +305,6 @@ val koinAppModules: List<Module> = listOf(
     repositoryModule,
     lastFmModule,
     updaterModule,
+    transitiveSingletonsModule,
+    viewModelsModule,
 )
