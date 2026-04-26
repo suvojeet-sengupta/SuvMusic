@@ -37,6 +37,14 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(libs.kotlinx.coroutines.core)
+                // Coil 3 — KMP image loading. Network engine is Ktor so
+                // the same AsyncImage call works on Android + Desktop.
+                // ktor-client-cio is the JVM HTTP engine Coil uses to
+                // actually fetch URLs.
+                implementation(libs.coil.compose)
+                implementation(libs.coil.network.ktor3)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
                 implementation(project(":core:model"))
                 // :core:domain provides the MusicPlayer expect class
                 // (Phase 4) — backed by VLCJ on Desktop, by a stub on
