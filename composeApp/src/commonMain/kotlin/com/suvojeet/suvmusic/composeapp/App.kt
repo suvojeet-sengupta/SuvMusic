@@ -1,57 +1,71 @@
 package com.suvojeet.suvmusic.composeapp
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.composeapp.theme.SuvMusicTheme
+import com.suvojeet.suvmusic.composeapp.ui.AboutTab
+import com.suvojeet.suvmusic.composeapp.ui.HomeTab
+import com.suvojeet.suvmusic.composeapp.ui.LibraryTab
+import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
+import com.suvojeet.suvmusic.composeapp.ui.SearchTab
+import com.suvojeet.suvmusic.composeapp.ui.VlcWarningBanner
+import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
+import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.SongSource
-import kotlinx.coroutines.launch
 
 /**
- * Top-level app composable. Renders About header, a "play local file"
- * section, and a "search YouTube" section.
+ * Top-level Desktop app shell. Three regions:
+ *  1. NavigationRail on the left — Home / Search / Library / About
+ *  2. Content area on the right — the active tab fills it
+ *  3. Persistent player bar at the bottom — shows whatever is loaded in
+ *     the [MusicPlayer], play/pause + seek, always visible
  *
- * Platform callbacks (file picker, URL opener, search) are passed down
- * so the composable stays free of Desktop-specific imports — Android
- * could eventually wire equivalents.
+ * The player is constructed once at app start and threaded into both
+ * content tabs (so they can call setQueue when a track is picked) and
+ * the bottom bar (so it can render state and accept controls).
+ *
+ * Phase 5.1 status: real production screens (HomeScreen, PlayerScreen
+ * etc. from :app) haven't moved to commonMain yet — those need their VM
+ * + repo stack ported. Tabs here are placeholders or simple
+ * implementations; they get progressively replaced with the Android UI
+ * code as it migrates.
  */
 @Composable
 fun App(
@@ -66,322 +80,174 @@ fun App(
         onDispose { musicPlayer.release() }
     }
 
-    val currentSong by musicPlayer.currentSong.collectAsState()
-    val isPlaying by musicPlayer.isPlaying.collectAsState()
-    val positionMs by musicPlayer.positionMs.collectAsState()
-    val durationMs by musicPlayer.durationMs.collectAsState()
+    var selectedTab by remember { mutableStateOf(Tab.Home) }
 
-    MaterialTheme {
+    SuvMusicTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AboutHeader(appVersion = appVersion, onOpenUrl = onOpenUrl)
-
-                if (!musicPlayer.isAvailable) {
-                    VlcWarning(onOpenUrl = onOpenUrl)
-                }
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider(modifier = Modifier.widthIn(max = 600.dp))
-                Spacer(Modifier.height(8.dp))
-
-                PlayerSection(
-                    currentSong = currentSong,
-                    isPlaying = isPlaying,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    onPickFile = {
-                        val path = onPickAudioFile() ?: return@PlayerSection
-                        val song = audioFileToSong(path)
-                        musicPlayer.setQueue(listOf(song))
-                    },
-                    onTogglePlayPause = { musicPlayer.togglePlayPause() },
-                    onSeek = { ms -> musicPlayer.seekTo(ms) },
-                )
-
-                if (onSearchYouTube != null && onResolveStreamSong != null) {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(modifier = Modifier.widthIn(max = 600.dp))
-                    Spacer(Modifier.height(8.dp))
-                    SearchSection(
-                        onSearch = onSearchYouTube,
-                        onPlayResult = { result ->
-                            val song = onResolveStreamSong(result) ?: return@SearchSection
-                            musicPlayer.setQueue(listOf(song))
-                        },
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    AppNavRail(
+                        selected = selectedTab,
+                        onSelect = { selectedTab = it },
                     )
-                }
-            }
-        }
-    }
-}
+                    Box(modifier = Modifier.weight(1f).fillMaxSize().padding(24.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            if (!musicPlayer.isAvailable) {
+                                VlcWarningBanner(onOpenUrl = onOpenUrl)
+                            }
 
-@Composable
-private fun AboutHeader(appVersion: String, onOpenUrl: (String) -> Unit) {
-    Text(
-        text = "SuvMusic",
-        style = MaterialTheme.typography.displaySmall,
-        fontWeight = FontWeight.Bold,
-    )
-    Text(
-        text = "Version $appVersion",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Text(
-        text = "Now multiplatform — this screen renders from shared Kotlin code on Android and Windows.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.widthIn(max = 480.dp),
-    )
-    OutlinedButton(onClick = { onOpenUrl("https://github.com/suvojeet-sengupta/SuvMusic") }) {
-        Text("View on GitHub")
-    }
-}
-
-/**
- * Banner shown only when MusicPlayer.isAvailable is false (Desktop without
- * VLC installed). Tells the user how to fix it instead of leaving them to
- * wonder why the play button does nothing.
- */
-@Composable
-private fun VlcWarning(onOpenUrl: (String) -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        ),
-        modifier = Modifier.widthIn(max = 600.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "VLC media player not detected",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "SuvMusic Desktop uses VLC's playback engine (LibVLC). " +
-                    "Install VLC media player and relaunch the app.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = "Windows: open PowerShell and run  winget install VideoLAN.VLC",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            TextButton(onClick = { onOpenUrl("https://www.videolan.org/vlc/") }) {
-                Text("Download VLC")
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayerSection(
-    currentSong: Song?,
-    isPlaying: Boolean,
-    positionMs: Long,
-    durationMs: Long,
-    onPickFile: () -> Unit,
-    onTogglePlayPause: () -> Unit,
-    onSeek: (Long) -> Unit,
-) {
-    Text(
-        text = "Player",
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-    )
-
-    Button(onClick = onPickFile) {
-        Text("Pick local audio file")
-    }
-
-    if (currentSong != null) {
-        Text(
-            text = currentSong.title,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.widthIn(max = 600.dp),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = currentSong.artist,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Slider(
-            value = positionMs.toFloat(),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 600.dp),
-        )
-
-        Text(
-            text = "${formatMs(positionMs)} / ${formatMs(durationMs)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Button(onClick = onTogglePlayPause) {
-            Text(if (isPlaying) "Pause" else "Play")
-        }
-    } else {
-        Text(
-            text = "No song loaded. Pick an audio file or search YouTube below.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun SearchSection(
-    onSearch: suspend (String) -> List<RemoteSearchResult>,
-    onPlayResult: suspend (RemoteSearchResult) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    var query by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf<List<RemoteSearchResult>>(emptyList()) }
-    var isSearching by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    Text(
-        text = "Search YouTube",
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-    )
-
-    Row(
-        modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text("Song / artist / video") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-        )
-        Button(
-            onClick = {
-                errorMessage = null
-                isSearching = true
-                scope.launch {
-                    try {
-                        results = onSearch(query)
-                    } catch (t: Throwable) {
-                        errorMessage = t.message ?: "Search failed"
-                        results = emptyList()
-                    } finally {
-                        isSearching = false
-                    }
-                }
-            },
-            enabled = query.isNotBlank() && !isSearching,
-        ) {
-            Text(if (isSearching) "..." else "Search")
-        }
-    }
-
-    errorMessage?.let { msg ->
-        Text(
-            text = msg,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-    }
-
-    if (results.isNotEmpty()) {
-        LazyColumn(
-            modifier = Modifier
-                .widthIn(max = 600.dp)
-                .heightIn(max = 360.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            items(results) { result ->
-                Card(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                onPlayResult(result)
-                            } catch (t: Throwable) {
-                                errorMessage = "Failed to play: ${t.message}"
+                            when (selectedTab) {
+                                Tab.Home -> HomeTab(
+                                    appVersion = appVersion,
+                                    onPickFile = {
+                                        val path = onPickAudioFile() ?: return@HomeTab
+                                        musicPlayer.setQueue(listOf(audioFileToSong(path)))
+                                    },
+                                )
+                                Tab.Search -> SearchTab(
+                                    onSearch = onSearchYouTube,
+                                    onPlayResult = { result ->
+                                        val song = onResolveStreamSong?.invoke(result) ?: return@SearchTab
+                                        musicPlayer.setQueue(listOf(song))
+                                    },
+                                )
+                                Tab.Library -> LibraryTab(
+                                    onPickFile = {
+                                        val path = onPickAudioFile() ?: return@LibraryTab
+                                        musicPlayer.setQueue(listOf(audioFileToSong(path)))
+                                    },
+                                )
+                                Tab.About -> AboutTab(
+                                    appVersion = appVersion,
+                                    onOpenUrl = onOpenUrl,
+                                )
                             }
                         }
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = result.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = "${result.uploader} · ${formatDurationSeconds(result.durationSeconds)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                BottomPlayerBar(player = musicPlayer)
             }
         }
     }
 }
 
-/**
- * Platform-neutral search result type. The Desktop main wires this up to
- * NewPipe's StreamInfoItem; an Android-side implementation could feed the
- * existing YouTubeRepository the same way.
- */
-data class RemoteSearchResult(
-    val title: String,
-    val uploader: String,
-    val durationSeconds: Long,
-    val url: String,
-    val thumbnailUrl: String?,
-)
-
-/** Build a minimal [Song] from a local file path. Title is the filename. */
-private fun audioFileToSong(path: String): Song = Song(
-    id = path.hashCode().toString(),
-    title = path.substringAfterLast('/').substringAfterLast('\\'),
-    artist = "Unknown",
-    album = "Unknown",
-    duration = 0L,
-    thumbnailUrl = null,
-    source = SongSource.LOCAL,
-    localUri = path,
-)
-
-private fun formatMs(ms: Long): String {
-    if (ms <= 0) return "0:00"
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
+private enum class Tab(val label: String) {
+    Home("Home"),
+    Search("Search"),
+    Library("Library"),
+    About("About"),
 }
 
-private fun formatDurationSeconds(seconds: Long): String {
-    if (seconds <= 0) return "—"
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return "%d:%02d".format(minutes, secs)
+@Composable
+private fun AppNavRail(
+    selected: Tab,
+    onSelect: (Tab) -> Unit,
+) {
+    NavigationRail(
+        modifier = Modifier.width(96.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "SuvMusic",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+        Spacer(Modifier.height(24.dp))
+
+        NavigationRailItem(
+            selected = selected == Tab.Home,
+            onClick = { onSelect(Tab.Home) },
+            icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
+            label = { Text("Home") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.Search,
+            onClick = { onSelect(Tab.Search) },
+            icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+            label = { Text("Search") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.Library,
+            onClick = { onSelect(Tab.Library) },
+            icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = "Library") },
+            label = { Text("Library") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.About,
+            onClick = { onSelect(Tab.About) },
+            icon = { Icon(Icons.Outlined.Info, contentDescription = "About") },
+            label = { Text("About") },
+        )
+    }
+}
+
+@Composable
+private fun BottomPlayerBar(player: MusicPlayer) {
+    val currentSong by player.currentSong.collectAsState()
+    val isPlaying by player.isPlaying.collectAsState()
+    val positionMs by player.positionMs.collectAsState()
+    val durationMs by player.durationMs.collectAsState()
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(modifier = Modifier.weight(0.3f)) {
+                Text(
+                    text = currentSong?.title ?: "Nothing playing",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = currentSong?.artist ?: "Pick a song to start",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            IconButton(
+                onClick = { player.togglePlayPause() },
+                enabled = currentSong != null && player.isAvailable,
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Slider(
+                    value = positionMs.toFloat(),
+                    onValueChange = { player.seekTo(it.toLong()) },
+                    valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+                    enabled = currentSong != null && player.isAvailable,
+                )
+                Text(
+                    text = "${formatMs(positionMs)} / ${formatMs(durationMs)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
