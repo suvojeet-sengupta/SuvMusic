@@ -65,13 +65,13 @@ class MusicHapticsManager @Inject constructor(
     private var currentIntensity = HapticsIntensity.MEDIUM
     
     // Minimum interval between haptics to prevent motor wear and battery drain
-    private val minHapticIntervalMs = 50L
+    private val minHapticIntervalMs = 40L
     
     // Threshold values for beat detection
-    private val basicModeThreshold = 0.65f
-    private val advancedModeThreshold = 0.35f
-    private val customModeThreshold = 0.50f
-    
+    private val basicModeThreshold = 0.60f
+    private val advancedModeThreshold = 0.30f
+    private val customModeThreshold = 0.45f
+
     init {
         // Load settings on initialization
         scope.launch {
@@ -116,7 +116,67 @@ class MusicHapticsManager @Inject constructor(
         beatDetectionJob = null
         vibrator.cancel()
     }
-    
+
+    /**
+     * Trigger haptic feedback based on amplitude.
+     * Uses VibrationEffect on Android 8+ for better control.
+     */
+    private fun triggerHaptic(amplitude: Float) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && currentMode == HapticsMode.ADVANCED) {
+                triggerHapticComposition(amplitude)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                triggerHapticModern(amplitude)
+            } else {
+                triggerHapticLegacy()
+            }
+        } catch (e: Exception) {
+            // Silently fail - haptics are a nice-to-have feature
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun triggerHapticComposition(amplitude: Float) {
+        val intensityMultiplier = currentIntensity.multiplier
+        val finalIntensity = (amplitude * intensityMultiplier).coerceIn(0.1f, 1.0f)
+        
+        val composition = VibrationEffect.startComposition()
+        if (amplitude > 0.85f) {
+            // Very strong beat
+            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, finalIntensity)
+            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, finalIntensity * 0.8f)
+        } else if (amplitude > 0.6f) {
+            // Medium beat
+            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, finalIntensity * 0.9f)
+        } else {
+            // Light rhythm
+            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, finalIntensity * 0.7f)
+        }
+        
+        vibrator.vibrate(composition.compose())
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun triggerHapticModern(amplitude: Float) {
+        // Calculate vibration intensity based on mode and user preference
+        val intensityMultiplier = currentIntensity.multiplier
+        
+        // Map amplitude (0-1) to vibration amplitude (1-255)
+        val baseIntensity = (amplitude * 210).toInt().coerceIn(40, 210)
+        val finalIntensity = (baseIntensity * intensityMultiplier).toInt().coerceIn(1, 255)
+        
+        // Duration varies based on mode
+        val duration = when (currentMode) {
+            HapticsMode.BASIC -> 20L      // Quicker tap
+            HapticsMode.ADVANCED -> 40L   // Slightly longer for feel
+            HapticsMode.CUSTOM -> 30L     // Medium
+            HapticsMode.OFF -> return
+        }
+        
+        val effect = VibrationEffect.createOneShot(duration, finalIntensity)
+        vibrator.vibrate(effect)
+    }
+
     /**
      * Process audio amplitude for beat detection.
      * Should be called periodically with current audio level (0.0 to 1.0).
@@ -146,7 +206,7 @@ class MusicHapticsManager @Inject constructor(
         
         // Beat detection: check for sudden amplitude increase
         val amplitudeDelta = amplitude - previousAmplitude
-        val isBeat = amplitude > threshold && amplitudeDelta > 0.15f
+        val isBeat = amplitude > threshold && amplitudeDelta > 0.12f
         
         if (isBeat) {
             triggerHaptic(amplitude)
@@ -154,43 +214,6 @@ class MusicHapticsManager @Inject constructor(
         }
         
         previousAmplitude = amplitude
-    }
-    
-    /**
-     * Trigger haptic feedback based on amplitude.
-     * Uses VibrationEffect on Android 8+ for better control.
-     */
-    private fun triggerHaptic(amplitude: Float) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                triggerHapticModern(amplitude)
-            } else {
-                triggerHapticLegacy()
-            }
-        } catch (e: Exception) {
-            // Silently fail - haptics are a nice-to-have feature
-        }
-    }
-    
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun triggerHapticModern(amplitude: Float) {
-        // Calculate vibration intensity based on mode and user preference
-        val intensityMultiplier = currentIntensity.multiplier
-        
-        // Map amplitude (0-1) to vibration amplitude (1-255)
-        val baseIntensity = (amplitude * 200).toInt().coerceIn(50, 200)
-        val finalIntensity = (baseIntensity * intensityMultiplier).toInt().coerceIn(1, 255)
-        
-        // Duration varies based on mode
-        val duration = when (currentMode) {
-            HapticsMode.BASIC -> 25L      // Quick tap
-            HapticsMode.ADVANCED -> 35L   // Slightly longer for feel
-            HapticsMode.CUSTOM -> 30L     // Medium
-            HapticsMode.OFF -> return
-        }
-        
-        val effect = VibrationEffect.createOneShot(duration, finalIntensity)
-        vibrator.vibrate(effect)
     }
     
     @Suppress("DEPRECATION")

@@ -168,39 +168,71 @@ private fun InputView(
             .padding(horizontal = 24.dp)
             .imePadding()
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.MusicNote, 
-                contentDescription = null,
-                tint = Color(0xFF1DB954), 
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(Color(0xFF1DB954).copy(alpha = 0.1f), SquircleShape)
-                    .padding(12.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Icon(
-                imageVector = Icons.Default.Share, 
-                contentDescription = null,
-                tint = Color(0xFFFF0000), 
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(Color(0xFFFF0000).copy(alpha = 0.1f), SquircleShape)
-                    .padding(12.dp)
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Spotify Icon Placeholder
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = SquircleShape,
+                color = Color(0xFF1DB954).copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote, 
+                        contentDescription = "Spotify",
+                        tint = Color(0xFF1DB954), 
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+            
+            // YT Music Icon Placeholder
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = SquircleShape,
+                color = Color(0xFFFF0000).copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow, 
+                        contentDescription = "YT Music",
+                        tint = Color(0xFFFF0000), 
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            // File Icon
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = SquircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.InsertDriveFile, 
+                        contentDescription = "Files",
+                        tint = MaterialTheme.colorScheme.secondary, 
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Import Your Music",
+            text = "Transfer Your Music",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
         )
 
         Text(
-            text = "Paste a link, or upload an .m3u or .suv file.",
+            text = "SuvMusic supports importing from Spotify, YouTube Music, and .m3u or .suv files.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

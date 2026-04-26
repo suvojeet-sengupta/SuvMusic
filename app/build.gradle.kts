@@ -13,14 +13,14 @@ plugins {
 
 android {
     namespace = "com.suvojeet.suvmusic"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.suvojeet.suvmusic"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 25
-        versionName = "2.2.2.0"
+        targetSdk = 37
+        versionCode = 26
+        versionName = "2.3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -109,6 +109,10 @@ android {
     ndkVersion = "27.0.12077973" // Stable NDK 27
 }
 
+composeCompiler {
+    stabilityConfigurationFile = rootProject.file("compose-stability.conf")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
@@ -169,6 +173,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.adaptive)
+    implementation(libs.androidx.compose.material3.adaptive.layout)
+    implementation(libs.androidx.compose.material3.adaptive.navigation)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.animation)
     

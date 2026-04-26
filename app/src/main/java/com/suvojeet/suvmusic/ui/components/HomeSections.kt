@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.components
 
+import com.suvojeet.suvmusic.util.dpadFocusable
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import com.suvojeet.suvmusic.ui.theme.NewReleaseCardShape
 import androidx.compose.foundation.background
@@ -150,18 +151,23 @@ fun VerticalListSection(
             displayItems.forEach { item ->
                 when (item) {
                     is HomeItem.SongItem -> {
+                         val onCardClick = remember(item.song, songs) {
+                             {
+                                 val index = songs.indexOf(item.song)
+                                 if (index != -1) onSongClick(songs, index)
+                             }
+                         }
+                         val onMoreClick = remember(item.song) { { onSongMoreClick(item.song) } }
+                         
                          MusicCard(
                             song = item.song,
-                            onClick = {
-                                val index = songs.indexOf(item.song)
-                                if (index != -1) onSongClick(songs, index)
-                            },
-                             onMoreClick = { onSongMoreClick(item.song) },
+                            onClick = onCardClick,
+                             onMoreClick = onMoreClick,
                              backgroundColor = Color.Transparent
                         )
                     }
                     is HomeItem.PlaylistItem -> {
-                        val tempSong = remember(item.playlist.id) {
+                        val tempSong = remember(item.playlist) {
                             Song(
                                 id = item.playlist.id,
                                 title = item.playlist.name,
@@ -172,14 +178,15 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
+                        val onPlaylistCardClick = remember(item.playlist) { { onPlaylistClick(item.playlist) } }
                          MusicCard(
                             song = tempSong,
-                            onClick = { onPlaylistClick(item.playlist) },
+                            onClick = onPlaylistCardClick,
                             backgroundColor = Color.Transparent
                         )
                     }
                     is HomeItem.AlbumItem -> {
-                        val tempSong = remember(item.album.id) {
+                        val tempSong = remember(item.album) {
                             Song(
                                 id = item.album.id,
                                 title = item.album.title,
@@ -190,9 +197,10 @@ fun VerticalListSection(
                                 source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
                             )
                         }
+                        val onAlbumCardClick = remember(item.album) { { onAlbumClick(item.album) } }
                         MusicCard(
                             song = tempSong,
-                            onClick = { onAlbumClick(item.album) },
+                            onClick = onAlbumCardClick,
                             backgroundColor = Color.Transparent
                         )
                     }
@@ -256,30 +264,42 @@ fun LargeCardWithListSection(
                 otherItems.forEach { item ->
                     when (item) {
                         is HomeItem.SongItem -> {
-                            MusicCard(
-                                song = item.song,
-                                onClick = {
+                            val onCardClick = remember(item.song) {
+                                {
                                     val songs = section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
                                     val index = songs.indexOf(item.song)
                                     if (index != -1) onSongClick(songs, index)
-                                },
-                                onMoreClick = { onSongMoreClick(item.song) },
+                                }
+                            }
+                            val onMoreClick = remember(item.song) { { onSongMoreClick(item.song) } }
+                            MusicCard(
+                                song = item.song,
+                                onClick = onCardClick,
+                                onMoreClick = onMoreClick,
                                 modifier = Modifier.height(60.dp)
                             )
                         }
                         is HomeItem.PlaylistItem -> {
                              // Simplified rendering for list items if not Song
+                             val tempSong = remember(item.playlist) {
+                                 Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                             }
+                             val onPlaylistCardClick = remember(item.playlist) { { onPlaylistClick(item.playlist) } }
                              MusicCard(
-                                song = Song(item.playlist.id, item.playlist.name, item.playlist.uploaderName, "Playlist", 0L, item.playlist.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                onClick = { onPlaylistClick(item.playlist) },
+                                song = tempSong,
+                                onClick = onPlaylistCardClick,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
                         }
                          is HomeItem.AlbumItem -> {
+                             val tempSong = remember(item.album) {
+                                 Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE)
+                             }
+                             val onAlbumCardClick = remember(item.album) { { onAlbumClick(item.album) } }
                              MusicCard(
-                                song = Song(item.album.id, item.album.title, item.album.artist, "Album", 0L, item.album.thumbnailUrl, com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE),
-                                onClick = { onAlbumClick(item.album) },
+                                song = tempSong,
+                                onClick = onAlbumCardClick,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.height(60.dp)
                             )
@@ -354,55 +374,65 @@ fun QuickPickItem(
         ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 160)
     }
 
-    Row(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = RoundedCornerShape(12.dp)),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp)
     ) {
-        // Compact thumbnail
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .build(),
-            contentDescription = song.title,
+        Row(
             modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Info
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Compact thumbnail
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(highResThumbnail)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = song.title,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
             )
-            Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        IconButton(onClick = onMoreClick) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = "More",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(20.dp)
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "More",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -870,10 +900,12 @@ fun NewReleaseCard(
         ImageUtils.getHighResThumbnailUrl(imageUrl, size = 544)
     }
     
-    val imageRequest = ImageRequest.Builder(context)
-        .data(highResThumbnail)
-        .crossfade(true)
-        .build()
+    val imageRequest = remember(highResThumbnail, context) {
+        ImageRequest.Builder(context)
+            .data(highResThumbnail)
+            .crossfade(true)
+            .build()
+    }
 
     androidx.compose.material3.Card(
         modifier = modifier

@@ -20,6 +20,8 @@ enum class SleepTimerOption(val minutes: Int, val label: String) {
     ONE_HOUR(60, "1 hour"),
     TWO_HOURS(120, "2 hours"),
     CUSTOM(-2, "Custom"),
+    FADE_OUT_GENTLE(-3, "Fade out (5% every 2 min)"),
+    FADE_OUT_FAST(-4, "Fade out (5% every 1 min)"),
     END_OF_SONG(-1, "End of song")
 }
 
@@ -29,6 +31,10 @@ enum class SleepTimerOption(val minutes: Int, val label: String) {
  */
 @Singleton
 class SleepTimerManager @Inject constructor() {
+    companion object {
+        private const val FADE_STEP_PERCENT = 0.05f
+        private const val FADE_STEP_COUNT = 20
+    }
     
     private var countDownTimer: CountDownTimer? = null
     
@@ -43,6 +49,7 @@ class SleepTimerManager @Inject constructor() {
     
     // Callback when timer finishes
     private var onTimerFinished: (() -> Unit)? = null
+    private var onFadeStep: ((Float) -> Unit)? = null
     
     // Flag for "End of Song" mode
     private val _endOfSongMode = MutableStateFlow(false)
@@ -50,6 +57,10 @@ class SleepTimerManager @Inject constructor() {
     
     fun setOnTimerFinished(callback: () -> Unit) {
         onTimerFinished = callback
+    }
+
+    fun setOnFadeStep(callback: (Float) -> Unit) {
+        onFadeStep = callback
     }
     
     /**
@@ -68,6 +79,16 @@ class SleepTimerManager @Inject constructor() {
             _endOfSongMode.value = true
             _isActive.value = true
             _remainingTimeMs.value = null
+            return
+        }
+
+        if (option == SleepTimerOption.FADE_OUT_GENTLE || option == SleepTimerOption.FADE_OUT_FAST) {
+            _endOfSongMode.value = false
+            val intervalMs = if (option == SleepTimerOption.FADE_OUT_FAST) 60_000L else 120_000L
+            val durationMs = intervalMs * FADE_STEP_COUNT
+            _remainingTimeMs.value = durationMs
+            _isActive.value = true
+            startFadeOutTimer(intervalMs, durationMs)
             return
         }
         
@@ -97,6 +118,28 @@ class SleepTimerManager @Inject constructor() {
         }
         
         _isActive.value = true
+        countDownTimer?.start()
+    }
+
+    private fun startFadeOutTimer(intervalMs: Long, totalDurationMs: Long) {
+        var accumulatedPercent = 0f
+
+        countDownTimer = object : CountDownTimer(totalDurationMs, intervalMs) {
+            override fun onTick(millisUntilFinished: Long) {
+                accumulatedPercent = (accumulatedPercent + FADE_STEP_PERCENT).coerceAtMost(1f)
+                _remainingTimeMs.value = millisUntilFinished
+                onFadeStep?.invoke(accumulatedPercent)
+            }
+
+            override fun onFinish() {
+                _remainingTimeMs.value = 0
+                _isActive.value = false
+                _currentOption.value = SleepTimerOption.OFF
+                onFadeStep?.invoke(1f)
+                onTimerFinished?.invoke()
+            }
+        }
+
         countDownTimer?.start()
     }
     

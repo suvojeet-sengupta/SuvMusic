@@ -17,7 +17,8 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.ui.utils.DeviceType
+import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
+import com.suvojeet.suvmusic.ui.utils.LocalDeviceFormFactor
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
 import com.suvojeet.suvmusic.ui.screens.HowItWorksScreen
 import com.suvojeet.suvmusic.ui.screens.AppearanceSettingsScreen
@@ -100,11 +101,11 @@ fun NavGraph(
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: Any = Destination.Home,
-    deviceType: DeviceType = DeviceType.Phone,
     dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
     snackbarHostState: androidx.compose.material3.SnackbarHostState? = null
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val formFactor = LocalDeviceFormFactor.current
 
     NavHost(
         navController = navController,
@@ -130,8 +131,8 @@ fun NavGraph(
         }
     ) {
         composable<Destination.Home> {
-            when (deviceType) {
-                DeviceType.TV -> {
+            when {
+                formFactor == DeviceFormFactor.TV -> {
                     com.suvojeet.suvmusic.ui.screens.TvHomeScreen(
                         onSongClick = { songs, index -> onPlaySong(songs, index) },
                         onPlaylistClick = { playlist ->
@@ -154,7 +155,7 @@ fun NavGraph(
                         }
                     )
                 }
-                DeviceType.Tablet -> {
+                formFactor.isTabletLike -> {
                     com.suvojeet.suvmusic.ui.screens.TabletHomeScreen(
                         onSongClick = { songs, index -> onPlaySong(songs, index) },
                         onPlaylistClick = { playlist ->
@@ -189,7 +190,7 @@ fun NavGraph(
                         currentSong = playbackInfo.currentSong
                     )
                 }
-                DeviceType.Phone -> {
+                else -> {
                     HomeScreen(
                         onSongClick = { songs, index -> onPlaySong(songs, index) },
                         onPlaylistClick = { playlist ->
@@ -550,11 +551,18 @@ fun NavGraph(
         
         composable<Destination.ListeningStats> {
             com.suvojeet.suvmusic.ui.screens.ListeningStatsScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onWrappedClick = { navController.navigate(Destination.Wrapped) }
             )
         }
-        
-        
+
+        composable<Destination.Wrapped> {
+            com.suvojeet.suvmusic.ui.screens.wrapped.WrappedScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
         composable<Destination.YouTubeLogin> {
             YouTubeLoginScreen(
                 sessionManager = sessionManager,

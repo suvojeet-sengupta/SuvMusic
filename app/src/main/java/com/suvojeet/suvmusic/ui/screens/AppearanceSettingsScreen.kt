@@ -90,6 +90,7 @@ val PlayerStyle.label: String
     get() = when (this) {
         PlayerStyle.YT_MUSIC -> "YT Music (New)"
         PlayerStyle.CLASSIC -> "Classic (SuvMusic)"
+        PlayerStyle.LIQUID_GLASS -> "Liquid Glass (iOS)"
     }
 
 /**

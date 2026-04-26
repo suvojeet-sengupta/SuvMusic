@@ -22,10 +22,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,12 +43,13 @@ private val shimmerColors = listOf(
 )
 
 /**
- * Creates a shimmer brush animation
+ * Modifier that applies a shimmer effect background without triggering recomposition.
  */
-@Composable
-fun shimmerBrush(): Brush {
+fun Modifier.shimmerBackground(
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(0.dp)
+): Modifier = composed {
     val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
+    val translateAnim = transition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -60,11 +62,18 @@ fun shimmerBrush(): Brush {
         label = "shimmer"
     )
 
-    return Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim, y = translateAnim)
-    )
+    this.clip(shape).drawWithCache {
+        onDrawBehind {
+            val translate = translateAnim.value
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = shimmerColors,
+                    start = Offset.Zero,
+                    end = Offset(x = translate, y = translate)
+                )
+            )
+        }
+    }
 }
 
 /**
@@ -81,8 +90,7 @@ fun ShimmerBox(
         modifier = modifier
             .width(width)
             .height(height)
-            .clip(shape)
-            .background(shimmerBrush())
+            .shimmerBackground(shape)
     )
 }
 
@@ -97,8 +105,7 @@ fun FeaturedPlaylistSkeleton(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(shimmerBrush())
+            .shimmerBackground(RoundedCornerShape(16.dp))
     )
 }
 
@@ -114,8 +121,7 @@ fun CompactMusicCardSkeleton() {
         Box(
             modifier = Modifier
                 .size(140.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(shimmerBrush())
+                .shimmerBackground(RoundedCornerShape(12.dp))
         )
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -142,8 +148,7 @@ fun PlaylistCardSkeleton() {
         Box(
             modifier = Modifier
                 .size(150.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(shimmerBrush())
+                .shimmerBackground(RoundedCornerShape(12.dp))
         )
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -175,8 +180,7 @@ fun MusicCardSkeleton(
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(shimmerBrush())
+                .shimmerBackground(RoundedCornerShape(8.dp))
         )
         
         Spacer(modifier = Modifier.width(12.dp))
@@ -208,9 +212,6 @@ fun SectionHeaderSkeleton(
 }
 
 /**
- * Home screen loading skeleton
- */
-/**
  * Home card skeleton (160dp width to match HomeItemCard)
  */
 @Composable
@@ -222,8 +223,7 @@ fun HomeCardSkeleton() {
         Box(
             modifier = Modifier
                 .size(160.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(shimmerBrush())
+                .shimmerBackground(RoundedCornerShape(8.dp))
         )
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -238,6 +238,9 @@ fun HomeCardSkeleton() {
     }
 }
 
+/**
+ * Home screen loading skeleton
+ */
 @Composable
 fun HomeLoadingSkeleton() {
     Column(

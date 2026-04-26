@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -54,6 +55,7 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
  * Beautiful music card with Material 3 Expressive design.
+ * Used for full-width list items.
  */
 @Composable
 fun MusicCard(
@@ -91,6 +93,7 @@ fun MusicCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .bounceClick(onClick = onClick)
             .dpadFocusable(onClick = onClick, shape = SquircleShape),
         color = cardBackgroundColor,
         shape = SquircleShape,
@@ -190,11 +193,15 @@ fun MusicCard(
             }
             
             // More options
-            IconButton(onClick = onMoreClick) {
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(32.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "More options",
-                    tint = subTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = subTextColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -202,13 +209,17 @@ fun MusicCard(
 }
 
 /**
- * Compact music card for horizontal lists - M3E.
+ * Unified Square Song Card for Grids and Horizontal Lists - M3E.
+ * Replaces CompactMusicCard and MediumSongCard.
  */
 @Composable
-fun CompactMusicCard(
+fun SquareSongCard(
     song: Song,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onMoreClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    size: Dp = 160.dp,
+    showMoreButton: Boolean = true
 ) {
     val context = LocalContext.current
     val highResThumbnail = remember(song.thumbnailUrl) {
@@ -223,64 +234,116 @@ fun CompactMusicCard(
         }
     }
     
-    Surface(
+    Column(
         modifier = modifier
-            .width(140.dp)
-            .dpadFocusable(onClick = onClick, shape = SquircleShape),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = SquircleShape,
-        tonalElevation = 1.dp
+            .width(size)
+            .bounceClick(onClick = onClick)
+            .dpadFocusable(onClick = onClick, shape = SquircleShape)
     ) {
-        Column {
-            // Album Art
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
+        // Album Art Surface for elevation and shape
+        Surface(
+            modifier = Modifier.size(size),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = SquircleShape,
+            tonalElevation = 2.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
                 if (highResThumbnail != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(highResThumbnail)
                             .crossfade(true)
-                            .size(280)
+                            .size((size.value * 2).toInt()) // Adaptive request size
                             .build(),
                         contentDescription = song.title,
-                        modifier = Modifier.size(140.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(size / 3),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                
+                // Members Only Badge
+                if (song.isMembersOnly) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(bottomStart = 12.dp, topEnd = 24.dp),
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                             imageVector = Icons.Default.Lock,
+                             contentDescription = "Members Only",
+                             modifier = Modifier.size(16.dp).padding(2.dp),
+                             tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             }
-            
-            // Info
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        // Info Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = if (size > 150.dp) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = song.artist,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            
+            if (showMoreButton) {
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * Compact music card for horizontal lists - M3E.
+ * Now a wrapper around SquareSongCard for backward compatibility.
+ */
+@Composable
+fun CompactMusicCard(
+    song: Song,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SquareSongCard(
+        song = song,
+        onClick = onClick,
+        modifier = modifier,
+        size = 140.dp,
+        showMoreButton = false
+    )
 }

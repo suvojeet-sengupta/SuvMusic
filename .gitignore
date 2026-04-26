@@ -25,3 +25,7 @@ metroserver/
 
 # Qoder AI
 .qoder/
+
+# Captured device logs — must not be checked in
+suvmusic_*.log
+suvmusic_bug_report_*.txt

@@ -140,4 +140,7 @@ sealed class Destination {
 
     @Serializable
     data object PickMusic : Destination()
+
+    @Serializable
+    data object Wrapped : Destination()
 }

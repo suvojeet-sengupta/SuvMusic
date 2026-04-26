@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TimerOff
+import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -160,6 +161,19 @@ fun SleepTimerSheet(
                         color = finalAccentColor
                     )
                 }
+
+                if (currentOption == SleepTimerOption.FADE_OUT_GENTLE || currentOption == SleepTimerOption.FADE_OUT_FAST) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (currentOption == SleepTimerOption.FADE_OUT_FAST) {
+                            "Lowering volume by 5% every minute"
+                        } else {
+                            "Lowering volume by 5% every 2 minutes"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = finalAccentColor
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
@@ -278,6 +292,32 @@ fun SleepTimerSheet(
                             accentColor = finalAccentColor,
                             contentColorOnBackground = finalContentColor,
                             onClick = { onSelectOption(SleepTimerOption.END_OF_SONG, null) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Row 5: Gradual fade options
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        TimerChip(
+                            label = "Fade 5% / 2m",
+                            icon = Icons.Default.TrendingDown,
+                            isSelected = currentOption == SleepTimerOption.FADE_OUT_GENTLE,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
+                            onClick = { onSelectOption(SleepTimerOption.FADE_OUT_GENTLE, null) },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        TimerChip(
+                            label = "Fade 5% / 1m",
+                            icon = Icons.Default.TrendingDown,
+                            isSelected = currentOption == SleepTimerOption.FADE_OUT_FAST,
+                            accentColor = finalAccentColor,
+                            contentColorOnBackground = finalContentColor,
+                            onClick = { onSelectOption(SleepTimerOption.FADE_OUT_FAST, null) },
                             modifier = Modifier.weight(1f)
                         )
                     }

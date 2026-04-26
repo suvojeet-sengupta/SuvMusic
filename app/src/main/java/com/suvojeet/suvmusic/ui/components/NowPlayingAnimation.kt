@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+
 @Composable
 fun NowPlayingAnimation(
     modifier: Modifier = Modifier,
@@ -39,7 +42,7 @@ fun NowPlayingAnimation(
                 else -> 500
             }
             
-            val height by if (isPlaying) {
+            val heightState = if (isPlaying) {
                 transition.animateValue(
                     initialValue = minBarHeight,
                     targetValue = maxBarHeight,
@@ -65,7 +68,19 @@ fun NowPlayingAnimation(
             Box(
                 modifier = Modifier
                     .width(barWidth)
-                    .height(height)
+                    // Use layout modifier to apply height without recomposition
+                    .layout { measurable, constraints ->
+                        val height = heightState.value.roundToPx()
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minHeight = height,
+                                maxHeight = height
+                            )
+                        )
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    }
                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 1.dp, bottomEnd = 1.dp))
                     .background(color)
             )

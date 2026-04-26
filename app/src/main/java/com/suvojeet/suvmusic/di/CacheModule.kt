@@ -37,11 +37,18 @@ object CacheModule {
         databaseProvider: DatabaseProvider,
         sessionManager: com.suvojeet.suvmusic.data.SessionManager
     ): Cache {
-        // Dynamic cache size from settings (synchronous access)
+        // Dynamic cache size from settings (synchronous access).
+        // Hard-cap at 4 GB even when user picks "unlimited" (-1) to prevent
+        // disk-full crashes — LRU eviction is a no-op with Long.MAX_VALUE.
         val limitPreference = sessionManager.getPlayerCacheLimit()
-        // If -1, use Long.MAX_VALUE for effectively unlimited
-        val cacheSize = if (limitPreference == -1L) Long.MAX_VALUE else limitPreference
-        
+        val hardCap = 4L * 1024 * 1024 * 1024 // 4 GB
+        val cacheSize = when {
+            limitPreference == -1L -> hardCap
+            limitPreference > hardCap -> hardCap
+            limitPreference > 0 -> limitPreference
+            else -> hardCap
+        }
+
         val cacheEvictor = LeastRecentlyUsedCacheEvictor(cacheSize)
         val cacheDir = File(context.cacheDir, "media_cache")
         if (!cacheDir.exists()) {
