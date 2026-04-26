@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -35,15 +36,16 @@ fun PlayerTopBar(
     audioArEnabled: Boolean = false,
     onRecenter: () -> Unit = {}
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 2.dp, end = 0.dp, top = 12.dp, bottom = 12.dp)
+            .padding(start = 2.dp, end = 0.dp, top = 12.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Left side: Back Button
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
                 .size(44.dp)
                 .clip(SquircleShape)
                 .background(dominantColors.onBackground.copy(alpha = 0.1f))
@@ -58,9 +60,9 @@ fun PlayerTopBar(
             )
         }
 
-        // Absolute Center: Switch or Title
+        // Center: Switch or Title — uses weight to take available space, prevents overlap
         Box(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.weight(1f, fill = false),
             contentAlignment = Alignment.Center
         ) {
             if (isYouTubeSong) {
@@ -83,7 +85,9 @@ fun PlayerTopBar(
                             text = "Audio",
                             style = MaterialTheme.typography.labelLarge,
                             color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     Box(
@@ -98,7 +102,9 @@ fun PlayerTopBar(
                             text = "Video",
                             style = MaterialTheme.typography.labelLarge,
                             color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -108,16 +114,15 @@ fun PlayerTopBar(
                     style = MaterialTheme.typography.labelLarge,
                     color = dominantColors.onBackground.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
+                    letterSpacing = 1.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
         // Right side: Cast, Audio AR and More Menu
         Row(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -135,7 +140,7 @@ fun PlayerTopBar(
                     modifier = Modifier.size(22.dp)
                 )
             }
-            
+
             if (audioArEnabled) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Box(
@@ -154,7 +159,7 @@ fun PlayerTopBar(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.width(6.dp))
 
             Box(

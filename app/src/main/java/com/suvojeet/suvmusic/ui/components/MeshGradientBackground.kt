@@ -40,17 +40,17 @@ fun MeshGradientBackground(
     )
 
     // Animate colors for fast expressive transitions when song changes
-    val animatedPrimary by animateColorAsState(
+    val animatedPrimaryState = animateColorAsState(
         targetValue = colors.primary,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "primary_color_anim"
     )
-    val animatedSecondary by animateColorAsState(
+    val animatedSecondaryState = animateColorAsState(
         targetValue = colors.secondary,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "secondary_color_anim"
     )
-    val animatedAccent by animateColorAsState(
+    val animatedAccentState = animateColorAsState(
         targetValue = colors.accent,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "accent_color_anim"
@@ -58,46 +58,46 @@ fun MeshGradientBackground(
 
     val infiniteTransition = rememberInfiniteTransition(label = "mesh_gradient_motion")
     
-    // Blob movements (animated values)
-    val x1 by infiniteTransition.animateFloat(
+    // Blob movements (animated values) - Use raw state to avoid recomposition
+    val x1State = infiniteTransition.animateFloat(
         initialValue = 0.1f, targetValue = 0.4f,
         animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
         label = "x1"
     )
-    val y1 by infiniteTransition.animateFloat(
+    val y1State = infiniteTransition.animateFloat(
         initialValue = 0.1f, targetValue = 0.3f,
         animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y1"
     )
 
-    val x2 by infiniteTransition.animateFloat(
+    val x2State = infiniteTransition.animateFloat(
         initialValue = 0.9f, targetValue = 0.6f,
         animationSpec = infiniteRepeatable(tween(18000, easing = LinearEasing), RepeatMode.Reverse),
         label = "x2"
     )
-    val y2 by infiniteTransition.animateFloat(
+    val y2State = infiniteTransition.animateFloat(
         initialValue = 0.2f, targetValue = 0.5f,
         animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y2"
     )
 
-    val x3 by infiniteTransition.animateFloat(
+    val x3State = infiniteTransition.animateFloat(
         initialValue = 0.2f, targetValue = 0.5f,
         animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Reverse),
         label = "x3"
     )
-    val y3 by infiniteTransition.animateFloat(
+    val y3State = infiniteTransition.animateFloat(
         initialValue = 0.8f, targetValue = 0.6f,
         animationSpec = infiniteRepeatable(tween(16000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y3"
     )
 
-    val x4 by infiniteTransition.animateFloat(
+    val x4State = infiniteTransition.animateFloat(
         initialValue = 0.8f, targetValue = 0.5f,
         animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse),
         label = "x4"
     )
-    val y4 by infiniteTransition.animateFloat(
+    val y4State = infiniteTransition.animateFloat(
         initialValue = 0.9f, targetValue = 0.7f,
         animationSpec = infiniteRepeatable(tween(19000, easing = LinearEasing), RepeatMode.Reverse),
         label = "y4"
@@ -113,12 +113,25 @@ fun MeshGradientBackground(
                     val width = size.width
                     val height = size.height
                     
+                    val primary = animatedPrimaryState.value
+                    val secondary = animatedSecondaryState.value
+                    val accent = animatedAccentState.value
+                    
+                    val x1 = x1State.value
+                    val y1 = y1State.value
+                    val x2 = x2State.value
+                    val y2 = y2State.value
+                    val x3 = x3State.value
+                    val y3 = y3State.value
+                    val x4 = x4State.value
+                    val y4 = y4State.value
+
                     // Drawing directly to canvas using the animated values
                     
                     // Blob 1: Primary
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(animatedPrimary.copy(alpha = 0.45f), Color.Transparent),
+                            colors = listOf(primary.copy(alpha = 0.45f), Color.Transparent),
                             center = Offset(width * x1, height * y1),
                             radius = width * 1.2f
                         ),
@@ -129,7 +142,7 @@ fun MeshGradientBackground(
                     // Blob 2: Secondary
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(animatedSecondary.copy(alpha = 0.4f), Color.Transparent),
+                            colors = listOf(secondary.copy(alpha = 0.4f), Color.Transparent),
                             center = Offset(width * x2, height * y2),
                             radius = width * 1.1f
                         ),
@@ -140,7 +153,7 @@ fun MeshGradientBackground(
                     // Blob 3: Accent
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(animatedAccent.copy(alpha = 0.35f), Color.Transparent),
+                            colors = listOf(accent.copy(alpha = 0.35f), Color.Transparent),
                             center = Offset(width * x3, height * y3),
                             radius = width * 1.0f
                         ),
@@ -151,7 +164,7 @@ fun MeshGradientBackground(
                     // Blob 4: Primary Variation
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(animatedPrimary.copy(alpha = 0.3f), Color.Transparent),
+                            colors = listOf(primary.copy(alpha = 0.3f), Color.Transparent),
                             center = Offset(width * x4, height * y4),
                             radius = width * 1.3f
                         ),

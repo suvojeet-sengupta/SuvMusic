@@ -61,7 +61,37 @@ object GradientBarStyle {
             cornerRadius = CornerRadius(trackHeight / 2)
         )
         
-        drawProgressIndicator(progressX, centerY, activeColor, isDragging)
+        // Custom vertical pill thumb for Gradient Bar style
+        val thumbWidth = 6.dp.toPx()
+        val thumbHeight = trackHeight * 2.5f
+        
+        // Thumb Glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(activeColor.copy(alpha = 0.4f), Color.Transparent),
+                center = Offset(progressX, centerY),
+                radius = thumbHeight
+            ),
+            radius = thumbHeight,
+            center = Offset(progressX, centerY)
+        )
+        
+        // Vertical pill
+        drawRoundRect(
+            color = activeColor,
+            topLeft = Offset(progressX - thumbWidth / 2, centerY - thumbHeight / 2),
+            size = Size(thumbWidth, thumbHeight),
+            cornerRadius = CornerRadius(thumbWidth / 2)
+        )
+        
+        // Bright vertical line in middle
+        drawLine(
+            color = Color.White.copy(alpha = 0.7f),
+            start = Offset(progressX, centerY - thumbHeight * 0.3f),
+            end = Offset(progressX, centerY + thumbHeight * 0.3f),
+            strokeWidth = 1.5.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
     }
     
     fun DrawScope.drawPreview(

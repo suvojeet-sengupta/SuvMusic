@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.suvojeet.suvmusic.core.model"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -36,4 +36,6 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.runtime)
 }

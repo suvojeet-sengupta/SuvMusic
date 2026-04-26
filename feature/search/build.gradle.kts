@@ -24,7 +24,7 @@ plugins {
 
 android {
     namespace = "com.suvojeet.suvmusic.feature.search"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -38,6 +38,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+composeCompiler {
+    stabilityConfigurationFile = rootProject.file("compose-stability.conf")
 }
 
 kotlin {

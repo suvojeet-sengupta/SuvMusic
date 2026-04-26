@@ -45,12 +45,14 @@ class RecommendationEngine @Inject constructor(
     private val tasteProfileBuilder: TasteProfileBuilder,
     private val cache: RecommendationCache,
     private val nativeScorer: NativeRecommendationScorer,
-    private val songGenreDao: com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
+    private val songGenreDao: com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao,
+    private val weeklyRecommendations: WeeklyRecommendations,
+    private val dailyMixGenerator: DailyMixGenerator
 ) {
     companion object {
         private const val TAG = "RecommendationEngine"
         /** Max concurrent YouTube API calls to prevent throttling */
-        private const val MAX_CONCURRENT_API_CALLS = 3
+        private const val MAX_CONCURRENT_API_CALLS = 5
     }
 
     /** Application-scoped coroutine scope with SupervisorJob — survives child failures */
@@ -441,6 +443,15 @@ class RecommendationEngine @Inject constructor(
         val discoveryDeferred = async { fetchDiscoveryMix(profile, seenSongIds, seenFingerprints) }
         val forgottenDeferred = async { fetchForgottenFavorites(profile) }
         val timeBasedDeferred = async { fetchTimeBasedRecommendations(profile, seenSongIds, seenFingerprints) }
+        val discoverWeeklyDeferred = async {
+            try { weeklyRecommendations.getDiscoverWeekly() } catch (e: Exception) { emptyList() }
+        }
+        val releaseRadarDeferred = async {
+            try { weeklyRecommendations.getReleaseRadar() } catch (e: Exception) { emptyList() }
+        }
+        val dailyMixesDeferred = async {
+            try { dailyMixGenerator.getMixes() } catch (e: Exception) { emptyList() }
+        }
 
         // Collect results
         val quickPicks = quickPicksDeferred.await()
@@ -449,6 +460,9 @@ class RecommendationEngine @Inject constructor(
         val discovery = discoveryDeferred.await()
         val forgotten = forgottenDeferred.await()
         val timeBased = timeBasedDeferred.await()
+        val discoverWeekly = discoverWeeklyDeferred.await()
+        val releaseRadar = releaseRadarDeferred.await()
+        val dailyMixes = dailyMixesDeferred.await()
 
         // Assemble sections in priority order
         if (quickPicks.isNotEmpty()) {
@@ -458,6 +472,25 @@ class RecommendationEngine @Inject constructor(
                 type = HomeSectionType.QuickPicks
             ))
         }
+
+        if (discoverWeekly.isNotEmpty()) {
+            sections.add(HomeSection(
+                title = "Discover Weekly",
+                items = discoverWeekly.map { HomeItem.SongItem(it) },
+                type = HomeSectionType.HorizontalCarousel
+            ))
+        }
+
+        if (releaseRadar.isNotEmpty()) {
+            sections.add(HomeSection(
+                title = "Release Radar",
+                items = releaseRadar.map { HomeItem.SongItem(it) },
+                type = HomeSectionType.HorizontalCarousel
+            ))
+        }
+
+        // Daily Mixes — each cluster is its own section (up to 6).
+        sections.addAll(dailyMixes)
 
         if (timeBased.isNotEmpty()) {
             val greeting = getTimeBasedGreeting()

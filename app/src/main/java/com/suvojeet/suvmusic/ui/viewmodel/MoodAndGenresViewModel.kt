@@ -57,7 +57,7 @@ class MoodAndGenresViewModel @Inject constructor(
                 ) 
             }
             
-            val songs = repository.getCategoryContent(browseId, params)
+            val songs = repository.getCategoryContent(browseId, params, title)
             
             _uiState.update { 
                 it.copy(

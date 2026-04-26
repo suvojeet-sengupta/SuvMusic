@@ -225,7 +225,10 @@ fun SystemVolumeObserver(
         }
 
         val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-        context.registerReceiver(volumeReceiver, filter)
+        androidx.core.content.ContextCompat.registerReceiver(
+            context, volumeReceiver, filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Initial check
         val initialCurrent = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)

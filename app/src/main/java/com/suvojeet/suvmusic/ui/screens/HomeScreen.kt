@@ -4,6 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -18,6 +24,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -28,6 +35,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -103,6 +111,15 @@ fun HomeScreen(
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
+    var isSpeedDialExpanded by remember { mutableStateOf(false) }
+    var isRadioGenerating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isRadioGenerating) {
+        if (isRadioGenerating) {
+            delay(2500)
+            isRadioGenerating = false
+        }
+    }
 
     // Stable callback reference — avoids creating new lambdas per section item
     val onSongMoreClickHandler = remember {
@@ -578,6 +595,74 @@ fun HomeScreen(
             }
         }
         
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = 174.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AnimatedVisibility(visible = isSpeedDialExpanded) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    HomeSpeedDialAction(
+                        label = "Moods",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            onExploreClick("FEmusic_moods_and_genres", "Moods & genres")
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Random",
+                        icon = Icons.Default.Shuffle,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            viewModel.playRandomMix()
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Listen Together",
+                        icon = Icons.Default.Group,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            onListenTogetherClick()
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Radio",
+                        icon = Icons.Default.Radio,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            isRadioGenerating = true
+                            onStartRadio()
+                        }
+                    )
+                    HomeSpeedDialAction(
+                        label = "Refresh",
+                        icon = Icons.Default.Refresh,
+                        onClick = {
+                            isSpeedDialExpanded = false
+                            viewModel.refresh()
+                        }
+                    )
+                }
+            }
+
+            ExtendedFloatingActionButton(
+                onClick = { isSpeedDialExpanded = !isSpeedDialExpanded },
+                icon = {
+                    Icon(
+                        imageVector = if (isSpeedDialExpanded) Icons.Default.Close else Icons.Default.Add,
+                        contentDescription = null
+                    )
+                },
+                text = { Text(if (isSpeedDialExpanded) "Close" else "Quick Mix") }
+            )
+        }
+
         // Song Options Menu
         selectedSong?.let { song ->
             SongMenuBottomSheet(
@@ -632,6 +717,107 @@ fun HomeScreen(
                     playlistViewModel.showCreatePlaylistDialog()
                 }
             )
+        }
+
+        // Generating Radio Overlay
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isRadioGenerating,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .pointerInput(Unit) { detectTapGestures { } }, // Prevent clicks behind
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "radioPulse")
+                    val pulseState = infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                        ),
+                        label = "pulse"
+                    )
+                    
+                    Surface(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .graphicsLayer {
+                                val pulse = pulseState.value
+                                scaleX = pulse
+                                scaleY = pulse
+                            },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 8.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Radio,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "Radio is generating...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Tailoring tunes for your vibe",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSpeedDialAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    com.suvojeet.suvmusic.ui.components.BounceButton(
+        onClick = onClick,
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+            tonalElevation = 8.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
@@ -1659,4 +1845,3 @@ fun TrackCard(
         )
     }
 }
-

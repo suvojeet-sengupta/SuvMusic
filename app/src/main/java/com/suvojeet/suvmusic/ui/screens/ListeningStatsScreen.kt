@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Audiotrack
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,19 +59,55 @@ import android.content.Intent
 @Composable
 fun ListeningStatsScreen(
     onBackClick: () -> Unit,
+    onWrappedClick: (() -> Unit)? = null,
     viewModel: ListeningStatsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
+    var showShareDialog by remember { mutableStateOf(false) }
 
     val shareStats = {
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "Check out my music personality on SuvMusic: ${uiState.musicPersonality.title}! I've listened to ${uiState.totalSongsPlayed} songs.")
+        showShareDialog = true
+    }
+
+    if (showShareDialog) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showShareDialog = false }
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    SpotifyWrappedShareCard(
+                        uiState = uiState,
+                        modifier = Modifier.clip(RoundedCornerShape(24.dp))
+                    )
+                    Button(
+                        onClick = {
+                            val topArtist = uiState.topArtists.firstOrNull()?.artist ?: "Unknown"
+                            val totalMinutes = uiState.totalListeningTimeMs / 60000
+                            val months = String.format("%.1f", uiState.totalMonthsListened)
+                            val text = "My Music Insights on SuvMusic 🎵\n\nPersonality: ${uiState.musicPersonality.title}\nTotal Playtime: $totalMinutes mins\nTop Artist: $topArtist\nMonths with SuvMusic: $months\n\n#SuvMusic #MusicInsights"
+                            
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
+                        },
+                        modifier = Modifier.padding(16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Share, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share as Text")
+                    }
+                }
+            }
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
     }
 
     Scaffold(
@@ -83,6 +121,11 @@ fun ListeningStatsScreen(
                     }
                 },
                 actions = {
+                    if (onWrappedClick != null) {
+                        IconButton(onClick = onWrappedClick) {
+                            Icon(Icons.Default.AutoAwesome, "Your Wrapped")
+                        }
+                    }
                     IconButton(onClick = shareStats) {
                         Icon(Icons.Default.Share, "Share")
                     }
@@ -209,18 +252,165 @@ private fun AnimatedEntry(
     delay: Int = 0,
     content: @Composable () -> Unit
 ) {
-    var visible by remember { mutableStateOf(false) }
+    var visible by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(delay.toLong())
-        visible = true
+        if (!visible) {
+            kotlinx.coroutines.delay((delay / 2).toLong()) // Half the delay for faster load
+            visible = true
+        }
     }
     
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(800)) + 
-                slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(800))
+        enter = fadeIn(animationSpec = tween(400)) + 
+                slideInVertically(initialOffsetY = { 20 }, animationSpec = tween(400))
     ) {
         content()
+    }
+}
+
+@Composable
+fun SpotifyWrappedShareCard(
+    uiState: ListeningStatsUiState,
+    modifier: Modifier = Modifier
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.tertiary
+    
+    Box(
+        modifier = modifier
+            .width(360.dp)
+            .height(640.dp)
+            .background(
+                Brush.sweepGradient(
+                    0.0f to primaryColor.copy(alpha = 0.8f),
+                    0.3f to Color(0xFF1DB954), // Spotify Green
+                    0.6f to secondaryColor.copy(alpha = 0.8f),
+                    1.0f to primaryColor.copy(alpha = 0.8f)
+                )
+            )
+            .background(Color.Black.copy(alpha = 0.2f)) // Tint
+            .padding(28.dp)
+    ) {
+        // Geometric abstract background patterns
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawPath(
+                path = Path().apply {
+                    moveTo(0f, size.height * 0.7f)
+                    quadraticTo(size.width * 0.5f, size.height * 0.8f, size.width, size.height * 0.6f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                },
+                color = Color.White.copy(alpha = 0.1f)
+            )
+            drawCircle(
+                color = Color.White.copy(alpha = 0.05f),
+                radius = 200.dp.toPx(),
+                center = Offset(size.width * 0.8f, size.height * 0.2f)
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = CircleShape,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Audiotrack,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "SUVMUSIC",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
+                )
+            }
+            
+            Spacer(Modifier.height(60.dp))
+            
+            Text(
+                "My music\npersonality is",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White.copy(alpha = 0.9f),
+                fontWeight = FontWeight.Normal,
+                lineHeight = 32.sp
+            )
+            Text(
+                uiState.musicPersonality.title.uppercase(),
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp
+            )
+            
+            Spacer(Modifier.height(40.dp))
+            
+            // Stats Grid with better layout
+            Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    StatValue("Total Minutes", (uiState.totalListeningTimeMs / 60000).toString(), Modifier.weight(1f))
+                    StatValue("Top Songs", uiState.totalSongsPlayed.toString(), Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    StatValue("Months Listened", String.format("%.1f", uiState.totalMonthsListened), Modifier.weight(1f))
+                    StatValue("Top Artist", uiState.topArtists.firstOrNull()?.artist ?: "None", Modifier.weight(1f))
+                }
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Modern Branding Footer
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "2026 INSIGHTS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "VIBE CODER CREATION",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 5.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatValue(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = label.uppercase(), 
+            style = MaterialTheme.typography.labelSmall, 
+            color = Color.White.copy(alpha = 0.7f),
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+        Text(
+            text = value, 
+            style = MaterialTheme.typography.headlineSmall, 
+            color = Color.White, 
+            fontWeight = FontWeight.Black
+        )
     }
 }
 
@@ -506,12 +696,23 @@ private fun GlobalStatsRow(uiState: ListeningStatsUiState) {
             )
         }
         
-        StatCardWide(
-            title = "Daily Average",
-            value = if (avgHours > 0) "${avgHours}h ${avgMinutes}m" else "${avgMinutes}m",
-            subtitle = "Based on your activity this week",
-            icon = Icons.Default.Timeline
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Months With Us",
+                value = String.format("%.1f", uiState.totalMonthsListened),
+                icon = Icons.Default.Timeline
+            )
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Daily Average",
+                value = if (avgHours > 0) "${avgHours}h ${avgMinutes}m" else "${avgMinutes}m",
+                icon = Icons.Default.Timeline
+            )
+        }
     }
 }
 

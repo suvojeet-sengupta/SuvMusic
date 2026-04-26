@@ -97,6 +97,7 @@ class SessionManager @Inject constructor(
         
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
         private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
+        private val QUICK_PICKS_CACHE_KEY = stringPreferencesKey("quick_picks_cache")
         private val LAST_FETCH_TIME_YOUTUBE_KEY = longPreferencesKey("last_fetch_time_youtube")
         private val LAST_FETCH_TIME_JIOSAAVN_KEY = longPreferencesKey("last_fetch_time_jiosaavn")
         
@@ -218,6 +219,10 @@ class SessionManager @Inject constructor(
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
+        private val PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("player_glass_blur")
+        private val PLAYER_GLASS_INTENSITY_KEY = floatPreferencesKey("player_glass_intensity")
+        private val MINI_PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("mini_player_glass_blur")
+        private val CROSSFADE_MS_KEY = intPreferencesKey("crossfade_ms")
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
         private val LOGGING_ENABLED_KEY = booleanPreferencesKey("logging_enabled")
         private val FOR_YOU_BANNER_DISMISSED_AT_KEY = longPreferencesKey("for_you_banner_dismissed_at")
@@ -500,10 +505,10 @@ class SessionManager @Inject constructor(
         context.dataStore.data.first()[DYNAMIC_ISLAND_ENABLED_KEY] ?: false
 
     suspend fun isSponsorBlockEnabled(): Boolean =
-        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: true
+        context.dataStore.data.first()[SPONSOR_BLOCK_ENABLED_KEY] ?: false
 
     val sponsorBlockEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: true
+        preferences[SPONSOR_BLOCK_ENABLED_KEY] ?: false
     }
 
     suspend fun setSponsorBlockEnabled(enabled: Boolean) {
@@ -530,6 +535,24 @@ class SessionManager @Inject constructor(
 
     suspend fun getLastFmUsername(): String? = withContext(Dispatchers.IO) {
         return@withContext encryptedPrefs.getString("last_fm_username", null)
+    }
+
+    /** Mark the start of a Last.fm auth handshake so the deep-link callback can
+     *  verify the flow was actually initiated from inside the app (CSRF guard). */
+    fun markLastFmAuthStarted() {
+        encryptedPrefs.edit()
+            .putLong("last_fm_auth_started_at", System.currentTimeMillis())
+            .apply()
+    }
+
+    /** True if markLastFmAuthStarted() was called within [windowMs]. */
+    fun isLastFmAuthPending(windowMs: Long = 5 * 60 * 1000L): Boolean {
+        val ts = encryptedPrefs.getLong("last_fm_auth_started_at", 0L)
+        return ts > 0 && System.currentTimeMillis() - ts <= windowMs
+    }
+
+    fun clearLastFmAuthPending() {
+        encryptedPrefs.edit().remove("last_fm_auth_started_at").apply()
     }
 
     suspend fun clearLastFmSession() {
@@ -1461,6 +1484,45 @@ class SessionManager @Inject constructor(
         }
     }
 
+    // --- Liquid Glass (Player + MiniPlayer) ---
+
+    val playerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_GLASS_BLUR_KEY] ?: 60f
+    }
+
+    suspend fun setPlayerGlassBlur(value: Float) {
+        context.dataStore.edit { it[PLAYER_GLASS_BLUR_KEY] = value }
+    }
+
+    val playerGlassIntensityFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_GLASS_INTENSITY_KEY] ?: 1f
+    }
+
+    suspend fun setPlayerGlassIntensity(value: Float) {
+        context.dataStore.edit { it[PLAYER_GLASS_INTENSITY_KEY] = value }
+    }
+
+    val miniPlayerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[MINI_PLAYER_GLASS_BLUR_KEY] ?: 50f
+    }
+
+    suspend fun setMiniPlayerGlassBlur(value: Float) {
+        context.dataStore.edit { it[MINI_PLAYER_GLASS_BLUR_KEY] = value }
+    }
+
+    // --- Crossfade ---
+
+    val crossfadeMsFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[CROSSFADE_MS_KEY] ?: 0
+    }
+
+    suspend fun getCrossfadeMs(): Int =
+        context.dataStore.data.first()[CROSSFADE_MS_KEY] ?: 0
+
+    suspend fun setCrossfadeMs(value: Int) {
+        context.dataStore.edit { it[CROSSFADE_MS_KEY] = value.coerceIn(0, 12000) }
+    }
+
     // --- Library Settings ---
 
     suspend fun isFilterLocalByDurationEnabled(): Boolean =
@@ -1671,14 +1733,17 @@ class SessionManager @Inject constructor(
     private var _encryptedPrefs: android.content.SharedPreferences? = null
     private val encryptedPrefs: android.content.SharedPreferences
         get() {
-            if (_encryptedPrefs == null) {
-                synchronized(this) {
-                    if (_encryptedPrefs == null) {
-                        _encryptedPrefs = createEncryptedPrefs()
-                    }
+            val existing = _encryptedPrefs
+            if (existing != null) return existing
+            return synchronized(this) {
+                val existingLocked = _encryptedPrefs
+                if (existingLocked != null) existingLocked
+                else {
+                    val created = createEncryptedPrefs()
+                    _encryptedPrefs = created
+                    created
                 }
             }
-            return _encryptedPrefs!!
         }
 
     private fun createEncryptedPrefs(): android.content.SharedPreferences {
@@ -1691,9 +1756,13 @@ class SessionManager @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // This happens after restoring backup on different device or OS reinstall
-            // where keystore keys are lost but preference file remains.
-            // We must clear the file to prevent continuous crashing.
+            // Happens after restoring backup on different device or OS reinstall
+            // where Keystore keys are lost but the preference file remains.
+            // Clearing the file and retrying creates a fresh Keystore-bound key.
+            // If that ALSO fails, the device's Keystore is broken — we must still
+            // return a prefs instance so the app can launch and prompt re-auth,
+            // but we clear any lingering secrets first and do NOT silently write
+            // new secrets to plaintext.
             try {
                 context.deleteSharedPreferences("suvmusic_secure_session")
                 EncryptedSharedPreferences.create(
@@ -1704,7 +1773,16 @@ class SessionManager @Inject constructor(
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e2: Exception) {
-                // Fallback to normal prefs if encryption is completely broken
+                android.util.Log.e(
+                    "SessionManager",
+                    "Keystore unavailable; session storage running in degraded mode",
+                    e2
+                )
+                // Wipe any stale plaintext fallback file so we never persist
+                // secrets unencrypted on disk.
+                try {
+                    context.deleteSharedPreferences("suvmusic_secure_session_fallback")
+                } catch (_: Exception) {}
                 context.getSharedPreferences("suvmusic_secure_session_fallback", Context.MODE_PRIVATE)
             }
         }
@@ -1858,9 +1936,13 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun isAutomixEnabled(): Boolean = 
+    suspend fun isAutomixEnabled(): Boolean =
         context.dataStore.data.first()[AUTOMIX_KEY] ?: true
-    
+
+    val automixEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[AUTOMIX_KEY] ?: true
+    }
+
     suspend fun setAutomix(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUTOMIX_KEY] = enabled
@@ -2275,6 +2357,49 @@ class SessionManager @Inject constructor(
         val json = encryptedPrefs.getString("jiosaavn_home_cache", null)
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
+        }
+    }
+
+    suspend fun saveQuickPicksCache(songs: List<Song>) {
+        val json = withContext(Dispatchers.Default) {
+            val array = JSONArray()
+            songs.forEach { song -> array.put(songToJson(song)) }
+            array.toString()
+        }
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("quick_picks_cache", json).apply()
+        }
+        context.dataStore.edit { it.remove(QUICK_PICKS_CACHE_KEY) }
+    }
+
+    fun getCachedQuickPicks(): Flow<List<Song>> = context.dataStore.data
+        .map { encryptedPrefs.getString("quick_picks_cache", null) }
+        .flowOn(Dispatchers.IO)
+        .map { json ->
+            withContext(Dispatchers.Default) {
+                if (json == null) return@withContext emptyList()
+                try {
+                    val array = JSONArray(json)
+                    (0 until array.length()).mapNotNull { i ->
+                        jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+        }
+
+    suspend fun getCachedQuickPicksSync(): List<Song> = withContext(Dispatchers.IO) {
+        val json = encryptedPrefs.getString("quick_picks_cache", null) ?: return@withContext emptyList()
+        withContext(Dispatchers.Default) {
+            try {
+                val array = JSONArray(json)
+                (0 until array.length()).mapNotNull { i ->
+                    jsonToSong(array.optJSONObject(i) ?: return@mapNotNull null)
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 

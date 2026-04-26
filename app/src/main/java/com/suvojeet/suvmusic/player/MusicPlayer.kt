@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
@@ -124,20 +126,69 @@ class MusicPlayer @Inject constructor(
     private var currentSongStartPosition: Long = 0L
     
     private var deviceReceiver: android.content.BroadcastReceiver? = null
-    
+
+    // Debounced device refresh — collapses bursts of Bluetooth/headset events
+    // into a single refresh so the Main dispatcher doesn't pile up delay() jobs.
+    private var deviceRefreshJob: Job? = null
+    private fun scheduleDeviceRefresh(primaryDelayMs: Long = 1000L, secondaryDelayMs: Long = 3000L) {
+        deviceRefreshJob?.cancel()
+        deviceRefreshJob = scope.launch {
+            delay(primaryDelayMs)
+            updateAvailableDevices()
+            // Second attempt after longer delay for slower devices
+            delay(secondaryDelayMs)
+            updateAvailableDevices()
+        }
+    }
+
     // Modern Audio Device Callback
     private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>?) {
-            scope.launch {
-                delay(1000)
-                updateAvailableDevices()
+            scheduleDeviceRefresh(primaryDelayMs = 1000L, secondaryDelayMs = 2000L)
+
+            val btAdded = addedDevices?.any { d ->
+                d.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                d.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                (android.os.Build.VERSION.SDK_INT >= 31 && (
+                    d.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                    d.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                    d.type == 30 /* TYPE_BLE_BROADCAST */
+                ))
+            } == true
+            if (btAdded) {
+                onBluetoothAudioConnected()
             }
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
-            scope.launch {
-                delay(500)
-                updateAvailableDevices()
+            scheduleDeviceRefresh(primaryDelayMs = 500L, secondaryDelayMs = 2000L)
+        }
+    }
+
+    private fun onBluetoothAudioConnected() {
+        scope.launch {
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val volumePercent = if (maxVolume > 0) currentVolume.toFloat() / maxVolume else 0f
+            if (volumePercent > 0.7f) {
+                val targetVolume = (maxVolume * 0.5f).toInt()
+                scope.launch {
+                    var v = currentVolume
+                    while (v > targetVolume) {
+                        v--
+                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
+                        delay(50)
+                    }
+                }
+            }
+
+            if (sessionManager.isBluetoothAutoplayEnabled()) {
+                // Give the audio route a moment to settle before starting playback
+                delay(800)
+                val state = _playerState.value
+                if (state.queue.isNotEmpty() && !state.isPlaying) {
+                    play()
+                }
             }
         }
     }
@@ -149,6 +200,19 @@ class MusicPlayer @Inject constructor(
     // Configurable Preloading
     private var nextSongPreloadingEnabled = true
     private var nextSongPreloadDelay = 3
+
+    // Automix master switch (Playback Settings -> Automix). Gates automatic queue
+    // extension when autoplay/radio is active. Default matches SessionManager.
+    @Volatile private var automixEnabled: Boolean = true
+
+    // Crossfade
+    private val crossfadeController = CrossfadeController(scope)
+    private var crossfadeMs: Int = 0
+    @Volatile private var crossfadeTriggered: Boolean = false
+
+    // Queue mutation lock — serializes toggleShuffle / playSong / radio-append races
+    // that desync ExoPlayer internal state (see suvmusic_shuffle*.log).
+    private val queueMutex = Mutex()
     
     init {
         // Initialize video quality from settings
@@ -164,12 +228,25 @@ class MusicPlayer @Inject constructor(
         scope.launch {
             sessionManager.nextSongPreloadDelayFlow.collect { nextSongPreloadDelay = it }
         }
-        
+        scope.launch {
+            sessionManager.crossfadeMsFlow.collect { crossfadeMs = it.coerceIn(0, 12000) }
+        }
+        scope.launch {
+            sessionManager.automixEnabledFlow.collect { automixEnabled = it }
+        }
+
         connectToService()
         
         // Setup sleep timer callback
         sleepTimerManager.setOnTimerFinished {
             pause()
+        }
+        sleepTimerManager.setOnFadeStep {
+            scope.launch {
+                val controller = mediaController ?: return@launch
+                val nextVolume = (controller.volume - 0.05f).coerceIn(0f, 1f)
+                controller.volume = nextVolume
+            }
         }
 
         // Initial device scan on background thread
@@ -212,53 +289,22 @@ class MusicPlayer @Inject constructor(
         
         deviceReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
-                // Small delay to allow system to update device list
-                scope.launch {
-                    delay(2000)
-                    updateAvailableDevices()
-                    
-                    // Second attempt after longer delay for slower devices
-                    delay(3000)
-                    updateAvailableDevices()
-
-                    // Bluetooth Autoplay
-                    if (intent?.action == android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) {
-                        // Improvement (5): Safe Volume Ducking
-                        // Prevent ear damage if Bluetooth device connects with high volume
-                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                        val volumePercent = currentVolume.toFloat() / maxVolume
-                        
-                        if (volumePercent > 0.7f) {
-                            android.util.Log.i("MusicPlayer", "Safe Volume: Ducking volume from ${ (volumePercent * 100).toInt() }% to 50%")
-                            val targetVolume = (maxVolume * 0.5f).toInt()
-                            
-                            // Smoothly duck volume over 1 second
-                            scope.launch {
-                                var v = currentVolume
-                                while (v > targetVolume) {
-                                    v--
-                                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
-                                    delay(50)
-                                }
-                            }
-                        }
-
-                        if (sessionManager.isBluetoothAutoplayEnabled()) {
-                            // Check if we have media to play
-                            if (_playerState.value.queue.isNotEmpty() && !_playerState.value.isPlaying) {
-                                play()
-                            }
-                        }
-                    }
-                }
+                // Debounce refresh so rapid connect/disconnect bursts don't stack coroutines.
+                // Bluetooth autoplay + safe-volume ducking are handled by the AudioDeviceCallback,
+                // which fires reliably without requiring BLUETOOTH_CONNECT permission.
+                scheduleDeviceRefresh(primaryDelayMs = 2000L, secondaryDelayMs = 3000L)
             }
         }
         
         try {
-            deviceReceiver?.let { context.registerReceiver(it, filter) }
+            deviceReceiver?.let {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    context, it, filter,
+                    androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+            }
         } catch (e: Exception) {
-            // Log error
+            android.util.Log.e("MusicPlayer", "registerReceiver failed", e)
         }
     }
 
@@ -403,11 +449,14 @@ class MusicPlayer @Inject constructor(
         val isInGracePeriod = manualSelectedDeviceId != null && (System.currentTimeMillis() - lastManualSelectionTime < 10000)
 
         // If we are in grace period but device isn't in list, MANUALLY add it to the list
-        // so the UI stays stable and shows it as "Connecting/Active"
-        if (!hasSelection && isInGracePeriod && manualSelectedDeviceId != null && manualSelectedDeviceName != null) {
+        // so the UI stays stable and shows it as "Connecting/Active".
+        // Capture to locals to avoid race with concurrent nullification of the fields.
+        val capturedId = manualSelectedDeviceId
+        val capturedName = manualSelectedDeviceName
+        if (!hasSelection && isInGracePeriod && capturedId != null && capturedName != null) {
             val placeholderDevice = OutputDevice(
-                id = manualSelectedDeviceId!!,
-                name = manualSelectedDeviceName!!,
+                id = capturedId,
+                name = capturedName,
                 type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
                 isSelected = true
             )
@@ -570,7 +619,7 @@ class MusicPlayer @Inject constructor(
                             resolveAndPlayCurrentItem(firstSong, 0, shouldPlay = true)
                         }
                     }
-                } else if (state.isAutoplayEnabled || state.isRadioMode) {
+                } else if ((state.isAutoplayEnabled || state.isRadioMode) && automixEnabled) {
                     // Autoplay/Radio: Queue ended but more songs should be loaded.
                     // Wait for the observer to add more songs, then play the next one.
                     scope.launch {
@@ -621,6 +670,14 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            // Reset crossfade guard + restore volume for the incoming track.
+            // Skip the volume restore while a crossfade is mid fade-in; otherwise we
+            // overwrite the ramp and the new track jumps to full volume instantly.
+            crossfadeTriggered = false
+            if (!crossfadeController.isFadingIn) {
+                mediaController?.let { c -> if (c.volume < 1f) c.volume = 1f }
+            }
+
             mediaItem?.let { item ->
                 val controller = mediaController ?: return@let
                 val index = controller.currentMediaItemIndex
@@ -800,8 +857,9 @@ class MusicPlayer @Inject constructor(
                     // Fast path: if we pre-resolved this song's URL during preloading
                     // (in shuffle mode, we cache the URL without calling replaceMediaItem
                     // to avoid disrupting ExoPlayer's internal state). Apply it now.
-                    if (needsResolution && preloadedNextSongId == song.id && preloadedStreamUrl != null) {
-                        val cachedUrl = preloadedStreamUrl!!
+                    val capturedPreloadUrl = preloadedStreamUrl
+                    if (needsResolution && preloadedNextSongId == song.id && capturedPreloadUrl != null) {
+                        val cachedUrl = capturedPreloadUrl
                         val cachedIsVideo = preloadedIsVideoMode
                         preloadedNextSongId = null
                         preloadedStreamUrl = null
@@ -1353,13 +1411,19 @@ class MusicPlayer @Inject constructor(
                         saveCurrentPlaybackState()
                     }
                     
-                    // Check if we need to preload next song for gapless playback
+                    // Check if we need to preload next song for gapless playback.
+                    // Skip the early-transition seek when a crossfade is already in flight
+                    // for this track — otherwise the gapless skip races the crossfade and
+                    // the new track ends up at full volume before the fade-in plays.
                     if (sessionManager.isGaplessPlaybackEnabled()) {
                         checkPreloadNextSong(currentPos, duration)
-                        
+
                         // Early transition logic
                         val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
-                        if (duration >= 10_000L && wallPlayTime >= 5_000L && currentPos >= duration - 1500 && preloadedNextSongId != null && preloadedStreamUrl != null) {
+                        if (!crossfadeTriggered && crossfadeMs == 0 &&
+                            duration >= 10_000L && wallPlayTime >= 5_000L &&
+                            currentPos >= duration - 1500 &&
+                            preloadedNextSongId != null && preloadedStreamUrl != null) {
                             val state = _playerState.value
                             if (state.repeatMode != RepeatMode.ONE) {
                                 val nextIndex = controller.nextMediaItemIndex
@@ -1372,6 +1436,22 @@ class MusicPlayer @Inject constructor(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // Crossfade: when within `crossfadeMs` of the end, fade song 1 out then
+                    // fade song 2 in. Respects Repeat One, ignores near-zero durations, and
+                    // only fires once per track.
+                    if (crossfadeMs > 0 && !crossfadeTriggered && duration > (crossfadeMs + 1000)) {
+                        val remaining = duration - currentPos
+                        val hasNext = controller.hasNextMediaItem()
+                        if (hasNext && remaining in 0..crossfadeMs.toLong() &&
+                            _playerState.value.repeatMode != RepeatMode.ONE
+                        ) {
+                            crossfadeTriggered = true
+                            crossfadeController.crossfadeTo(controller, crossfadeMs) {
+                                mediaController?.seekToNextMediaItem()
                             }
                         }
                     }
@@ -1607,14 +1687,21 @@ class MusicPlayer @Inject constructor(
                     }.awaitAll()
                 }
 
-                mediaController?.let { controller ->
-                    controller.setMediaItems(mediaItems, startIndex, 0L)
-                    controller.prepare()
-                    if (autoPlay) {
-                        controller.play()
+                queueMutex.withLock {
+                    mediaController?.let { controller ->
+                        // Cancel any in-flight crossfade so the incoming track starts at full volume.
+                        crossfadeController.cancel()
+                        crossfadeTriggered = false
+                        if (controller.volume < 1f) controller.volume = 1f
+
+                        controller.setMediaItems(mediaItems, startIndex, 0L)
+                        controller.prepare()
+                        if (autoPlay) {
+                            controller.play()
+                        }
+                    } ?: run {
+                        _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                     }
-                } ?: run {
-                    _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                 }
             } catch (e: Exception) {
                 // Ignore cancellations
@@ -1823,7 +1910,7 @@ class MusicPlayer @Inject constructor(
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
                  playSong(queue[0], queue, 0)
-             } else if (state.isAutoplayEnabled || state.isRadioMode) {
+             } else if ((state.isAutoplayEnabled || state.isRadioMode) && automixEnabled) {
                  // Infinite Autoplay/Radio: The ViewModel automatically loads more songs when nearing the end.
                  // Wait with retry loop for new songs to be added by the autoplay observer.
                  val originalQueueSize = queue.size
@@ -1887,10 +1974,17 @@ class MusicPlayer @Inject constructor(
     }
     
     fun toggleShuffle() {
-        mediaController?.let { controller ->
-            val newShuffleState = !controller.shuffleModeEnabled
-            controller.shuffleModeEnabled = newShuffleState
-            _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+        // Serialize against queue mutations (playSong / radio-append) so ExoPlayer's
+        // internal timeline isn't reshuffled while another queue change is in-flight.
+        scope.launch {
+            queueMutex.withLock {
+                mediaController?.let { controller ->
+                    val newShuffleState = !controller.shuffleModeEnabled
+                    // Do NOT seek — shuffle toggle should preserve current playback position.
+                    controller.shuffleModeEnabled = newShuffleState
+                    _playerState.update { it.copy(shuffleEnabled = newShuffleState) }
+                }
+            }
         }
     }
     
@@ -2395,8 +2489,14 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
-     * Convert a YouTube thumbnail URL to high resolution for better notification artwork quality.
-     * Converts hqdefault, mqdefault, sddefault to maxresdefault format.
+     * Convert a YouTube / Google thumbnail URL to high resolution for notification,
+     * lock screen, Android Auto, and Wear artwork.
+     *
+     * Notification panels (especially on tablets) and Android Auto upscale the artwork
+     * to ~720–1080px. The previous 544px cap looked soft compared to apps like
+     * YouTube Music or Spotify; bumping the request to 1080 gives crisp art on
+     * high-DPI panels while still being well under the bitmap-size limit MediaSession
+     * accepts (~10MB / 4096px).
      */
     private fun getHighResThumbnail(url: String?): String? {
         return url?.let {
@@ -2405,17 +2505,16 @@ class MusicPlayer @Inject constructor(
                     .replace("hqdefault", "maxresdefault")
                     .replace("mqdefault", "maxresdefault")
                     .replace("sddefault", "maxresdefault")
-                    // Fix: use path-aware replacement so we only upgrade the bare "default"
-                    // thumbnail (e.g. "/default.jpg") and never corrupt "maxresdefault" which
-                    // was already set by the replacements above (plain .replace("default",…)
-                    // would turn "maxresdefault" → "maxresmaxresdefault" — an invalid URL).
+                    // Path-aware replace: only upgrade the bare "default" thumbnail
+                    // (e.g. "/default.jpg"); bare .replace("default",…) would corrupt
+                    // "maxresdefault" → "maxresmaxresdefault".
                     .replace("/default.", "/maxresdefault.")
-                    .replace(Regex("w\\d+-h\\d+"), "w544-h544")
-                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") -> 
-                    it.replace(Regex("=w\\d+-h\\d+"), "=w544-h544")
-                      .replace(Regex("=s\\d+"), "=s544")
-                      .replace(Regex("=w\\d+"), "=w544")
-                else -> it.replace(Regex("w\\d+-h\\d+"), "w544-h544")
+                    .replace(Regex("w\\d+-h\\d+"), "w1080-h1080")
+                it.contains("lh3.googleusercontent.com") || it.contains("yt3.ggpht.com") || it.contains("googleusercontent.com") ->
+                    it.replace(Regex("=w\\d+-h\\d+(-[a-z0-9]+)?"), "=w1080-h1080")
+                      .replace(Regex("=s\\d+(-[a-z0-9]+)?"), "=s1080")
+                      .replace(Regex("=w\\d+(-[a-z0-9]+)?"), "=w1080")
+                else -> it.replace(Regex("w\\d+-h\\d+"), "w1080-h1080")
             }
         }
     }
@@ -2434,7 +2533,7 @@ class MusicPlayer @Inject constructor(
             val newParameters = parameters.buildUpon()
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, isBackground)
                 .build()
-            
+
             player.trackSelectionParameters = newParameters
         }
     }
