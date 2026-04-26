@@ -18,11 +18,7 @@ object PlaylistExportHelper {
             for (song in songs) {
                 m3uContent.append("#EXTINF:${song.duration / 1000},${song.artist} - ${song.title}\n")
                 // For YouTube songs, use the URL. For local songs, use the URI.
-                val url = if (song.localUri != null) {
-                    song.localUri.toString()
-                } else {
-                    "https://www.youtube.com/watch?v=${song.id}"
-                }
+                val url = song.localUri ?: "https://www.youtube.com/watch?v=${song.id}"
                 m3uContent.append("$url\n")
             }
 

@@ -8,7 +8,6 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +24,6 @@ data class AlbumUiState(
     val isSelectionMode: Boolean = false
 )
 
-@HiltViewModel
 class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,

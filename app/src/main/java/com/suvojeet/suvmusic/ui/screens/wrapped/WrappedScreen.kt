@@ -38,8 +38,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
@@ -49,14 +49,12 @@ import com.suvojeet.suvmusic.recommendation.WrappedGenerator
 import com.suvojeet.suvmusic.recommendation.WrappedReport
 import com.suvojeet.suvmusic.recommendation.WrappedWindow
 import com.suvojeet.suvmusic.ui.components.glass.LiquidGlassSurface
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@HiltViewModel
 class WrappedViewModel @Inject constructor(
     private val generator: WrappedGenerator
 ) : ViewModel() {
@@ -73,7 +71,7 @@ class WrappedViewModel @Inject constructor(
 fun WrappedScreen(
     onBack: () -> Unit,
     initialWindow: WrappedWindow = WrappedWindow.LAST_365_DAYS,
-    viewModel: WrappedViewModel = hiltViewModel()
+    viewModel: WrappedViewModel = koinViewModel()
 ) {
     val isDark = isSystemInDarkTheme()
     val window by remember { mutableStateOf(initialWindow) }

@@ -1,0 +1,49 @@
+-- Mirrors @Entity DislikedSong + @Entity DislikedArtist in :core:data Room.
+
+CREATE TABLE disliked_songs (
+    songId TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE disliked_artists (
+    artistName TEXT NOT NULL PRIMARY KEY,
+    timestamp INTEGER NOT NULL
+);
+
+-- disliked_songs ---------------------------------------------------------
+
+selectAllDislikedSongIds:
+SELECT songId FROM disliked_songs;
+
+selectAllDislikedSongs:
+SELECT * FROM disliked_songs;
+
+insertOrReplaceDislikedSong:
+INSERT OR REPLACE INTO disliked_songs (songId, title, artist, timestamp)
+VALUES (?, ?, ?, ?);
+
+deleteDislikedSong:
+DELETE FROM disliked_songs WHERE songId = ?;
+
+deleteAllDislikedSongs:
+DELETE FROM disliked_songs;
+
+-- disliked_artists -------------------------------------------------------
+
+selectAllDislikedArtistNames:
+SELECT artistName FROM disliked_artists;
+
+selectAllDislikedArtists:
+SELECT * FROM disliked_artists;
+
+insertOrReplaceDislikedArtist:
+INSERT OR REPLACE INTO disliked_artists (artistName, timestamp)
+VALUES (?, ?);
+
+deleteDislikedArtist:
+DELETE FROM disliked_artists WHERE artistName = ?;
+
+deleteAllDislikedArtists:
+DELETE FROM disliked_artists;

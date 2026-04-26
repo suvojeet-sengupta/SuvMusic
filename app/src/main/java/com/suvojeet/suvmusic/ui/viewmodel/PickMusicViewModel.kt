@@ -5,14 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@HiltViewModel
 class PickMusicViewModel @Inject constructor(
     private val repository: YouTubeRepository
 ) : ViewModel() {

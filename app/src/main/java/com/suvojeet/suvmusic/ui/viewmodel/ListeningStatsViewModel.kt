@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.data.local.dao.ArtistStats
 import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -55,7 +54,6 @@ data class DailyListening(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
 class ListeningStatsViewModel @Inject constructor(
     private val listeningHistoryRepository: ListeningHistoryRepository
 ) : ViewModel() {

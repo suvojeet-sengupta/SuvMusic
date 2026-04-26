@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -70,7 +70,7 @@ fun ArtistScreen(
     onArtistIdClick: (String) -> Unit = {},
     onPlaylistClick: (Playlist) -> Unit,
     onStartRadio: (List<Song>) -> Unit,
-    viewModel: ArtistViewModel = hiltViewModel()
+    viewModel: ArtistViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberLazyListState()

@@ -11,4 +11,6 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.sqldelight) apply false
+    // Phase 2 — AGP 9+ KMP-aware Android library plugin.
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 }

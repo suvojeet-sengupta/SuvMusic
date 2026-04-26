@@ -11,7 +11,6 @@ import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +35,6 @@ data class ArtistUiState(
     val currentArtistCredits: List<ArtistCreditInfo> = emptyList()
 )
 
-@HiltViewModel
 class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,

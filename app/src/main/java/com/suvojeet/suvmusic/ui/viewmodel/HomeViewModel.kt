@@ -16,7 +16,6 @@ import com.suvojeet.suvmusic.lastfm.RecommendedArtist
 import com.suvojeet.suvmusic.lastfm.RecommendedTrack
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,7 +69,6 @@ data class HomeUiState(
     val homeSectionsVisibility: Set<String> = SessionManager.DEFAULT_HOME_SECTIONS
 )
 
-@HiltViewModel
 class HomeViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,

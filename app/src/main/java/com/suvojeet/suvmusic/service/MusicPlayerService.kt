@@ -1559,7 +1559,8 @@ class MusicPlayerService : MediaLibraryService() {
         cachedBrowseSongs[song.id] = song
 
         val artworkUri = if (!song.thumbnailUrl.isNullOrEmpty()) Uri.parse(song.thumbnailUrl) else null
-        val contentUri = song.localUri ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else null
+        val contentUri = song.localUri?.let { Uri.parse(it) }
+            ?: if (song.streamUrl != null) Uri.parse(song.streamUrl) else null
         val metadata = MediaMetadata.Builder()
             .setTitle(song.title)
             .setDisplayTitle(song.title)

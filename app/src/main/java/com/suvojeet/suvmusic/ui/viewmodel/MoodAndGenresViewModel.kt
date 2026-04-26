@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.BrowseCategory
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +21,6 @@ data class MoodAndGenresUiState(
     val selectedCategoryTitle: String = ""
 )
 
-@HiltViewModel
 class MoodAndGenresViewModel @Inject constructor(
     private val repository: YouTubeRepository
 ) : ViewModel() {

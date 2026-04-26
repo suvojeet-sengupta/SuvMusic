@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -40,7 +40,7 @@ fun ArtistDiscographyScreen(
     type: String,
     onBackClick: () -> Unit,
     onAlbumClick: (Album) -> Unit,
-    viewModel: ArtistViewModel = hiltViewModel()
+    viewModel: ArtistViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()

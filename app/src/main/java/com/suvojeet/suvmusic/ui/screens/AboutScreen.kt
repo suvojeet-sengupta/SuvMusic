@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.ui.screens.about.AboutDescriptionSection
 import com.suvojeet.suvmusic.ui.screens.about.AboutDeveloperSection
 import com.suvojeet.suvmusic.ui.screens.about.AboutFeaturesSection
@@ -43,7 +43,7 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 fun AboutScreen(
     onBack: () -> Unit,
     onHowItWorksClick: () -> Unit = {},
-    @Suppress("UNUSED_PARAMETER") viewModel: AboutViewModel = hiltViewModel()
+    @Suppress("UNUSED_PARAMETER") viewModel: AboutViewModel = koinViewModel()
 ) {
     val uriHandler = LocalUriHandler.current
 

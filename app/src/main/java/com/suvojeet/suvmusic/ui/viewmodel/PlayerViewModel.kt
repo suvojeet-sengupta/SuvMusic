@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.core.model.fromLocal
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.data.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
@@ -33,7 +34,6 @@ import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.recommendation.SmartQueueManager
 import com.suvojeet.suvmusic.service.DownloadService
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,7 +55,6 @@ import javax.inject.Inject
 
 import com.suvojeet.suvmusic.discord.DiscordManager
 
-@HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository,
@@ -1094,7 +1093,7 @@ class PlayerViewModel @Inject constructor(
                 // First chunk ready - start playback from temp file
                 val tempSong = song.copy(
                     source = SongSource.DOWNLOADED,
-                    localUri = tempUri
+                    localUri = tempUri.toString()
                 )
                 playSong(tempSong)
             }

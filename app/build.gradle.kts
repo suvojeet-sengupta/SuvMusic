@@ -205,10 +205,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // Retrofit
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    
+    // Retrofit removed in KMP phase 3a — last consumer (SponsorBlockRepository)
+    // moved to Ktor. Drop converter-gson too.
     // Image Loading
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
@@ -217,6 +215,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // Koin DI (Phase 1 of KMP migration — coexists with Hilt during the swap)
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose)
+    implementation(libs.koin.compose.viewmodel)
     
     // DataStore
     implementation(libs.androidx.datastore.preferences)
@@ -273,6 +277,7 @@ dependencies {
     implementation(project(":updater"))
     implementation(project(":core:data"))
     implementation(project(":core:domain"))
+    implementation(project(":core:db"))
     implementation(project(":core:ui"))
     implementation(project(":scrobbler"))
     implementation(project(":lyric-simpmusic"))
