@@ -94,6 +94,7 @@ fun App(
 
     var selectedTab by remember { mutableStateOf(Tab.Home) }
     var playerExpanded by remember { mutableStateOf(false) }
+    var searchSeedQuery by remember { mutableStateOf("") }
 
     SuvMusicTheme {
         if (playerExpanded) {
@@ -123,10 +124,17 @@ fun App(
                             when (selectedTab) {
                                 Tab.Home -> HomeTab(
                                     appVersion = appVersion,
+                                    player = musicPlayer,
                                     onPickFile = {
                                         val path = onPickAudioFile() ?: return@HomeTab
                                         musicPlayer.setQueue(listOf(audioFileToSong(path)))
                                     },
+                                    onGoToSearch = { selectedTab = Tab.Search },
+                                    onSearchQuery = { q ->
+                                        searchSeedQuery = q
+                                        selectedTab = Tab.Search
+                                    },
+                                    onExpandPlayer = { playerExpanded = true },
                                 )
                                 Tab.Search -> SearchTab(
                                     onSearch = onSearchYouTube,
@@ -134,6 +142,7 @@ fun App(
                                         val song = onResolveStreamSong?.invoke(result) ?: return@SearchTab
                                         musicPlayer.setQueue(listOf(song))
                                     },
+                                    seedQuery = searchSeedQuery,
                                 )
                                 Tab.Library -> LibraryTab(
                                     onPickFile = {

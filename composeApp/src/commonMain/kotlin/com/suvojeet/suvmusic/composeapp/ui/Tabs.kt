@@ -48,50 +48,20 @@ import kotlinx.coroutines.launch
  * one at a time as Phase 5 progresses.
  */
 
-// ----------------------------------------------------------------------
-// Home tab — welcome + quick actions.
-// ----------------------------------------------------------------------
-
-@Composable
-fun HomeTab(
-    appVersion: String,
-    onPickFile: () -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(
-            text = "Welcome to SuvMusic",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Version $appVersion · Multiplatform build",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "Quick start: pick a local audio file, or use the Search tab to find something on YouTube.",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.widthIn(max = 600.dp),
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Button(onClick = onPickFile) {
-            Text("Play a local file")
-        }
-    }
-}
+// HomeTab moved to its own file (HomeTab.kt) — richer layout with
+// greeting, quick actions, trending shortcuts, and now-playing card.
 
 // ----------------------------------------------------------------------
 // Search tab — YouTube search via NewPipe (actual hookup is in Main.kt).
+// State is hoisted to App so external taps (trending chips on Home) can
+// trigger searches.
 // ----------------------------------------------------------------------
 
 @Composable
 fun SearchTab(
     onSearch: (suspend (String) -> List<RemoteSearchResult>)?,
     onPlayResult: suspend (RemoteSearchResult) -> Unit,
+    seedQuery: String = "",
 ) {
     if (onSearch == null) {
         Text(
@@ -101,10 +71,28 @@ fun SearchTab(
         return
     }
     val scope = rememberCoroutineScope()
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(seedQuery) }
     var results by remember { mutableStateOf<List<RemoteSearchResult>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Auto-trigger search when seedQuery changes (Home tab's trending
+    // chip taps switch to Search tab with this populated).
+    androidx.compose.runtime.LaunchedEffect(seedQuery) {
+        if (seedQuery.isNotBlank()) {
+            query = seedQuery
+            errorMessage = null
+            isSearching = true
+            try {
+                results = onSearch(seedQuery)
+            } catch (t: Throwable) {
+                errorMessage = t.message ?: "Search failed"
+                results = emptyList()
+            } finally {
+                isSearching = false
+            }
+        }
+    }
 
     Text(
         text = "Search YouTube",
