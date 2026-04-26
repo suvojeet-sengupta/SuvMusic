@@ -1,0 +1,3 @@
+[submodule "app/NewPipeExtractor"]
+	path = app/NewPipeExtractor
+	url = https://github.com/TeamNewPipe/NewPipeExtractor.git
