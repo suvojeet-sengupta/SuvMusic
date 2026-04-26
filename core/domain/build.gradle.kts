@@ -28,11 +28,18 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
-        // androidMain + desktopMain land here once Phase 4.0 introduces
-        // the first expect/actual platform code (MusicPlayer scaffold).
-        // Empty for now — the KMP plugin auto-creates them and they
-        // inherit commonMain dependencies.
         val androidMain by getting
-        val desktopMain by getting
+        val desktopMain by getting {
+            dependencies {
+                // VLCJ — Phase 4.1 Desktop audio backend. Uses LibVLC native
+                // libraries that the user must have installed (typically via
+                // `winget install VideoLAN.VLC` on Windows, or VLC.app on
+                // macOS, or system package manager on Linux). LibVLC bundling
+                // into the MSI is deferred — VLCJ's NativeDiscovery handles
+                // typical install paths and we fall back to a logged warning
+                // (no crash) when the lib isn't found.
+                implementation(libs.vlcj)
+            }
+        }
     }
 }
