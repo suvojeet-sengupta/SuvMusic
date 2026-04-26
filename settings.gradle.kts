@@ -33,3 +33,6 @@ include(":feature:player")
 include(":feature:library")
 include(":feature:search")
 include(":feature:settings")
+// KMP migration (Phase 0): parallel desktop/multiplatform module. Does not yet
+// replace :app — Android APK still builds from :app unchanged.
+include(":composeApp")

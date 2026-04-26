@@ -1,0 +1,77 @@
+name: Build Windows Desktop
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'composeApp/**'
+      - 'gradle/libs.versions.toml'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - '.github/workflows/windows-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle wrapper
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-wrapper-
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/daemon
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build Windows MSI
+        run: ./gradlew :composeApp:packageReleaseMsi --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: -Dorg.gradle.workers.max=2
+
+      - name: Locate MSI
+        id: locate
+        run: |
+          MSI_PATH=$(find composeApp/build/compose/binaries/main-release/msi -name "*.msi" | head -n 1)
+          if [ -z "$MSI_PATH" ]; then
+            echo "No MSI produced — listing build dir for diagnostics:" >&2
+            find composeApp/build/compose -type f >&2 || true
+            exit 1
+          fi
+          echo "MSI_PATH=$MSI_PATH" >> $GITHUB_OUTPUT
+          echo "MSI_NAME=$(basename "$MSI_PATH")" >> $GITHUB_OUTPUT
+
+      - name: Upload MSI Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SuvMusic-Windows-MSI-${{ github.run_number }}
+          path: ${{ steps.locate.outputs.MSI_PATH }}
