@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.LocalDensity
@@ -396,8 +395,8 @@ fun SuvMusicApp(
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
-    val playerViewModel: PlayerViewModel = hiltViewModel()
-    val mainViewModel: MainViewModel = hiltViewModel()
+    val playerViewModel: PlayerViewModel = koinViewModel()
+    val mainViewModel: MainViewModel = koinViewModel()
     val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
     
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()

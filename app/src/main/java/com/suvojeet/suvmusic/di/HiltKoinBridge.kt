@@ -27,10 +27,16 @@ import com.suvojeet.suvmusic.data.BackupManager
 import com.suvojeet.suvmusic.lastfm.LastFmClient
 import com.suvojeet.suvmusic.lastfm.LastFmConfig
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
+import com.suvojeet.suvmusic.data.repository.SponsorBlockRepository
+import com.suvojeet.suvmusic.discord.DiscordManager
 import com.suvojeet.suvmusic.player.AudioARManager
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.player.SleepTimerManager
+import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import com.suvojeet.suvmusic.recommendation.SmartQueueManager
 import com.suvojeet.suvmusic.recommendation.WrappedGenerator
+import com.suvojeet.suvmusic.updater.UpdateDownloader
 import com.suvojeet.suvmusic.shareplay.ListenTogetherClient
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.updater.UpdateChecker
@@ -125,6 +131,14 @@ interface HiltKoinBridgeEntryPoint {
     fun aiEqualizerService(): AIEqualizerService
     fun wrappedGenerator(): WrappedGenerator
     fun backupManager(): BackupManager
+
+    // chunk 1c.4 — PlayerViewModel + UpdateViewModel transitive @Inject classes
+    fun sleepTimerManager(): SleepTimerManager
+    fun smartQueueManager(): SmartQueueManager
+    fun sponsorBlockRepository(): SponsorBlockRepository
+    fun discordManager(): DiscordManager
+    fun spatialAudioProcessor(): SpatialAudioProcessor
+    fun updateDownloader(): UpdateDownloader
 }
 
 /** One-call accessor used by Koin module blocks. Resolved against the application Context. */

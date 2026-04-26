@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import androidx.media3.common.Player
 import com.suvojeet.suvmusic.ui.screens.SponsorBlockSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.ListenTogetherScreen
-import androidx.hilt.navigation.compose.hiltViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.navigation.toRoute
@@ -397,7 +396,7 @@ fun NavGraph(
             com.suvojeet.suvmusic.updater.UpdaterScreen(
                 currentVersionCode = com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
                 currentVersionName = com.suvojeet.suvmusic.BuildConfig.VERSION_NAME,
-                viewModel = hiltViewModel(),
+                viewModel = koinViewModel(),
                 onBackClick = { navController.popBackStack() }
             )
         }

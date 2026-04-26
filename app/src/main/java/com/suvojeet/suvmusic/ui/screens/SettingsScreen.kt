@@ -85,7 +85,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
@@ -103,7 +102,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
-    updateViewModel: UpdateViewModel = hiltViewModel(),
+    updateViewModel: UpdateViewModel = koinViewModel(),
     onLoginClick: () -> Unit = {},
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},

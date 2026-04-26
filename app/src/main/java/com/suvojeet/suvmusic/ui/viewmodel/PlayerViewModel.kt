@@ -33,7 +33,6 @@ import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.recommendation.SmartQueueManager
 import com.suvojeet.suvmusic.service.DownloadService
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,7 +54,6 @@ import javax.inject.Inject
 
 import com.suvojeet.suvmusic.discord.DiscordManager
 
-@HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository,
