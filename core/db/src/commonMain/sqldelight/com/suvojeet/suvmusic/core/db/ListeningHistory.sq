@@ -1,0 +1,29 @@
+-- Mirrors @Entity ListeningHistory in :core:data (Room).
+-- Lives in a standalone KMP-only module to avoid the variant-attribute
+-- conflicts that caused 3b.1 to break Android consumers — :core:db has no
+-- Hilt/Room consumers and is intended for KMP-friendly drivers only.
+-- Queries land in chunk 3b.2 alongside the migration coroutine.
+
+CREATE TABLE listening_history (
+    songId TEXT NOT NULL PRIMARY KEY,
+    songTitle TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    thumbnailUrl TEXT,
+
+    album TEXT NOT NULL DEFAULT '',
+    duration INTEGER NOT NULL DEFAULT 0,
+    localUri TEXT,
+
+    playCount INTEGER NOT NULL DEFAULT 0,
+    totalDurationMs INTEGER NOT NULL DEFAULT 0,
+    lastPlayed INTEGER NOT NULL,
+    firstPlayed INTEGER NOT NULL,
+
+    skipCount INTEGER NOT NULL DEFAULT 0,
+    completionRate REAL NOT NULL DEFAULT 0,
+    isLiked INTEGER NOT NULL DEFAULT 0,
+
+    artistId TEXT,
+    source TEXT NOT NULL DEFAULT 'YOUTUBE',
+    releaseDate TEXT
+);
