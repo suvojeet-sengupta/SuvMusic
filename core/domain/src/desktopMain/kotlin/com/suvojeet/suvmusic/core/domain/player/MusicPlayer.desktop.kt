@@ -35,6 +35,12 @@ import kotlin.random.Random
 actual class MusicPlayer {
     // --- Public state flows --------------------------------------------------
 
+    /**
+     * Set in the init block once VLCJ wiring completes. Stays false on
+     * machines without VLC media player installed (LibVLC missing).
+     */
+    actual val isAvailable: Boolean
+
     private val _currentSong = MutableStateFlow<Song?>(null)
     actual val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -122,6 +128,10 @@ actual class MusicPlayer {
     }
 
     private val isVlcReady: Boolean get() = mediaPlayer != null
+
+    init {
+        isAvailable = isVlcReady
+    }
 
     // --- Public API ---------------------------------------------------------
 

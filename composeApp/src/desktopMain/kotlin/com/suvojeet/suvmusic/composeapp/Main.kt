@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.suvojeet.suvmusic.composeapp.newpipe.YouTubeSearch
+import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
@@ -23,8 +25,34 @@ fun main() = application {
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
             onPickAudioFile = ::pickAudioFile,
+            onSearchYouTube = ::searchYouTube,
+            onResolveStreamSong = ::resolveStreamSong,
         )
     }
+}
+
+/** Adapter from NewPipe's SearchResult to the commonMain RemoteSearchResult. */
+private suspend fun searchYouTube(query: String): List<RemoteSearchResult> {
+    return YouTubeSearch.search(query).map { result ->
+        RemoteSearchResult(
+            title = result.title,
+            uploader = result.uploader,
+            durationSeconds = result.durationSeconds,
+            url = result.url,
+            thumbnailUrl = result.thumbnailUrl,
+        )
+    }
+}
+
+private suspend fun resolveStreamSong(result: RemoteSearchResult): Song? {
+    val nativeResult = com.suvojeet.suvmusic.composeapp.newpipe.SearchResult(
+        title = result.title,
+        uploader = result.uploader,
+        durationSeconds = result.durationSeconds,
+        url = result.url,
+        thumbnailUrl = result.thumbnailUrl,
+    )
+    return YouTubeSearch.resolveStreamSong(nativeResult)
 }
 
 /**
