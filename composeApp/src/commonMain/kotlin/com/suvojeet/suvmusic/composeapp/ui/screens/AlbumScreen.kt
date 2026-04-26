@@ -180,9 +180,9 @@ private fun AlbumHero(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (!album.year.isNullOrBlank()) {
+                    album.year?.takeIf { it.isNotBlank() }?.let { year ->
                         Text(
-                            text = album.year,
+                            text = year,
                             style = MaterialTheme.typography.bodyMedium,
                             color = dominantColors.onBackground.copy(alpha = 0.6f),
                         )

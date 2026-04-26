@@ -44,9 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * Home tab — visual mirror of app/.../ui/screens/HomeScreen.kt's section
@@ -341,7 +342,12 @@ private fun UsageTip(text: String) {
     )
 }
 
+@OptIn(ExperimentalTime::class)
 private fun greetingForCurrentTime(): String {
+    // kotlinx-datetime 0.7+ deprecates `kotlinx.datetime.Clock` in favour
+    // of `kotlin.time.Clock` from the standard library (still
+    // ExperimentalTime). The Instant returned interoperates with
+    // kotlinx-datetime's `toLocalDateTime` extension.
     val hour = Clock.System.now()
         .toLocalDateTime(TimeZone.currentSystemDefault())
         .hour

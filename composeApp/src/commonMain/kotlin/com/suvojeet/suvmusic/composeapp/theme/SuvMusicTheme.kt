@@ -5,8 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -31,7 +30,6 @@ import com.suvojeet.suvmusic.composeapp.image.DominantColors
  * Everything else — colour tokens, animated dominant-art transitions,
  * pure-black AMOLED switch — is identical to the Android implementation.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SuvMusicTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -113,7 +111,12 @@ fun SuvMusicTheme(
 
     ApplySystemBars(darkTheme = darkTheme)
 
-    MaterialExpressiveTheme(
+    // NOTE: Android :app uses MaterialExpressiveTheme (M3E) here, but
+    // that symbol is internal in CMP 1.10's material3 artifact. Falling
+    // back to plain MaterialTheme — visually identical for our use
+    // (M3E mostly adds motion-scheme + morph-shape support, not colour
+    // semantics). Restore MaterialExpressiveTheme when CMP exposes it.
+    MaterialTheme(
         colorScheme = colorScheme,
         typography = appTypography(),
         shapes = Shapes,

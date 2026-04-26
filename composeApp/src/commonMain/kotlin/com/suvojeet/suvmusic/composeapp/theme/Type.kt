@@ -6,36 +6,28 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.suvojeet.suvmusic.composeapp.generated.resources.Res
-import com.suvojeet.suvmusic.composeapp.generated.resources.outfit
-import org.jetbrains.compose.resources.Font
 
 /**
- * Typography — Material 3 Expressive scale powered by Outfit (variable font).
- * Verbatim port of `app/.../ui/theme/Type.kt`, but reading the font through
- * Compose Multiplatform Resources so Android and Desktop both pull from a
- * single `composeResources/font/outfit.ttf` asset.
+ * Typography — Material 3 Expressive scale powered by the platform's
+ * Outfit font family. Values mirror `app/.../ui/theme/Type.kt`.
  *
- * The variable font carries weights 400–800 in one file. We bind logical
- * weights via [FontWeight] in each [Font] declaration; the system rasteriser
- * picks the correct axis position when it loads the glyphs.
- */
-@Composable
-private fun outfitFamily(): FontFamily = FontFamily(
-    Font(Res.font.outfit, weight = FontWeight.Normal),
-    Font(Res.font.outfit, weight = FontWeight.Medium),
-    Font(Res.font.outfit, weight = FontWeight.SemiBold),
-    Font(Res.font.outfit, weight = FontWeight.Bold),
-    Font(Res.font.outfit, weight = FontWeight.ExtraBold),
-)
-
-/**
- * Build the SuvMusic [Typography] inside a Composable scope (needed because
- * [outfitFamily] reads from CMP Resources). Called once by [SuvMusicTheme].
+ * Font loading is delegated to [outfitFontFamily], an expect/actual hook
+ * so each platform can decide where the font comes from. The Android
+ * actual will pull Outfit from `:app`'s R.font.outfit resource (or, in a
+ * follow-up, from `composeApp/src/androidMain/res/font/outfit.ttf` if we
+ * mirror the asset). The Desktop actual currently returns
+ * [FontFamily.Default] — Skiko's default sans serif. Outfit on Desktop
+ * lands when we wire CMP Resources properly (see notes in [Type] below).
+ *
+ * Earlier iteration tried CMP's `Res.font.outfit` accessor for a single
+ * shared asset, but the generated `Res` class wasn't reachable from
+ * commonMain in CMP 1.10 with our `androidLibrary {}` namespace setup.
+ * Kept the asset at `composeApp/src/commonMain/composeResources/font/
+ * outfit.ttf` — it'll snap into place once the resource hook works.
  */
 @Composable
 fun appTypography(): Typography {
-    val outfit = outfitFamily()
+    val outfit = outfitFontFamily()
     return Typography(
         displayLarge = TextStyle(
             fontFamily = outfit,
@@ -144,3 +136,10 @@ fun appTypography(): Typography {
         ),
     )
 }
+
+/**
+ * Platform-specific Outfit font family. Swap to a real Outfit-loading
+ * implementation per platform once the resource path is finalised.
+ */
+@Composable
+expect fun outfitFontFamily(): FontFamily
