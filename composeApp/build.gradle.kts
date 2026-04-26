@@ -37,6 +37,11 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(libs.kotlinx.coroutines.core)
+                // First KMP module dependency — proves the wiring end-to-end.
+                // Only the commonMain leaf model classes (5 files) are usable
+                // here; Song/Album/Artist/Playlist live in :core:model's
+                // androidMain until chunk 2.3.
+                implementation(project(":core:model"))
             }
         }
 
