@@ -3,12 +3,11 @@ package com.suvojeet.suvmusic.core.domain.usecase
 import com.suvojeet.suvmusic.core.domain.repository.PlaybackRepository
 import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.flow.Flow
-import javax.inject.Inject
 
 /**
  * Use case for resolving a streamable URL for a song.
  */
-class ResolveStreamUrlUseCase @Inject constructor(
+class ResolveStreamUrlUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : UseCase<Song, String?> {
     override suspend operator fun invoke(song: Song): String? {
@@ -19,7 +18,7 @@ class ResolveStreamUrlUseCase @Inject constructor(
 /**
  * Use case for retrieving lyrics for a song.
  */
-class GetLyricsUseCase @Inject constructor(
+class GetLyricsUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : UseCase<Song, String?> {
     override suspend operator fun invoke(song: Song): String? {
@@ -30,7 +29,7 @@ class GetLyricsUseCase @Inject constructor(
 /**
  * Use case for retrieving recently played songs.
  */
-class GetRecentlyPlayedUseCase @Inject constructor(
+class GetRecentlyPlayedUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : ParameterlessUseCase<Flow<List<Song>>> {
     override suspend operator fun invoke(): Flow<List<Song>> {
@@ -41,7 +40,7 @@ class GetRecentlyPlayedUseCase @Inject constructor(
 /**
  * Use case for retrieving recommended songs.
  */
-class GetRecommendedSongsUseCase @Inject constructor(
+class GetRecommendedSongsUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : ParameterlessUseCase<List<Song>> {
     override suspend operator fun invoke(): List<Song> {
@@ -52,7 +51,7 @@ class GetRecommendedSongsUseCase @Inject constructor(
 /**
  * Use case for retrieving songs in a queue.
  */
-class GetQueueSongsUseCase @Inject constructor(
+class GetQueueSongsUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : UseCase<String, List<Song>> {
     override suspend operator fun invoke(queueId: String): List<Song> {
@@ -63,7 +62,7 @@ class GetQueueSongsUseCase @Inject constructor(
 /**
  * Use case for adding songs to the playback queue.
  */
-class AddToQueueUseCase @Inject constructor(
+class AddToQueueUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : ConsumerUseCase<List<Song>> {
     override suspend operator fun invoke(songs: List<Song>) {
@@ -74,7 +73,7 @@ class AddToQueueUseCase @Inject constructor(
 /**
  * Use case for marking a song as played (for listening history).
  */
-class MarkSongAsPlayedUseCase @Inject constructor(
+class MarkSongAsPlayedUseCase constructor(
     private val playbackRepository: PlaybackRepository
 ) : ConsumerUseCase<Song> {
     override suspend operator fun invoke(song: Song) {
