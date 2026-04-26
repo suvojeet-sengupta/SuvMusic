@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.core.model.Song
@@ -50,7 +50,7 @@ fun SongInfoSheet(
     audioBitrate: Int? = null,
     dominantColors: DominantColors? = null,
     isDarkTheme: Boolean = isSystemInDarkTheme(),
-    viewModel: SongInfoViewModel = hiltViewModel()
+    viewModel: SongInfoViewModel = koinViewModel()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
