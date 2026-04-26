@@ -63,13 +63,13 @@ fun RingtoneTrimmerDialog(
     LaunchedEffect(song.id, isVisible) {
         if (isVisible) {
             isLoading = true
-            val uri = if (song.localUri != null) {
-                song.localUri
+            val uri: android.net.Uri? = if (song.localUri != null) {
+                android.net.Uri.parse(song.localUri)
             } else {
                 val resolvedUrl = onResolveStreamUrl(song.id)
                 resolvedUrl?.let { android.net.Uri.parse(it) }
             }
-            
+
             if (uri != null) {
                 val mediaItem = MediaItem.Builder()
                     .setUri(uri)

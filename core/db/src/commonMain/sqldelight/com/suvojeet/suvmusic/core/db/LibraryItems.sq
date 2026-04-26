@@ -1,0 +1,108 @@
+-- Mirrors @Entity LibraryEntity (table "library_items") and @Entity
+-- PlaylistSongEntity (table "playlist_songs") in :core:data Room. Combined
+-- because the original LibraryDao mixes queries across both.
+
+CREATE TABLE library_items (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    subtitle TEXT,
+    thumbnailUrl TEXT,
+    type TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE playlist_songs (
+    playlistId TEXT NOT NULL,
+    songId TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    album TEXT,
+    thumbnailUrl TEXT,
+    duration INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    localUri TEXT,
+    releaseDate TEXT,
+    addedAt INTEGER NOT NULL DEFAULT 0,
+    "order" INTEGER NOT NULL,
+    PRIMARY KEY (playlistId, songId)
+);
+
+CREATE INDEX playlist_songs_playlistId ON playlist_songs(playlistId);
+
+-- library_items reads ----------------------------------------------------
+
+selectItemById:
+SELECT * FROM library_items WHERE id = ?;
+
+selectAllItems:
+SELECT * FROM library_items ORDER BY timestamp DESC;
+
+selectItemsByType:
+SELECT * FROM library_items
+WHERE type = ?
+ORDER BY timestamp DESC;
+
+selectItemsByTypeWithSongCount:
+SELECT
+    library_items.*,
+    (SELECT COUNT(*) FROM playlist_songs WHERE playlistId = library_items.id) AS songCount
+FROM library_items
+WHERE type = ?
+ORDER BY timestamp DESC;
+
+isItemSaved:
+SELECT EXISTS(SELECT 1 FROM library_items WHERE id = ?);
+
+-- library_items writes ---------------------------------------------------
+
+insertOrReplaceItem:
+INSERT OR REPLACE INTO library_items (id, title, subtitle, thumbnailUrl, type, timestamp)
+VALUES (?, ?, ?, ?, ?, ?);
+
+updateItemThumbnail:
+UPDATE library_items SET thumbnailUrl = ? WHERE id = ? AND type = 'PLAYLIST';
+
+updateItemName:
+UPDATE library_items SET title = ? WHERE id = ? AND type = 'PLAYLIST';
+
+deleteItemById:
+DELETE FROM library_items WHERE id = ?;
+
+deleteAllItems:
+DELETE FROM library_items;
+
+-- playlist_songs reads ---------------------------------------------------
+
+selectAllPlaylistSongs:
+SELECT * FROM playlist_songs;
+
+selectPlaylistSongs:
+SELECT * FROM playlist_songs
+WHERE playlistId = ?
+ORDER BY "order" ASC;
+
+countPlaylistSongs:
+SELECT COUNT(*) FROM playlist_songs WHERE playlistId = ?;
+
+isSongInPlaylist:
+SELECT EXISTS(SELECT 1 FROM playlist_songs WHERE playlistId = ? AND songId = ?);
+
+-- playlist_songs writes --------------------------------------------------
+
+insertOrReplacePlaylistSong:
+INSERT OR REPLACE INTO playlist_songs (
+    playlistId, songId, title, artist, album, thumbnailUrl,
+    duration, source, localUri, releaseDate, addedAt, "order"
+) VALUES (
+    ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?, ?
+);
+
+deletePlaylistSongs:
+DELETE FROM playlist_songs WHERE playlistId = ?;
+
+deleteSongFromPlaylist:
+DELETE FROM playlist_songs WHERE playlistId = ? AND songId = ?;
+
+deleteAllPlaylistSongs:
+DELETE FROM playlist_songs;

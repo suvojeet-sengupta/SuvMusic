@@ -4,18 +4,17 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.android.library)
+    // AGP 9+ KMP-aware Android library plugin (replaces com.android.library +
+    // androidTarget(); see :core:model/build.gradle.kts for context).
+    alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
 kotlin {
-    androidTarget {
-        compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-                }
-            }
-        }
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.composeapp"
+        compileSdk = 37
+        minSdk = 26
+        withHostTestBuilder { }
     }
 
     jvm("desktop") {
@@ -34,9 +33,25 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.datetime)
+                // Coil 3 — KMP image loading. Network engine is Ktor so
+                // the same AsyncImage call works on Android + Desktop.
+                // ktor-client-cio is the JVM HTTP engine Coil uses to
+                // actually fetch URLs.
+                implementation(libs.coil.compose)
+                implementation(libs.coil.network.ktor3)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
+                implementation(project(":core:model"))
+                // :core:domain provides the MusicPlayer expect class
+                // (Phase 4) — backed by VLCJ on Desktop, by a stub on
+                // Android until Phase 4.2 wires the existing Media3
+                // player. Brings in kotlinx-coroutines transitively.
+                implementation(project(":core:domain"))
             }
         }
 
@@ -50,28 +65,35 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
+                // NewPipe Extractor for YouTube search + stream URL
+                // resolution. Pure JVM library — works on Desktop without
+                // any Android-specific bits. Brings in jsoup + Mozilla
+                // Rhino transitively (~5 MB extra in the MSI).
+                implementation(libs.newpipe.extractor)
             }
         }
-    }
-}
-
-android {
-    namespace = "com.suvojeet.suvmusic.composeapp"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 
 compose.desktop {
     application {
         mainClass = "com.suvojeet.suvmusic.composeapp.MainKt"
+
+        // ProGuard disabled for the desktop release. Reasons:
+        // 1. jsoup optionally references com.google.re2j (not on classpath)
+        //    — ProGuard treats this as a fatal unresolved-reference error.
+        // 2. VLCJ's JNA bindings, Mozilla Rhino's JS interop, and NewPipe
+        //    Extractor all rely on runtime reflection that ProGuard would
+        //    need extensive -keep rules to preserve. Wrong rule = silent
+        //    runtime crash deep inside playback or extraction.
+        // 3. The unminified MSI is ~80 MB vs ~50 MB minified — acceptable
+        //    cost given the alternative is hours of ProGuard rule tuning
+        //    for every transitive dep.
+        // Re-enable in a future chunk if MSI size becomes a real problem;
+        // would need a curated -dontwarn + -keep rules file.
+        buildTypes.release.proguard {
+            isEnabled.set(false)
+        }
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)

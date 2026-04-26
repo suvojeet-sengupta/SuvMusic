@@ -47,7 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.ai.AIEqualizerService
 import com.suvojeet.suvmusic.ai.AIProvider
 import com.suvojeet.suvmusic.ui.components.BetaBadge
@@ -67,7 +67,7 @@ fun AIEqualizerScreen(
     onBackClick: () -> Unit,
     onSettingsClick: () -> Unit,
     aiService: AIEqualizerService,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val logs by aiService.logs.collectAsState()

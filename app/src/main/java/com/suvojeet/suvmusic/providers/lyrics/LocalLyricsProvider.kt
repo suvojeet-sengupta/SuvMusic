@@ -75,7 +75,7 @@ class LocalLyricsProvider @Inject constructor(
 
     private fun getAudioPath(song: Song): String? {
         try {
-            val uri = song.localUri ?: return null
+            val uri = song.localUri?.let { android.net.Uri.parse(it) } ?: return null
             
             if (uri.scheme == "file") {
                 return uri.path

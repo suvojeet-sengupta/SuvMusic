@@ -23,7 +23,6 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.data.MusicSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -151,7 +150,6 @@ data class SettingsUiState(
     val updateChannel: UpdateChannel = UpdateChannel.STABLE
 )
 
-@HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val youtubeRepository: YouTubeRepository,

@@ -22,7 +22,6 @@ import com.suvojeet.suvmusic.service.PlaylistImportService
 import com.suvojeet.suvmusic.util.SpotifyImportHelper
 import com.suvojeet.suvmusic.util.PlaylistImportHelper
 import com.suvojeet.suvmusic.util.PlaylistExportHelper
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,7 +91,6 @@ sealed class ImportState {
     data class Error(val message: String) : ImportState()
 }
 
-@HiltViewModel
 class LibraryViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context,
     private val youTubeRepository: YouTubeRepository,
@@ -602,7 +600,7 @@ class LibraryViewModel @Inject constructor(
                     } catch (e: Exception) { 
                         com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE 
                     },
-                    localUri = history.localUri?.let { android.net.Uri.parse(it) },
+                    localUri = history.localUri,
                     artistId = history.artistId
                 ))
             }

@@ -24,6 +24,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.suvojeet.suvmusic.di.koinAppModules
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
+
 /**
  * Application class for SuvMusic.
  * Annotated with @HiltAndroidApp to enable Hilt dependency injection.
@@ -65,12 +71,49 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun onCreate() {
         super.onCreate()
 
+        // Phase 1a: bring Koin up alongside Hilt. The app still routes all DI
+        // through Hilt; Koin starts with an empty module list and gets populated
+        // slice-by-slice in subsequent phase-1 chunks. Removed in chunk 1d once
+        // Hilt is fully retired.
+        startKoin {
+            androidLogger(if (BuildConfig.DEBUG) Level.INFO else Level.ERROR)
+            androidContext(this@SuvMusicApplication)
+            modules(koinAppModules)
+        }
+
         // Initialize logging early
         applicationScope.launch {
             val enabled = sessionManager.isLoggingEnabled()
             withContext(Dispatchers.Main) {
                 com.suvojeet.suvmusic.util.AppLog.init(this@SuvMusicApplication, enabled)
                 com.suvojeet.suvmusic.util.AppLog.i("SuvMusicApplication") { "App initialization started" }
+            }
+        }
+
+        // Phase 3b.3-A health check: force the SQLDelight database to open
+        // so we surface any driver/schema misconfiguration at app launch
+        // rather than the first time a real consumer queries it. The
+        // `listening_history` count is a no-op SELECT that exercises the
+        // generated query class end-to-end. Empty DB on a fresh install
+        // means count = 0; that's the success case.
+        //
+        // Wrapped in try/catch so an SQLDelight setup bug can't take the
+        // whole app down — we just log and move on.
+        applicationScope.launch {
+            try {
+                val db: com.suvojeet.suvmusic.core.db.SuvMusicDatabase =
+                    org.koin.java.KoinJavaComponent.getKoin().get()
+                val count = db.listeningHistoryQueries.countAll().executeAsOne()
+                android.util.Log.i(
+                    "SuvMusicApplication",
+                    "SQLDelight DB opened OK; listening_history rows = $count",
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e(
+                    "SuvMusicApplication",
+                    "SQLDelight DB health check failed",
+                    t,
+                )
             }
         }
 

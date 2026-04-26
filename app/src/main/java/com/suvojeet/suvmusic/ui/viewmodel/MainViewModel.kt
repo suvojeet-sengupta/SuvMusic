@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,11 +35,10 @@ data class MainUiState(
     val isReady: Boolean = false
 )
 
-@HiltViewModel
 class MainViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val lastFmRepository: LastFmRepository,
-    private val playerCache: dagger.Lazy<androidx.media3.datasource.cache.Cache>,
+    private val playerCache: () -> androidx.media3.datasource.cache.Cache,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -67,7 +65,7 @@ class MainViewModel @Inject constructor(
                 val intervalMillis = intervalDays * 24 * 60 * 60 * 1000L
                 if (System.currentTimeMillis() - lastCleared > intervalMillis) {
                     try {
-                        val cache = playerCache.get()
+                        val cache = playerCache()
                         cache.keys.forEach { key ->
                             cache.removeResource(key)
                         }

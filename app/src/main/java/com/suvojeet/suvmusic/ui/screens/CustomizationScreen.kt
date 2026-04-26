@@ -39,7 +39,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.SessionManager
@@ -65,8 +65,8 @@ import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomizationScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = koinViewModel(),
+    playerViewModel: PlayerViewModel = koinViewModel(),
     onBack: () -> Unit,
     onSeekbarStyleClick: () -> Unit = {},
     onArtworkShapeClick: () -> Unit = {},

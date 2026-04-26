@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +20,6 @@ data class ExploreUiState(
     val error: String? = null
 )
 
-@HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     savedStateHandle: SavedStateHandle

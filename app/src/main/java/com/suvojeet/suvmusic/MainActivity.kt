@@ -45,7 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.WindowInsets
@@ -78,7 +78,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.MainViewModel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import com.suvojeet.suvmusic.updater.UpdateDialog
 import com.suvojeet.suvmusic.updater.UpdateState
-import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import com.suvojeet.suvmusic.util.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.material.icons.filled.Lock
@@ -106,8 +106,8 @@ import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     
-    private val mainViewModel: MainViewModel by viewModels()
-    private val updateViewModel: UpdateViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModel()
+    private val updateViewModel: UpdateViewModel by viewModel()
     
     @Inject
     lateinit var networkMonitor: NetworkMonitor
@@ -395,9 +395,9 @@ fun SuvMusicApp(
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
-    val playerViewModel: PlayerViewModel = hiltViewModel()
-    val mainViewModel: MainViewModel = hiltViewModel()
-    val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
+    val playerViewModel: PlayerViewModel = koinViewModel()
+    val mainViewModel: MainViewModel = koinViewModel()
+    val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
     
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val playlistManagementUiState by playlistManagementViewModel.uiState.collectAsStateWithLifecycle()
@@ -407,8 +407,8 @@ fun SuvMusicApp(
     val scope = androidx.compose.runtime.rememberCoroutineScope()    
     
     // Handle events from other viewmodels for global sheets
-    val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = hiltViewModel()
-    val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = hiltViewModel()
+    val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = koinViewModel()
+    val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = koinViewModel()
 
     LaunchedEffect(Unit) {
         homeViewModel.events.collect { event ->
