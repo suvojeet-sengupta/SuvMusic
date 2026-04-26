@@ -1,0 +1,31 @@
+-- Mirrors @Entity LibraryEntity (table "library_items") and @Entity
+-- PlaylistSongEntity (table "playlist_songs") in :core:data Room. Combined
+-- because the original LibraryDao mixed queries across both.
+-- Queries land in chunk 3b.2.
+
+CREATE TABLE library_items (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    subtitle TEXT,
+    thumbnailUrl TEXT,
+    type TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE playlist_songs (
+    playlistId TEXT NOT NULL,
+    songId TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    album TEXT,
+    thumbnailUrl TEXT,
+    duration INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    localUri TEXT,
+    releaseDate TEXT,
+    addedAt INTEGER NOT NULL DEFAULT 0,
+    "order" INTEGER NOT NULL,
+    PRIMARY KEY (playlistId, songId)
+);
+
+CREATE INDEX playlist_songs_playlistId ON playlist_songs(playlistId);
