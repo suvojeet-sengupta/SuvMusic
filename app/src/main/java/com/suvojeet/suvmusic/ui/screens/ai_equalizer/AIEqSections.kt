@@ -55,7 +55,7 @@ import com.suvojeet.suvmusic.ai.AIPromptHistory
 import com.suvojeet.suvmusic.ui.screens.PromptHistoryItem
 
 @Composable
-internal fun AIEqPromptInput(
+fun AIEqPromptInput(
     prompt: String,
     onPromptChange: (String) -> Unit,
     isProcessing: Boolean,
@@ -93,7 +93,7 @@ internal fun AIEqPromptInput(
 }
 
 @Composable
-internal fun AIEqLogsPanel(
+fun AIEqLogsPanel(
     logs: List<String>,
     autoStatus: String?,
     listState: LazyListState,
@@ -210,7 +210,7 @@ internal fun AIEqLogsPanel(
 }
 
 @Composable
-internal fun AIEqResultActions(
+fun AIEqResultActions(
     onRevert: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -242,7 +242,7 @@ internal fun AIEqResultActions(
 }
 
 @Composable
-internal fun AIEqPromptHistoryDialog(
+fun AIEqPromptHistoryDialog(
     promptHistory: AIPromptHistory,
     onDismiss: () -> Unit,
     onClearAll: () -> Unit,
