@@ -2650,7 +2650,7 @@ class SessionManager @Inject constructor(
                 } catch (e: Exception) { 
                     SongSource.YOUTUBE 
                 },
-                localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
+                localUri = songObj.optString("localUri").takeIf { it.isNotBlank() }
             )
         } catch (e: Exception) {
             null
@@ -2666,7 +2666,7 @@ class SessionManager @Inject constructor(
             put("thumbnailUrl", song.thumbnailUrl ?: "")
             put("duration", song.duration)
             put("source", song.source.name)
-            put("localUri", song.localUri?.toString() ?: "")
+            put("localUri", song.localUri ?: "")
         }
     }
 

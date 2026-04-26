@@ -55,7 +55,7 @@ class ListeningHistoryRepository @Inject constructor(
                 thumbnailUrl = song.thumbnailUrl,
                 album = song.album,
                 duration = song.duration,
-                localUri = song.localUri?.toString(),
+                localUri = song.localUri,
                 releaseDate = song.releaseDate
             )
         } else {
@@ -86,7 +86,7 @@ class ListeningHistoryRepository @Inject constructor(
                 },
                 album = song.album,
                 duration = song.duration,
-                localUri = song.localUri?.toString(),
+                localUri = song.localUri,
                 releaseDate = song.releaseDate
             )
         }

@@ -85,7 +85,7 @@ class RecentsViewModel @Inject constructor(
             } catch (e: Exception) {
                 SongSource.YOUTUBE
             },
-            localUri = this.localUri?.let { android.net.Uri.parse(it) },
+            localUri = this.localUri,
             artistId = this.artistId
         )
         return RecentlyPlayed(song, this.lastPlayed)

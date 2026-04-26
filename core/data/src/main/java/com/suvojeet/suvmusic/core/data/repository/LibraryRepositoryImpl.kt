@@ -51,7 +51,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 thumbnailUrl = song.thumbnailUrl,
                 duration = song.duration,
                 source = song.source.name,
-                localUri = song.localUri?.toString(),
+                localUri = song.localUri,
                 releaseDate = song.releaseDate,
                 addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = index
@@ -72,7 +72,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 thumbnailUrl = song.thumbnailUrl,
                 duration = song.duration,
                 source = song.source.name,
-                localUri = song.localUri?.toString(),
+                localUri = song.localUri,
                 releaseDate = song.releaseDate,
                 addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = startOrder + index
@@ -91,7 +91,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 thumbnailUrl = entity.thumbnailUrl,
                 duration = entity.duration,
                 source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
-                localUri = entity.localUri?.let { android.net.Uri.parse(it) },
+                localUri = entity.localUri,
                 releaseDate = entity.releaseDate,
                 addedAt = entity.addedAt
             )
@@ -109,7 +109,7 @@ class LibraryRepositoryImpl @Inject constructor(
                     thumbnailUrl = entity.thumbnailUrl,
                     duration = entity.duration,
                     source = try { SongSource.valueOf(entity.source) } catch (e: IllegalArgumentException) { SongSource.YOUTUBE },
-                    localUri = entity.localUri?.let { android.net.Uri.parse(it) },
+                    localUri = entity.localUri,
                     releaseDate = entity.releaseDate,
                     addedAt = entity.addedAt
                 )
@@ -145,7 +145,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 thumbnailUrl = song.thumbnailUrl,
                 duration = song.duration,
                 source = song.source.name,
-                localUri = song.localUri?.toString(),
+                localUri = song.localUri,
                 releaseDate = song.releaseDate,
                 addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
                 order = index

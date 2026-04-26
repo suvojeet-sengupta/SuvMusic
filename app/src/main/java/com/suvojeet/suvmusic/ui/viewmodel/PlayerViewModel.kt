@@ -1092,7 +1092,7 @@ class PlayerViewModel @Inject constructor(
                 // First chunk ready - start playback from temp file
                 val tempSong = song.copy(
                     source = SongSource.DOWNLOADED,
-                    localUri = tempUri
+                    localUri = tempUri.toString()
                 )
                 playSong(tempSong)
             }

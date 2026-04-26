@@ -6,9 +6,15 @@ import android.net.Uri
  * Represents a song/track that can be played.
  * Can originate from YouTube, YouTube Music, or local storage.
  *
- * @Immutable annotation removed during KMP phase 2.1: it was a Compose
- * recomposition hint, not a correctness requirement. Re-add in Phase 5
- * when this moves to commonMain alongside Compose Multiplatform runtime.
+ * KMP migration notes:
+ * - @Immutable annotation removed in chunk 2.1: it was a Compose
+ *   recomposition hint, not a correctness requirement. Re-add in Phase 5
+ *   when this moves to commonMain alongside Compose Multiplatform runtime.
+ * - localUri changed from android.net.Uri? to String? in chunk 2.2 so this
+ *   class can move to commonMain in chunk 2.3. Callers that need a Uri
+ *   wrap with `Uri.parse(song.localUri)` at the point of use. The
+ *   `fromLocal()` factory still accepts Uri inputs (Android-only convenience)
+ *   and converts internally with `.toString()`.
  */
 data class Song(
     val id: String,
@@ -19,7 +25,7 @@ data class Song(
     val thumbnailUrl: String?,
     val source: SongSource,
     val streamUrl: String? = null, // For YouTube, this is resolved at playback time
-    val localUri: Uri? = null, // For local files
+    val localUri: String? = null, // Stringified URI for local files (was android.net.Uri?)
     val setVideoId: String? = null, // Unique ID for this song instance in a playlist (for reordering)
     val artistId: String? = null, // Artist browse ID for navigation to artist screen
     val originalSource: SongSource? = null, // Original source before download (for credits display)
@@ -64,9 +70,10 @@ data class Song(
                 releaseDate = releaseDate
             )
         }
-        
+
         /**
-         * Create a Song from local audio file.
+         * Create a Song from local audio file. Accepts platform Uri values for
+         * caller convenience and stringifies them into the data model.
          */
         fun fromLocal(
             id: Long,
@@ -86,11 +93,11 @@ data class Song(
                 duration = duration,
                 thumbnailUrl = albumArtUri?.toString(),
                 source = SongSource.LOCAL,
-                localUri = contentUri,
+                localUri = contentUri.toString(),
                 releaseDate = releaseDate
             )
         }
-        
+
         /**
          * Create a Song from JioSaavn data.
          */

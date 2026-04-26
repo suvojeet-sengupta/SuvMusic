@@ -167,8 +167,12 @@ class DownloadRepository @Inject constructor(
         val title = parts.getOrElse(0) { nameWithoutExt }.trim()
         val artist = parts.getOrElse(1) { "Unknown Artist" }.trim()
 
+        val uriString = uri.toString()
+        val uriPath = uri.path
         val existingSongIndex = currentSongs.indexOfFirst { song ->
-            if (song.localUri == uri || song.localUri?.path == uri.path) return@indexOfFirst true
+            val songLocal = song.localUri
+            if (songLocal == uriString) return@indexOfFirst true
+            if (songLocal != null && Uri.parse(songLocal).path == uriPath) return@indexOfFirst true
             val expectedFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}"
             if (nameWithoutExt == expectedFileName) return@indexOfFirst true
             if (song.title.equals(title, ignoreCase = true) && song.artist.equals(artist, ignoreCase = true)) return@indexOfFirst true
@@ -199,7 +203,7 @@ class DownloadRepository @Inject constructor(
             thumbnailUrl = null,
             source = SongSource.DOWNLOADED,
             streamUrl = null,
-            localUri = uri,
+            localUri = uriString,
             collectionId = collectionName?.let { "folder_$it" },
             collectionName = collectionName,
             customFolderPath = collectionName
@@ -349,7 +353,7 @@ class DownloadRepository @Inject constructor(
                     if (newUri != null) {
                         val index = currentSongs.indexOfFirst { it.id == songId }
                         if (index >= 0) {
-                            currentSongs[index] = song.copy(localUri = newUri)
+                            currentSongs[index] = song.copy(localUri = newUri.toString())
                             migrated = true
                         }
                         oldFile.delete()
@@ -698,7 +702,7 @@ class DownloadRepository @Inject constructor(
             val songs: List<Song> = gson.fromJson(json, type) ?: emptyList()
             
             val validSongs = songs.mapNotNull { song ->
-                val uri = song.localUri
+                val uri = song.localUri?.let { Uri.parse(it) }
                 if (uri != null && uri != Uri.EMPTY) {
                    try {
                         if (uri.scheme == "file") {
@@ -710,23 +714,23 @@ class DownloadRepository @Inject constructor(
                         }
                     } catch (e: Exception) {}
                 }
-                
+
                 try {
                     val folder = getPublicMusicFolder()
                     val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.m4a"
                     val file = File(folder, fileName)
-                    if (file.exists()) return@mapNotNull song.copy(localUri = file.toUri())
-                    
+                    if (file.exists()) return@mapNotNull song.copy(localUri = file.toUri().toString())
+
                     // Fallback: search recursively in case it's in a subfolder (album/playlist)
                     val foundFile = findFileRecursive(folder, fileName)
-                    if (foundFile != null) return@mapNotNull song.copy(localUri = foundFile.toUri())
+                    if (foundFile != null) return@mapNotNull song.copy(localUri = foundFile.toUri().toString())
 
                     // Try other extensions
                     val extensions = listOf("mp3", "aac", "flac", "wav", "ogg", "opus")
                     for (ext in extensions) {
                         val altFileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$ext"
                         val altFoundFile = findFileRecursive(folder, altFileName)
-                        if (altFoundFile != null) return@mapNotNull song.copy(localUri = altFoundFile.toUri())
+                        if (altFoundFile != null) return@mapNotNull song.copy(localUri = altFoundFile.toUri().toString())
                     }
                 } catch (e: Exception) {}
                 null
@@ -862,10 +866,10 @@ class DownloadRepository @Inject constructor(
 
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
-                localUri = downloadedUri,
+                localUri = downloadedUri.toString(),
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source 
+                originalSource = song.source
             )
 
             _downloadedSongs.update { it + downloadedSong }
@@ -886,7 +890,7 @@ class DownloadRepository @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         if (_downloadedSongs.value.any { it.id == song.id }) {
             _downloadedSongs.value.find { it.id == song.id }?.localUri?.let { uri ->
-                withContext(Dispatchers.Main) { onReadyToPlay(uri) }
+                withContext(Dispatchers.Main) { onReadyToPlay(Uri.parse(uri)) }
             }
             return@withContext true
         }
@@ -975,10 +979,10 @@ class DownloadRepository @Inject constructor(
             
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
-                localUri = finalUri,
+                localUri = finalUri.toString(),
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source 
+                originalSource = song.source
             )
             
             _downloadedSongs.update { it + downloadedSong }
@@ -1013,7 +1017,8 @@ class DownloadRepository @Inject constructor(
         val song = _downloadedSongs.value.find { it.id == songId } ?: return@withContext
         try {
             var deleted = false
-            song.localUri?.let { uri ->
+            song.localUri?.let { uriString ->
+                val uri = Uri.parse(uriString)
                 if (uri.scheme == "file") {
                     val file = File(uri.path ?: "")
                     if (file.exists()) deleted = file.delete()
@@ -1139,7 +1144,7 @@ class DownloadRepository @Inject constructor(
                 } catch (e: Exception) {}
             }
 
-            val downloadedSong = song.copy(source = SongSource.DOWNLOADED, localUri = savedUri, thumbnailUrl = localThumbnailUrl, streamUrl = null, originalSource = song.source, isVideo = true)
+            val downloadedSong = song.copy(source = SongSource.DOWNLOADED, localUri = savedUri.toString(), thumbnailUrl = localThumbnailUrl, streamUrl = null, originalSource = song.source, isVideo = true)
             _downloadedSongs.update { it + downloadedSong }
             saveDownloads()
             downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
@@ -1264,7 +1269,9 @@ class DownloadRepository @Inject constructor(
     suspend fun deleteDownloads(songIds: List<String>) = withContext(Dispatchers.IO) {
         if (songIds.isEmpty()) return@withContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val uris = _downloadedSongs.value.filter { it.id in songIds && it.localUri?.scheme == "content" }.mapNotNull { it.localUri }
+            val uris = _downloadedSongs.value
+                .filter { it.id in songIds && it.localUri?.startsWith("content://") == true }
+                .mapNotNull { it.localUri?.let { s -> Uri.parse(s) } }
             if (uris.isNotEmpty()) {
                 val deleteRequest = MediaStore.createDeleteRequest(context.contentResolver, uris)
                 throw com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException("Permission needed to delete multiple files", deleteRequest)
