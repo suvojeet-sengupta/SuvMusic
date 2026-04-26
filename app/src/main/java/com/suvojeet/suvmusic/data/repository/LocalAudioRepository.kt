@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.fromLocal
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
