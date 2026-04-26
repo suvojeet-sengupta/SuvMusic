@@ -69,6 +69,22 @@ compose.desktop {
     application {
         mainClass = "com.suvojeet.suvmusic.composeapp.MainKt"
 
+        // ProGuard disabled for the desktop release. Reasons:
+        // 1. jsoup optionally references com.google.re2j (not on classpath)
+        //    — ProGuard treats this as a fatal unresolved-reference error.
+        // 2. VLCJ's JNA bindings, Mozilla Rhino's JS interop, and NewPipe
+        //    Extractor all rely on runtime reflection that ProGuard would
+        //    need extensive -keep rules to preserve. Wrong rule = silent
+        //    runtime crash deep inside playback or extraction.
+        // 3. The unminified MSI is ~80 MB vs ~50 MB minified — acceptable
+        //    cost given the alternative is hours of ProGuard rule tuning
+        //    for every transitive dep.
+        // Re-enable in a future chunk if MSI size becomes a real problem;
+        // would need a curated -dontwarn + -keep rules file.
+        buildTypes.release.proguard {
+            isEnabled.set(false)
+        }
+
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "SuvMusic"
