@@ -28,5 +28,11 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
+        // androidMain + desktopMain land here once Phase 4.0 introduces
+        // the first expect/actual platform code (MusicPlayer scaffold).
+        // Empty for now — the KMP plugin auto-creates them and they
+        // inherit commonMain dependencies.
+        val androidMain by getting
+        val desktopMain by getting
     }
 }
