@@ -6,6 +6,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.suvojeet.suvmusic.composeapp.newpipe.YouTubeSearch
+import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
 import java.awt.FileDialog
