@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.CategoryCard
 import com.suvojeet.suvmusic.ui.components.MusicCard
@@ -29,7 +29,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.MoodAndGenresViewModel
 fun MoodAndGenresScreen(
     onCategoryClick: (String, String?, String) -> Unit, // browseId, params, title
     onBackClick: () -> Unit,
-    viewModel: MoodAndGenresViewModel = hiltViewModel()
+    viewModel: MoodAndGenresViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -91,7 +91,7 @@ fun MoodAndGenresDetailScreen(
     title: String,
     onBackClick: () -> Unit,
     onSongClick: (List<Song>, Int) -> Unit,
-    viewModel: MoodAndGenresViewModel = hiltViewModel()
+    viewModel: MoodAndGenresViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

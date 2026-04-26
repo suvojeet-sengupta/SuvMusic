@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.WindowInsets
@@ -397,7 +398,7 @@ fun SuvMusicApp(
     val navController = rememberNavController()
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val mainViewModel: MainViewModel = hiltViewModel()
-    val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
+    val playlistManagementViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
     
     val mainUiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val playlistManagementUiState by playlistManagementViewModel.uiState.collectAsStateWithLifecycle()
@@ -408,7 +409,7 @@ fun SuvMusicApp(
     
     // Handle events from other viewmodels for global sheets
     val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = hiltViewModel()
-    val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = hiltViewModel()
+    val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = koinViewModel()
 
     LaunchedEffect(Unit) {
         homeViewModel.events.collect { event ->

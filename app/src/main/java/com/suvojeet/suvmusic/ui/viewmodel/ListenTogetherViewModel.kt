@@ -7,7 +7,6 @@ import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.shareplay.RoomRole
 import com.suvojeet.suvmusic.shareplay.RoomState
 import com.suvojeet.suvmusic.shareplay.TrackInfo
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@HiltViewModel
 class ListenTogetherViewModel @Inject constructor(
     private val manager: ListenTogetherManager
 ) : ViewModel() {

@@ -79,7 +79,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -105,7 +105,7 @@ fun DownloadsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
-    viewModel: DownloadsViewModel = hiltViewModel()
+    viewModel: DownloadsViewModel = koinViewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val downloadedSongs by viewModel.downloadedSongs.collectAsStateWithLifecycle()

@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.shareplay.*
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -50,7 +50,7 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 fun ListenTogetherScreen(
     onDismiss: () -> Unit,
     dominantColors: DominantColors,
-    viewModel: ListenTogetherViewModel = hiltViewModel()
+    viewModel: ListenTogetherViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()

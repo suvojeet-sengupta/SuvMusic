@@ -15,7 +15,6 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -85,7 +84,6 @@ data class SearchUiState(
 )
 
 @OptIn(FlowPreview::class)
-@HiltViewModel
 class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: JioSaavnRepository,

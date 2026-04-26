@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
@@ -54,7 +55,7 @@ fun RecentsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onBack: () -> Unit,
     viewModel: RecentsViewModel = hiltViewModel(),
-    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
+    playlistViewModel: PlaylistManagementViewModel = koinViewModel()
 ) {
     val recentlyPlayed by viewModel.recentSongs.collectAsState()
     val selectedSongIds by viewModel.selectedSongs.collectAsState()
