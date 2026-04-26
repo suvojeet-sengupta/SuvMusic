@@ -3,10 +3,17 @@ package com.suvojeet.suvmusic.di
 import androidx.media3.datasource.DataSource
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.DownloadsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ExploreViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.ListeningStatsViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.MoodAndGenresViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.PickMusicViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,12 +109,21 @@ private val coroutineScopesModule: Module = module {
  * hiltViewModel<X>() call site switched to koinViewModel<X>().
  */
 private val viewModelsModule: Module = module {
+    // chunk 1c.1
     viewModelOf(::AboutViewModel)
     viewModelOf(::PickMusicViewModel)
     viewModelOf(::SongInfoViewModel)
     viewModelOf(::ExploreViewModel)
     viewModelOf(::ArtistViewModel)
     viewModelOf(::RingtoneViewModel)
+    // chunk 1c.2
+    viewModelOf(::SearchViewModel)
+    viewModelOf(::AlbumViewModel)
+    viewModelOf(::DownloadsViewModel)
+    viewModelOf(::MoodAndGenresViewModel)
+    viewModelOf(::PlaylistManagementViewModel)
+    viewModelOf(::ListeningStatsViewModel)
+    viewModelOf(::ListenTogetherViewModel)
 }
 
 /**

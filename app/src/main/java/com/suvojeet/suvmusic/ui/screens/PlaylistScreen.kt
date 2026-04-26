@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
@@ -69,7 +70,7 @@ fun PlaylistScreen(
     onShufflePlay: (List<Song>) -> Unit = {},
     currentSong: Song? = null,
     viewModel: PlaylistViewModel = hiltViewModel(),
-    playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = hiltViewModel()
+    playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()

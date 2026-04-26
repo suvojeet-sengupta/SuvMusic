@@ -169,7 +169,7 @@ fun PlayerScreen(
     state: PlayerScreenState,
     actions: PlayerScreenActions,
     player: Player? = null,
-    playlistViewModel: PlaylistManagementViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistManagementViewModel = koinViewModel(),
     ringtoneViewModel: RingtoneViewModel = koinViewModel<RingtoneViewModel>(),
     playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel = hiltViewModel(),
     mainViewModel: com.suvojeet.suvmusic.ui.viewmodel.MainViewModel = hiltViewModel(),

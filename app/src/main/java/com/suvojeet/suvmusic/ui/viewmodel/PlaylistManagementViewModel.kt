@@ -9,7 +9,6 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import java.util.UUID
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,7 +32,6 @@ data class PlaylistManagementUiState(
  * ViewModel for managing playlist operations like creation and adding songs.
  * Separate from PlaylistViewModel which is for viewing a specific playlist.
  */
-@HiltViewModel
 class PlaylistManagementViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val libraryRepository: LibraryRepository,

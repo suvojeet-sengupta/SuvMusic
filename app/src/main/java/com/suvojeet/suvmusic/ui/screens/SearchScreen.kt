@@ -54,7 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.suvojeet.suvmusic.core.model.Album
@@ -80,8 +80,8 @@ fun SearchScreen(
     onPlaylistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     currentSong: Song? = null,
-    viewModel: SearchViewModel = hiltViewModel(),
-    playlistViewModel: PlaylistManagementViewModel = hiltViewModel()
+    viewModel: SearchViewModel = koinViewModel(),
+    playlistViewModel: PlaylistManagementViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
