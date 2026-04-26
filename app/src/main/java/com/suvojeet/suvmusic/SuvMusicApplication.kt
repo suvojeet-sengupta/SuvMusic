@@ -24,6 +24,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.suvojeet.suvmusic.di.koinAppModules
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
+
 /**
  * Application class for SuvMusic.
  * Annotated with @HiltAndroidApp to enable Hilt dependency injection.
@@ -64,6 +70,16 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
 
     override fun onCreate() {
         super.onCreate()
+
+        // Phase 1a: bring Koin up alongside Hilt. The app still routes all DI
+        // through Hilt; Koin starts with an empty module list and gets populated
+        // slice-by-slice in subsequent phase-1 chunks. Removed in chunk 1d once
+        // Hilt is fully retired.
+        startKoin {
+            androidLogger(if (BuildConfig.DEBUG) Level.INFO else Level.ERROR)
+            androidContext(this@SuvMusicApplication)
+            modules(koinAppModules)
+        }
 
         // Initialize logging early
         applicationScope.launch {
