@@ -299,12 +299,12 @@ actual class MusicPlayer {
     }
 
     private fun regenerateShuffleOrder() {
-        if (!_shuffleEnabled.value || queue.isEmpty()) {
+        if (!_shuffleEnabled.value || queueList.isEmpty()) {
             shuffleOrder = emptyList()
             shuffleCursor = -1
             return
         }
-        val others = queue.indices.filter { it != canonicalIndex }.toMutableList()
+        val others = queueList.indices.filter { it != canonicalIndex }.toMutableList()
         others.shuffle(Random(System.nanoTime()))
         shuffleOrder = listOf(canonicalIndex) + others
         shuffleCursor = 0
