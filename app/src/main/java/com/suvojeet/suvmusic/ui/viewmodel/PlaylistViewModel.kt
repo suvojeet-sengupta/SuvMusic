@@ -11,7 +11,6 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.util.PlaylistExportHelper
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,7 +52,6 @@ data class PlaylistUiState(
         get() = isEditable // Alias for clarity
 }
 
-@HiltViewModel
 class PlaylistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,

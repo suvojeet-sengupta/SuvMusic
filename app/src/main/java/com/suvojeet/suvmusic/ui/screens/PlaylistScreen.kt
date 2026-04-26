@@ -69,7 +69,7 @@ fun PlaylistScreen(
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
     currentSong: Song? = null,
-    viewModel: PlaylistViewModel = hiltViewModel(),
+    viewModel: PlaylistViewModel = koinViewModel(),
     playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()

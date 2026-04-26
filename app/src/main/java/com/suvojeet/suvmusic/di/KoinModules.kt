@@ -2,18 +2,26 @@ package com.suvojeet.suvmusic.di
 
 import androidx.media3.datasource.DataSource
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
+import com.suvojeet.suvmusic.ui.screens.wrapped.WrappedViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.AIEqualizerViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ArtistViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.BackupViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.DownloadsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ExploreViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ListeningStatsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.MoodAndGenresViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.PickMusicViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.PlaylistViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +96,16 @@ private val hiltBridgedModule: Module = module {
 
     // updater UpdaterModule equivalent
     single { bridge(androidContext()).updateChecker() }
+
+    // chunk 1c.3 — additional transitive @Inject classes
+    single { bridge(androidContext()).spotifyImportHelper() }
+    single { bridge(androidContext()).playlistImportHelper() }
+    single { bridge(androidContext()).recommendationEngine() }
+    single { bridge(androidContext()).lastFmRepository() }
+    single { bridge(androidContext()).audioARManager() }
+    single { bridge(androidContext()).aiEqualizerService() }
+    single { bridge(androidContext()).wrappedGenerator() }
+    single { bridge(androidContext()).backupManager() }
 }
 
 /**
@@ -124,6 +142,15 @@ private val viewModelsModule: Module = module {
     viewModelOf(::PlaylistManagementViewModel)
     viewModelOf(::ListeningStatsViewModel)
     viewModelOf(::ListenTogetherViewModel)
+    // chunk 1c.3
+    viewModelOf(::HomeViewModel)
+    viewModelOf(::LibraryViewModel)
+    viewModelOf(::SettingsViewModel)
+    viewModelOf(::PlaylistViewModel)
+    viewModelOf(::AIEqualizerViewModel)
+    viewModelOf(::RecentsViewModel)
+    viewModelOf(::WrappedViewModel)
+    viewModelOf(::BackupViewModel)
 }
 
 /**

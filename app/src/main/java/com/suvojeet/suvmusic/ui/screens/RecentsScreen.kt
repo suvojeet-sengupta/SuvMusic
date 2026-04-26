@@ -54,7 +54,7 @@ import android.text.format.DateUtils
 fun RecentsScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onBack: () -> Unit,
-    viewModel: RecentsViewModel = hiltViewModel(),
+    viewModel: RecentsViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
 ) {
     val recentlyPlayed by viewModel.recentSongs.collectAsState()

@@ -22,15 +22,23 @@ import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
 import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
+import com.suvojeet.suvmusic.ai.AIEqualizerService
+import com.suvojeet.suvmusic.data.BackupManager
 import com.suvojeet.suvmusic.lastfm.LastFmClient
 import com.suvojeet.suvmusic.lastfm.LastFmConfig
+import com.suvojeet.suvmusic.lastfm.LastFmRepository
+import com.suvojeet.suvmusic.player.AudioARManager
 import com.suvojeet.suvmusic.player.MusicPlayer
+import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import com.suvojeet.suvmusic.recommendation.WrappedGenerator
 import com.suvojeet.suvmusic.shareplay.ListenTogetherClient
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.updater.UpdateChecker
 import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.util.NetworkMonitor
+import com.suvojeet.suvmusic.util.PlaylistImportHelper
 import com.suvojeet.suvmusic.util.RingtoneHelper
+import com.suvojeet.suvmusic.util.SpotifyImportHelper
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -107,6 +115,16 @@ interface HiltKoinBridgeEntryPoint {
 
     // updater
     fun updateChecker(): UpdateChecker
+
+    // chunk 1c.3 — additional transitive @Inject constructor classes
+    fun spotifyImportHelper(): SpotifyImportHelper
+    fun playlistImportHelper(): PlaylistImportHelper
+    fun recommendationEngine(): RecommendationEngine
+    fun lastFmRepository(): LastFmRepository
+    fun audioARManager(): AudioARManager
+    fun aiEqualizerService(): AIEqualizerService
+    fun wrappedGenerator(): WrappedGenerator
+    fun backupManager(): BackupManager
 }
 
 /** One-call accessor used by Koin module blocks. Resolved against the application Context. */

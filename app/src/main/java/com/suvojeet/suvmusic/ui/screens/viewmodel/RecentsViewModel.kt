@@ -7,7 +7,6 @@ import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-@HiltViewModel
 class RecentsViewModel @Inject constructor(
     private val repository: ListeningHistoryRepository,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository

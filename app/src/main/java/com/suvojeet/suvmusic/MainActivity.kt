@@ -408,7 +408,7 @@ fun SuvMusicApp(
     val scope = androidx.compose.runtime.rememberCoroutineScope()    
     
     // Handle events from other viewmodels for global sheets
-    val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = hiltViewModel()
+    val homeViewModel: com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel = koinViewModel()
     val searchViewModel: com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel = koinViewModel()
 
     LaunchedEffect(Unit) {
