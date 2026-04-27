@@ -32,7 +32,7 @@ import com.suvojeet.suvmusic.data.model.RecentSearchItem
 import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
-import com.suvojeet.suvmusic.data.model.SponsorCategory
+import com.suvojeet.suvmusic.core.model.SponsorCategory
 import com.suvojeet.suvmusic.data.model.ThemeMode
 import com.suvojeet.suvmusic.data.model.UpdateChannel
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
