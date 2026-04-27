@@ -59,8 +59,9 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.data.model.SponsorCategory
+import com.suvojeet.suvmusic.core.model.SponsorCategory
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
+import com.suvojeet.suvmusic.ui.sponsorblock.color
 import com.suvojeet.suvmusic.ui.components.seekbar.ClassicStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.DotsStyle
 import com.suvojeet.suvmusic.ui.components.seekbar.GradientBarStyle

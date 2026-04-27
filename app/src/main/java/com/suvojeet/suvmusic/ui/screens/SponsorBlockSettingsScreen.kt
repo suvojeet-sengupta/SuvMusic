@@ -50,7 +50,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
-import com.suvojeet.suvmusic.data.model.SponsorCategory
+import com.suvojeet.suvmusic.core.model.SponsorCategory
+import com.suvojeet.suvmusic.ui.sponsorblock.color
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable

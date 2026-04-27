@@ -13,12 +13,12 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.DownloadState
-import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.core.model.DownloadState
+import com.suvojeet.suvmusic.core.model.PlayerState
+import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
-import com.suvojeet.suvmusic.data.model.VideoQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -45,8 +45,8 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
 import androidx.mediarouter.media.MediaRouteSelector
-import com.suvojeet.suvmusic.data.model.DeviceType
-import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.core.model.DeviceType
+import com.suvojeet.suvmusic.core.model.OutputDevice
 import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.util.TTSManager
 import androidx.glance.appwidget.updateAll
@@ -657,10 +657,10 @@ class MusicPlayer @Inject constructor(
 
         override fun onRepeatModeChanged(repeatMode: Int) {
             val mode = when (repeatMode) {
-                Player.REPEAT_MODE_OFF -> com.suvojeet.suvmusic.data.model.RepeatMode.OFF
-                Player.REPEAT_MODE_ALL -> com.suvojeet.suvmusic.data.model.RepeatMode.ALL
-                Player.REPEAT_MODE_ONE -> com.suvojeet.suvmusic.data.model.RepeatMode.ONE
-                else -> com.suvojeet.suvmusic.data.model.RepeatMode.OFF
+                Player.REPEAT_MODE_OFF -> com.suvojeet.suvmusic.core.model.RepeatMode.OFF
+                Player.REPEAT_MODE_ALL -> com.suvojeet.suvmusic.core.model.RepeatMode.ALL
+                Player.REPEAT_MODE_ONE -> com.suvojeet.suvmusic.core.model.RepeatMode.ONE
+                else -> com.suvojeet.suvmusic.core.model.RepeatMode.OFF
             }
             _playerState.update { it.copy(repeatMode = mode) }
         }
@@ -1373,7 +1373,7 @@ class MusicPlayer @Inject constructor(
                         val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
                         if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE && !hasTriedLowQualityForCurrent) {
                             val currentQuality = sessionManager.getAudioQuality()
-                            if (currentQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                            if (currentQuality == com.suvojeet.suvmusic.core.model.AudioQuality.AUTO) {
                                 _playerState.value.currentSong?.let { song ->
                                     android.util.Log.i("MusicPlayer", "Buffering too long. Downscaling to LOW quality for ${song.title}")
                                     streamingService.clearCacheFor(song.id)

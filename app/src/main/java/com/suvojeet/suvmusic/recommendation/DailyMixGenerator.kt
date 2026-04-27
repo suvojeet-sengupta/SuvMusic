@@ -4,9 +4,9 @@ import android.util.Log
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
-import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

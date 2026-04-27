@@ -7,8 +7,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.annotation.RequiresApi
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.HapticsIntensity
-import com.suvojeet.suvmusic.data.model.HapticsMode
+import com.suvojeet.suvmusic.core.model.HapticsIntensity
+import com.suvojeet.suvmusic.core.model.HapticsMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

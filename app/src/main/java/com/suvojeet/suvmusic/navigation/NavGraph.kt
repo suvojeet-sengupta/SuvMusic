@@ -16,7 +16,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Album
-import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.ui.utils.DeviceFormFactor
 import com.suvojeet.suvmusic.ui.utils.LocalDeviceFormFactor
 import com.suvojeet.suvmusic.ui.screens.AboutScreen
@@ -76,13 +76,13 @@ fun NavGraph(
     onLoadMoreRadioSongs: () -> Unit = {},
     isRadioMode: Boolean = false,
     isLoadingMoreSongs: Boolean = false,
-    onSwitchDevice: (com.suvojeet.suvmusic.data.model.OutputDevice) -> Unit = {},
+    onSwitchDevice: (com.suvojeet.suvmusic.core.model.OutputDevice) -> Unit = {},
     onRefreshDevices: () -> Unit = {},
     onSetPlaybackParameters: (Float, Float) -> Unit = { _, _ -> },
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.providers.lyrics.Lyrics?,
     isFetchingLyrics: Boolean,
-    comments: List<com.suvojeet.suvmusic.data.model.Comment>?,
+    comments: List<com.suvojeet.suvmusic.core.model.Comment>?,
     isFetchingComments: Boolean,
     isLoggedIn: Boolean = false,
     isPostingComment: Boolean = false,

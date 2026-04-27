@@ -61,9 +61,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Album

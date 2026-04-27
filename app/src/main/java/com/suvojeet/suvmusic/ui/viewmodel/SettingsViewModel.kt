@@ -9,16 +9,16 @@ import androidx.lifecycle.ViewModel
 import com.suvojeet.suvmusic.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.AppTheme
-import com.suvojeet.suvmusic.data.model.AudioQuality
-import com.suvojeet.suvmusic.data.model.VideoQuality
-import com.suvojeet.suvmusic.data.model.DownloadQuality
-import com.suvojeet.suvmusic.data.model.HapticsIntensity
-import com.suvojeet.suvmusic.data.model.HapticsMode
-import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
-import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
-import com.suvojeet.suvmusic.data.model.ThemeMode
-import com.suvojeet.suvmusic.data.model.UpdateChannel
+import com.suvojeet.suvmusic.core.model.AppTheme
+import com.suvojeet.suvmusic.core.model.AudioQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
+import com.suvojeet.suvmusic.core.model.DownloadQuality
+import com.suvojeet.suvmusic.core.model.HapticsIntensity
+import com.suvojeet.suvmusic.core.model.HapticsMode
+import com.suvojeet.suvmusic.core.model.LyricsTextPosition
+import com.suvojeet.suvmusic.core.model.LyricsAnimationType
+import com.suvojeet.suvmusic.core.model.ThemeMode
+import com.suvojeet.suvmusic.core.model.UpdateChannel
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
@@ -136,8 +136,8 @@ data class SettingsUiState(
     val navBarBlur: Float = 60.0f,
     val iosLiquidGlassEnabled: Boolean = false,
     val miniPlayerAlpha: Float = 0f,
-    val miniPlayerStyle: com.suvojeet.suvmusic.data.model.MiniPlayerStyle = com.suvojeet.suvmusic.data.model.MiniPlayerStyle.YT_MUSIC,
-    val playerStyle: com.suvojeet.suvmusic.data.model.PlayerStyle = com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC,
+    val miniPlayerStyle: com.suvojeet.suvmusic.core.model.MiniPlayerStyle = com.suvojeet.suvmusic.core.model.MiniPlayerStyle.YT_MUSIC,
+    val playerStyle: com.suvojeet.suvmusic.core.model.PlayerStyle = com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC,
     val homeSectionsVisibility: Set<String> = com.suvojeet.suvmusic.data.SessionManager.DEFAULT_HOME_SECTIONS,
     val downloadLocation: String? = null,
     val loggingEnabled: Boolean = false,
@@ -1429,14 +1429,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setMiniPlayerStyle(style: com.suvojeet.suvmusic.data.model.MiniPlayerStyle) {
+    fun setMiniPlayerStyle(style: com.suvojeet.suvmusic.core.model.MiniPlayerStyle) {
         viewModelScope.launch {
             sessionManager.setMiniPlayerStyle(style)
             _uiState.update { it.copy(miniPlayerStyle = style) }
         }
     }
 
-    fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+    fun setPlayerStyle(style: com.suvojeet.suvmusic.core.model.PlayerStyle) {
         viewModelScope.launch {
             sessionManager.setPlayerStyle(style)
             _uiState.update { it.copy(playerStyle = style) }

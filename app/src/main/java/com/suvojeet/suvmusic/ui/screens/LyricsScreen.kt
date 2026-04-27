@@ -66,9 +66,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import android.content.Intent
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
-import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.core.model.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
-import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.core.model.LyricsTextPosition
 import com.suvojeet.suvmusic.util.LyricsPdfGenerator
 import com.suvojeet.suvmusic.util.MoodDetector
 import com.suvojeet.suvmusic.ui.components.DynamicLyricsBackground

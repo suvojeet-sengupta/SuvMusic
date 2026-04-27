@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ai
 
+import com.suvojeet.suvmusic.core.model.ChatProxyModels
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import kotlinx.coroutines.CoroutineScope

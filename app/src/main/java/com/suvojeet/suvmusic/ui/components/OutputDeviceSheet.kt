@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import kotlinx.coroutines.flow.MutableStateFlow
-import com.suvojeet.suvmusic.data.model.DeviceType
-import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.core.model.DeviceType
+import com.suvojeet.suvmusic.core.model.OutputDevice
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.shareplay.RoomRole

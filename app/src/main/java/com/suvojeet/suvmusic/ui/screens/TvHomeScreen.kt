@@ -29,7 +29,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.HomeLoadingSkeleton
 import com.suvojeet.suvmusic.ui.viewmodel.HomeViewModel
@@ -62,7 +62,7 @@ fun TvHomeScreen(
     // Hero Item: Use the first recommendation or the first item from the first playable section
     val heroItem = remember(uiState) {
         uiState.recommendations.firstOrNull() 
-            ?: (uiState.homeSections.firstOrNull()?.items?.firstOrNull() as? com.suvojeet.suvmusic.data.model.HomeItem.SongItem)?.song
+            ?: (uiState.homeSections.firstOrNull()?.items?.firstOrNull() as? com.suvojeet.suvmusic.core.model.HomeItem.SongItem)?.song
     }
 
     LazyColumn(
@@ -321,9 +321,9 @@ private fun TvHorizontalSection(
     ) {
         items(section.items) { item ->
             when (item) {
-                is com.suvojeet.suvmusic.data.model.HomeItem.SongItem -> TvSongCard(song = item.song, onClick = { onSongClick(listOf(item.song), 0) })
-                is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem -> TvPlaylistCard(playlist = item.playlist, onClick = { onPlaylistClick(item.playlist) })
-                is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem -> TvAlbumCard(album = item.album, onClick = { onAlbumClick(item.album) })
+                is com.suvojeet.suvmusic.core.model.HomeItem.SongItem -> TvSongCard(song = item.song, onClick = { onSongClick(listOf(item.song), 0) })
+                is com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem -> TvPlaylistCard(playlist = item.playlist, onClick = { onPlaylistClick(item.playlist) })
+                is com.suvojeet.suvmusic.core.model.HomeItem.AlbumItem -> TvAlbumCard(album = item.album, onClick = { onAlbumClick(item.album) })
                 else -> {} // Skip unsupported items for now
             }
         }

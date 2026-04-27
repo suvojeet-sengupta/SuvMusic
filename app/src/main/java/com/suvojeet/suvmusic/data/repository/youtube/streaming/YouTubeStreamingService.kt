@@ -93,17 +93,17 @@ class YouTubeStreamingService @Inject constructor(
         return retryWithBackoff {
             val startTime = System.currentTimeMillis()
             var audioQuality = if (forceLow) {
-                com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+                com.suvojeet.suvmusic.core.model.AudioQuality.LOW
             } else {
                 sessionManager.getAudioQuality()
             }
             
             // Adaptive logic for AUTO quality
-            if (audioQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+            if (audioQuality == com.suvojeet.suvmusic.core.model.AudioQuality.AUTO) {
                 audioQuality = if (networkMonitor.isOnWifi()) {
-                    com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM
+                    com.suvojeet.suvmusic.core.model.AudioQuality.MEDIUM
                 } else {
-                    com.suvojeet.suvmusic.data.model.AudioQuality.LOW
+                    com.suvojeet.suvmusic.core.model.AudioQuality.LOW
                 }
             }
             
@@ -114,10 +114,10 @@ class YouTubeStreamingService @Inject constructor(
             if (audioStreams.isEmpty()) return@retryWithBackoff null
 
             val targetBitrate = when (audioQuality) {
-                com.suvojeet.suvmusic.data.model.AudioQuality.LOW -> 70
-                com.suvojeet.suvmusic.data.model.AudioQuality.MEDIUM -> 160
-                com.suvojeet.suvmusic.data.model.AudioQuality.HIGH -> 512
-                com.suvojeet.suvmusic.data.model.AudioQuality.AUTO -> 160
+                com.suvojeet.suvmusic.core.model.AudioQuality.LOW -> 70
+                com.suvojeet.suvmusic.core.model.AudioQuality.MEDIUM -> 160
+                com.suvojeet.suvmusic.core.model.AudioQuality.HIGH -> 512
+                com.suvojeet.suvmusic.core.model.AudioQuality.AUTO -> 160
             }
             
             val bestAudioStream = audioStreams
@@ -148,13 +148,13 @@ class YouTubeStreamingService @Inject constructor(
         val resolution: String? = null
     )
     
-    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
+    suspend fun getVideoStreamUrl(videoId: String, quality: com.suvojeet.suvmusic.core.model.VideoQuality? = null, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
         getVideoStreamResult(videoId, quality, forceLow)?.videoUrl
     }
     
-    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.data.model.VideoQuality? = null, forceLow: Boolean = false): VideoStreamResult? = withContext(Dispatchers.IO) {
+    suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.core.model.VideoQuality? = null, forceLow: Boolean = false): VideoStreamResult? = withContext(Dispatchers.IO) {
         val targetQuality = if (forceLow) {
-            com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+            com.suvojeet.suvmusic.core.model.VideoQuality.LOW
         } else {
             quality ?: sessionManager.getVideoQuality()
         }
@@ -187,7 +187,7 @@ class YouTubeStreamingService @Inject constructor(
     private suspend fun resolveVideoWithUrl(
         streamUrl: String,
         videoId: String,
-        targetQuality: com.suvojeet.suvmusic.data.model.VideoQuality
+        targetQuality: com.suvojeet.suvmusic.core.model.VideoQuality
     ): VideoStreamResult? {
         val videoCacheKey = "video_${videoId}_${targetQuality.name}"
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
@@ -196,11 +196,11 @@ class YouTubeStreamingService @Inject constructor(
             var quality = targetQuality
             
             // Adaptive logic for AUTO quality
-            if (quality == com.suvojeet.suvmusic.data.model.VideoQuality.AUTO) {
+            if (quality == com.suvojeet.suvmusic.core.model.VideoQuality.AUTO) {
                 quality = if (networkMonitor.isOnWifi()) {
-                    com.suvojeet.suvmusic.data.model.VideoQuality.MEDIUM
+                    com.suvojeet.suvmusic.core.model.VideoQuality.MEDIUM
                 } else {
-                    com.suvojeet.suvmusic.data.model.VideoQuality.LOW
+                    com.suvojeet.suvmusic.core.model.VideoQuality.LOW
                 }
             }
             
@@ -381,7 +381,7 @@ class YouTubeStreamingService @Inject constructor(
 
     fun clearCacheFor(videoId: String) {
         streamCache.remove("audio_$videoId")
-        com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { 
+        com.suvojeet.suvmusic.core.model.VideoQuality.entries.forEach { 
             streamCache.remove("video_${videoId}_${it.name}")
             streamCache.remove("video_audio_${videoId}_${it.name}")
         }
