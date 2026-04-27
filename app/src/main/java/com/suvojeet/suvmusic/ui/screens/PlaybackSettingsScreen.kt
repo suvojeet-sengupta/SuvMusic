@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.data.model.*
+import com.suvojeet.suvmusic.core.model.AudioQuality
+import com.suvojeet.suvmusic.core.model.DownloadQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.data.MusicSource
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.util.MusicHapticsManager
