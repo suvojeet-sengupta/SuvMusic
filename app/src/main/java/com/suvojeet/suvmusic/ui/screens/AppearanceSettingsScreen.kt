@@ -77,8 +77,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.core.model.AppTheme
-import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
-import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.core.model.LyricsAnimationType
+import com.suvojeet.suvmusic.core.model.LyricsTextPosition
 import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.core.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
