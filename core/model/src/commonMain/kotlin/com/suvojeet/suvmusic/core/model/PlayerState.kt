@@ -1,5 +1,4 @@
-package com.suvojeet.suvmusic.data.model
-import com.suvojeet.suvmusic.core.model.*
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Player state for UI updates.
@@ -35,13 +34,13 @@ data class PlayerState(
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f
-    
+
     val hasNext: Boolean
         get() = currentIndex < queue.size - 1 || repeatMode == RepeatMode.ALL || isAutoplayEnabled || isRadioMode
-    
+
     val hasPrevious: Boolean
         get() = currentIndex > 0 || repeatMode == RepeatMode.ALL
-    
+
     /** Returns formatted audio format string like "Opus • 256kbps" */
     val audioFormatDisplay: String
         get() {

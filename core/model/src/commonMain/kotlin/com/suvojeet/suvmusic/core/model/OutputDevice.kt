@@ -1,6 +1,4 @@
-package com.suvojeet.suvmusic.data.model
-
-import androidx.compose.ui.graphics.vector.ImageVector
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Represents an audio output device.

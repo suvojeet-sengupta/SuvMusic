@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.window.core.layout.WindowSizeClass
 import coil3.compose.AsyncImage
-import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.DominantColors

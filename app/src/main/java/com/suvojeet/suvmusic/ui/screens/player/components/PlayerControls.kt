@@ -29,7 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.bounceClick
 import com.suvojeet.suvmusic.ui.components.primitives.AnimatedPlayerButton

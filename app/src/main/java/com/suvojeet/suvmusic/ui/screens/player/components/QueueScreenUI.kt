@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.NowPlayingAnimation
 import androidx.compose.foundation.ExperimentalFoundationApi

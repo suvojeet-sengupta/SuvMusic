@@ -57,7 +57,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Lock
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.AppTheme
-import com.suvojeet.suvmusic.data.model.OutputDevice
+import com.suvojeet.suvmusic.core.model.OutputDevice
 import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
@@ -438,8 +438,8 @@ fun SuvMusicApp(
         }
     }
     // Optimized states to reduce recompositions
-    val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
-    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerState())
+    val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
+    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
     val keepScreenOnEnabled by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()

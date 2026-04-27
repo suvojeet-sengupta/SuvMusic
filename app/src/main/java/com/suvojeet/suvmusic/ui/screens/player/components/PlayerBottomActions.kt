@@ -50,7 +50,7 @@ fun BottomActions(
     onQueueClick: () -> Unit,
     onRelatedClick: () -> Unit,
     onDownloadClick: () -> Unit,
-    downloadState: com.suvojeet.suvmusic.data.model.DownloadState,
+    downloadState: com.suvojeet.suvmusic.core.model.DownloadState,
     dominantColors: DominantColors,
     isYouTubeSong: Boolean = false,
     isVideoMode: Boolean = false,
