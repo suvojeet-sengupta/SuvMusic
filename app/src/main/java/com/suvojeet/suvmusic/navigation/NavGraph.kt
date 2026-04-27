@@ -82,7 +82,7 @@ fun NavGraph(
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.providers.lyrics.Lyrics?,
     isFetchingLyrics: Boolean,
-    comments: List<com.suvojeet.suvmusic.data.model.Comment>?,
+    comments: List<com.suvojeet.suvmusic.core.model.Comment>?,
     isFetchingComments: Boolean,
     isLoggedIn: Boolean = false,
     isPostingComment: Boolean = false,

@@ -20,11 +20,11 @@ import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.AudioQuality
 import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.DownloadQuality
-import com.suvojeet.suvmusic.data.model.HapticsIntensity
-import com.suvojeet.suvmusic.data.model.HapticsMode
-import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.HapticsIntensity
+import com.suvojeet.suvmusic.core.model.HapticsMode
+import com.suvojeet.suvmusic.core.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem

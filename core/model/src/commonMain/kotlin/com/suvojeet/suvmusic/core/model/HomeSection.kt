@@ -1,6 +1,4 @@
-package com.suvojeet.suvmusic.data.model
-import com.suvojeet.suvmusic.core.model.*
-
+package com.suvojeet.suvmusic.core.model
 
 enum class HomeSectionType {
     HorizontalCarousel,
@@ -32,6 +30,13 @@ sealed class HomeItem {
     data class ArtistItem(val artist: Artist) : HomeItem() {
         override val id: String = artist.id
     }
+    /**
+     * `iconRes` carries an Android `R.drawable` integer ID. The data class
+     * itself is platform-neutral (just an Int), and only Android call sites
+     * construct ExploreItem today. When Desktop renders explore tiles, it
+     * will need an icon-key indirection (expect/actual) — for now this stays
+     * an Int so nothing breaks at the model layer.
+     */
     data class ExploreItem(val title: String, val iconRes: Int, val browseId: String) : HomeItem() {
         override val id: String = browseId
     }

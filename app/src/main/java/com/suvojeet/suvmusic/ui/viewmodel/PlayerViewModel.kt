@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.Comment
+import com.suvojeet.suvmusic.core.model.Comment
 import com.suvojeet.suvmusic.data.model.DownloadState
 import com.suvojeet.suvmusic.data.model.OutputDevice
 import com.suvojeet.suvmusic.data.model.PlayerState

@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Defines the vibration intensity for Music Haptics.
@@ -10,19 +10,19 @@ enum class HapticsIntensity(val multiplier: Float, val displayName: String) {
      * Best for quiet environments or long listening sessions.
      */
     LOW(0.3f, "Low"),
-    
+
     /**
      * Balanced vibration intensity.
      * Default recommended setting.
      */
     MEDIUM(0.6f, "Medium"),
-    
+
     /**
      * Strong vibrations for an immersive experience.
      * Good for bass-heavy music genres.
      */
     HIGH(0.85f, "High"),
-    
+
     /**
      * Maximum vibration power.
      * Best for EDM, hip-hop, and dance music.

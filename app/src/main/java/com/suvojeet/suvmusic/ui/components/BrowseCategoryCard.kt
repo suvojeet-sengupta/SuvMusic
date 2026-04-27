@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.data.model.BrowseCategory
+import com.suvojeet.suvmusic.core.model.BrowseCategory
 
 /**
  * Category color palette - vibrant gradients inspired by Apple Music

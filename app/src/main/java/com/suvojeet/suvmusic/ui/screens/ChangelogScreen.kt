@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.suvojeet.suvmusic.data.model.ChangelogData
-import com.suvojeet.suvmusic.data.model.ChangelogEntry
+import com.suvojeet.suvmusic.core.model.ChangelogData
+import com.suvojeet.suvmusic.core.model.ChangelogEntry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

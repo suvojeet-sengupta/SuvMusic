@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Represents a browse category (mood/genre) from YouTube Music.
