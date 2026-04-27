@@ -29,11 +29,6 @@ include(":core:data")
 include(":core:domain")
 include(":core:db")
 include(":core:ui")
-include(":feature:home")
-include(":feature:player")
-include(":feature:library")
-include(":feature:search")
-include(":feature:settings")
 // KMP migration (Phase 0): parallel desktop/multiplatform module. Does not yet
 // replace :app — Android APK still builds from :app unchanged.
 include(":composeApp")
