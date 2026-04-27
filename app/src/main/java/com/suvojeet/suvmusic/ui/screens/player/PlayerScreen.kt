@@ -70,12 +70,12 @@ import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import com.suvojeet.suvmusic.data.model.ThemeMode
+import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.ui.screens.player.FullScreenVideoPlayer
 
-import com.suvojeet.suvmusic.data.model.PlayerStyle
+import com.suvojeet.suvmusic.core.model.PlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.YTMusicPlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.ClassicPlayerStyle
 import com.suvojeet.suvmusic.ui.screens.player.styles.LiquidGlassPlayerStyle
@@ -197,7 +197,7 @@ fun PlayerScreen(
     
     // Customization styles from settings
     val sessionManager = remember { SessionManager(context) }
-    val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC)
+    val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC)
     val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
     val currentArtworkShapeName by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = ArtworkShape.ROUNDED_SQUARE.name)
     val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)

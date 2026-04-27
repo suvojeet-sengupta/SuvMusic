@@ -15,17 +15,17 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.suvojeet.suvmusic.core.model.Album
-import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.core.model.Artist
-import com.suvojeet.suvmusic.data.model.AudioQuality
-import com.suvojeet.suvmusic.data.model.VideoQuality
-import com.suvojeet.suvmusic.data.model.DownloadQuality
+import com.suvojeet.suvmusic.core.model.AudioQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
+import com.suvojeet.suvmusic.core.model.DownloadQuality
 import com.suvojeet.suvmusic.data.model.HapticsIntensity
 import com.suvojeet.suvmusic.data.model.HapticsMode
 import com.suvojeet.suvmusic.data.model.HomeItem
 import com.suvojeet.suvmusic.data.model.HomeSection
 import com.suvojeet.suvmusic.data.model.HomeSectionType
-import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.data.model.RecentSearchItem
@@ -33,8 +33,8 @@ import com.suvojeet.suvmusic.data.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.SponsorCategory
-import com.suvojeet.suvmusic.data.model.ThemeMode
-import com.suvojeet.suvmusic.data.model.UpdateChannel
+import com.suvojeet.suvmusic.core.model.ThemeMode
+import com.suvojeet.suvmusic.core.model.UpdateChannel
 import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
@@ -794,20 +794,20 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun getPlayerStyle(): com.suvojeet.suvmusic.data.model.PlayerStyle {
+    suspend fun getPlayerStyle(): com.suvojeet.suvmusic.core.model.PlayerStyle {
         val styleName = context.dataStore.data.first()[PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
-        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC
     }
 
-    val playerStyleFlow: Flow<com.suvojeet.suvmusic.data.model.PlayerStyle> = context.dataStore.data.map { preferences ->
+    val playerStyleFlow: Flow<com.suvojeet.suvmusic.core.model.PlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[PLAYER_STYLE_KEY]?.let {
-            try { com.suvojeet.suvmusic.data.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC }
-        } ?: com.suvojeet.suvmusic.data.model.PlayerStyle.YT_MUSIC
+            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
+        } ?: com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC
     }
 
-    suspend fun setPlayerStyle(style: com.suvojeet.suvmusic.data.model.PlayerStyle) {
+    suspend fun setPlayerStyle(style: com.suvojeet.suvmusic.core.model.PlayerStyle) {
         context.dataStore.edit { preferences ->
             preferences[PLAYER_STYLE_KEY] = style.name
         }

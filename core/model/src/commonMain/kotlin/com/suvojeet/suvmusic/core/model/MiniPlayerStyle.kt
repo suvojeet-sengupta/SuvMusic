@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.core.model
 
 enum class MiniPlayerStyle(val label: String) {
     STANDARD("Standard"),
