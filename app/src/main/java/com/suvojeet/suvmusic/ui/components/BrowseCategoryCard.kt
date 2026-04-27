@@ -64,8 +64,9 @@ fun BrowseCategoryCard(
     )
     
     // Select gradient based on index or derive from category color
-    val gradient = if (category.color != null) {
-        val baseColor = Color(category.color or 0xFF000000) // Ensure alpha
+    val categoryColor = category.color
+    val gradient = if (categoryColor != null) {
+        val baseColor = Color(categoryColor or 0xFF000000) // Ensure alpha
         val darkerColor = baseColor.copy(
             red = (baseColor.red * 0.7f).coerceIn(0f, 1f),
             green = (baseColor.green * 0.7f).coerceIn(0f, 1f),
