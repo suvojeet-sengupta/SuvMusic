@@ -10,9 +10,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Comment
-import com.suvojeet.suvmusic.data.model.DownloadState
-import com.suvojeet.suvmusic.data.model.OutputDevice
-import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.core.model.DownloadState
+import com.suvojeet.suvmusic.core.model.OutputDevice
+import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.fromLocal

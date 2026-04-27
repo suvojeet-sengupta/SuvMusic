@@ -32,8 +32,8 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.app.Activity
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.OutputDevice
-import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.core.model.OutputDevice
+import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.ui.components.DominantColors

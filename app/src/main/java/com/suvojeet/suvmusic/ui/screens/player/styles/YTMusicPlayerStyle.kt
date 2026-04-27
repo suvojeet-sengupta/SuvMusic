@@ -42,7 +42,7 @@ import androidx.window.core.layout.WindowHeightSizeClass
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import com.suvojeet.suvmusic.data.model.PlayerState
+import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.DominantColors
