@@ -43,8 +43,8 @@ import androidx.media3.ui.PlayerView
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.window.core.layout.WindowHeightSizeClass
-import com.suvojeet.suvmusic.data.model.PlayerState
-import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.core.model.PlayerState
+import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -536,7 +536,7 @@ private fun ClassicPlaybackControls(
 @Composable
 private fun ClassicBottomActions(
     onLyricsClick: () -> Unit, onCastClick: () -> Unit, onQueueClick: () -> Unit, onRelatedClick: () -> Unit, onDownloadClick: () -> Unit,
-    downloadState: com.suvojeet.suvmusic.data.model.DownloadState, dominantColors: DominantColors, isYouTubeSong: Boolean, isVideoMode: Boolean, onVideoToggle: () -> Unit, compact: Boolean = false
+    downloadState: com.suvojeet.suvmusic.core.model.DownloadState, dominantColors: DominantColors, isYouTubeSong: Boolean, isVideoMode: Boolean, onVideoToggle: () -> Unit, compact: Boolean = false
 ) {
     val iconSize = if (compact) 20.dp else 22.dp
     val containerPadding = if (compact) 4.dp else 6.dp
@@ -556,11 +556,11 @@ private fun ClassicBottomActions(
 
             IconButton(onClick = onDownloadClick, modifier = Modifier.weight(1f)) {
                 val icon = when(downloadState) {
-                    com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED -> Icons.Default.CheckCircle
-                    com.suvojeet.suvmusic.data.model.DownloadState.FAILED -> Icons.Default.Error
+                    com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADED -> Icons.Default.CheckCircle
+                    com.suvojeet.suvmusic.core.model.DownloadState.FAILED -> Icons.Default.Error
                     else -> Icons.Default.Download
                 }
-                Icon(imageVector = icon, contentDescription = "Download", tint = if (downloadState == com.suvojeet.suvmusic.data.model.DownloadState.DOWNLOADED) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
+                Icon(imageVector = icon, contentDescription = "Download", tint = if (downloadState == com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADED) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
 
             IconButton(onClick = onCastClick, modifier = Modifier.weight(1f)) {

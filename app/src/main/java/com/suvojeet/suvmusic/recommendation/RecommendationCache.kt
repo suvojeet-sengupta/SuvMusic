@@ -1,7 +1,7 @@
 package com.suvojeet.suvmusic.recommendation
 
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSection
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton

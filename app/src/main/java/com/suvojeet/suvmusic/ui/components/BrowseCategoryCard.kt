@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.data.model.BrowseCategory
+import com.suvojeet.suvmusic.core.model.BrowseCategory
 
 /**
  * Category color palette - vibrant gradients inspired by Apple Music
@@ -64,8 +64,9 @@ fun BrowseCategoryCard(
     )
     
     // Select gradient based on index or derive from category color
-    val gradient = if (category.color != null) {
-        val baseColor = Color(category.color or 0xFF000000) // Ensure alpha
+    val categoryColor = category.color
+    val gradient = if (categoryColor != null) {
+        val baseColor = Color(categoryColor or 0xFF000000) // Ensure alpha
         val darkerColor = baseColor.copy(
             red = (baseColor.red * 0.7f).coerceIn(0f, 1f),
             green = (baseColor.green * 0.7f).coerceIn(0f, 1f),

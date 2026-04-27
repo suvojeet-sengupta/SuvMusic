@@ -43,7 +43,7 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
 import com.suvojeet.suvmusic.R
-import com.suvojeet.suvmusic.data.model.RepeatMode
+import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.player.MusicPlayer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn

@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 /**
