@@ -18,7 +18,7 @@ import com.suvojeet.suvmusic.data.model.PlayerState
 import com.suvojeet.suvmusic.data.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
-import com.suvojeet.suvmusic.data.model.VideoQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -1373,7 +1373,7 @@ class MusicPlayer @Inject constructor(
                         val bufferingDuration = System.currentTimeMillis() - bufferingStartWallTime
                         if (bufferingDuration > MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE && !hasTriedLowQualityForCurrent) {
                             val currentQuality = sessionManager.getAudioQuality()
-                            if (currentQuality == com.suvojeet.suvmusic.data.model.AudioQuality.AUTO) {
+                            if (currentQuality == com.suvojeet.suvmusic.core.model.AudioQuality.AUTO) {
                                 _playerState.value.currentSong?.let { song ->
                                     android.util.Log.i("MusicPlayer", "Buffering too long. Downscaling to LOW quality for ${song.title}")
                                     streamingService.clearCacheFor(song.id)

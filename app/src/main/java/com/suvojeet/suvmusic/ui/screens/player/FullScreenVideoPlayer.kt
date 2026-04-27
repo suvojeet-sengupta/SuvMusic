@@ -98,7 +98,7 @@ import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.media3.ui.AspectRatioFrameLayout
-import com.suvojeet.suvmusic.data.model.VideoDownloadQuality
+import com.suvojeet.suvmusic.core.model.VideoDownloadQuality
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
@@ -200,7 +200,7 @@ fun FullScreenVideoPlayer(
             title = { Text("Quality", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
             text = {
                 Column(modifier = Modifier.padding(top = 8.dp)) {
-                    com.suvojeet.suvmusic.data.model.VideoQuality.entries.forEach { quality ->
+                    com.suvojeet.suvmusic.core.model.VideoQuality.entries.forEach { quality ->
                         Surface(
                             onClick = {
                                 viewModel.setVideoQuality(quality)

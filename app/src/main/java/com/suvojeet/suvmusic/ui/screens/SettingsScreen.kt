@@ -88,7 +88,7 @@ import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
-import com.suvojeet.suvmusic.data.model.UpdateChannel
+import com.suvojeet.suvmusic.core.model.UpdateChannel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.components.BetaBadge

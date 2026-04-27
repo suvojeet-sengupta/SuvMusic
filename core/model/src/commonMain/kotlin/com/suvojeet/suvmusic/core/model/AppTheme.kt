@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.model
+package com.suvojeet.suvmusic.core.model
 
 enum class AppTheme(val label: String) {
     DEFAULT("Electric Purple"),

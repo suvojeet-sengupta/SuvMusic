@@ -17,7 +17,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.fromLocal
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
-import com.suvojeet.suvmusic.data.model.VideoQuality
+import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository

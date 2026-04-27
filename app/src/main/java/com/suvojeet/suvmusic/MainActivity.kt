@@ -56,10 +56,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Lock
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.model.AppTheme
+import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.data.model.OutputDevice
-import com.suvojeet.suvmusic.data.model.ThemeMode
-import com.suvojeet.suvmusic.data.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.core.model.ThemeMode
+import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
@@ -165,7 +165,7 @@ class MainActivity : ComponentActivity() {
             val channel = sessionManager.getUpdateChannel()
             updateViewModel.checkForUpdate(
                 com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
-                isNightly = channel == com.suvojeet.suvmusic.data.model.UpdateChannel.NIGHTLY
+                isNightly = channel == com.suvojeet.suvmusic.core.model.UpdateChannel.NIGHTLY
             )
         }
         
