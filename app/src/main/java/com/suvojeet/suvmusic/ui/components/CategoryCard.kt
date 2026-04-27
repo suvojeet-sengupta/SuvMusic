@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.suvojeet.suvmusic.data.model.BrowseCategory
+import com.suvojeet.suvmusic.core.model.BrowseCategory
 
 @Composable
 fun CategoryCard(

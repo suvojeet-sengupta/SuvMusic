@@ -108,7 +108,7 @@ class MusicPlayerService : MediaLibraryService() {
     private val PLAYLISTS_ID = "playlists"
     
     // Cache for Home Sections to handle "SECTION_Index" lookup
-    private var cachedHomeSections: List<com.suvojeet.suvmusic.data.model.HomeSection> = emptyList()
+    private var cachedHomeSections: List<com.suvojeet.suvmusic.core.model.HomeSection> = emptyList()
     
     // Cache for search results so onSearch & onGetSearchResult stay consistent
     private var cachedSearchQuery: String? = null
@@ -1026,18 +1026,18 @@ class MusicPlayerService : MediaLibraryService() {
                                         // BUG FIX (Skip): Cache song list for this section so
                                         // onSetMediaItems can populate the queue for skip support
                                         val sectionSongs = section.items
-                                            .filterIsInstance<com.suvojeet.suvmusic.data.model.HomeItem.SongItem>()
+                                            .filterIsInstance<com.suvojeet.suvmusic.core.model.HomeItem.SongItem>()
                                             .map { it.song }
                                         sectionSongs.forEach { song ->
                                             playlistContextCache[song.id] = sectionSongs
                                         }
 
                                         section.items.forEach { homeItem ->
-                                             if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.SongItem) {
+                                             if (homeItem is com.suvojeet.suvmusic.core.model.HomeItem.SongItem) {
                                                  children.add(createPlayableMediaItem(homeItem.song))
-                                             } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.PlaylistItem) {
+                                             } else if (homeItem is com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem) {
                                                  children.add(createBrowsableMediaItem("playlist_${homeItem.playlist.id}", homeItem.playlist.name, homeItem.playlist.uploaderName, mediaType = MediaMetadata.MEDIA_TYPE_PLAYLIST))
-                                             } else if (homeItem is com.suvojeet.suvmusic.data.model.HomeItem.AlbumItem) {
+                                             } else if (homeItem is com.suvojeet.suvmusic.core.model.HomeItem.AlbumItem) {
                                                  children.add(createBrowsableMediaItem("album_${homeItem.album.id}", homeItem.album.title, homeItem.album.artist, mediaType = MediaMetadata.MEDIA_TYPE_ALBUM))
                                              }
                                         }

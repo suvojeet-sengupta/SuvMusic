@@ -80,7 +80,7 @@ fun ExploreScreen(
                     ) {
                         items(uiState.sections, key = { it.title }) { section ->
                             when (section.type) {
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.LargeCardWithList -> {
+                                com.suvojeet.suvmusic.core.model.HomeSectionType.LargeCardWithList -> {
                                     LargeCardWithListSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -88,7 +88,7 @@ fun ExploreScreen(
                                         onAlbumClick = onAlbumClick
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.Grid -> {
+                                com.suvojeet.suvmusic.core.model.HomeSectionType.Grid -> {
                                     GridSection(
                                         section = section,
                                         onSongClick = onSongClick,
@@ -96,7 +96,7 @@ fun ExploreScreen(
                                         onAlbumClick = onAlbumClick
                                     )
                                 }
-                                com.suvojeet.suvmusic.data.model.HomeSectionType.VerticalList -> {
+                                com.suvojeet.suvmusic.core.model.HomeSectionType.VerticalList -> {
                                     VerticalListSection(
                                         section = section,
                                         onSongClick = onSongClick,

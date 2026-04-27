@@ -8,11 +8,11 @@ import com.suvojeet.suvmusic.data.YouTubeAuthUtils
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.ArtistPreview
-import com.suvojeet.suvmusic.data.model.BrowseCategory
-import com.suvojeet.suvmusic.data.model.Comment
-import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.BrowseCategory
+import com.suvojeet.suvmusic.core.model.Comment
+import com.suvojeet.suvmusic.core.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
@@ -2153,7 +2153,7 @@ class YouTubeRepository @Inject constructor(
     /**
      * Fetch comments for a video using NewPipe extractor.
      */
-    suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+    suspend fun getComments(videoId: String): List<com.suvojeet.suvmusic.core.model.Comment> = withContext(Dispatchers.IO) {
         if (videoId.isBlank()) return@withContext emptyList()
         try {
             currentVideoIdForComments = videoId
@@ -2199,7 +2199,7 @@ class YouTubeRepository @Inject constructor(
     /**
      * Fetch more comments for the current video.
      */
-    suspend fun getMoreComments(videoId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+    suspend fun getMoreComments(videoId: String): List<com.suvojeet.suvmusic.core.model.Comment> = withContext(Dispatchers.IO) {
         val page = currentCommentsPage
         val extractor = currentCommentsExtractor
         if (videoId != currentVideoIdForComments || extractor == null || page == null || !page.hasNextPage()) {
@@ -2234,7 +2234,7 @@ class YouTubeRepository @Inject constructor(
     /**
      * Fetch the first page of replies for a given top-level comment.
      */
-    suspend fun getCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+    suspend fun getCommentReplies(commentId: String): List<com.suvojeet.suvmusic.core.model.Comment> = withContext(Dispatchers.IO) {
         val extractor = currentCommentsExtractor ?: return@withContext emptyList()
         val initial = commentRepliesInitialPage[commentId] ?: return@withContext emptyList()
         try {
@@ -2260,7 +2260,7 @@ class YouTubeRepository @Inject constructor(
     /**
      * Fetch more replies for a given top-level comment (paginated).
      */
-    suspend fun getMoreCommentReplies(commentId: String): List<com.suvojeet.suvmusic.data.model.Comment> = withContext(Dispatchers.IO) {
+    suspend fun getMoreCommentReplies(commentId: String): List<com.suvojeet.suvmusic.core.model.Comment> = withContext(Dispatchers.IO) {
         val extractor = currentCommentsExtractor ?: return@withContext emptyList()
         val next = commentRepliesNextPage[commentId] ?: return@withContext emptyList()
         try {

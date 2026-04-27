@@ -27,7 +27,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.core.model.Album
-import com.suvojeet.suvmusic.data.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeItem
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys

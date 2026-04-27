@@ -3,9 +3,9 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.HomeSection
-import com.suvojeet.suvmusic.data.model.HomeItem
-import com.suvojeet.suvmusic.data.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.HomeSection
+import com.suvojeet.suvmusic.core.model.HomeItem
+import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager

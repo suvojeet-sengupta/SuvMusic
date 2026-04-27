@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.suvojeet.suvmusic.data.model.Comment
+import com.suvojeet.suvmusic.core.model.Comment
 import com.suvojeet.suvmusic.ui.components.PulseLoadingIndicator
 
 import com.suvojeet.suvmusic.ui.components.DominantColors
