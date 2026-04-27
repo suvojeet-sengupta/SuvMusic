@@ -15,8 +15,8 @@ import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.DownloadQuality
 import com.suvojeet.suvmusic.core.model.HapticsIntensity
 import com.suvojeet.suvmusic.core.model.HapticsMode
-import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
-import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.core.model.LyricsTextPosition
+import com.suvojeet.suvmusic.core.model.LyricsAnimationType
 import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.core.model.UpdateChannel
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository

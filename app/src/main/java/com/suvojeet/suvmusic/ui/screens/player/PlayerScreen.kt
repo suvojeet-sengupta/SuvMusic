@@ -219,8 +219,8 @@ fun PlayerScreen(
     val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle()
 
     // Lyrics appearance
-    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition.CENTER)
-    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType.WORD)
+    val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.LyricsTextPosition.CENTER)
+    val lyricsAnimationType by sessionManager.lyricsAnimationTypeFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.LyricsAnimationType.WORD)
     val lyricsLineSpacing by sessionManager.lyricsLineSpacingFlow.collectAsStateWithLifecycle(initialValue = 1.2f)
     val lyricsFontSize by sessionManager.lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = 24f)
     val lyricsBlur by sessionManager.lyricsBlurFlow.collectAsStateWithLifecycle(initialValue = 0f)
@@ -519,8 +519,8 @@ fun AdaptiveSupportingContent(
     dominantColors: DominantColors, playerViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlayerViewModel,
     playlistViewModel: PlaylistManagementViewModel, upNextSongs: List<com.suvojeet.suvmusic.core.model.Song>,
     selectedQueueIndices: Set<Int>, isAppInDarkTheme: Boolean, animatedBackgroundEnabled: Boolean,
-    lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition,
-    lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
+    lyricsTextPosition: com.suvojeet.suvmusic.core.model.LyricsTextPosition,
+    lyricsAnimationType: com.suvojeet.suvmusic.core.model.LyricsAnimationType,
     lyricsLineSpacing: Float, lyricsFontSize: Float, lyricsBlur: Float, sessionManager: SessionManager,
     coroutineScope: kotlinx.coroutines.CoroutineScope,
     progressProvider: () -> Float,
@@ -604,7 +604,7 @@ fun BoxScope.OverlaysContent(
     playlistViewModel: PlaylistManagementViewModel, ringtoneViewModel: RingtoneViewModel,
     upNextSongs: List<com.suvojeet.suvmusic.core.model.Song>, selectedQueueIndices: Set<Int>, isAppInDarkTheme: Boolean,
     animatedBackgroundEnabled: Boolean, volumeSliderEnabled: Boolean, volumeKeyEvents: SharedFlow<Unit>?,
-    lyricsTextPosition: com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType,
+    lyricsTextPosition: com.suvojeet.suvmusic.core.model.LyricsTextPosition, lyricsAnimationType: com.suvojeet.suvmusic.core.model.LyricsAnimationType,
     lyricsLineSpacing: Float, lyricsFontSize: Float, lyricsBlur: Float, sessionManager: SessionManager, coroutineScope: kotlinx.coroutines.CoroutineScope,
     isFullScreen: Boolean, eqEnabled: Boolean, eqBands: FloatArray, eqPreamp: Float, bassBoost: Float, virtualizer: Float,
     isExpanded: Boolean = false,

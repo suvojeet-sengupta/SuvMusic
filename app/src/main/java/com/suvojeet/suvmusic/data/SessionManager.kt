@@ -35,9 +35,9 @@ import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.SponsorCategory
 import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.core.model.UpdateChannel
-import com.suvojeet.suvmusic.providers.lyrics.LyricsAnimationType
+import com.suvojeet.suvmusic.core.model.LyricsAnimationType
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
-import com.suvojeet.suvmusic.providers.lyrics.LyricsTextPosition
+import com.suvojeet.suvmusic.core.model.LyricsTextPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

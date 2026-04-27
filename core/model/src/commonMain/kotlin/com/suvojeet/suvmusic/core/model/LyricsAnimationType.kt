@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.providers.lyrics
+package com.suvojeet.suvmusic.core.model
 
 enum class LyricsAnimationType(val label: String) {
     LINE("Line by Line (Classic)"),
