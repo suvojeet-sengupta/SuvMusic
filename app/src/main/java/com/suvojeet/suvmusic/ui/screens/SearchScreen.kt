@@ -61,7 +61,7 @@ import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.RecentSearchItem
+import com.suvojeet.suvmusic.core.model.RecentSearchItem
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
