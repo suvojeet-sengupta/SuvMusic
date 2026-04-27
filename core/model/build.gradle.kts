@@ -26,19 +26,19 @@ kotlin {
     }
 
     sourceSets {
-        // commonMain stays pure Kotlin — no Android, no Compose annotations.
-        // Currently holds Song-independent leaf model classes.
+        // commonMain stays free of Android and Compose deps. kotlinx-datetime
+        // is the one allowed addition — it gives us `Clock.System.now()` so
+        // data classes can pick up timestamps in default parameters without
+        // reaching for the JVM-only `System.currentTimeMillis()`.
         val commonMain by getting {
-            // No deps yet; pure Kotlin data classes only.
+            dependencies {
+                implementation(libs.kotlinx.datetime)
+            }
         }
 
-        // androidMain holds model classes that still reference android.net.Uri
-        // (Song + its consumers Album/Artist/Playlist). Migrated to common in
-        // chunk 2.3 once Song.localUri is refactored to String. The @Immutable
-        // Compose annotations were dropped in this same chunk — they were a
-        // recomposition-skipping hint, not a correctness requirement, and
-        // reintroducing them requires Compose Multiplatform's runtime artifact
-        // which we'll add in Phase 5 when UI moves to commonMain.
+        // androidMain currently only holds the `Song.fromLocal(Uri, Uri)`
+        // convenience factory, which still references android.net.Uri.
+        // Everything else has migrated to commonMain.
         val androidMain by getting {
             // No deps for now.
         }

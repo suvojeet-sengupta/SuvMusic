@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.ui.screens.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.data.local.entity.ListeningHistory
-import com.suvojeet.suvmusic.data.model.RecentlyPlayed
+import com.suvojeet.suvmusic.core.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository

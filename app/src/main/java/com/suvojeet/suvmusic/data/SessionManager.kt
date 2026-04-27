@@ -28,8 +28,8 @@ import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
-import com.suvojeet.suvmusic.data.model.RecentSearchItem
-import com.suvojeet.suvmusic.data.model.RecentlyPlayed
+import com.suvojeet.suvmusic.core.model.RecentSearchItem
+import com.suvojeet.suvmusic.core.model.RecentlyPlayed
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.SponsorCategory

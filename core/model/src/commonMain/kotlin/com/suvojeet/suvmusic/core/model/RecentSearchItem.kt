@@ -1,5 +1,6 @@
-package com.suvojeet.suvmusic.data.model
-import com.suvojeet.suvmusic.core.model.*
+package com.suvojeet.suvmusic.core.model
+
+import kotlinx.datetime.Clock
 
 sealed class RecentSearchItem {
     abstract val id: String
@@ -10,7 +11,7 @@ sealed class RecentSearchItem {
 
     data class SongItem(
         val song: Song,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : RecentSearchItem() {
         override val id: String = song.id
         override val title: String = song.title
@@ -20,7 +21,7 @@ sealed class RecentSearchItem {
 
     data class AlbumItem(
         val album: Album,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : RecentSearchItem() {
         override val id: String = album.id
         override val title: String = album.title
@@ -30,7 +31,7 @@ sealed class RecentSearchItem {
 
     data class PlaylistItem(
         val playlist: Playlist,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : RecentSearchItem() {
         override val id: String = playlist.id
         override val title: String = playlist.title

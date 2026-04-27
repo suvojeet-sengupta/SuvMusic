@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.model.RecentlyPlayed
+import com.suvojeet.suvmusic.core.model.RecentlyPlayed
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
