@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.suvojeet.suvmusic.core.model
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 sealed class RecentSearchItem {
     abstract val id: String
