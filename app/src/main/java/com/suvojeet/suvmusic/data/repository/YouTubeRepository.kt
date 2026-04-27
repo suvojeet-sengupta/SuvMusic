@@ -656,8 +656,9 @@ class YouTubeRepository @Inject constructor(
                     }
                 }
 
-                val json = if (category.params != null) {
-                    fetchInternalApiWithParams(category.browseId, category.params)
+                val params = category.params
+                val json = if (params != null) {
+                    fetchInternalApiWithParams(category.browseId, params)
                 } else {
                     fetchInternalApi(category.browseId)
                 }
