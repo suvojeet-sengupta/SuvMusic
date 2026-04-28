@@ -22,7 +22,7 @@ import com.suvojeet.suvmusic.core.model.UpdateChannel
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
-import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.core.model.MusicSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

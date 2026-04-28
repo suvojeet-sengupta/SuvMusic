@@ -71,21 +71,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import kotlin.random.Random
 import kotlin.math.sin
-
-/**
- * Seekbar style options
- */
-enum class SeekbarStyle {
-    WAVEFORM,      // Animated waveform bars
-    WAVE_LINE,     // Sine wave line
-    CLASSIC,       // Simple progress bar
-    DOTS,          // Animated dots
-    GRADIENT_BAR,  // Gradient progress bar with glow
-    NEON,          // Neon glowing line
-    BLOCKS,        // Pixel/Block progress
-    MATERIAL,      // Standard Material 3 Slider
-    M3E_WAVY       // Material 3 Expressive LinearWavyProgressIndicator
-}
+import com.suvojeet.suvmusic.core.model.SeekbarStyle
 
 /**
  * Animated waveform seeker with multiple style options.

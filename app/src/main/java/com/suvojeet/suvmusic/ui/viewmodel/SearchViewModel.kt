@@ -12,7 +12,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
-import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import kotlinx.coroutines.FlowPreview
