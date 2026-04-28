@@ -41,8 +41,8 @@ import com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay
 import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
+import com.suvojeet.suvmusic.core.model.ArtworkShape
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.ui.screens.player.components.ModernQueueView
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog

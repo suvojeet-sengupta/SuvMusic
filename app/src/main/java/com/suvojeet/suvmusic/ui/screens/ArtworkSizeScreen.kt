@@ -44,7 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

@@ -44,8 +44,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.ui.components.SeekbarStyle
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
+import com.suvojeet.suvmusic.core.model.ArtworkShape
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientMiddle
