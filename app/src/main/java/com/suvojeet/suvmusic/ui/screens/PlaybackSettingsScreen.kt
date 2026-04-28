@@ -26,7 +26,7 @@ import com.suvojeet.suvmusic.core.model.DownloadQuality
 import com.suvojeet.suvmusic.core.model.HapticsIntensity
 import com.suvojeet.suvmusic.core.model.HapticsMode
 import com.suvojeet.suvmusic.core.model.VideoQuality
-import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.ui.theme.SquircleShape

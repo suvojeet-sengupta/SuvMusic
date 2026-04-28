@@ -10,7 +10,7 @@ import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
-import com.suvojeet.suvmusic.data.MusicSource
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import com.suvojeet.suvmusic.lastfm.RecommendedArtist
 import com.suvojeet.suvmusic.lastfm.RecommendedTrack
