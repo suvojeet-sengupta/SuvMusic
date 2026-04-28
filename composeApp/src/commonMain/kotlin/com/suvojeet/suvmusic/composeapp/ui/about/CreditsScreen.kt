@@ -287,20 +287,6 @@ private fun DeveloperCard(onOpenUri: (String) -> Unit) {
 }
 
 @Composable
-private fun SocialIconBadge(icon: ImageVector, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(SquircleShape)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-    }
-}
-
-@Composable
 private fun SectionHeader(title: String) {
     Text(
         text = title,
