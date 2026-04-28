@@ -49,7 +49,7 @@ import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
 import com.suvojeet.suvmusic.ui.screens.player.components.VolumeControl
 import com.suvojeet.suvmusic.ui.screens.player.components.M3ESeekbarShimmer
-import com.suvojeet.suvmusic.ui.components.SeekbarStyle
+import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import kotlinx.coroutines.Dispatchers
