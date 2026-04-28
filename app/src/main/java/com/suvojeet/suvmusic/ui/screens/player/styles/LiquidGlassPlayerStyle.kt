@@ -21,10 +21,10 @@ import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
 import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.ui.components.SeekbarStyle
+import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import com.suvojeet.suvmusic.ui.screens.player.PlayerScreenActions
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkShape
-import com.suvojeet.suvmusic.ui.screens.player.components.ArtworkSize
+import com.suvojeet.suvmusic.core.model.ArtworkShape
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 
 /**
  * iOS-style Liquid Glass player.

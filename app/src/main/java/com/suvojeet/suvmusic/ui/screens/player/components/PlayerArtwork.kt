@@ -74,28 +74,11 @@ import androidx.compose.ui.window.PopupProperties
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.suvojeet.suvmusic.core.model.ArtworkShape
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.getHighResThumbnail
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
-
-/**
- * Artwork display modes
- */
-enum class ArtworkShape {
-    ROUNDED_SQUARE,  // Default 16dp corners
-    CIRCLE,          // Circular artwork
-    VINYL,           // Vinyl record style with hole in center
-    SQUARE           // Sharp corners
-}
-
-/**
- * Artwork size options for player screen
- */
-enum class ArtworkSize(val fraction: Float, val label: String) {
-    SMALL(0.65f, "Small"),
-    MEDIUM(0.75f, "Medium"),
-    LARGE(0.85f, "Large")
-}
 
 @Composable
 fun AlbumArtwork(

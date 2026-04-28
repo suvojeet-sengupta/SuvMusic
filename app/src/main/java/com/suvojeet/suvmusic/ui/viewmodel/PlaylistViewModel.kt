@@ -264,7 +264,7 @@ class PlaylistViewModel @Inject constructor(
                     thumbnailUrl = null,
                     songs = songs
                 )
-            } else if (currentSource == com.suvojeet.suvmusic.data.MusicSource.JIOSAAVN) {
+            } else if (currentSource == com.suvojeet.suvmusic.core.model.MusicSource.JIOSAAVN) {
                 // In HQ Audio mode, prioritize JioSaavn
                 val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
                 if (jioPlaylist != null) {

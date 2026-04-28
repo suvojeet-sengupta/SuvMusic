@@ -11,7 +11,7 @@ import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
-import com.suvojeet.suvmusic.ui.components.SeekbarStyle
+import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import kotlin.math.sin
 import kotlin.random.Random
 

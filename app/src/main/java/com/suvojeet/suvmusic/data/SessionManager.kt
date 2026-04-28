@@ -26,6 +26,7 @@ import com.suvojeet.suvmusic.core.model.HomeItem
 import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.RecentSearchItem
@@ -2682,11 +2683,4 @@ data class LastPlaybackState(
     val index: Int
 )
 
-/**
- * Music source preference.
- */
-enum class MusicSource {
-    YOUTUBE,
-    JIOSAAVN,
-    BOTH
-}
+// MusicSource enum moved to :core:model — see com.suvojeet.suvmusic.core.model.MusicSource
