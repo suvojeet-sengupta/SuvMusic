@@ -285,4 +285,10 @@ dependencies {
     implementation(project(":lyric-kugou"))
     implementation(project(":extractor"))
     implementation(project(":core:model"))
+    // KMP migration: :composeApp owns the shared (Android + Desktop) UI.
+    // :app consumes it so migrated screens render in the Android APK
+    // instead of duplicating in :app/ui/screens. End state of the migration
+    // is :composeApp building the Android app directly; until then this
+    // dep lets :app delegate one screen at a time to commonMain.
+    implementation(project(":composeApp"))
 }
