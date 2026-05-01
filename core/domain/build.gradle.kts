@@ -28,7 +28,18 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
             }
         }
-        val androidMain by getting
+        val androidMain by getting {
+            dependencies {
+                // Media3 ExoPlayer — Phase 4.2 Android audio backend. The
+                // shared MusicPlayer expect/actual delegates to ExoPlayer
+                // here; the legacy rich :app player (spatial audio, audio
+                // focus, MediaSession, BT autoplay) stays separate and is
+                // not consumed through this surface. Common code only needs
+                // the basic playback verbs.
+                implementation(libs.androidx.media3.exoplayer)
+                implementation(libs.androidx.media3.common)
+            }
+        }
         val desktopMain by getting {
             dependencies {
                 // VLCJ — Phase 4.1 Desktop audio backend. Uses LibVLC native
