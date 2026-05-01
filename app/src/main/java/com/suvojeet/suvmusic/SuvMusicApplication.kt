@@ -71,6 +71,14 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun onCreate() {
         super.onCreate()
 
+        // Phase 4.2: hand the Application context to the KMP MusicPlayer
+        // actual in :core:domain so its ExoPlayer can be built. The expect
+        // class is no-arg (KMP requirement) — without this call, isAvailable
+        // is false and the shared composeApp App() shell can't play audio.
+        // Must run before any code resolves the KMP MusicPlayer (currently
+        // none does on Android, but the call is harmless either way).
+        com.suvojeet.suvmusic.core.domain.player.MusicPlayer.setApplicationContext(this)
+
         // Phase 1a: bring Koin up alongside Hilt. The app still routes all DI
         // through Hilt; Koin starts with an empty module list and gets populated
         // slice-by-slice in subsequent phase-1 chunks. Removed in chunk 1d once
