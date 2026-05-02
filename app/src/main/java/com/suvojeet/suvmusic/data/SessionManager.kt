@@ -840,20 +840,43 @@ class SessionManager @Inject constructor(
         preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
     }
 
-    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_API_KEY] ?: "" }
+    // Encrypted-prefs keys for AI API tokens — these are billable user secrets,
+    // they live in EncryptedSharedPreferences, not the plaintext DataStore.
+    private val OPENAI_API_KEY_ENC = "openai_api_key_enc"
+    private val ANTHROPIC_API_KEY_ENC = "anthropic_api_key_enc"
+    private val GEMINI_API_KEY_ENC = "gemini_api_key_enc"
+
+    private fun getOpenAiApiKeyBlocking(): String =
+        encryptedPrefs.getString(OPENAI_API_KEY_ENC, null) ?: ""
+    private fun getAnthropicApiKeyBlocking(): String =
+        encryptedPrefs.getString(ANTHROPIC_API_KEY_ENC, null) ?: ""
+    private fun getGeminiApiKeyBlocking(): String =
+        encryptedPrefs.getString(GEMINI_API_KEY_ENC, null) ?: ""
+
+    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { getOpenAiApiKeyBlocking() }
     val openaiModelFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_MODEL_KEY] ?: "gpt-4o" }
-    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_API_KEY] ?: "" }
+    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { getAnthropicApiKeyBlocking() }
     val anthropicModelFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL_KEY] ?: "claude-3-5-sonnet-20240620" }
-    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_API_KEY] ?: "" }
+    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { getGeminiApiKeyBlocking() }
     val geminiModelFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_MODEL_KEY] ?: "gemini-1.5-pro" }
     val chatProxyModelFlow: Flow<String> = context.dataStore.data.map { it[CHAT_PROXY_MODEL_KEY] ?: "gpt-5" }
     val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "CHAT_PROXY" }
 
-    suspend fun setOpenAiApiKey(apiKey: String) = context.dataStore.edit { it[OPENAI_API_KEY] = apiKey }
+    suspend fun setOpenAiApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(OPENAI_API_KEY_ENC, apiKey).apply()
+        // Nudge DataStore listeners so the openaiApiKeyFlow re-emits.
+        context.dataStore.edit { it[OPENAI_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setOpenAiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL_KEY] = model }
-    suspend fun setAnthropicApiKey(apiKey: String) = context.dataStore.edit { it[ANTHROPIC_API_KEY] = apiKey }
+    suspend fun setAnthropicApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(ANTHROPIC_API_KEY_ENC, apiKey).apply()
+        context.dataStore.edit { it[ANTHROPIC_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL_KEY] = model }
-    suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
+    suspend fun setGeminiApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(GEMINI_API_KEY_ENC, apiKey).apply()
+        context.dataStore.edit { it[GEMINI_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
     suspend fun setChatProxyModel(model: String) = context.dataStore.edit { it[CHAT_PROXY_MODEL_KEY] = model }
     suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
@@ -1830,6 +1853,28 @@ class SessionManager @Inject constructor(
                 context.dataStore.edit { prefs -> prefs.remove(dsKey) }
                 changed = true
                 if (prefKey == "cookies") _isLoggedInFlow.value = true
+            }
+        }
+
+        // Migrate AI API keys from plaintext DataStore to EncryptedSharedPreferences.
+        // Previously stored as raw stringPreferencesKey; user-billable secrets that
+        // shouldn't sit in plaintext DataStore. After migration, the DataStore entry
+        // becomes a "stored" sentinel used only to nudge listener flows.
+        val aiKeysToMigrate = listOf(
+            Triple(OPENAI_API_KEY, OPENAI_API_KEY_ENC, "openai"),
+            Triple(ANTHROPIC_API_KEY, ANTHROPIC_API_KEY_ENC, "anthropic"),
+            Triple(GEMINI_API_KEY, GEMINI_API_KEY_ENC, "gemini"),
+        )
+        aiKeysToMigrate.forEach { (dsKey, encKey, label) ->
+            val plain = dataStore[dsKey]
+            if (!plain.isNullOrBlank() && plain != "stored") {
+                edit.putString(encKey, plain)
+                context.dataStore.edit { it[dsKey] = "stored" }
+                changed = true
+                android.util.Log.i(
+                    "SessionManager",
+                    "Migrated $label API key from plaintext DataStore to encrypted prefs",
+                )
             }
         }
 
