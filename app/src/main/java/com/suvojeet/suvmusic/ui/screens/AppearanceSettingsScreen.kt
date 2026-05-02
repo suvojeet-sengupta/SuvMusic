@@ -111,6 +111,12 @@ fun AppearanceSettingsScreen(
             contentPadding = PaddingValues(
                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp,
             ),
+            brandingSection = {
+                com.suvojeet.suvmusic.ui.components.LogoPickerSection(
+                    selected = uiState.logoVariant,
+                    onSelect = viewModel::setLogoVariant,
+                )
+            },
         )
     }
 }

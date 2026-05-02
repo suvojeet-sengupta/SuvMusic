@@ -114,6 +114,7 @@ class SessionManager @Inject constructor(
         private val ARTWORK_SIZE_KEY = stringPreferencesKey("artwork_size")
         
         private val APP_THEME_KEY = stringPreferencesKey("app_theme")
+        private val LOGO_VARIANT_KEY = stringPreferencesKey("logo_variant")
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
         private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
@@ -2116,8 +2117,29 @@ class SessionManager @Inject constructor(
             preferences[APP_THEME_KEY] = theme.name
         }
     }
-    
-    suspend fun isDynamicColorEnabled(): Boolean = 
+
+    suspend fun getLogoVariant(): com.suvojeet.suvmusic.core.model.LogoVariant {
+        val name = context.dataStore.data.first()[LOGO_VARIANT_KEY]
+        return name?.let {
+            try { com.suvojeet.suvmusic.core.model.LogoVariant.valueOf(it) }
+            catch (e: Exception) { com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT }
+        } ?: com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT
+    }
+
+    val logoVariantFlow: Flow<com.suvojeet.suvmusic.core.model.LogoVariant> = context.dataStore.data.map { preferences ->
+        preferences[LOGO_VARIANT_KEY]?.let {
+            try { com.suvojeet.suvmusic.core.model.LogoVariant.valueOf(it) }
+            catch (e: Exception) { com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT }
+        } ?: com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT
+    }
+
+    suspend fun setLogoVariant(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
+        context.dataStore.edit { preferences ->
+            preferences[LOGO_VARIANT_KEY] = variant.name
+        }
+    }
+
+    suspend fun isDynamicColorEnabled(): Boolean =
         context.dataStore.data.first()[DYNAMIC_COLOR_KEY] ?: true
     
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

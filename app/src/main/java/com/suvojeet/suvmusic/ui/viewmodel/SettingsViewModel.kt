@@ -47,6 +47,7 @@ data class SettingsUiState(
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val appTheme: AppTheme = AppTheme.DEFAULT,
+    val logoVariant: com.suvojeet.suvmusic.core.model.LogoVariant = com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT,
     val dynamicColorEnabled: Boolean = true,
     val gaplessPlaybackEnabled: Boolean = false,
     val automixEnabled: Boolean = true,
@@ -234,7 +235,13 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(appTheme = theme) }
             }
         }
-        
+
+        viewModelScope.launch {
+            sessionManager.logoVariantFlow.collect { variant ->
+                _uiState.update { it.copy(logoVariant = variant) }
+            }
+        }
+
         viewModelScope.launch {
             sessionManager.doubleTapSeekSecondsFlow.collect { seconds ->
                 _uiState.update { it.copy(doubleTapSeekSeconds = seconds) }
@@ -1181,7 +1188,14 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(appTheme = theme) }
         }
     }
-    
+
+    fun setLogoVariant(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
+        viewModelScope.launch {
+            sessionManager.setLogoVariant(variant)
+            _uiState.update { it.copy(logoVariant = variant) }
+        }
+    }
+
     fun setGaplessPlayback(enabled: Boolean) {
         viewModelScope.launch {
             sessionManager.setGaplessPlayback(enabled)
