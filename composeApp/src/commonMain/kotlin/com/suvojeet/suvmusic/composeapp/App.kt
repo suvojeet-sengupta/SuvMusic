@@ -54,7 +54,7 @@ import com.suvojeet.suvmusic.composeapp.ui.LyricsTab
 import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.composeapp.ui.SearchTab
-import com.suvojeet.suvmusic.composeapp.ui.VlcWarningBanner
+import com.suvojeet.suvmusic.composeapp.ui.PlaybackEngineUnavailableBanner
 import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
 import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
@@ -118,7 +118,7 @@ fun App(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             if (!musicPlayer.isAvailable) {
-                                VlcWarningBanner(onOpenUrl = onOpenUrl)
+                                PlaybackEngineUnavailableBanner(onOpenUrl = onOpenUrl)
                             }
 
                             when (selectedTab) {

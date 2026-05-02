@@ -266,11 +266,14 @@ fun AboutTab(
 }
 
 // ----------------------------------------------------------------------
-// Banner shown when MusicPlayer.isAvailable is false (no VLC installed).
+// Banner shown when MusicPlayer.isAvailable is false. Copy is platform-
+// specific (Desktop: install VLC; Android: engine not ready) — see
+// PlaybackEngineHint expect/actual.
 // ----------------------------------------------------------------------
 
 @Composable
-fun VlcWarningBanner(onOpenUrl: (String) -> Unit) {
+fun PlaybackEngineUnavailableBanner(onOpenUrl: (String) -> Unit) {
+    val hint = playbackEngineHint
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -282,20 +285,21 @@ fun VlcWarningBanner(onOpenUrl: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "VLC media player not detected",
+                text = hint.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "SuvMusic Desktop uses VLC's playback engine (LibVLC). Install VLC media player and relaunch.",
+                text = hint.body,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Text(
-                text = "Windows: open PowerShell and run  winget install VideoLAN.VLC",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            TextButton(onClick = { onOpenUrl("https://www.videolan.org/vlc/") }) {
-                Text("Download VLC")
+            hint.detail?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall)
+            }
+            hint.actionUrl?.let { url ->
+                TextButton(onClick = { onOpenUrl(url) }) {
+                    Text(hint.actionLabel ?: "Learn more")
+                }
             }
         }
     }
