@@ -2171,34 +2171,34 @@ class SessionManager @Inject constructor(
             "$pkg.LauncherAether",
             "$pkg.LauncherClassic",
         )
+
+        // 1. Enable the target alias first (with DONT_KILL_APP to avoid premature exit)
+        val targetComponent = android.content.ComponentName(pkg, targetAliasName)
+        try {
+            pm.setComponentEnabledSetting(
+                targetComponent,
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                android.content.pm.PackageManager.DONT_KILL_APP
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("SessionManager", "Failed to enable target alias $targetAliasName", e)
+        }
+
+        // 2. Disable all other aliases
         for (alias in allAliases) {
+            if (alias == targetAliasName) continue
             val component = android.content.ComponentName(pkg, alias)
-            val desired = if (alias == targetAliasName) {
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            }
-            val current = try {
-                pm.getComponentEnabledSetting(component)
-            } catch (e: IllegalArgumentException) {
-                // Alias not present yet (e.g. fresh install racing first call).
-                android.util.Log.w("SessionManager", "Launcher alias missing: $alias")
-                continue
-            }
-            if (current != desired) {
-                try {
+            try {
+                val current = pm.getComponentEnabledSetting(component)
+                if (current != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
                     pm.setComponentEnabledSetting(
                         component,
-                        desired,
-                        // DONT_KILL_APP=0 — we WANT the app killed so the
-                        // launcher rebinds to the new component. Setting it
-                        // to DONT_KILL_APP can leave the launcher with a
-                        // stale icon until the next reboot.
-                        0,
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        0 // Let Android kill the app process here if this was the active alias
                     )
-                } catch (e: Exception) {
-                    android.util.Log.e("SessionManager", "Failed to flip launcher alias $alias", e)
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("SessionManager", "Failed to disable alias $alias", e)
             }
         }
     }
