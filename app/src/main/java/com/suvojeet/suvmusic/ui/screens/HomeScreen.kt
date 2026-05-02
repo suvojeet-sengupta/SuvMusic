@@ -1522,10 +1522,9 @@ private fun AppFooter(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                AsyncImage(
-                    model = com.suvojeet.suvmusic.R.drawable.logo,
+                com.suvojeet.suvmusic.ui.components.AppLogo(
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)),
                     contentDescription = null,
-                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
                 )
             }
         }
