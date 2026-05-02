@@ -2137,6 +2137,70 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[LOGO_VARIANT_KEY] = variant.name
         }
+        applyLauncherAlias(variant)
+    }
+
+    /**
+     * Switch the launcher icon to match the chosen [variant] by enabling
+     * exactly one of the activity-alias entries declared in the manifest
+     * and disabling the others. The launcher reads the alias state and
+     * shows the corresponding icon.
+     *
+     * Caveat: changing the enabled state of the *currently active* alias
+     * causes Android to terminate the app process so the launcher can
+     * re-bind. The Appearance settings UI surfaces this with a confirmation
+     * toast before calling setLogoVariant().
+     *
+     * Some launchers (notably Pixel Launcher pre-Android 13) cache icons
+     * aggressively and may take a few seconds — or a re-launch of the
+     * launcher itself — to pick up the new alias. There's no API fix for
+     * that; it's a launcher-side behaviour.
+     */
+    private fun applyLauncherAlias(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
+        val pkg = context.packageName
+        val pm = context.packageManager
+        val targetAliasName = when (variant) {
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE -> "$pkg.LauncherPulse"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE -> "$pkg.LauncherResonance"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER -> "$pkg.LauncherAether"
+            com.suvojeet.suvmusic.core.model.LogoVariant.CLASSIC -> "$pkg.LauncherClassic"
+        }
+        val allAliases = listOf(
+            "$pkg.LauncherPulse",
+            "$pkg.LauncherResonance",
+            "$pkg.LauncherAether",
+            "$pkg.LauncherClassic",
+        )
+        for (alias in allAliases) {
+            val component = android.content.ComponentName(pkg, alias)
+            val desired = if (alias == targetAliasName) {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+            val current = try {
+                pm.getComponentEnabledSetting(component)
+            } catch (e: IllegalArgumentException) {
+                // Alias not present yet (e.g. fresh install racing first call).
+                android.util.Log.w("SessionManager", "Launcher alias missing: $alias")
+                continue
+            }
+            if (current != desired) {
+                try {
+                    pm.setComponentEnabledSetting(
+                        component,
+                        desired,
+                        // DONT_KILL_APP=0 — we WANT the app killed so the
+                        // launcher rebinds to the new component. Setting it
+                        // to DONT_KILL_APP can leave the launcher with a
+                        // stale icon until the next reboot.
+                        0,
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("SessionManager", "Failed to flip launcher alias $alias", e)
+                }
+            }
+        }
     }
 
     suspend fun isDynamicColorEnabled(): Boolean =

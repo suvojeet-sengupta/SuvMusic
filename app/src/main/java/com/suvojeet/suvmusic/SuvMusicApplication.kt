@@ -131,6 +131,13 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             com.suvojeet.suvmusic.util.AppLog.d("SuvMusicApplication") { "Setting up workers" }
             setupWorkers()
         }
+        // Note: we deliberately do NOT reconcile the launcher activity-alias
+        // state with the stored LogoVariant on cold start. Doing so would
+        // kill the app on the first launch after upgrade (because the
+        // default in-app variant is PULSE but the manifest default alias
+        // is CLASSIC), which is jarring UX. The launcher icon switches
+        // only when the user explicitly picks a variant from Appearance
+        // settings.
     }
     
     override val workManagerConfiguration: androidx.work.Configuration
