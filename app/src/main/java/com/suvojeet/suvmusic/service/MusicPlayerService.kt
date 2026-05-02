@@ -144,6 +144,16 @@ class MusicPlayerService : MediaLibraryService() {
     @Volatile
     private var stopMusicOnTaskClearCached: Boolean = false
 
+    // Tracks whether playback was actively running when the most recent
+    // playback-suppression event started (audio focus loss for incoming calls,
+    // navigation announcements, etc.). Used by onPlaybackSuppressionReasonChanged
+    // to decide whether to auto-resume when suppression is lifted: if the user
+    // had already pressed pause before the call, suppression-cleared must NOT
+    // wake playback back up. Captured under the main thread when suppression
+    // begins so it reflects the actual playWhenReady at that instant.
+    @Volatile
+    private var wasPlayingBeforeSuppression: Boolean = false
+
     private var audioSinkKickstartDone = false
     
     // Audio AR & Effects state
@@ -522,14 +532,39 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
                     super.onPlaybackSuppressionReasonChanged(playbackSuppressionReason)
-                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
-                        serviceScope.launch {
-                            if (sessionManager.isAutoResumeAfterCallEnabled()) {
-                                android.util.Log.d("MusicPlayerService", "Suppression removed. Ensuring playback resumes.")
-                                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    mediaLibrarySession?.player?.play()
-                                }
+                    if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        // Suppression starting (incoming call, transient focus loss,
+                        // nav announcement). Capture the playWhenReady state at this
+                        // exact moment so we can decide on resume: if the user had
+                        // already paused before this event, we must NOT wake playback
+                        // back up when suppression clears.
+                        wasPlayingBeforeSuppression = mediaLibrarySession?.player?.playWhenReady == true
+                        android.util.Log.d(
+                            "MusicPlayerService",
+                            "Suppression started (reason=$playbackSuppressionReason). wasPlayingBeforeSuppression=$wasPlayingBeforeSuppression",
+                        )
+                        return
+                    }
+
+                    // Suppression cleared. Only resume if playback was actually running
+                    // when suppression started AND the user has auto-resume enabled.
+                    val shouldResume = wasPlayingBeforeSuppression
+                    wasPlayingBeforeSuppression = false
+                    if (!shouldResume) {
+                        android.util.Log.d(
+                            "MusicPlayerService",
+                            "Suppression cleared but user had paused before — leaving paused.",
+                        )
+                        return
+                    }
+                    serviceScope.launch {
+                        if (sessionManager.isAutoResumeAfterCallEnabled()) {
+                            android.util.Log.d("MusicPlayerService", "Suppression cleared and was playing — resuming.")
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                mediaLibrarySession?.player?.play()
                             }
+                        } else {
+                            android.util.Log.d("MusicPlayerService", "Suppression cleared but auto-resume disabled — staying paused.")
                         }
                     }
                 }
