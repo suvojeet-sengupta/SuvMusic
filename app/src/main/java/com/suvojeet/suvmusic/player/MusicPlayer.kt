@@ -25,6 +25,7 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1942,27 +1943,32 @@ class MusicPlayer @Inject constructor(
     }
     
     fun seekToPrevious() {
-        currentResolutionJob?.cancel()
         val state = _playerState.value
         // If played more than 3 seconds, restart current song
         if (state.currentPosition > 3000) {
+            currentResolutionJob?.cancel()
             seekTo(0)
             return
         }
-        
+
         val queue = state.queue
         if (queue.isEmpty()) return
         val controller = mediaController ?: return
-        
-        val prevIndex = controller.previousMediaItemIndex
 
-        if (prevIndex != -1 && prevIndex != androidx.media3.common.C.INDEX_UNSET && prevIndex in queue.indices) {
-             controller.seekToPreviousMediaItem()
-        } else {
-            // If at start and repeat all is on, go to end? Or just stop.
-            if (state.repeatMode == RepeatMode.ALL && queue.isNotEmpty()) {
-                val lastIndex = queue.lastIndex
-                controller.seekTo(lastIndex, 0L)
+        // Wait for the in-flight resolution to actually finish cancelling before
+        // we trigger seekToPreviousMediaItem — otherwise the still-running
+        // resolution and the new transition's resolution race on
+        // replaceMediaItem for overlapping indices (same double-resolution
+        // class as the prior shuffle bug, but on user-driven Previous).
+        scope.launch {
+            currentResolutionJob?.cancelAndJoin()
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                val prevIndex = controller.previousMediaItemIndex
+                if (prevIndex != -1 && prevIndex != androidx.media3.common.C.INDEX_UNSET && prevIndex in queue.indices) {
+                    controller.seekToPreviousMediaItem()
+                } else if (state.repeatMode == RepeatMode.ALL && queue.isNotEmpty()) {
+                    controller.seekTo(queue.lastIndex, 0L)
+                }
             }
         }
     }
@@ -2215,22 +2221,56 @@ class MusicPlayer @Inject constructor(
         if (indices.isEmpty()) return
         val sortedIndices = indices.sortedDescending()
         val queue = _playerState.value.queue.toMutableList()
-        
-        mediaController?.let { controller ->
-            sortedIndices.forEach { index ->
-                if (index in queue.indices) {
-                    queue.removeAt(index)
-                    controller.removeMediaItem(index)
-                }
+        val controller = mediaController ?: return
+
+        // Capture the current playing index BEFORE mutating, and detect whether
+        // any removed index is the one currently playing. After removeMediaItem
+        // returns, controller.currentMediaItemIndex may still report the stale
+        // pre-removal index (Media3's index update crosses an IPC boundary), so
+        // computing currentSong directly off it produced a blank player UI when
+        // the user swiped-to-remove the playing track.
+        val originalCurrentIndex = controller.currentMediaItemIndex
+        val currentWasRemoved = sortedIndices.any { it == originalCurrentIndex }
+
+        sortedIndices.forEach { index ->
+            if (index in queue.indices) {
+                queue.removeAt(index)
+                controller.removeMediaItem(index)
             }
-            
-            _playerState.update { 
+        }
+
+        if (queue.isEmpty()) {
+            _playerState.update {
                 it.copy(
-                    queue = queue,
-                    currentIndex = controller.currentMediaItemIndex,
-                    currentSong = if (controller.currentMediaItemIndex in queue.indices) queue[controller.currentMediaItemIndex] else null
-                ) 
+                    queue = emptyList(),
+                    currentIndex = -1,
+                    currentSong = null,
+                    isPlaying = false,
+                )
             }
+            return
+        }
+
+        // If the playing track was removed, Media3 auto-transitions to the
+        // next track but we can't trust controller.currentMediaItemIndex
+        // immediately after the IPC removal call. Land on a deterministic
+        // "next" index (the same slot, or last if we removed the tail) and
+        // let onMediaItemTransition correct us if it disagrees.
+        val newIndex = if (currentWasRemoved) {
+            originalCurrentIndex.coerceAtMost(queue.size - 1).coerceAtLeast(0)
+        } else {
+            // Current track survived; its position may have shifted left if any
+            // earlier indices were removed.
+            val shift = sortedIndices.count { it < originalCurrentIndex }
+            (originalCurrentIndex - shift).coerceIn(0, queue.size - 1)
+        }
+
+        _playerState.update {
+            it.copy(
+                queue = queue,
+                currentIndex = newIndex,
+                currentSong = queue[newIndex],
+            )
         }
     }
 
@@ -2241,38 +2281,73 @@ class MusicPlayer @Inject constructor(
         val controller = mediaController ?: return
         val currentMediaItem = controller.currentMediaItem ?: return
         val currentIndex = controller.currentMediaItemIndex
-        val currentPosition = controller.currentPosition
-        
+
         scope.launch {
-            // Find current song in new queue
-            val newIndexInSongs = songs.indexOfFirst { it.id == currentMediaItem.mediaId }.coerceAtLeast(0)
-            
-            _playerState.update { 
+            // Find the currently playing song in the new ordering.
+            // indexOfFirst returns -1 when the user removed/filtered the current
+            // track out of the queue. Previously this was coerced to 0, which
+            // kept the old current item playing but pinned it at logical index 0
+            // of the new queue — the UI then showed song A playing while the
+            // queue list said song B was current. Treat -1 as "current is no
+            // longer in the queue" and replace the whole timeline.
+            val foundIndex = songs.indexOfFirst { it.id == currentMediaItem.mediaId }
+
+            if (foundIndex < 0) {
+                // Current song dropped from the new queue. Replace the entire
+                // controller timeline and start from the top of the new list.
+                if (songs.isEmpty()) {
+                    controller.clearMediaItems()
+                    _playerState.update {
+                        it.copy(
+                            queue = emptyList(),
+                            currentIndex = -1,
+                            currentSong = null,
+                            isPlaying = false,
+                        )
+                    }
+                    return@launch
+                }
+                val newMediaItems = songs.map { createMediaItem(it, resolveStream = false) }
+                controller.setMediaItems(newMediaItems, 0, 0L)
+                controller.prepare()
+                _playerState.update {
+                    it.copy(
+                        queue = songs,
+                        currentIndex = 0,
+                        currentSong = songs[0],
+                    )
+                }
+                return@launch
+            }
+
+            val newIndexInSongs = foundIndex
+            _playerState.update {
                 it.copy(
                     queue = songs,
-                    currentIndex = newIndexInSongs
-                ) 
+                    currentIndex = newIndexInSongs,
+                    currentSong = songs[newIndexInSongs],
+                )
             }
-            
+
             // 1. Clear everything after the current item
             if (controller.mediaItemCount > currentIndex + 1) {
                 controller.removeMediaItems(currentIndex + 1, controller.mediaItemCount)
             }
-            
+
             // 2. Clear everything before the current item
             if (currentIndex > 0) {
                 controller.removeMediaItems(0, currentIndex)
             }
-            
+
             // Now only the current item is in the player at index 0.
-            
+
             // 3. Add items before the current one in the new queue
             if (newIndexInSongs > 0) {
                 val songsBefore = songs.subList(0, newIndexInSongs)
                 val mediaItemsBefore = songsBefore.map { createMediaItem(it, resolveStream = false) }
                 controller.addMediaItems(0, mediaItemsBefore)
             }
-            
+
             // 4. Add items after the current one in the new queue
             if (newIndexInSongs < songs.size - 1) {
                 val songsAfter = songs.subList(newIndexInSongs + 1, songs.size)
