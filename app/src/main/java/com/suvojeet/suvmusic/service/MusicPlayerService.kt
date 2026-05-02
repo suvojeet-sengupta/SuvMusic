@@ -134,7 +134,16 @@ class MusicPlayerService : MediaLibraryService() {
     private val serviceResolutionInProgress = java.util.concurrent.atomic.AtomicBoolean(false)
     
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
-    
+
+    // Cached "stop music when task is cleared" setting. onTaskRemoved is called
+    // synchronously by the framework which then immediately decides whether to
+    // keep the service alive — reading the flow's value asynchronously inside
+    // a coroutine raced the framework's decision and produced inconsistent
+    // behavior (sometimes music kept playing, sometimes stopped twice). We
+    // cache the value at service start and observe the flow to keep it fresh.
+    @Volatile
+    private var stopMusicOnTaskClearCached: Boolean = false
+
     private var audioSinkKickstartDone = false
     
     // Audio AR & Effects state
@@ -1324,6 +1333,13 @@ class MusicPlayerService : MediaLibraryService() {
                 sponsorBlockRepository.setEnabled(enabled)
             }
         }
+        // Keep the cached setting fresh so onTaskRemoved can read it
+        // synchronously — see stopMusicOnTaskClearCached.
+        serviceScope.launch {
+            sessionManager.stopMusicOnTaskClearEnabledFlow.collect { enabled ->
+                stopMusicOnTaskClearCached = enabled
+            }
+        }
         setupSleepTimerNotification()
     }
     
@@ -1423,15 +1439,16 @@ class MusicPlayerService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
     
     override fun onTaskRemoved(rootIntent: Intent?) {
-        serviceScope.launch {
-            if (sessionManager.isStopMusicOnTaskClearEnabled()) {
-                stopSelf()
-            } else {
-                val player = mediaLibrarySession?.player
-                if (player?.playWhenReady == false && player.mediaItemCount == 0) {
-                    stopSelf()
-                }
-            }
+        // Read the cached setting synchronously — the framework decides whether
+        // to keep the service alive immediately after this method returns, so
+        // launching a coroutine to read DataStore raced that decision.
+        if (stopMusicOnTaskClearCached) {
+            stopSelf()
+            return
+        }
+        val player = mediaLibrarySession?.player
+        if (player?.playWhenReady == false && player.mediaItemCount == 0) {
+            stopSelf()
         }
     }
     
@@ -1484,7 +1501,13 @@ class MusicPlayerService : MediaLibraryService() {
     override fun onDestroy() {
         serviceScope.cancel()
         sponsorBlockJob?.cancel()
-        try { unregisterReceiver(volumeReceiver) } catch (e: Exception) {}
+        try {
+            unregisterReceiver(volumeReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver wasn't registered — onCreate likely failed before
+            // registerReceiver ran. Safe to ignore on teardown but worth logging.
+            android.util.Log.w("MusicPlayerService", "volumeReceiver was not registered at onDestroy")
+        }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
         audioARManager.setPlaying(false)
