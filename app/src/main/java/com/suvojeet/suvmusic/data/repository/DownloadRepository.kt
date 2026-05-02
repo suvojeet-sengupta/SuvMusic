@@ -19,6 +19,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -935,8 +936,10 @@ class DownloadRepository @Inject constructor(
                             // tap on Cancel only stopped the cooperative coroutine
                             // bookkeeping while OkHttp/file copy kept reading bytes
                             // until the next chunk boundary — the row disappeared
-                            // from UI but bandwidth/storage kept draining.
-                            kotlinx.coroutines.ensureActive()
+                            // from UI but bandwidth/storage kept draining. Inside
+                            // the .use { } lambdas there's no CoroutineScope
+                            // receiver, so reach for the suspending context form.
+                            currentCoroutineContext().ensureActive()
                             outputStream.write(buffer, 0, bytesRead)
                             totalBytesRead += bytesRead
                             if (contentLength > 0) {
