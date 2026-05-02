@@ -269,7 +269,10 @@ class MusicPlayer @Inject constructor(
                     try {
                         com.suvojeet.suvmusic.glance.SuvMusicWidget().updateAll(context)
                     } catch (e: Exception) {
-                        // Ignore
+                        // Glance widget update can fail when no widget is bound,
+                        // when the host process is busy, or on rare runtime errors.
+                        // None should crash playback — log so we can spot patterns.
+                        android.util.Log.w("MusicPlayer", "Widget updateAll failed: ${e.message}")
                     }
                 }
             }
@@ -2481,8 +2484,9 @@ class MusicPlayer @Inject constructor(
         deviceReceiver?.let {
             try {
                 context.unregisterReceiver(it)
-            } catch (e: Exception) {
-                // Ignore if already unregistered
+            } catch (e: IllegalArgumentException) {
+                // Already unregistered — release() called twice or never registered.
+                android.util.Log.w("MusicPlayer", "deviceReceiver was not registered at release()")
             }
             deviceReceiver = null
         }
