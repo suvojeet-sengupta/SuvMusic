@@ -144,7 +144,25 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Handle permission results
+        permissions.forEach { (perm, granted) ->
+            if (!granted) {
+                android.util.Log.w("MainActivity", "Permission denied: $perm")
+            }
+        }
+        // Notifications power lock-screen / Android Auto / wear controls and
+        // the foreground media service notification. A silent denial means
+        // the user thinks the app is broken; surface a Toast so they know
+        // the playback notification won't appear and they can re-enable it
+        // in system settings.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            permissions[Manifest.permission.POST_NOTIFICATIONS] == false
+        ) {
+            android.widget.Toast.makeText(
+                this,
+                "Notifications disabled — playback controls won't appear on the lock screen. Enable it in App settings.",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
