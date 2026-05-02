@@ -20,7 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,12 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.lazy.LazyColumn
 import com.suvojeet.suvmusic.core.model.LogoVariant
 import kotlinx.coroutines.launch
 
@@ -60,6 +61,8 @@ fun LogoPickerSection(
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    var pendingVariant by remember { mutableStateOf<LogoVariant?>(null) }
+    val ctx = LocalContext.current
 
     Column(modifier = modifier) {
         Text(
@@ -138,16 +141,59 @@ fun LogoPickerSection(
                         variant = variant,
                         isSelected = variant == selected,
                         onClick = {
-                            onSelect(variant)
-                            scope.launch {
-                                sheetState.hide()
-                                showSheet = false
+                            if (variant == selected) {
+                                scope.launch {
+                                    sheetState.hide()
+                                    showSheet = false
+                                }
+                            } else {
+                                pendingVariant = variant
                             }
                         },
                     )
                 }
             }
         }
+    }
+
+    pendingVariant?.let { variant ->
+        AlertDialog(
+            onDismissRequest = { pendingVariant = null },
+            title = { Text("Change app logo to ${variant.displayName}?") },
+            text = {
+                Text(
+                    "The launcher icon will switch to the ${variant.displayName} logo. " +
+                        "Android will close SuvMusic so the launcher can refresh — " +
+                        "open the app again from your launcher after that.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSelect(variant)
+                    pendingVariant = null
+                    // Brief toast so the user has a beat to read it before
+                    // Android tears the process down. The actual kill happens
+                    // inside SessionManager.applyLauncherAlias when it flips
+                    // the active alias.
+                    android.widget.Toast.makeText(
+                        ctx,
+                        "Switching to ${variant.displayName}…",
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                    scope.launch {
+                        sheetState.hide()
+                        showSheet = false
+                    }
+                }) {
+                    Text("Apply & restart")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingVariant = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 
