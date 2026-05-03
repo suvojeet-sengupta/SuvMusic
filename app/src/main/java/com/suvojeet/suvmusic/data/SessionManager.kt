@@ -2185,52 +2185,98 @@ class SessionManager @Inject constructor(
     private fun applyLauncherAlias(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
         val pkg = context.packageName
         val pm = context.packageManager
-        // The launcher icon switches at the CONCEPT level — sub-styles
-        // (App Icon / Mono / Light / Tone) only affect the in-app brand
-        // and the splash drawable. We derive the alias from conceptKey so
-        // all five styles of e.g. Pulse route to LauncherPulse.
-        val targetAliasName = when (variant.conceptKey) {
-            "PULSE" -> "$pkg.LauncherPulse"
-            "RESONANCE" -> "$pkg.LauncherResonance"
-            "AETHER" -> "$pkg.LauncherAether"
-            "CLASSIC" -> "$pkg.LauncherClassic"
-            else -> "$pkg.LauncherClassic"
+        // Each LogoVariant maps to its own activity-alias so the launcher
+        // icon updates per variant — picking "Pulse · Monochrome" enables
+        // LauncherPulseMono, etc. Sub-styles within a concept share the
+        // same splash theme (defined on each alias's android:theme) but
+        // have distinct launcher icons.
+        val targetAliasName = "$pkg." + when (variant) {
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE -> "LauncherPulse"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_APP_ICON -> "LauncherPulseAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_MONO -> "LauncherPulseMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_LIGHT -> "LauncherPulseLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_TONE -> "LauncherPulseTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE -> "LauncherResonance"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_APP_ICON -> "LauncherResonanceAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_MONO -> "LauncherResonanceMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_LIGHT -> "LauncherResonanceLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_TONE -> "LauncherResonanceTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER -> "LauncherAether"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_APP_ICON -> "LauncherAetherAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_MONO -> "LauncherAetherMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_LIGHT -> "LauncherAetherLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_TONE -> "LauncherAetherTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.CLASSIC -> "LauncherClassic"
         }
         val allAliases = listOf(
-            "$pkg.LauncherPulse",
-            "$pkg.LauncherResonance",
-            "$pkg.LauncherAether",
             "$pkg.LauncherClassic",
+            "$pkg.LauncherPulse",
+            "$pkg.LauncherPulseAppIcon",
+            "$pkg.LauncherPulseMono",
+            "$pkg.LauncherPulseLight",
+            "$pkg.LauncherPulseTone",
+            "$pkg.LauncherResonance",
+            "$pkg.LauncherResonanceAppIcon",
+            "$pkg.LauncherResonanceMono",
+            "$pkg.LauncherResonanceLight",
+            "$pkg.LauncherResonanceTone",
+            "$pkg.LauncherAether",
+            "$pkg.LauncherAetherAppIcon",
+            "$pkg.LauncherAetherMono",
+            "$pkg.LauncherAetherLight",
+            "$pkg.LauncherAetherTone",
         )
 
-        // 1. Enable the target alias first (with DONT_KILL_APP to avoid premature exit)
-        val targetComponent = android.content.ComponentName(pkg, targetAliasName)
-        try {
-            pm.setComponentEnabledSetting(
-                targetComponent,
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                android.content.pm.PackageManager.DONT_KILL_APP
-            )
-        } catch (e: Exception) {
-            android.util.Log.e("SessionManager", "Failed to enable target alias $targetAliasName", e)
+        // Pass 1: flip every alias with DONT_KILL_APP so all four
+        // setComponentEnabledSetting calls actually complete. The previous
+        // implementation passed flags=0 inside the loop, which schedules an
+        // immediate process kill — on the first flip that affected the
+        // currently-active alias, Android terminated the app before the
+        // remaining flips could run, leaving the alias state inconsistent
+        // (e.g. LauncherPulse still enabled even though we just picked
+        // Resonance). Track whether anything actually changed so we know
+        // whether the launcher needs to refresh.
+        var anyChanged = false
+        for (alias in allAliases) {
+            val component = android.content.ComponentName(pkg, alias)
+            val desired = if (alias == targetAliasName) {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+            val current = try {
+                pm.getComponentEnabledSetting(component)
+            } catch (e: IllegalArgumentException) {
+                android.util.Log.w("SessionManager", "Launcher alias missing in manifest: $alias")
+                continue
+            }
+            if (current == desired) continue
+            try {
+                pm.setComponentEnabledSetting(
+                    component,
+                    desired,
+                    android.content.pm.PackageManager.DONT_KILL_APP,
+                )
+                anyChanged = true
+                android.util.Log.i(
+                    "SessionManager",
+                    "Launcher alias flipped: $alias -> ${if (desired == 1) "ENABLED" else "DISABLED"}",
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("SessionManager", "Failed to flip launcher alias $alias", e)
+            }
         }
 
-        // 2. Disable all other aliases
-        for (alias in allAliases) {
-            if (alias == targetAliasName) continue
-            val component = android.content.ComponentName(pkg, alias)
-            try {
-                val current = pm.getComponentEnabledSetting(component)
-                if (current != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
-                    pm.setComponentEnabledSetting(
-                        component,
-                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        0 // Let Android kill the app process here if this was the active alias
-                    )
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("SessionManager", "Failed to disable alias $alias", e)
-            }
+        // Pass 2: if we actually changed an alias, kill the app process so
+        // the launcher rebinds to the new component. Without this the
+        // launcher keeps showing the previous icon until the app is
+        // force-stopped or rebooted. Posting to the main handler with a
+        // small delay gives the picker UI a beat to dismiss its bottom
+        // sheet and toast before the kill.
+        if (anyChanged) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                android.os.Process.killProcess(android.os.Process.myPid())
+            }, 600L)
         }
     }
 
