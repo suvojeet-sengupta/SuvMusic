@@ -46,6 +46,11 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
 
+        // Wire the KMP MusicPlayer actual's application context here — earliest
+        // possible hook so any MusicPlayer constructed before onCreate (Compose
+        // previews, instrumentation tests) still gets a valid context.
+        com.suvojeet.suvmusic.core.domain.player.MusicPlayer.setApplicationContext(this)
+
         try {
             initAcra {
                 buildConfigClass = BuildConfig::class.java
@@ -62,7 +67,11 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e(
+                "SuvMusicApplication",
+                "ACRA init failed — crash reporting disabled for this session",
+                e,
+            )
         }
     }
 
@@ -70,14 +79,6 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
 
     override fun onCreate() {
         super.onCreate()
-
-        // Phase 4.2: hand the Application context to the KMP MusicPlayer
-        // actual in :core:domain so its ExoPlayer can be built. The expect
-        // class is no-arg (KMP requirement) — without this call, isAvailable
-        // is false and the shared composeApp App() shell can't play audio.
-        // Must run before any code resolves the KMP MusicPlayer (currently
-        // none does on Android, but the call is harmless either way).
-        com.suvojeet.suvmusic.core.domain.player.MusicPlayer.setApplicationContext(this)
 
         // Phase 1a: bring Koin up alongside Hilt. The app still routes all DI
         // through Hilt; Koin starts with an empty module list and gets populated
@@ -130,6 +131,13 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             com.suvojeet.suvmusic.util.AppLog.d("SuvMusicApplication") { "Setting up workers" }
             setupWorkers()
         }
+        // Note: we deliberately do NOT reconcile the launcher activity-alias
+        // state with the stored LogoVariant on cold start. Doing so would
+        // kill the app on the first launch after upgrade (because the
+        // default in-app variant is PULSE but the manifest default alias
+        // is CLASSIC), which is jarring UX. The launcher icon switches
+        // only when the user explicitly picks a variant from Appearance
+        // settings.
     }
     
     override val workManagerConfiguration: androidx.work.Configuration

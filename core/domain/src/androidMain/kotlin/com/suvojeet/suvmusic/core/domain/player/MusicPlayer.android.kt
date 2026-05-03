@@ -32,12 +32,18 @@ import kotlin.random.Random
  *
  * ExoPlayer needs an Android [Context]; the expect class is no-arg, so
  * the Application calls [MusicPlayer.setApplicationContext] once at
- * startup. Until that happens [isAvailable] is false (mirroring the
- * Desktop "no LibVLC" path) — UI surfaces this so the Play button shows
- * a hint instead of silently doing nothing.
+ * startup. This is wired in `attachBaseContext` (earliest possible hook)
+ * to avoid races where a [MusicPlayer] is constructed before [Application.onCreate]
+ * runs (Compose previews, instrumentation tests, etc.).
+ *
+ * ExoPlayer is created lazily on first playback request, re-checking
+ * [appContext] each time. A MusicPlayer constructed before the Application
+ * was attached can therefore still recover once the context is set, instead
+ * of being permanently dead.
  */
 actual class MusicPlayer {
     actual val isAvailable: Boolean
+        get() = appContext != null
 
     private val _currentSong = MutableStateFlow<Song?>(null)
     actual val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -63,62 +69,56 @@ actual class MusicPlayer {
     private val _currentIndex = MutableStateFlow(-1)
     actual val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
-    private var queueList: List<Song> = emptyList()
-    private var canonicalIndex: Int = -1
-    private var shuffleOrder: List<Int> = emptyList()
-    private var shuffleCursor: Int = -1
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // queueState is mutated under `queueLock` so background callers and the
+    // main-thread playback callbacks can't race on canonicalIndex/shuffleOrder.
+    private val queueLock = Any()
+    @Volatile private var queueList: List<Song> = emptyList()
+    @Volatile private var canonicalIndex: Int = -1
+    @Volatile private var shuffleOrder: List<Int> = emptyList()
+    @Volatile private var shuffleCursor: Int = -1
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val exoPlayer: ExoPlayer?
+
+    @Volatile private var exoPlayer: ExoPlayer? = null
+    @Volatile private var listenerAttached: Boolean = false
+    @Volatile private var tickerPosted: Boolean = false
 
     @OptIn(UnstableApi::class)
     private val positionTicker = object : Runnable {
         override fun run() {
-            val player = exoPlayer ?: return
-            if (player.isPlaying) {
+            val player = exoPlayer
+            if (player != null && player.isPlaying) {
                 _positionMs.value = player.currentPosition
             }
             mainHandler.postDelayed(this, POSITION_TICK_MS)
         }
     }
 
-    init {
-        val ctx = appContext
-        exoPlayer = if (ctx != null) {
-            try {
-                buildExoPlayer(ctx).also { player ->
-                    player.addListener(buildListener())
-                    mainHandler.post(positionTicker)
-                }
-            } catch (t: Throwable) {
-                Log.w(TAG, "ExoPlayer init failed: ${t.message}")
-                null
-            }
-        } else {
-            Log.w(TAG, "appContext not set — call MusicPlayer.setApplicationContext() at app startup. Playback disabled.")
-            null
-        }
-        isAvailable = exoPlayer != null
-    }
-
     actual fun setQueue(songs: List<Song>, startIndex: Int) {
-        queueList = songs
+        synchronized(queueLock) {
+            queueList = songs
+            canonicalIndex = startIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0))
+            regenerateShuffleOrderLocked()
+        }
         _queue.value = songs
-        canonicalIndex = startIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0))
         _currentIndex.value = if (songs.isEmpty()) -1 else canonicalIndex
-        regenerateShuffleOrder()
         loadCurrent(autoPlay = true)
     }
 
     actual fun playAt(index: Int) {
-        if (index !in queueList.indices) return
-        canonicalIndex = index
-        regenerateShuffleOrder()
+        synchronized(queueLock) {
+            if (index !in queueList.indices) return
+            canonicalIndex = index
+            regenerateShuffleOrderLocked()
+        }
         loadCurrent(autoPlay = true)
     }
 
     actual fun play() {
-        runOnMain { exoPlayer?.play() }
+        runOnMain { ensureExoPlayer()?.play() }
     }
 
     actual fun pause() {
@@ -127,31 +127,33 @@ actual class MusicPlayer {
 
     actual fun togglePlayPause() {
         runOnMain {
-            val player = exoPlayer ?: return@runOnMain
+            val player = ensureExoPlayer() ?: return@runOnMain
             if (player.isPlaying) player.pause() else player.play()
         }
     }
 
     actual fun next() {
-        if (queueList.isEmpty()) return
-        val nextIndex = nextIndexInPlayOrder()
-        if (nextIndex >= 0) {
-            canonicalIndex = nextIndex
-            loadCurrent(autoPlay = true)
+        val nextIndex = synchronized(queueLock) {
+            if (queueList.isEmpty()) return
+            nextIndexInPlayOrderLocked().also {
+                if (it >= 0) canonicalIndex = it
+            }
         }
+        if (nextIndex >= 0) loadCurrent(autoPlay = true)
     }
 
     actual fun previous() {
-        if (queueList.isEmpty()) return
         if (_positionMs.value > 3000L) {
             seekTo(0L)
             return
         }
-        val prevIndex = previousIndexInPlayOrder()
-        if (prevIndex >= 0) {
-            canonicalIndex = prevIndex
-            loadCurrent(autoPlay = true)
+        val prevIndex = synchronized(queueLock) {
+            if (queueList.isEmpty()) return
+            previousIndexInPlayOrderLocked().also {
+                if (it >= 0) canonicalIndex = it
+            }
         }
+        if (prevIndex >= 0) loadCurrent(autoPlay = true)
     }
 
     actual fun seekTo(positionMs: Long) {
@@ -172,30 +174,47 @@ actual class MusicPlayer {
     actual fun setShuffleEnabled(enabled: Boolean) {
         if (_shuffleEnabled.value == enabled) return
         _shuffleEnabled.value = enabled
-        regenerateShuffleOrder()
+        synchronized(queueLock) { regenerateShuffleOrderLocked() }
     }
 
     actual fun release() {
         runOnMain {
             mainHandler.removeCallbacks(positionTicker)
+            tickerPosted = false
             exoPlayer?.release()
+            exoPlayer = null
+            listenerAttached = false
         }
     }
 
+    /** Clear the most recent error after the UI has surfaced it. */
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
     private fun loadCurrent(autoPlay: Boolean) {
-        val song = queueList.getOrNull(canonicalIndex)
+        val (song, idx) = synchronized(queueLock) {
+            queueList.getOrNull(canonicalIndex) to canonicalIndex
+        }
         _currentSong.value = song
-        _currentIndex.value = if (song == null) -1 else canonicalIndex
+        _currentIndex.value = if (song == null) -1 else idx
         _positionMs.value = 0L
         _durationMs.value = 0L
         if (song == null) return
         val mrl = song.streamUrl ?: song.localUri
         if (mrl.isNullOrBlank()) {
-            Log.w(TAG, "No playable URL for ${song.title} — skipping load")
+            val msg = "No playable URL for \"${song.title}\". Stream may not be resolved yet."
+            Log.w(TAG, "$msg — skipping load")
+            _errorMessage.value = msg
+            _isPlaying.value = false
             return
         }
         runOnMain {
-            val player = exoPlayer ?: return@runOnMain
+            val player = ensureExoPlayer()
+            if (player == null) {
+                _errorMessage.value = "Audio engine unavailable. Restart the app and try again."
+                return@runOnMain
+            }
             player.setMediaItem(MediaItem.fromUri(mrl))
             player.prepare()
             if (autoPlay) player.play()
@@ -203,22 +222,21 @@ actual class MusicPlayer {
     }
 
     private fun onTrackEnded() {
-        when (_repeatMode.value) {
-            RepeatMode.ONE -> loadCurrent(autoPlay = true)
-            RepeatMode.ALL -> next()
-            RepeatMode.OFF -> {
-                val n = nextIndexInPlayOrder()
-                if (n >= 0) {
-                    canonicalIndex = n
-                    loadCurrent(autoPlay = true)
-                } else {
-                    _isPlaying.value = false
-                }
+        val target = synchronized(queueLock) {
+            when (_repeatMode.value) {
+                RepeatMode.ONE -> canonicalIndex
+                RepeatMode.ALL -> nextIndexInPlayOrderLocked().also { if (it >= 0) canonicalIndex = it }
+                RepeatMode.OFF -> nextIndexInPlayOrderLocked().also { if (it >= 0) canonicalIndex = it }
             }
+        }
+        if (target >= 0) {
+            loadCurrent(autoPlay = true)
+        } else {
+            _isPlaying.value = false
         }
     }
 
-    private fun nextIndexInPlayOrder(): Int {
+    private fun nextIndexInPlayOrderLocked(): Int {
         if (queueList.isEmpty()) return -1
         return if (_shuffleEnabled.value) {
             val nextCursor = shuffleCursor + 1
@@ -228,7 +246,7 @@ actual class MusicPlayer {
                     shuffleOrder[nextCursor]
                 }
                 _repeatMode.value == RepeatMode.ALL -> {
-                    regenerateShuffleOrder()
+                    regenerateShuffleOrderLocked()
                     shuffleCursor = 0
                     shuffleOrder.firstOrNull() ?: -1
                 }
@@ -241,7 +259,7 @@ actual class MusicPlayer {
         }
     }
 
-    private fun previousIndexInPlayOrder(): Int {
+    private fun previousIndexInPlayOrderLocked(): Int {
         if (queueList.isEmpty()) return -1
         return if (_shuffleEnabled.value) {
             val prevCursor = shuffleCursor - 1
@@ -255,7 +273,7 @@ actual class MusicPlayer {
         }
     }
 
-    private fun regenerateShuffleOrder() {
+    private fun regenerateShuffleOrderLocked() {
         if (!_shuffleEnabled.value || queueList.isEmpty()) {
             shuffleOrder = emptyList()
             shuffleCursor = -1
@@ -265,6 +283,31 @@ actual class MusicPlayer {
         others.shuffle(Random(System.nanoTime()))
         shuffleOrder = listOf(canonicalIndex) + others
         shuffleCursor = 0
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun ensureExoPlayer(): ExoPlayer? {
+        exoPlayer?.let { return it }
+        val ctx = appContext ?: return null
+        return synchronized(this) {
+            exoPlayer ?: try {
+                buildExoPlayer(ctx).also { player ->
+                    if (!listenerAttached) {
+                        player.addListener(buildListener())
+                        listenerAttached = true
+                    }
+                    if (!tickerPosted) {
+                        mainHandler.post(positionTicker)
+                        tickerPosted = true
+                    }
+                    exoPlayer = player
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "ExoPlayer init failed: ${t.message}")
+                _errorMessage.value = "Audio engine init failed: ${t.message}"
+                null
+            }
+        }
     }
 
     @OptIn(UnstableApi::class)
@@ -289,7 +332,9 @@ actual class MusicPlayer {
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            Log.w(TAG, "ExoPlayer error on ${_currentSong.value?.title}: ${error.message}")
+            val title = _currentSong.value?.title ?: "track"
+            Log.w(TAG, "ExoPlayer error on $title: ${error.message}")
+            _errorMessage.value = "Playback failed: ${error.message ?: "unknown error"}"
             _isPlaying.value = false
         }
     }
@@ -306,10 +351,14 @@ actual class MusicPlayer {
         private var appContext: Context? = null
 
         /**
-         * Must be called once from `Application.onCreate()` before the
-         * first [MusicPlayer] is constructed. The MusicPlayer expect
-         * class is no-arg (KMP requirement); this is how we hand the
-         * Android Application context to the actual.
+         * Must be called from `Application.attachBaseContext()` (earliest hook)
+         * before any [MusicPlayer] is constructed. The MusicPlayer expect class
+         * is no-arg (KMP requirement); this is how we hand the Android
+         * Application context to the actual.
+         *
+         * Calling this after a MusicPlayer is already constructed is safe —
+         * the player creates its ExoPlayer lazily on first playback request and
+         * will pick up the context at that point.
          */
         fun setApplicationContext(context: Context) {
             appContext = context.applicationContext

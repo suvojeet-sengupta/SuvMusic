@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse — Single Tone variant. Black S + halo on brass. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path
+        android:pathData="M0,0h400v400h-400z"
+        android:fillColor="#C9A961"/>
+    <path
+        android:pathData="M380,200 a180,180 0 1,1 -360,0 a180,180 0 1,1 360,0z"
+        android:fillColor="#00000000"
+        android:strokeColor="#0A0A0B"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.4"/>
+    <path
+        android:pathData="M280,110 C280,80, 240,70, 200,70 C150,70, 110,100, 110,145 C110,185, 145,200, 195,210 C250,222, 290,235, 290,280 C290,320, 250,340, 200,340 C155,340, 115,325, 110,295"
+        android:strokeColor="#0A0A0B"
+        android:strokeWidth="34"
+        android:strokeLineCap="round"/>
+</vector>

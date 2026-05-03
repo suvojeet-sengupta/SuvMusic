@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,15 +29,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.core.model.LogoVariant
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.ui.components.drawableRes
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.utils.SocialIcons
+import org.koin.compose.koinInject
 
 @Composable
 internal fun AboutDeveloperSection(onOpenUri: (String) -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     val primaryColor = colorScheme.primary
     val onSurfaceVariant = colorScheme.onSurfaceVariant
+    val sessionManager: SessionManager = koinInject()
+    val logoVariant by sessionManager.logoVariantFlow.collectAsState(initial = LogoVariant.DEFAULT)
 
     AboutSectionTitle("Developer")
     AboutCard(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -65,7 +72,7 @@ internal fun AboutDeveloperSection(onOpenUri: (String) -> Unit) {
                         .size(100.dp)
                         .clip(SquircleShape),
                     contentScale = ContentScale.Crop,
-                    error = painterResource(id = R.drawable.logo)
+                    error = painterResource(id = logoVariant.drawableRes())
                 )
             }
 

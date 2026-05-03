@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse — App Icon variant. Simplified S monogram on dark crimson squircle.
+     From the HTML logo concepts page, "App Icon" tile under Concept 01. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path
+        android:pathData="M0,0h400v400h-400z"
+        android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="400" android:endY="400">
+                <item android:offset="0" android:color="#2A0D12"/>
+                <item android:offset="1" android:color="#0D0506"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M280,110 C280,80, 240,70, 200,70 C150,70, 110,100, 110,145 C110,185, 145,200, 195,210 C250,222, 290,235, 290,280 C290,320, 250,340, 200,340 C155,340, 115,325, 110,295"
+        android:strokeWidth="44"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear"
+                android:startX="200" android:startY="0"
+                android:endX="200" android:endY="400">
+                <item android:offset="0" android:color="#F25871"/>
+                <item android:offset="1" android:color="#C9A961"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -67,7 +67,22 @@ class SuvMusicWidget : GlanceAppWidget() {
                 val currentSong = playerState.currentSong
                 
                 var artworkBitmap by remember(currentSong?.id) { mutableStateOf<Bitmap?>(null) }
-                
+
+                // Recycle the previous bitmap when the song id changes or the
+                // widget leaves composition. Each artwork is ~256KB ARGB; without
+                // explicit recycle() the native bitmap memory only freed when the
+                // GC ran and the JVM-side Bitmap was collected, which on long
+                // listening sessions across many track skips kept widget memory
+                // bloated.
+                DisposableEffect(currentSong?.id) {
+                    onDispose {
+                        artworkBitmap?.let { bmp ->
+                            if (!bmp.isRecycled) bmp.recycle()
+                        }
+                        artworkBitmap = null
+                    }
+                }
+
                 LaunchedEffect(currentSong?.id) {
                     if (currentSong?.thumbnailUrl != null) {
                         try {
@@ -80,7 +95,7 @@ class SuvMusicWidget : GlanceAppWidget() {
                                 artworkBitmap = result.image.toBitmap()
                             }
                         } catch (e: Exception) {
-                            // Fallback to placeholder
+                            android.util.Log.w("SuvMusicWidget", "Artwork load failed: ${e.message}")
                         }
                     }
                 }

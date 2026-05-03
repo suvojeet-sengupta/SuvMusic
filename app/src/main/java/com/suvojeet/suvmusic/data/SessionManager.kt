@@ -114,6 +114,7 @@ class SessionManager @Inject constructor(
         private val ARTWORK_SIZE_KEY = stringPreferencesKey("artwork_size")
         
         private val APP_THEME_KEY = stringPreferencesKey("app_theme")
+        private val LOGO_VARIANT_KEY = stringPreferencesKey("logo_variant")
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
         private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
@@ -840,20 +841,43 @@ class SessionManager @Inject constructor(
         preferences[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
     }
 
-    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_API_KEY] ?: "" }
+    // Encrypted-prefs keys for AI API tokens — these are billable user secrets,
+    // they live in EncryptedSharedPreferences, not the plaintext DataStore.
+    private val OPENAI_API_KEY_ENC = "openai_api_key_enc"
+    private val ANTHROPIC_API_KEY_ENC = "anthropic_api_key_enc"
+    private val GEMINI_API_KEY_ENC = "gemini_api_key_enc"
+
+    private fun getOpenAiApiKeyBlocking(): String =
+        encryptedPrefs.getString(OPENAI_API_KEY_ENC, null) ?: ""
+    private fun getAnthropicApiKeyBlocking(): String =
+        encryptedPrefs.getString(ANTHROPIC_API_KEY_ENC, null) ?: ""
+    private fun getGeminiApiKeyBlocking(): String =
+        encryptedPrefs.getString(GEMINI_API_KEY_ENC, null) ?: ""
+
+    val openaiApiKeyFlow: Flow<String> = context.dataStore.data.map { getOpenAiApiKeyBlocking() }
     val openaiModelFlow: Flow<String> = context.dataStore.data.map { it[OPENAI_MODEL_KEY] ?: "gpt-4o" }
-    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_API_KEY] ?: "" }
+    val anthropicApiKeyFlow: Flow<String> = context.dataStore.data.map { getAnthropicApiKeyBlocking() }
     val anthropicModelFlow: Flow<String> = context.dataStore.data.map { it[ANTHROPIC_MODEL_KEY] ?: "claude-3-5-sonnet-20240620" }
-    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_API_KEY] ?: "" }
+    val geminiApiKeyFlow: Flow<String> = context.dataStore.data.map { getGeminiApiKeyBlocking() }
     val geminiModelFlow: Flow<String> = context.dataStore.data.map { it[GEMINI_MODEL_KEY] ?: "gemini-1.5-pro" }
     val chatProxyModelFlow: Flow<String> = context.dataStore.data.map { it[CHAT_PROXY_MODEL_KEY] ?: "gpt-5" }
     val selectedAiProviderFlow: Flow<String> = context.dataStore.data.map { it[SELECTED_AI_PROVIDER_KEY] ?: "CHAT_PROXY" }
 
-    suspend fun setOpenAiApiKey(apiKey: String) = context.dataStore.edit { it[OPENAI_API_KEY] = apiKey }
+    suspend fun setOpenAiApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(OPENAI_API_KEY_ENC, apiKey).apply()
+        // Nudge DataStore listeners so the openaiApiKeyFlow re-emits.
+        context.dataStore.edit { it[OPENAI_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setOpenAiModel(model: String) = context.dataStore.edit { it[OPENAI_MODEL_KEY] = model }
-    suspend fun setAnthropicApiKey(apiKey: String) = context.dataStore.edit { it[ANTHROPIC_API_KEY] = apiKey }
+    suspend fun setAnthropicApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(ANTHROPIC_API_KEY_ENC, apiKey).apply()
+        context.dataStore.edit { it[ANTHROPIC_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setAnthropicModel(model: String) = context.dataStore.edit { it[ANTHROPIC_MODEL_KEY] = model }
-    suspend fun setGeminiApiKey(apiKey: String) = context.dataStore.edit { it[GEMINI_API_KEY] = apiKey }
+    suspend fun setGeminiApiKey(apiKey: String) {
+        encryptedPrefs.edit().putString(GEMINI_API_KEY_ENC, apiKey).apply()
+        context.dataStore.edit { it[GEMINI_API_KEY] = if (apiKey.isBlank()) "" else "stored" }
+    }
     suspend fun setGeminiModel(model: String) = context.dataStore.edit { it[GEMINI_MODEL_KEY] = model }
     suspend fun setChatProxyModel(model: String) = context.dataStore.edit { it[CHAT_PROXY_MODEL_KEY] = model }
     suspend fun setSelectedAiProvider(provider: String) = context.dataStore.edit { it[SELECTED_AI_PROVIDER_KEY] = provider }
@@ -1806,6 +1830,23 @@ class SessionManager @Inject constructor(
 
             // Initial login check on background thread
             _isLoggedInFlow.value = isLoggedIn()
+
+            // Seed the synchronous logo-variant mirror used by MainActivity to
+            // pick the splash screen theme. Existing users who selected a
+            // variant before this code shipped have it stored only in DataStore
+            // and need the SP mirror populated; new installs land here with no
+            // selection yet so the mirror falls back to the in-app default
+            // (PULSE), which matches what About / Home would render.
+            val brandingPrefs = context.getSharedPreferences(
+                "suvmusic_branding",
+                Context.MODE_PRIVATE,
+            )
+            if (brandingPrefs.getString("logo_variant", null) == null) {
+                val current = getLogoVariant()
+                brandingPrefs.edit()
+                    .putString("logo_variant", current.name)
+                    .apply()
+            }
         }
     }
     private suspend fun migrateSensitiveData() {
@@ -1830,6 +1871,28 @@ class SessionManager @Inject constructor(
                 context.dataStore.edit { prefs -> prefs.remove(dsKey) }
                 changed = true
                 if (prefKey == "cookies") _isLoggedInFlow.value = true
+            }
+        }
+
+        // Migrate AI API keys from plaintext DataStore to EncryptedSharedPreferences.
+        // Previously stored as raw stringPreferencesKey; user-billable secrets that
+        // shouldn't sit in plaintext DataStore. After migration, the DataStore entry
+        // becomes a "stored" sentinel used only to nudge listener flows.
+        val aiKeysToMigrate = listOf(
+            Triple(OPENAI_API_KEY, OPENAI_API_KEY_ENC, "openai"),
+            Triple(ANTHROPIC_API_KEY, ANTHROPIC_API_KEY_ENC, "anthropic"),
+            Triple(GEMINI_API_KEY, GEMINI_API_KEY_ENC, "gemini"),
+        )
+        aiKeysToMigrate.forEach { (dsKey, encKey, label) ->
+            val plain = dataStore[dsKey]
+            if (!plain.isNullOrBlank() && plain != "stored") {
+                edit.putString(encKey, plain)
+                context.dataStore.edit { it[dsKey] = "stored" }
+                changed = true
+                android.util.Log.i(
+                    "SessionManager",
+                    "Migrated $label API key from plaintext DataStore to encrypted prefs",
+                )
             }
         }
 
@@ -2071,8 +2134,153 @@ class SessionManager @Inject constructor(
             preferences[APP_THEME_KEY] = theme.name
         }
     }
-    
-    suspend fun isDynamicColorEnabled(): Boolean = 
+
+    suspend fun getLogoVariant(): com.suvojeet.suvmusic.core.model.LogoVariant {
+        val name = context.dataStore.data.first()[LOGO_VARIANT_KEY]
+        return name?.let {
+            try { com.suvojeet.suvmusic.core.model.LogoVariant.valueOf(it) }
+            catch (e: Exception) { com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT }
+        } ?: com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT
+    }
+
+    val logoVariantFlow: Flow<com.suvojeet.suvmusic.core.model.LogoVariant> = context.dataStore.data.map { preferences ->
+        preferences[LOGO_VARIANT_KEY]?.let {
+            try { com.suvojeet.suvmusic.core.model.LogoVariant.valueOf(it) }
+            catch (e: Exception) { com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT }
+        } ?: com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT
+    }
+
+    suspend fun setLogoVariant(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
+        context.dataStore.edit { preferences ->
+            preferences[LOGO_VARIANT_KEY] = variant.name
+        }
+        // Mirror to a separate SharedPreferences file so MainActivity can read
+        // the variant SYNCHRONOUSLY before installSplashScreen(). DataStore is
+        // async-only and would race the splash window initialisation, leaving
+        // the splash showing the previous variant's drawable for one launch
+        // after a switch.
+        context.getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
+            .edit()
+            .putString("logo_variant", variant.name)
+            .apply()
+        applyLauncherAlias(variant)
+    }
+
+    /**
+     * Switch the launcher icon to match the chosen [variant] by enabling
+     * exactly one of the activity-alias entries declared in the manifest
+     * and disabling the others. The launcher reads the alias state and
+     * shows the corresponding icon.
+     *
+     * Caveat: changing the enabled state of the *currently active* alias
+     * causes Android to terminate the app process so the launcher can
+     * re-bind. The Appearance settings UI surfaces this with a confirmation
+     * toast before calling setLogoVariant().
+     *
+     * Some launchers (notably Pixel Launcher pre-Android 13) cache icons
+     * aggressively and may take a few seconds — or a re-launch of the
+     * launcher itself — to pick up the new alias. There's no API fix for
+     * that; it's a launcher-side behaviour.
+     */
+    private fun applyLauncherAlias(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
+        val pkg = context.packageName
+        val pm = context.packageManager
+        // Each LogoVariant maps to its own activity-alias so the launcher
+        // icon updates per variant — picking "Pulse · Monochrome" enables
+        // LauncherPulseMono, etc. Sub-styles within a concept share the
+        // same splash theme (defined on each alias's android:theme) but
+        // have distinct launcher icons.
+        val targetAliasName = "$pkg." + when (variant) {
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE -> "LauncherPulse"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_APP_ICON -> "LauncherPulseAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_MONO -> "LauncherPulseMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_LIGHT -> "LauncherPulseLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE_TONE -> "LauncherPulseTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE -> "LauncherResonance"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_APP_ICON -> "LauncherResonanceAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_MONO -> "LauncherResonanceMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_LIGHT -> "LauncherResonanceLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE_TONE -> "LauncherResonanceTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER -> "LauncherAether"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_APP_ICON -> "LauncherAetherAppIcon"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_MONO -> "LauncherAetherMono"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_LIGHT -> "LauncherAetherLight"
+            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER_TONE -> "LauncherAetherTone"
+            com.suvojeet.suvmusic.core.model.LogoVariant.CLASSIC -> "LauncherClassic"
+        }
+        val allAliases = listOf(
+            "$pkg.LauncherClassic",
+            "$pkg.LauncherPulse",
+            "$pkg.LauncherPulseAppIcon",
+            "$pkg.LauncherPulseMono",
+            "$pkg.LauncherPulseLight",
+            "$pkg.LauncherPulseTone",
+            "$pkg.LauncherResonance",
+            "$pkg.LauncherResonanceAppIcon",
+            "$pkg.LauncherResonanceMono",
+            "$pkg.LauncherResonanceLight",
+            "$pkg.LauncherResonanceTone",
+            "$pkg.LauncherAether",
+            "$pkg.LauncherAetherAppIcon",
+            "$pkg.LauncherAetherMono",
+            "$pkg.LauncherAetherLight",
+            "$pkg.LauncherAetherTone",
+        )
+
+        // Pass 1: flip every alias with DONT_KILL_APP so all four
+        // setComponentEnabledSetting calls actually complete. The previous
+        // implementation passed flags=0 inside the loop, which schedules an
+        // immediate process kill — on the first flip that affected the
+        // currently-active alias, Android terminated the app before the
+        // remaining flips could run, leaving the alias state inconsistent
+        // (e.g. LauncherPulse still enabled even though we just picked
+        // Resonance). Track whether anything actually changed so we know
+        // whether the launcher needs to refresh.
+        var anyChanged = false
+        for (alias in allAliases) {
+            val component = android.content.ComponentName(pkg, alias)
+            val desired = if (alias == targetAliasName) {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+            val current = try {
+                pm.getComponentEnabledSetting(component)
+            } catch (e: IllegalArgumentException) {
+                android.util.Log.w("SessionManager", "Launcher alias missing in manifest: $alias")
+                continue
+            }
+            if (current == desired) continue
+            try {
+                pm.setComponentEnabledSetting(
+                    component,
+                    desired,
+                    android.content.pm.PackageManager.DONT_KILL_APP,
+                )
+                anyChanged = true
+                android.util.Log.i(
+                    "SessionManager",
+                    "Launcher alias flipped: $alias -> ${if (desired == 1) "ENABLED" else "DISABLED"}",
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("SessionManager", "Failed to flip launcher alias $alias", e)
+            }
+        }
+
+        // Pass 2: if we actually changed an alias, kill the app process so
+        // the launcher rebinds to the new component. Without this the
+        // launcher keeps showing the previous icon until the app is
+        // force-stopped or rebooted. Posting to the main handler with a
+        // small delay gives the picker UI a beat to dismiss its bottom
+        // sheet and toast before the kill.
+        if (anyChanged) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                android.os.Process.killProcess(android.os.Process.myPid())
+            }, 600L)
+        }
+    }
+
+    suspend fun isDynamicColorEnabled(): Boolean =
         context.dataStore.data.first()[DYNAMIC_COLOR_KEY] ?: true
     
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

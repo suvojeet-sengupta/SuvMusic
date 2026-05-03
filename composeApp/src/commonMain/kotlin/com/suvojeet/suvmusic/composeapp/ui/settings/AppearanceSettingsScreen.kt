@@ -130,6 +130,13 @@ fun AppearanceSettingsScreen(
     onLyricsBlurChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = 20.dp),
+    /**
+     * Slot for the host to drop a "Branding" / "App Logo" section in. The
+     * picker needs platform-specific drawable resources for the previews,
+     * so commonMain hands off rendering to the host. Pass `null` to hide
+     * the section (e.g. on platforms that don't ship the variant assets).
+     */
+    brandingSection: (@Composable () -> Unit)? = null,
 ) {
     var showThemeModeSheet by remember { mutableStateOf(false) }
     val themeModeSheetState = rememberModalBottomSheetState()
@@ -218,6 +225,14 @@ fun AppearanceSettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // --- Branding (App Logo) — host-rendered ---
+        brandingSection?.let { section ->
+            item {
+                section()
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
 
         // --- Player Section ---

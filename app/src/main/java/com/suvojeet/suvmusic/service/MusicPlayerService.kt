@@ -134,7 +134,26 @@ class MusicPlayerService : MediaLibraryService() {
     private val serviceResolutionInProgress = java.util.concurrent.atomic.AtomicBoolean(false)
     
     private var sponsorBlockJob: kotlinx.coroutines.Job? = null
-    
+
+    // Cached "stop music when task is cleared" setting. onTaskRemoved is called
+    // synchronously by the framework which then immediately decides whether to
+    // keep the service alive — reading the flow's value asynchronously inside
+    // a coroutine raced the framework's decision and produced inconsistent
+    // behavior (sometimes music kept playing, sometimes stopped twice). We
+    // cache the value at service start and observe the flow to keep it fresh.
+    @Volatile
+    private var stopMusicOnTaskClearCached: Boolean = false
+
+    // Tracks whether playback was actively running when the most recent
+    // playback-suppression event started (audio focus loss for incoming calls,
+    // navigation announcements, etc.). Used by onPlaybackSuppressionReasonChanged
+    // to decide whether to auto-resume when suppression is lifted: if the user
+    // had already pressed pause before the call, suppression-cleared must NOT
+    // wake playback back up. Captured under the main thread when suppression
+    // begins so it reflects the actual playWhenReady at that instant.
+    @Volatile
+    private var wasPlayingBeforeSuppression: Boolean = false
+
     private var audioSinkKickstartDone = false
     
     // Audio AR & Effects state
@@ -513,14 +532,39 @@ class MusicPlayerService : MediaLibraryService() {
 
                 override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
                     super.onPlaybackSuppressionReasonChanged(playbackSuppressionReason)
-                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
-                        serviceScope.launch {
-                            if (sessionManager.isAutoResumeAfterCallEnabled()) {
-                                android.util.Log.d("MusicPlayerService", "Suppression removed. Ensuring playback resumes.")
-                                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    mediaLibrarySession?.player?.play()
-                                }
+                    if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                        // Suppression starting (incoming call, transient focus loss,
+                        // nav announcement). Capture the playWhenReady state at this
+                        // exact moment so we can decide on resume: if the user had
+                        // already paused before this event, we must NOT wake playback
+                        // back up when suppression clears.
+                        wasPlayingBeforeSuppression = mediaLibrarySession?.player?.playWhenReady == true
+                        android.util.Log.d(
+                            "MusicPlayerService",
+                            "Suppression started (reason=$playbackSuppressionReason). wasPlayingBeforeSuppression=$wasPlayingBeforeSuppression",
+                        )
+                        return
+                    }
+
+                    // Suppression cleared. Only resume if playback was actually running
+                    // when suppression started AND the user has auto-resume enabled.
+                    val shouldResume = wasPlayingBeforeSuppression
+                    wasPlayingBeforeSuppression = false
+                    if (!shouldResume) {
+                        android.util.Log.d(
+                            "MusicPlayerService",
+                            "Suppression cleared but user had paused before — leaving paused.",
+                        )
+                        return
+                    }
+                    serviceScope.launch {
+                        if (sessionManager.isAutoResumeAfterCallEnabled()) {
+                            android.util.Log.d("MusicPlayerService", "Suppression cleared and was playing — resuming.")
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                mediaLibrarySession?.player?.play()
                             }
+                        } else {
+                            android.util.Log.d("MusicPlayerService", "Suppression cleared but auto-resume disabled — staying paused.")
                         }
                     }
                 }
@@ -1324,6 +1368,13 @@ class MusicPlayerService : MediaLibraryService() {
                 sponsorBlockRepository.setEnabled(enabled)
             }
         }
+        // Keep the cached setting fresh so onTaskRemoved can read it
+        // synchronously — see stopMusicOnTaskClearCached.
+        serviceScope.launch {
+            sessionManager.stopMusicOnTaskClearEnabledFlow.collect { enabled ->
+                stopMusicOnTaskClearCached = enabled
+            }
+        }
         setupSleepTimerNotification()
     }
     
@@ -1423,15 +1474,16 @@ class MusicPlayerService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
     
     override fun onTaskRemoved(rootIntent: Intent?) {
-        serviceScope.launch {
-            if (sessionManager.isStopMusicOnTaskClearEnabled()) {
-                stopSelf()
-            } else {
-                val player = mediaLibrarySession?.player
-                if (player?.playWhenReady == false && player.mediaItemCount == 0) {
-                    stopSelf()
-                }
-            }
+        // Read the cached setting synchronously — the framework decides whether
+        // to keep the service alive immediately after this method returns, so
+        // launching a coroutine to read DataStore raced that decision.
+        if (stopMusicOnTaskClearCached) {
+            stopSelf()
+            return
+        }
+        val player = mediaLibrarySession?.player
+        if (player?.playWhenReady == false && player.mediaItemCount == 0) {
+            stopSelf()
         }
     }
     
@@ -1484,7 +1536,13 @@ class MusicPlayerService : MediaLibraryService() {
     override fun onDestroy() {
         serviceScope.cancel()
         sponsorBlockJob?.cancel()
-        try { unregisterReceiver(volumeReceiver) } catch (e: Exception) {}
+        try {
+            unregisterReceiver(volumeReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver wasn't registered — onCreate likely failed before
+            // registerReceiver ran. Safe to ignore on teardown but worth logging.
+            android.util.Log.w("MusicPlayerService", "volumeReceiver was not registered at onDestroy")
+        }
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
         audioARManager.setPlaying(false)

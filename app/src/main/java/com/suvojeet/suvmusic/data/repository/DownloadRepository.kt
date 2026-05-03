@@ -19,6 +19,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -910,51 +911,66 @@ class DownloadRepository @Inject constructor(
             val tempDir = File(context.cacheDir, "progressive_downloads")
             if (!tempDir.exists()) tempDir.mkdirs()
             val tempFile = File(tempDir, "${song.id}.$extension.tmp")
-            
+            var finalUri: android.net.Uri? = null
+
             val request = Request.Builder().url(streamUrl).build()
             val response = downloadClient.newCall(request).execute()
-            if (!response.isSuccessful) {
-                response.close()
-                _downloadingIds.update { it - song.id }
-                _downloadProgress.update { it - song.id }
-                return@withContext false
-            }
-            
-            val contentLength = response.body.contentLength()
-            val minBytesForPlayback = 480 * 1024L
-            var playbackTriggered = false
-            var totalBytesRead = 0L
-            
-            response.body.byteStream().use { inputStream ->
-                FileOutputStream(tempFile).use { outputStream ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                        outputStream.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-                        if (contentLength > 0) {
-                            val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
-                            _downloadProgress.update { it + (song.id to progress) }
-                        }
-                        if (!playbackTriggered && totalBytesRead >= minBytesForPlayback) {
-                            playbackTriggered = true
-                            withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
+            try {
+                if (!response.isSuccessful) {
+                    _downloadingIds.update { it - song.id }
+                    _downloadProgress.update { it - song.id }
+                    return@withContext false
+                }
+
+                val contentLength = response.body.contentLength()
+                val minBytesForPlayback = 480 * 1024L
+                var playbackTriggered = false
+                var totalBytesRead = 0L
+
+                response.body.byteStream().use { inputStream ->
+                    FileOutputStream(tempFile).use { outputStream ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                            // Honour cancellation promptly. Without this the user's
+                            // tap on Cancel only stopped the cooperative coroutine
+                            // bookkeeping while OkHttp/file copy kept reading bytes
+                            // until the next chunk boundary — the row disappeared
+                            // from UI but bandwidth/storage kept draining. Inside
+                            // the .use { } lambdas there's no CoroutineScope
+                            // receiver, so reach for the suspending context form.
+                            currentCoroutineContext().ensureActive()
+                            outputStream.write(buffer, 0, bytesRead)
+                            totalBytesRead += bytesRead
+                            if (contentLength > 0) {
+                                val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
+                                _downloadProgress.update { it + (song.id to progress) }
+                            }
+                            if (!playbackTriggered && totalBytesRead >= minBytesForPlayback) {
+                                playbackTriggered = true
+                                withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
+                            }
                         }
                     }
                 }
+
+                if (!playbackTriggered && tempFile.exists()) {
+                    withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
+                }
+
+                tagAudioFile(tempFile, song)
+                finalUri = tempFile.inputStream().use { input ->
+                    saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
+                }
+            } finally {
+                // Always clean up: the .tmp is no longer needed once it has
+                // been copied to the public Music folder, AND any cancellation
+                // / failure path that leaves the .tmp partial must not orphan
+                // it in the cache directory (storage bloated over time).
+                response.close()
+                if (tempFile.exists()) tempFile.delete()
             }
-            response.close()
-            
-            if (!playbackTriggered && tempFile.exists()) {
-                withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
-            }
-            
-            tagAudioFile(tempFile, song)
-            val finalUri = tempFile.inputStream().use { input ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
-            }
-            tempFile.delete()
-            
+
             if (finalUri == null) {
                 _downloadingIds.update { it - song.id }
                 _downloadProgress.update { it - song.id }
@@ -1252,15 +1268,30 @@ class DownloadRepository @Inject constructor(
     fun popFromQueue(): Song? { val s = downloadQueue.poll(); _queueState.value = downloadQueue.toList(); return s }
     fun updateBatchProgress(current: Int, total: Int) { _batchProgress.value = current to total }
 
+    /**
+     * Atomically advance the "done" counter. Used by [DownloadService] so the
+     * worker increment can't race with [downloadSongs] resizing the batch.
+     */
+    fun incrementBatchDone() {
+        _batchProgress.update { (done, total) -> (done + 1) to total }
+    }
+
     fun downloadSongs(songs: List<Song>) {
         val newSongs = songs.filter { song -> _downloadedSongs.value.none { it.id == song.id } && downloadQueue.none { it.id == song.id } && !_downloadingIds.value.contains(song.id) }
         if (newSongs.isEmpty()) return
         downloadQueue.addAll(newSongs)
         _queueState.value = downloadQueue.toList()
-        val currentTotal = _batchProgress.value.second
-        val currentDone = _batchProgress.value.first
-        if (currentTotal == 0 || currentDone >= currentTotal) _batchProgress.value = 0 to newSongs.size
-        else _batchProgress.value = currentDone to (currentTotal + newSongs.size)
+        // Atomic CAS-style update so concurrent done-counter increments from the
+        // worker can't race with this caller-thread mutation. The previous
+        // read-then-write produced "(5/3)" and "(7/3)" notification counters
+        // when the user added more songs to an in-flight batch.
+        _batchProgress.update { (currentDone, currentTotal) ->
+            if (currentTotal == 0 || currentDone >= currentTotal) {
+                0 to newSongs.size
+            } else {
+                currentDone to (currentTotal + newSongs.size)
+            }
+        }
         DownloadService.startBatchDownload(context)
     }
     
@@ -1283,14 +1314,23 @@ class DownloadRepository @Inject constructor(
     suspend fun deleteAllDownloads() = withContext(Dispatchers.IO) {
         val songIds = _downloadedSongs.value.map { it.id }
         if (songIds.isNotEmpty()) {
+            // deleteDownloads throws FilePermissionException on Android 11+ to
+            // request the system's multi-file-delete dialog. Let it propagate
+            // so the UI can launch the IntentSender — previously this was
+            // swallowed by the broad catch below and the user saw nothing
+            // happen, then a partial wipe.
             deleteDownloads(songIds)
         }
-        
+
         try {
             listOf(getPublicMusicFolder(), getLegacyDownloadsFolder()).forEach { publicFolder ->
                 if (publicFolder.exists()) publicFolder.listFiles()?.forEach { file -> if (file.isFile && file.extension.lowercase() in listOf("m4a", "mp3", "aac", "flac")) file.delete() }
             }
-        } catch (e: Exception) {}
+        } catch (e: com.suvojeet.suvmusic.util.FileOperationException.FilePermissionException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "deleteAllDownloads: failed to clean public folder", e)
+        }
         _downloadedSongs.value = emptyList()
         saveDownloads()
     }

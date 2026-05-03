@@ -53,22 +53,39 @@ class DiscordManager @Inject constructor(
     }
     
     fun updateSettings(userToken: String, enabled: Boolean, details: Boolean) {
-        val wasConnected = discordRPC != null && discordRPC!!.isWebSocketConnected()
+        val previousToken = token
+        val wasEnabled = isEnabled
+        val wasConnected = discordRPC?.isWebSocketConnected() == true
+
         token = userToken
         isEnabled = enabled
         useDetails = details
-        
-        if (isEnabled && !userToken.isBlank()) {
-            if (!wasConnected || discordRPC == null) {
-                // Reconnect if not connected or instance missing
-                 connect()
+
+        // Only tear down and reconnect when the token or enabled-state actually
+        // changed. Previously this method reconnected unconditionally, so any
+        // unrelated settings save (privacy toggle, RPC details flag, etc.) tore
+        // down the gateway and triggered a Discord reconnect — battery drain
+        // plus visible "Disconnected → Connecting…" flicker for every save.
+        val tokenChanged = previousToken != userToken
+        val enabledChanged = wasEnabled != enabled
+
+        if (!enabled || userToken.isBlank()) {
+            if (wasConnected || discordRPC != null) disconnect()
+            return
+        }
+
+        when {
+            // Just turned on, or instance missing → fresh connect.
+            !wasConnected || discordRPC == null -> connect()
+            // Token swapped → tear down and reconnect with the new token.
+            tokenChanged -> {
+                disconnect()
+                connect()
             }
-            // If already connected and token changed, we might need to reconnect. 
-            // For simplicity, we can just reconnect.
-             disconnect()
-            connect()
-        } else {
-            disconnect()
+            // Newly enabled but somehow already connected → no-op, keep alive.
+            enabledChanged -> Unit
+            // Nothing meaningful changed (details flag etc.) — leave the gateway alone.
+            else -> Unit
         }
     }
 
