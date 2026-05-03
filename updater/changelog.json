@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.4.0.0",
+      "versionCode": 27,
+      "date": "May 03, 2026",
+      "description": "• Dynamic App Icons: Introduced 'Logo Variants'—Aether, Pulse, and Resonance. Customize the app icon and splash screen in Appearance settings.\n• Unified Multiplatform Architecture: Massive architectural shift to Kotlin Multiplatform (KMP). Core models and business logic are now shared, laying the foundation for desktop support.\n• Critical Playback Fixes: Resolved edge cases in MusicPlayer where state could become desynchronized. Optimized recovery logic for high-fidelity streams and improved gapless playback transitions.\n• Enhanced Session Persistence: Now accurately remembers your last played song, position, and queue across app restarts.\n• Next-Gen Audio Features: Integrated Spatial Audio processing, Haptic feedback for controls, and intelligent TTS ducking during voice announcements.\n• Download Stability: Major overhaul of the Download engine to resolve intermittent failures and improve resume reliability on unstable networks.\n• Smart Connectivity: Improved Discord RPC synchronization and refreshed Glance widgets with real-time playback status.",
+      "isMajorUpdate": true
+    },
+    {
       "versionName": "2.3.0.0",
       "versionCode": 26,
       "date": "April 17, 2026",
