@@ -358,17 +358,17 @@ class MainActivity : ComponentActivity() {
      */
     private fun applyVariantSplashTheme() {
         val prefs = getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
-        val variantName = prefs.getString("logo_variant", null)
-        val themeRes = when (variantName) {
-            "PULSE" -> R.style.Theme_SuvMusic_SplashScreen_Pulse
-            "RESONANCE" -> R.style.Theme_SuvMusic_SplashScreen_Resonance
-            "AETHER" -> R.style.Theme_SuvMusic_SplashScreen_Aether
-            "CLASSIC" -> R.style.Theme_SuvMusic_SplashScreen
-            // Fresh installs that haven't gone through SessionManager.setLogoVariant
-            // yet land here. Use the in-app default (PULSE) so the splash matches
-            // what About / Home would render. The launcher icon stays Classic in
-            // that case (manifest default) until the user picks — that's a
-            // deliberate trade-off to avoid surprise on first upgrade.
+        val variantName = prefs.getString("logo_variant", null) ?: "PULSE"
+        // The splash drawable lives at the CONCEPT level — sub-styles
+        // (App Icon / Mono / Light / Tone) reuse the same hero PNG for the
+        // splash to keep the asset count manageable. So we derive the splash
+        // theme from the variant name's prefix rather than its exact value.
+        val themeRes = when {
+            variantName.startsWith("PULSE") -> R.style.Theme_SuvMusic_SplashScreen_Pulse
+            variantName.startsWith("RESONANCE") -> R.style.Theme_SuvMusic_SplashScreen_Resonance
+            variantName.startsWith("AETHER") -> R.style.Theme_SuvMusic_SplashScreen_Aether
+            variantName == "CLASSIC" -> R.style.Theme_SuvMusic_SplashScreen
+            // Fresh install / unknown value — match the in-app PULSE default.
             else -> R.style.Theme_SuvMusic_SplashScreen_Pulse
         }
         setTheme(themeRes)

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resonance — Single Tone variant. Black marks on brass gradient. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:pathData="M0,0h400v400h-400z" android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="400" android:endY="400">
+                <item android:offset="0" android:color="#C9A961"/>
+                <item android:offset="1" android:color="#8E6F2A"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M375,200 a175,175 0 1,1 -350,0 a175,175 0 1,1 350,0z" android:fillColor="#00000000" android:strokeColor="#0A0A0B" android:strokeWidth="3"/>
+    <group>
+        <clip-path android:pathData="M0,0 H200 V400 H0 Z"/>
+        <path android:pathData="M355,200 a155,155 0 1,1 -310,0 a155,155 0 1,1 310,0z" android:fillColor="#00000000" android:strokeColor="#0A0A0B" android:strokeWidth="1.5" android:strokeAlpha="0.65"/>
+        <path android:pathData="M325,200 a125,125 0 1,1 -250,0 a125,125 0 1,1 250,0z" android:fillColor="#00000000" android:strokeColor="#0A0A0B" android:strokeWidth="1.5" android:strokeAlpha="0.5"/>
+        <path android:pathData="M295,200 a95,95 0 1,1 -190,0 a95,95 0 1,1 190,0z" android:fillColor="#00000000" android:strokeColor="#0A0A0B" android:strokeWidth="1.5" android:strokeAlpha="0.4"/>
+        <path android:pathData="M265,200 a65,65 0 1,1 -130,0 a65,65 0 1,1 130,0z" android:fillColor="#00000000" android:strokeColor="#0A0A0B" android:strokeWidth="1.5" android:strokeAlpha="0.3"/>
+    </group>
+    <group>
+        <clip-path android:pathData="M200,0 H400 V400 H200 Z"/>
+        <path android:pathData="M218,155 h10 v90 h-10z" android:fillColor="#0A0A0B"/>
+        <path android:pathData="M240,115 h10 v170 h-10z" android:fillColor="#0A0A0B"/>
+        <path android:pathData="M262,85 h10 v230 h-10z" android:fillColor="#0A0A0B"/>
+        <path android:pathData="M284,125 h10 v150 h-10z" android:fillColor="#0A0A0B"/>
+        <path android:pathData="M306,160 h10 v80 h-10z" android:fillColor="#0A0A0B"/>
+        <path android:pathData="M328,180 h10 v40 h-10z" android:fillColor="#0A0A0B"/>
+    </group>
+    <path android:pathData="M222,200 a22,22 0 1,1 -44,0 a22,22 0 1,1 44,0z" android:fillColor="#C9A961" android:strokeColor="#0A0A0B" android:strokeWidth="3"/>
+    <path android:pathData="M194,191 L209,200 L194,209 Z" android:fillColor="#0A0A0B"/>
+</vector>

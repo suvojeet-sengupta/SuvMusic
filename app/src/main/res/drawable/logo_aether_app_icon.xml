@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aether — App Icon variant. Three orbital rings + music note on teal-deep
+     gradient. From the HTML logo concepts page, "App Icon" tile under Concept 03. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path
+        android:pathData="M0,0h400v400h-400z"
+        android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="400" android:endY="400">
+                <item android:offset="0" android:color="#1A3D44"/>
+                <item android:offset="1" android:color="#0A1F24"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Ring 1 (yaw) -->
+    <group android:pivotX="200" android:pivotY="200" android:rotation="-15">
+        <path android:pathData="M355,200 a155,48 0 1,1 -310,0 a155,48 0 1,1 310,0z"
+            android:fillColor="#00000000"
+            android:strokeColor="#7AE8F0"
+            android:strokeWidth="3"
+            android:strokeAlpha="0.7"/>
+    </group>
+    <!-- Ring 2 (pitch) -->
+    <group android:pivotX="200" android:pivotY="200" android:rotation="75">
+        <path android:pathData="M365,200 a165,56 0 1,1 -330,0 a165,56 0 1,1 330,0z"
+            android:fillColor="#00000000"
+            android:strokeColor="#6B4FBF"
+            android:strokeWidth="3"
+            android:strokeAlpha="0.7"/>
+    </group>
+    <!-- Ring 3 (roll) -->
+    <group android:pivotX="200" android:pivotY="200" android:rotation="35">
+        <path android:pathData="M350,200 a150,62 0 1,1 -300,0 a150,62 0 1,1 300,0z"
+            android:fillColor="#00000000"
+            android:strokeColor="#4FD1E0"
+            android:strokeWidth="3"
+            android:strokeAlpha="0.7"/>
+    </group>
+    <!-- Music note head -->
+    <group android:pivotX="180" android:pivotY="240" android:rotation="-18">
+        <path android:pathData="M214,240 a34,26 0 1,1 -68,0 a34,26 0 1,1 68,0z" android:fillType="nonZero">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear"
+                    android:startX="0" android:startY="0"
+                    android:endX="400" android:endY="400">
+                    <item android:offset="0" android:color="#7AE8F0"/>
+                    <item android:offset="1" android:color="#6B4FBF"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+    <!-- Stem -->
+    <path android:pathData="M206,130 h8 v115 h-8z" android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="400" android:endY="400">
+                <item android:offset="0" android:color="#7AE8F0"/>
+                <item android:offset="1" android:color="#6B4FBF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Flag -->
+    <path android:pathData="M210,130 Q254,142, 248,178 Q236,166, 210,170 Z" android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="400" android:endY="400">
+                <item android:offset="0" android:color="#7AE8F0"/>
+                <item android:offset="1" android:color="#6B4FBF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
