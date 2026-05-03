@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.BrandingWatermark
@@ -122,7 +124,12 @@ fun LogoPickerSection(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Text(
                     text = "Choose an app logo",
                     style = MaterialTheme.typography.titleLarge,
@@ -130,27 +137,49 @@ fun LogoPickerSection(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
                 )
                 Text(
-                    text = "Picks the brand mark used across About, the home top bar, and avatar fallbacks. The launcher icon doesn't change.",
+                    text = "Picks the brand mark used across About, the home top bar, the launcher icon, and the splash screen.",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 4.dp),
+                )
+                Text(
+                    text = "Note: the icon shown in App info, system Settings → Apps, and permission dialogs is locked by Android and won't change at runtime — it only updates when the app itself is updated.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp),
                 )
 
-                LogoVariant.values().forEach { variant ->
-                    LogoOptionRow(
-                        variant = variant,
-                        isSelected = variant == selected,
-                        onClick = {
-                            if (variant == selected) {
-                                scope.launch {
-                                    sheetState.hide()
-                                    showSheet = false
-                                }
-                            } else {
-                                pendingVariant = variant
-                            }
-                        },
+                // Group variants by conceptKey so the picker reads
+                // "Pulse → 5 styles, Resonance → 5 styles, …" instead of a
+                // flat 16-row list. The sub-styles share one launcher icon
+                // per concept (only the in-app brand and splash drawable
+                // differ across styles within a concept).
+                val grouped = LogoVariant.values().groupBy { it.conceptKey }
+                grouped.forEach { (_, variants) ->
+                    val concept = variants.first().conceptLabel
+                    Text(
+                        text = concept,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp).padding(top = 12.dp, bottom = 4.dp),
                     )
+                    variants.forEach { variant ->
+                        LogoOptionRow(
+                            variant = variant,
+                            isSelected = variant == selected,
+                            onClick = {
+                                if (variant == selected) {
+                                    scope.launch {
+                                        sheetState.hide()
+                                        showSheet = false
+                                    }
+                                } else {
+                                    pendingVariant = variant
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -162,9 +191,9 @@ fun LogoPickerSection(
             title = { Text("Change app logo to ${variant.displayName}?") },
             text = {
                 Text(
-                    "The launcher icon will switch to the ${variant.displayName} logo. " +
-                        "Android will close SuvMusic so the launcher can refresh — " +
-                        "open the app again from your launcher after that.",
+                    "The launcher icon, splash screen, and in-app brand mark will switch to ${variant.displayName}. " +
+                        "Android will close SuvMusic so the launcher can refresh — open the app again from your launcher after that.\n\n" +
+                        "The icon shown in App info / Settings won't change (Android locks it until the app is updated).",
                 )
             },
             confirmButton = {
@@ -222,7 +251,10 @@ private fun LogoOptionRow(
         Spacer(modifier = Modifier.size(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = variant.displayName,
+                // styleLabel = "Hero" / "App Icon" / "Monochrome" / "On Light"
+                // / "Single Tone" — the concept name lives in the section
+                // header so we don't repeat it on every row.
+                text = variant.styleLabel,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
             )

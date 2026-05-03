@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aether — Monochrome variant. Cream marks on dark surface. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:pathData="M0,0h400v400h-400z" android:fillColor="#16161B"/>
+    <group android:pivotX="200" android:pivotY="200" android:rotation="-15">
+        <path android:pathData="M355,200 a155,48 0 1,1 -310,0 a155,48 0 1,1 310,0z"
+            android:fillColor="#00000000" android:strokeColor="#F5F1E8"
+            android:strokeWidth="2" android:strokeAlpha="0.7"/>
+    </group>
+    <group android:pivotX="200" android:pivotY="200" android:rotation="75">
+        <path android:pathData="M365,200 a165,56 0 1,1 -330,0 a165,56 0 1,1 330,0z"
+            android:fillColor="#00000000" android:strokeColor="#F5F1E8"
+            android:strokeWidth="2" android:strokeAlpha="0.6"/>
+    </group>
+    <group android:pivotX="200" android:pivotY="200" android:rotation="35">
+        <path android:pathData="M350,200 a150,62 0 1,1 -300,0 a150,62 0 1,1 300,0z"
+            android:fillColor="#00000000" android:strokeColor="#F5F1E8"
+            android:strokeWidth="2" android:strokeAlpha="0.5"/>
+    </group>
+    <group android:pivotX="180" android:pivotY="240" android:rotation="-18">
+        <path android:pathData="M212,240 a32,24 0 1,1 -64,0 a32,24 0 1,1 64,0z"
+            android:fillColor="#F5F1E8"/>
+    </group>
+    <path android:pathData="M207,135 h6 v105 h-6z" android:fillColor="#F5F1E8"/>
+    <path android:pathData="M210,135 Q250,145, 245,175 Q235,165, 210,170 Z" android:fillColor="#F5F1E8"/>
+</vector>

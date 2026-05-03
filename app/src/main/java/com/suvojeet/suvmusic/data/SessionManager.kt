@@ -2185,11 +2185,16 @@ class SessionManager @Inject constructor(
     private fun applyLauncherAlias(variant: com.suvojeet.suvmusic.core.model.LogoVariant) {
         val pkg = context.packageName
         val pm = context.packageManager
-        val targetAliasName = when (variant) {
-            com.suvojeet.suvmusic.core.model.LogoVariant.PULSE -> "$pkg.LauncherPulse"
-            com.suvojeet.suvmusic.core.model.LogoVariant.RESONANCE -> "$pkg.LauncherResonance"
-            com.suvojeet.suvmusic.core.model.LogoVariant.AETHER -> "$pkg.LauncherAether"
-            com.suvojeet.suvmusic.core.model.LogoVariant.CLASSIC -> "$pkg.LauncherClassic"
+        // The launcher icon switches at the CONCEPT level — sub-styles
+        // (App Icon / Mono / Light / Tone) only affect the in-app brand
+        // and the splash drawable. We derive the alias from conceptKey so
+        // all five styles of e.g. Pulse route to LauncherPulse.
+        val targetAliasName = when (variant.conceptKey) {
+            "PULSE" -> "$pkg.LauncherPulse"
+            "RESONANCE" -> "$pkg.LauncherResonance"
+            "AETHER" -> "$pkg.LauncherAether"
+            "CLASSIC" -> "$pkg.LauncherClassic"
+            else -> "$pkg.LauncherClassic"
         }
         val allAliases = listOf(
             "$pkg.LauncherPulse",
