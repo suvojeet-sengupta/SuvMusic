@@ -1830,6 +1830,23 @@ class SessionManager @Inject constructor(
 
             // Initial login check on background thread
             _isLoggedInFlow.value = isLoggedIn()
+
+            // Seed the synchronous logo-variant mirror used by MainActivity to
+            // pick the splash screen theme. Existing users who selected a
+            // variant before this code shipped have it stored only in DataStore
+            // and need the SP mirror populated; new installs land here with no
+            // selection yet so the mirror falls back to the in-app default
+            // (PULSE), which matches what About / Home would render.
+            val brandingPrefs = context.getSharedPreferences(
+                "suvmusic_branding",
+                Context.MODE_PRIVATE,
+            )
+            if (brandingPrefs.getString("logo_variant", null) == null) {
+                val current = getLogoVariant()
+                brandingPrefs.edit()
+                    .putString("logo_variant", current.name)
+                    .apply()
+            }
         }
     }
     private suspend fun migrateSensitiveData() {
@@ -2137,6 +2154,15 @@ class SessionManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[LOGO_VARIANT_KEY] = variant.name
         }
+        // Mirror to a separate SharedPreferences file so MainActivity can read
+        // the variant SYNCHRONOUSLY before installSplashScreen(). DataStore is
+        // async-only and would race the splash window initialisation, leaving
+        // the splash showing the previous variant's drawable for one launch
+        // after a switch.
+        context.getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
+            .edit()
+            .putString("logo_variant", variant.name)
+            .apply()
         applyLauncherAlias(variant)
     }
 
