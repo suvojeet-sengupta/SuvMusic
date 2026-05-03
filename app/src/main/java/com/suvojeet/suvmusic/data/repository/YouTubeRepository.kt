@@ -2690,9 +2690,50 @@ class YouTubeRepository @Inject constructor(
         val songs = mutableListOf<Song>()
         try {
             val root = JSONObject(json)
+            
+            // BUG FIX: Prevent Greedy Parsing of "Suggested" or "Related" shelves at the bottom of playlists.
+            // We should only extract songs from the main 'contents' array of the tab or section list,
+            // rather than doing a global `findAllObjects` which picks up recommendations below the playlist.
             val items = mutableListOf<JSONObject>()
-            findAllObjects(root, "musicResponsiveListItemRenderer", items)
-            findAllObjects(root, "musicTwoRowItemRenderer", items)
+            
+            // Look for the main contents array specifically to avoid grabbing suggestions
+            val mainContents = root.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+                ?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents")
+            
+            if (mainContents != null) {
+                // We found the main section list. Now we only extract items from within these main sections.
+                for (i in 0 until mainContents.length()) {
+                    val section = mainContents.getJSONObject(i)
+                    // If this section has a title (like "Suggested"), skip it to avoid adding suggestions to the playlist
+                    val sectionHeader = section.optJSONObject("musicPlaylistShelfRenderer")?.optJSONObject("header")
+                        ?: section.optJSONObject("musicShelfRenderer")?.optJSONObject("header")
+                        ?: section.optJSONObject("musicCarouselShelfRenderer")?.optJSONObject("header")
+                    
+                    val sectionTitle = getRunText(sectionHeader?.optJSONObject("musicResponsiveHeaderRenderer")?.optJSONObject("title"))
+                        ?: getRunText(sectionHeader?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title"))
+                    
+                    // Skip "Suggested", "Related", "Recommended" sections
+                    if (sectionTitle != null && (sectionTitle.contains("suggest", ignoreCase = true) || 
+                        sectionTitle.contains("recommend", ignoreCase = true) || 
+                        sectionTitle.contains("related", ignoreCase = true))) {
+                        continue
+                    }
+                    
+                    findAllObjects(section, "musicResponsiveListItemRenderer", items)
+                    findAllObjects(section, "musicTwoRowItemRenderer", items)
+                }
+            } else {
+                // Fallback for search results, continuation responses, and other list types
+                findAllObjects(root, "musicResponsiveListItemRenderer", items)
+                findAllObjects(root, "musicTwoRowItemRenderer", items)
+            }
+            
             findAllObjects(root, "videoRenderer", items) // Support for main YouTube history
 
             items.forEach { item ->
