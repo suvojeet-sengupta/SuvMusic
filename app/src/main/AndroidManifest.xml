@@ -240,6 +240,194 @@
             </intent-filter>
         </activity-alias>
 
+        <!--
+          Sub-style activity-aliases. Each in-app variant (App Icon /
+          Monochrome / On Light / Single Tone × Pulse / Resonance / Aether)
+          gets its own launcher icon entry so picking it from Appearance
+          settings updates the home-screen icon to match. The alias's
+          theme attribute uses the parent concept's splash theme since
+          the splash drawable is at the concept level.
+        -->
+        <activity-alias
+            android:name=".LauncherPulseAppIcon"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_pulse_app_icon"
+            android:roundIcon="@mipmap/ic_launcher_pulse_app_icon"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Pulse">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPulseMono"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_pulse_mono"
+            android:roundIcon="@mipmap/ic_launcher_pulse_mono"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Pulse">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPulseLight"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_pulse_light"
+            android:roundIcon="@mipmap/ic_launcher_pulse_light"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Pulse">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPulseTone"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_pulse_tone"
+            android:roundIcon="@mipmap/ic_launcher_pulse_tone"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Pulse">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherResonanceAppIcon"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_resonance_app_icon"
+            android:roundIcon="@mipmap/ic_launcher_resonance_app_icon"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Resonance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherResonanceMono"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_resonance_mono"
+            android:roundIcon="@mipmap/ic_launcher_resonance_mono"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Resonance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherResonanceLight"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_resonance_light"
+            android:roundIcon="@mipmap/ic_launcher_resonance_light"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Resonance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherResonanceTone"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_resonance_tone"
+            android:roundIcon="@mipmap/ic_launcher_resonance_tone"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Resonance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherAetherAppIcon"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_aether_app_icon"
+            android:roundIcon="@mipmap/ic_launcher_aether_app_icon"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Aether">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherAetherMono"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_aether_mono"
+            android:roundIcon="@mipmap/ic_launcher_aether_mono"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Aether">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherAetherLight"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_aether_light"
+            android:roundIcon="@mipmap/ic_launcher_aether_light"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Aether">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherAetherTone"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_aether_tone"
+            android:roundIcon="@mipmap/ic_launcher_aether_tone"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.SuvMusic.SplashScreen.Aether">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Music Player Service -->
         <service
             android:name=".service.MusicPlayerService"
