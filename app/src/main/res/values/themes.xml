@@ -19,7 +19,25 @@
     <!-- Splash Screen theme -->
     <style name="Theme.SuvMusic.SplashScreen" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
+    </style>
+
+    <style name="Theme.SuvMusic.SplashScreen.Pulse" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_pulse</item>
+        <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
+    </style>
+
+    <style name="Theme.SuvMusic.SplashScreen.Resonance" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_resonance</item>
+        <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
+    </style>
+
+    <style name="Theme.SuvMusic.SplashScreen.Aether" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_aether</item>
         <item name="postSplashScreenTheme">@style/Theme.SuvMusic</item>
     </style>
 </resources>

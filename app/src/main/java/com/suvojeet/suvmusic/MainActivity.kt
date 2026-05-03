@@ -144,11 +144,43 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Handle permission results
+        permissions.forEach { (perm, granted) ->
+            if (!granted) {
+                android.util.Log.w("MainActivity", "Permission denied: $perm")
+            }
+        }
+        // Notifications power lock-screen / Android Auto / wear controls and
+        // the foreground media service notification. A silent denial means
+        // the user thinks the app is broken; surface a Toast so they know
+        // the playback notification won't appear and they can re-enable it
+        // in system settings.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            permissions[Manifest.permission.POST_NOTIFICATIONS] == false
+        ) {
+            android.widget.Toast.makeText(
+                this,
+                "Notifications disabled — playback controls won't appear on the lock screen. Enable it in App settings.",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         com.suvojeet.suvmusic.util.AppLog.i("MainActivity") { "onCreate started" }
+
+        // Apply the variant-matching SplashScreen theme BEFORE installSplashScreen
+        // reads it. Android's activity-alias android:theme attribute should make
+        // the system propagate the correct theme on Android 12+, but in practice
+        // the AndroidX SplashScreen library (which handles the post-system-splash
+        // drawable + the keep-on-screen extension) reads the theme from
+        // MainActivity's current state — so without this override the user sees
+        // the Classic splash drawable even after switching variants.
+        //
+        // We can't use DataStore here because it's async and would race the splash
+        // initialisation; SessionManager mirrors the chosen variant to a
+        // SharedPreferences slot specifically for this synchronous read.
+        applyVariantSplashTheme()
+
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         
@@ -315,6 +347,31 @@ class MainActivity : ComponentActivity() {
         if (missingPermissions.isNotEmpty()) {
             requestPermissionLauncher.launch(missingPermissions.toTypedArray())
         }
+    }
+
+    /**
+     * Synchronously read the user's stored logo variant from the branding
+     * SharedPreferences mirror (kept in sync by SessionManager.setLogoVariant)
+     * and apply the matching SplashScreen theme so installSplashScreen() picks
+     * up the correct windowSplashScreenAnimatedIcon. Must run before
+     * installSplashScreen() and before super.onCreate().
+     */
+    private fun applyVariantSplashTheme() {
+        val prefs = getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
+        val variantName = prefs.getString("logo_variant", null) ?: "PULSE"
+        // The splash drawable lives at the CONCEPT level — sub-styles
+        // (App Icon / Mono / Light / Tone) reuse the same hero PNG for the
+        // splash to keep the asset count manageable. So we derive the splash
+        // theme from the variant name's prefix rather than its exact value.
+        val themeRes = when {
+            variantName.startsWith("PULSE") -> R.style.Theme_SuvMusic_SplashScreen_Pulse
+            variantName.startsWith("RESONANCE") -> R.style.Theme_SuvMusic_SplashScreen_Resonance
+            variantName.startsWith("AETHER") -> R.style.Theme_SuvMusic_SplashScreen_Aether
+            variantName == "CLASSIC" -> R.style.Theme_SuvMusic_SplashScreen
+            // Fresh install / unknown value — match the in-app PULSE default.
+            else -> R.style.Theme_SuvMusic_SplashScreen_Pulse
+        }
+        setTheme(themeRes)
     }
 
     private fun enableMaxRefreshRate() {

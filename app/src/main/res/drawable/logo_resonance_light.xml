@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resonance — On Light variant. Midnight violet marks on cream. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:pathData="M0,0h400v400h-400z" android:fillColor="#F5F1E8"/>
+    <path android:pathData="M375,200 a175,175 0 1,1 -350,0 a175,175 0 1,1 350,0z" android:fillColor="#00000000" android:strokeColor="#2A1F5C" android:strokeWidth="3"/>
+    <group>
+        <clip-path android:pathData="M0,0 H200 V400 H0 Z"/>
+        <path android:pathData="M355,200 a155,155 0 1,1 -310,0 a155,155 0 1,1 310,0z" android:fillColor="#00000000" android:strokeColor="#2A1F5C" android:strokeWidth="1.5" android:strokeAlpha="0.7"/>
+        <path android:pathData="M325,200 a125,125 0 1,1 -250,0 a125,125 0 1,1 250,0z" android:fillColor="#00000000" android:strokeColor="#2A1F5C" android:strokeWidth="1.5" android:strokeAlpha="0.55"/>
+        <path android:pathData="M295,200 a95,95 0 1,1 -190,0 a95,95 0 1,1 190,0z" android:fillColor="#00000000" android:strokeColor="#2A1F5C" android:strokeWidth="1.5" android:strokeAlpha="0.45"/>
+        <path android:pathData="M265,200 a65,65 0 1,1 -130,0 a65,65 0 1,1 130,0z" android:fillColor="#00000000" android:strokeColor="#2A1F5C" android:strokeWidth="1.5" android:strokeAlpha="0.35"/>
+    </group>
+    <group>
+        <clip-path android:pathData="M200,0 H400 V400 H200 Z"/>
+        <path android:pathData="M218,155 h10 v90 h-10z" android:fillColor="#2A1F5C"/>
+        <path android:pathData="M240,115 h10 v170 h-10z" android:fillColor="#2A1F5C"/>
+        <path android:pathData="M262,85 h10 v230 h-10z" android:fillColor="#2A1F5C"/>
+        <path android:pathData="M284,125 h10 v150 h-10z" android:fillColor="#2A1F5C"/>
+        <path android:pathData="M306,160 h10 v80 h-10z" android:fillColor="#2A1F5C"/>
+        <path android:pathData="M328,180 h10 v40 h-10z" android:fillColor="#2A1F5C"/>
+    </group>
+    <path android:pathData="M222,200 a22,22 0 1,1 -44,0 a22,22 0 1,1 44,0z" android:fillColor="#F5F1E8" android:strokeColor="#2A1F5C" android:strokeWidth="3"/>
+    <path android:pathData="M194,191 L209,200 L194,209 Z" android:fillColor="#2A1F5C"/>
+</vector>

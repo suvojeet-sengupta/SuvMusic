@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pulse launcher foreground. The variant PNG fills the full 108dp adaptive-
+  icon canvas (no inset). The launcher's circular / squircle / etc. mask
+  crops the outer ~7-15% of the canvas — but the S monogram and sine wave
+  sit within the central 67% of the source viewport, so the brand mark is
+  always intact regardless of mask shape. The PNG's own near-black radial
+  gradient handles the corners that the mask hides; the separate background
+  drawable is only there to satisfy adaptive-icon requirements.
+
+  Earlier this file used `<inset android:inset="20%">` wrapping a `<bitmap
+  android:gravity="center">` — that combination centred the 512px bitmap at
+  intrinsic size inside ~260px inset bounds, so only the central horizontal
+  strip rendered. Switching to `gravity="fill"` scales the bitmap to fit.
+-->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/logo_pulse"
+    android:gravity="fill" />

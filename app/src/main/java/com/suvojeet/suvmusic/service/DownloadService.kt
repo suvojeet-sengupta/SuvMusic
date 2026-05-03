@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -96,8 +97,19 @@ class DownloadService : Service() {
     @Inject
     lateinit var downloadRepository: DownloadRepository
     
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // var (not val) so we can re-create after a cancellation if a new
+    // startService intent arrives between stopSelf() and onDestroy(). On a
+    // fresh service instance Android always allocates a new scope here, but
+    // re-entering an in-flight teardown otherwise produced silent no-op
+    // launches and downloads stuck in queue forever.
+    private var serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var batchJob: Job? = null
+
+    private fun ensureScopeAlive() {
+        if (!serviceScope.isActive) {
+            serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        }
+    }
     
     // Track active downloads: ID -> Title
     private val activeDownloads = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -119,6 +131,7 @@ class DownloadService : Service() {
         // Fix for Android 12+ ForegroundServiceDidNotStartInTimeException
         // We must call startForeground immediately
         startForeground(NOTIFICATION_ID, createProgressNotification("Starting service...", 0, 0, 0))
+        ensureScopeAlive()
 
         when (intent?.action) {
             ACTION_START_DOWNLOAD -> {
@@ -176,15 +189,16 @@ class DownloadService : Service() {
                     break
                 }
                 
-                // Update batch progress tracking
-                val (done, total) = downloadRepository.batchProgress.value
-                val newDone = done + 1
-                downloadRepository.updateBatchProgress(newDone, total)
-                
+                // Atomic increment so a concurrent caller-thread call to
+                // downloadSongs() resizing the batch can't produce
+                // "(5/3)" or "(7/3)" notification counters.
+                downloadRepository.incrementBatchDone()
+                val (newDone, total) = downloadRepository.batchProgress.value
+
                 // Active tracking
                 activeDownloads[song.id] = song.title
                 primaryNotificationSongId = song.id
-                
+
                 // Initial notification
                 updateForegroundNotification(song.title, 0, newDone, total)
 

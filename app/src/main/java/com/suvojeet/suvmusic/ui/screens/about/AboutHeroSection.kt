@@ -1,6 +1,5 @@
 package com.suvojeet.suvmusic.ui.screens.about
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.BuildConfig
-import com.suvojeet.suvmusic.R
+import com.suvojeet.suvmusic.ui.components.AppLogo
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
 @Composable
@@ -51,12 +49,11 @@ internal fun AboutHeroSection() {
                         shape = CircleShape
                     )
             )
-            Image(
-                painter = painterResource(id = R.drawable.logo),
-                contentDescription = "SuvMusic Logo",
+            AppLogo(
                 modifier = Modifier
                     .size(100.dp)
-                    .clip(SquircleShape)
+                    .clip(SquircleShape),
+                contentDescription = "SuvMusic Logo",
             )
         }
 

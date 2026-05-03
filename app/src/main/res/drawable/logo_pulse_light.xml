@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse — On Light variant. Crimson S + halo on cream surface. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path
+        android:pathData="M0,0h400v400h-400z"
+        android:fillColor="#F5F1E8"/>
+    <path
+        android:pathData="M380,200 a180,180 0 1,1 -360,0 a180,180 0 1,1 360,0z"
+        android:fillColor="#00000000"
+        android:strokeColor="#8E1B2E"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.3"/>
+    <path
+        android:pathData="M280,110 C280,80, 240,70, 200,70 C150,70, 110,100, 110,145 C110,185, 145,200, 195,210 C250,222, 290,235, 290,280 C290,320, 250,340, 200,340 C155,340, 115,325, 110,295"
+        android:strokeWidth="34"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear"
+                android:startX="200" android:startY="0"
+                android:endX="200" android:endY="400">
+                <item android:offset="0" android:color="#DC2A47"/>
+                <item android:offset="1" android:color="#8E1B2E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M50,205 Q75,180 100,205 T150,205 Q175,230 200,205 T250,205 Q275,180 300,205 T350,205"
+        android:strokeColor="#8E1B2E"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.6"/>
+</vector>
