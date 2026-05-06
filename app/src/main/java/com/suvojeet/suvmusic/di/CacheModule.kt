@@ -11,12 +11,16 @@ import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.cronet.CronetDataSource
+import androidx.media3.datasource.cronet.CronetUtil
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.chromium.net.CronetEngine
 import java.io.File
+import java.util.concurrent.Executors
 import javax.inject.Singleton
 
 @Module
@@ -27,6 +31,18 @@ object CacheModule {
     @Singleton
     fun provideDatabaseProvider(@ApplicationContext context: Context): DatabaseProvider {
         return StandaloneDatabaseProvider(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCronetEngine(@ApplicationContext context: Context): CronetEngine? {
+        return try {
+            // Use CronetUtil to build an engine from the best available provider
+            // (Google Play Services or fallback)
+            CronetUtil.buildCronetEngine(context)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     @Provides
@@ -63,12 +79,18 @@ object CacheModule {
     @OptIn(UnstableApi::class)
     fun providePlayerDataSourceFactory(
         @ApplicationContext context: Context,
-        cache: Cache
+        cache: Cache,
+        cronetEngine: CronetEngine?
     ): DataSource.Factory {
-        // Upstream factory for network requests
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("SuvMusic-User-Agent")
-            .setAllowCrossProtocolRedirects(true)
+        // Base network factory - Prefer Cronet for QUIC/HTTP3 support
+        val httpDataSourceFactory: DataSource.Factory = if (cronetEngine != null) {
+            CronetDataSource.Factory(cronetEngine, Executors.newSingleThreadExecutor())
+                .setUserAgent("SuvMusic-User-Agent")
+        } else {
+            DefaultHttpDataSource.Factory()
+                .setUserAgent("SuvMusic-User-Agent")
+                .setAllowCrossProtocolRedirects(true)
+        }
         
         // DefaultDataSource handles http/https/file/content/asset/etc.
         val upstreamFactory = androidx.media3.datasource.DefaultDataSource.Factory(context, httpDataSourceFactory)
@@ -85,17 +107,23 @@ object CacheModule {
     @DownloadDataSource
     @OptIn(UnstableApi::class)
     fun provideDownloadDataSourceFactory(
-        cache: Cache
+        cache: Cache,
+        cronetEngine: CronetEngine?
     ): DataSource.Factory {
-        // Upstream factory for network requests
-        val upstreamFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("SuvMusic-User-Agent")
-            .setAllowCrossProtocolRedirects(true)
+        // Base network factory - Prefer Cronet for QUIC/HTTP3 support
+        val httpDataSourceFactory: DataSource.Factory = if (cronetEngine != null) {
+            CronetDataSource.Factory(cronetEngine, Executors.newSingleThreadExecutor())
+                .setUserAgent("SuvMusic-User-Agent")
+        } else {
+            DefaultHttpDataSource.Factory()
+                .setUserAgent("SuvMusic-User-Agent")
+                .setAllowCrossProtocolRedirects(true)
+        }
         
         // CacheDataSource Factory
         return CacheDataSource.Factory()
             .setCache(cache)
-            .setUpstreamDataSourceFactory(upstreamFactory)
+            .setUpstreamDataSourceFactory(httpDataSourceFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 }
