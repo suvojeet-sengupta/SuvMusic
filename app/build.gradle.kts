@@ -194,6 +194,8 @@ dependencies {
     implementation(libs.androidx.media3.transformer)
     implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.ui.compose)
+    implementation(libs.androidx.media3.datasource.cronet)
+    implementation(libs.play.services.cronet)
     
     // Media Router
     implementation(libs.androidx.mediarouter)
