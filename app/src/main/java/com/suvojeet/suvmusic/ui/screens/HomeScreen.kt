@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -47,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -436,7 +440,7 @@ fun HomeScreen(
                                 contentType = { _, section -> "personalized_${section.type}" }
                             ) { index, section ->
                                 val enterModifier = Modifier.animateEnter(index = index)
-                                
+
                                 when (section.type) {
                                     HomeSectionType.QuickPicks -> {
                                         com.suvojeet.suvmusic.ui.components.QuickPicksSection(
@@ -449,12 +453,13 @@ fun HomeScreen(
                                         )
                                     }
                                     else -> {
-                                        com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                        // Personalized rows get the vinyl-disc treatment so
+                                        // they read distinctly from regular YouTube carousels.
+                                        com.suvojeet.suvmusic.ui.components.PersonalizedMixCarousel(
                                             section = section,
                                             onSongClick = onSongClick,
                                             onPlaylistClick = onPlaylistClick,
                                             onAlbumClick = onAlbumClick,
-                                            onSongMoreClick = onSongMoreClickHandler,
                                             modifier = enterModifier,
                                         )
                                     }
@@ -480,12 +485,13 @@ fun HomeScreen(
                                 contentType = { _, section -> "genre_${section.type}" }
                             ) { index, section ->
                                 val enterModifier = Modifier.animateEnter(index = index)
-                                com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                // Genre rows get a tinted ring + tag-chip header so each
+                                // "Because you like X" feels visually labeled by genre.
+                                com.suvojeet.suvmusic.ui.components.GenreCarousel(
                                     section = section,
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
                                     onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = enterModifier,
                                 )
                             }
@@ -912,63 +918,119 @@ fun QuickAccessCard(
 }
 
 
+/**
+ * Time-aware gradient hero banner. Replaces the plain greeting Row with a
+ * full-width band tinted by hour-of-day (dawn/day/dusk/night) so the top of
+ * Home doesn't blend into the rest of the feed.
+ */
 @Composable
 private fun ProfileHeader(
     modifier: Modifier = Modifier,
     onHistoryClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {}
 ) {
+    val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
     val greeting = remember { getGreeting() }
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val (gradient, glyph, glyphLabel) = remember(hour) {
+        val primary = when {
+            hour < 6 -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
+            hour < 12 -> Triple(Color(0xFFFFB347), Color(0xFFFF7E5F), Icons.Default.WbSunny to "Morning")
+            hour < 17 -> Triple(Color(0xFF36D1DC), Color(0xFF5B86E5), Icons.Default.WbSunny to "Afternoon")
+            hour < 21 -> Triple(Color(0xFFCB356B), Color(0xFF6A2C70), Icons.Default.WbTwilight to "Evening")
+            else -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
+        }
+        Triple(
+            Brush.linearGradient(listOf(primary.first.copy(alpha = 0.85f), primary.second.copy(alpha = 0.85f))),
+            primary.third.first,
+            primary.third.second
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(gradient)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
-        // Greeting
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onBackground,
-            letterSpacing = (-0.5).sp
+        // Decorative glyph drifts toward the trailing edge — purely ornamental.
+        Icon(
+            imageVector = glyph,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.18f),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(96.dp)
+                .offset(x = 16.dp)
         )
 
-        // Actions Row
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onListenTogetherClick),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Group,
-                        contentDescription = "Listen Together",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = glyphLabel.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.7f),
+                    letterSpacing = 2.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = (-0.5).sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Pick something to play",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
             }
 
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onHistoryClick),
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = "History",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.White.copy(alpha = 0.18f),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clickable(onClick = onListenTogetherClick),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = "Listen Together",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.White.copy(alpha = 0.18f),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clickable(onClick = onHistoryClick),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "History",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -1081,11 +1143,40 @@ private fun EndOfFeedCard(
     onStartRadio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Confetti palette + deterministic positions so the splash doesn't
+    // reflow across recompositions.
+    val confettiColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.secondary,
+        Color(0xFFFFB347),
+        Color(0xFFFF5E62)
+    )
+    val confettiSpec = remember {
+        listOf(
+            Triple(0.08f, 0.18f, 0), Triple(0.18f, 0.62f, 1), Triple(0.27f, 0.32f, 2),
+            Triple(0.42f, 0.78f, 3), Triple(0.55f, 0.14f, 4), Triple(0.68f, 0.55f, 0),
+            Triple(0.78f, 0.22f, 1), Triple(0.86f, 0.72f, 2), Triple(0.94f, 0.30f, 3)
+        )
+    }
+
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Confetti backdrop — fixed-position dots scattered behind the card.
+            confettiSpec.forEach { (x, y, ci) ->
+                Box(
+                    modifier = Modifier
+                        .padding(start = (x * 320).dp, top = (y * 200).dp)
+                        .size(if (ci % 2 == 0) 8.dp else 6.dp)
+                        .clip(if (ci == 3) RoundedCornerShape(2.dp) else CircleShape)
+                        .background(confettiColors[ci % confettiColors.size].copy(alpha = 0.65f))
+                )
+            }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -1157,6 +1248,7 @@ private fun EndOfFeedCard(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -1416,53 +1508,94 @@ private fun getGreeting(userName: String? = null): String {
     return if (!userName.isNullOrBlank()) "$timeGreeting, $userName" else timeGreeting
 }
 
+/**
+ * "Create a Mix" CTA, redesigned. Dashed primary-tinted border + a slow
+ * horizontal shimmer sweep make it read as an *action* (not content) and
+ * stand apart from the surrounding cards.
+ */
 @Composable
 private fun CreateMixCard(
     onClick: () -> Unit
 ) {
-    Row(
+    val transition = rememberInfiniteTransition(label = "createMixShimmer")
+    val shimmer by transition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+
+    val borderColor = MaterialTheme.colorScheme.primary
+    val shimmerStart = MaterialTheme.colorScheme.primary.copy(alpha = 0f)
+    val shimmerMid = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(68.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-            )
+            .height(76.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f))
+            .drawBehind {
+                val stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        floatArrayOf(12.dp.toPx(), 8.dp.toPx()), 0f
+                    )
+                )
+                drawRoundRect(
+                    color = borderColor,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                    style = stroke
+                )
+
+                // Shimmer sweep — diagonal gradient that crosses the card.
+                val sweepWidthPx = size.width * 0.4f
+                val sweepX = (size.width + sweepWidthPx) * shimmer - sweepWidthPx
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(shimmerStart, shimmerMid, shimmerStart),
+                        start = androidx.compose.ui.geometry.Offset(sweepX, 0f),
+                        end = androidx.compose.ui.geometry.Offset(sweepX + sweepWidthPx, size.height)
+                    )
+                )
+            }
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 18.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(10.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(14.dp))
-        
-        Column {
-            Text(
-                text = "Create your own mix",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Pick artists to get started",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column {
+                Text(
+                    text = "Create your own mix",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Pick artists to get started",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -1798,6 +1931,12 @@ fun ArtistCard(
     }
 }
 
+/**
+ * Wide horizontal track card — thumbnail on the left, title + artist + a
+ * trailing play affordance on the right. Width 280dp so two cards fit a
+ * peeking carousel viewport. Spotify-style layout that contrasts with the
+ * square album/playlist cards used elsewhere.
+ */
 @Composable
 fun TrackCard(
     track: com.suvojeet.suvmusic.lastfm.RecommendedTrack,
@@ -1806,41 +1945,62 @@ fun TrackCard(
     val context = LocalContext.current
     val imageUrl = track.image.lastOrNull()?.url ?: ""
 
-    Column(
+    Row(
         modifier = Modifier
-            .width(150.dp)
+            .width(280.dp)
+            .height(72.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .bounceClick(onClick = onClick)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = track.name,
-                modifier = Modifier
-                    .size(150.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = track.name,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = track.artist.name,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = track.name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = track.artist.name,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
