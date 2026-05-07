@@ -22,12 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier 
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -387,7 +389,9 @@ fun QuickPickItem(
                 .padding(vertical = 6.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Compact thumbnail
+            // Flat-leading thumbnail — square right edge gives the row a
+            // distinctive silhouette vs the squircle/round cards used
+            // elsewhere on Home.
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(highResThumbnail)
@@ -396,12 +400,30 @@ fun QuickPickItem(
                 contentDescription = song.title,
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 14.dp,
+                            bottomStart = 14.dp,
+                            topEnd = 4.dp,
+                            bottomEnd = 4.dp
+                        )
+                    )
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            // Thin vertical accent stripe sets the row apart from a
+            // generic ListItem.
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .width(3.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
@@ -806,6 +828,14 @@ fun CommunityPlaylistCard(
     }
 }
 
+/**
+ * Explore grid, redesigned as an asymmetric Pinterest-style mosaic. Tiles
+ * alternate between "tall" (120dp) and "short" (80dp) per row so the block
+ * doesn't read as a uniform 2×N grid. Each tile carries a subtle hue tint
+ * derived from its title hash, varying corner radii (round / squircle-ish
+ * / pill-leaning), and a faint gradient backplate so individual tiles
+ * stand apart instead of forming one beige slab.
+ */
 @Composable
 fun ExploreGridSection(
     section: HomeSection,
@@ -817,33 +847,39 @@ fun ExploreGridSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HomeSectionHeader(title = section.title)
-        
+
         Column(
             modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-             val items = section.items.filterIsInstance<HomeItem.ExploreItem>()
-             val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
-             val chunkCount = if (isLandscape) 1 else 2
-             val rows = items.chunked(chunkCount)
-             
-             rows.forEach { rowItems ->
-                 Row(
-                     modifier = Modifier.fillMaxWidth(),
-                     horizontalArrangement = Arrangement.spacedBy(16.dp)
-                 ) {
-                     rowItems.forEach { item ->
-                         ExploreItemCard(
-                             item = item,
-                             modifier = Modifier.weight(1f),
-                             onClick = { onExploreItemClick(item.browseId, item.title) }
-                         )
-                     }
-                     if (rowItems.size == 1) {
-                         Spacer(modifier = Modifier.weight(1f))
-                     }
-                 }
-             }
+            val items = section.items.filterIsInstance<HomeItem.ExploreItem>()
+            val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
+            val chunkCount = if (isLandscape) 1 else 2
+            val rows = items.chunked(chunkCount)
+
+            rows.forEachIndexed { rowIndex, rowItems ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    rowItems.forEachIndexed { colIndex, item ->
+                        // Stagger pattern: each row flips which column is tall,
+                        // landscape-mode rows fall back to the standard short tile.
+                        val isTall = !isLandscape && ((rowIndex + colIndex) % 2 == 0)
+                        ExploreItemCard(
+                            item = item,
+                            modifier = Modifier.weight(1f),
+                            isTall = isTall,
+                            tileIndex = rowIndex * 10 + colIndex,
+                            onClick = { onExploreItemClick(item.browseId, item.title) }
+                        )
+                    }
+                    if (rowItems.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
         }
     }
 }
@@ -852,35 +888,69 @@ fun ExploreGridSection(
 fun ExploreItemCard(
     item: HomeItem.ExploreItem,
     modifier: Modifier = Modifier,
+    isTall: Boolean = false,
+    tileIndex: Int = 0,
     onClick: () -> Unit
 ) {
+    // Title-hash-derived hue gives each tile a unique tint while staying
+    // tonally compatible with the active color scheme.
+    val accentSeed = remember(item.title) { (item.title.hashCode() and 0xFFFF) / 65535f }
+    val baseAccent = MaterialTheme.colorScheme.primary
+    val tilePalette = listOf(
+        baseAccent,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.secondary
+    )
+    val accent = tilePalette[(tileIndex + (accentSeed * 1000).toInt()) % tilePalette.size]
+    val shape = when (tileIndex % 3) {
+        0 -> RoundedCornerShape(20.dp)
+        1 -> RoundedCornerShape(topStart = 24.dp, bottomEnd = 24.dp, topEnd = 8.dp, bottomStart = 8.dp)
+        else -> RoundedCornerShape(14.dp)
+    }
+
     Box(
         modifier = modifier
-            .height(80.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .height(if (isTall) 120.dp else 84.dp)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        accent.copy(alpha = 0.18f),
+                        MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            )
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(14.dp)
     ) {
-        // Layout: Icon Top Left, Text Bottom Left? Screenshot shows Icon Top Left, Text Bottom Left.
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
-             Icon(
-                 painter = painterResource(id = item.iconRes),
-                 contentDescription = null,
-                 tint = MaterialTheme.colorScheme.onSurface,
-                 modifier = Modifier.size(24.dp)
-             )
-             
-             Text(
-                 text = item.title,
-                 style = MaterialTheme.typography.titleSmall,
-                 fontWeight = FontWeight.Bold,
-                 color = MaterialTheme.colorScheme.onSurface
-             )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = item.iconRes),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = if (isTall) 2 else 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -991,6 +1061,316 @@ fun NewReleaseCard(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
                 contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Genre carousel — square cover wrapped in a thick tinted ring whose color
+// is derived from the section title (genre name). Used only by the
+// "Because you like X" block so genre mixes don't blur into regular albums.
+// -----------------------------------------------------------------------------
+
+private val GENRE_PALETTE = listOf(
+    Color(0xFFE91E63), // pink
+    Color(0xFF9C27B0), // purple
+    Color(0xFF3F51B5), // indigo
+    Color(0xFF009688), // teal
+    Color(0xFFFF5722), // deep orange
+    Color(0xFFFFB300), // amber
+    Color(0xFF4CAF50), // green
+    Color(0xFF00BCD4), // cyan
+)
+
+private fun genreAccentFor(title: String): Color {
+    val hash = title.hashCode().toLong() and 0xFFFFFFFFL
+    return GENRE_PALETTE[(hash % GENRE_PALETTE.size).toInt()]
+}
+
+@Composable
+fun GenreCarousel(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (section.items.isEmpty()) return
+    val accent = remember(section.title) { genreAccentFor(section.title) }
+    val items = remember(section.items) { section.items.distinctBy { it.id } }
+    val songs = remember(items) {
+        items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+
+    Column(modifier = modifier) {
+        // Genre tag chip preceding the title — visually claims the row.
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 28.dp, height = 6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(accent)
+            )
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = (-0.4).sp
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            itemsIndexed(
+                items = items,
+                key = { _, item -> item.id },
+                contentType = { _, item -> "genre_${item::class}" }
+            ) { _, item ->
+                val (title, subtitle, image) = when (item) {
+                    is HomeItem.SongItem -> Triple(item.song.title, item.song.artist, item.song.thumbnailUrl)
+                    is HomeItem.PlaylistItem -> Triple(item.playlist.name, item.playlist.uploaderName, item.playlist.thumbnailUrl)
+                    is HomeItem.AlbumItem -> Triple(item.album.title, item.album.artist, item.album.thumbnailUrl)
+                    else -> Triple("", "", null)
+                }
+                GenreRingCard(
+                    title = title,
+                    subtitle = subtitle,
+                    imageUrl = image,
+                    accent = accent,
+                    onClick = {
+                        when (item) {
+                            is HomeItem.SongItem -> {
+                                val idx = songs.indexOf(item.song)
+                                if (idx != -1) onSongClick(songs, idx)
+                            }
+                            is HomeItem.PlaylistItem -> onPlaylistClick(item.playlist)
+                            is HomeItem.AlbumItem -> onAlbumClick(item.album)
+                            else -> {}
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GenreRingCard(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val coverSize = 144.dp
+    Column(
+        modifier = Modifier
+            .width(coverSize)
+            .bounceClick(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(coverSize)
+                .clip(RoundedCornerShape(18.dp))
+                .background(accent.copy(alpha = 0.9f))
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = title,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Personalized Mix carousel — a vinyl-disc treatment used only inside the
+// "Personalized for you" block. Cover art sits inside a square sleeve with a
+// black disc peeking out from the trailing edge so these mixes are visually
+// distinct from regular album/playlist cards.
+// -----------------------------------------------------------------------------
+
+@Composable
+fun PersonalizedMixCarousel(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (section.items.isEmpty()) return
+
+    val items = remember(section.items) { section.items.distinctBy { it.id } }
+    val songs = remember(items) {
+        items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+
+    Column(modifier = modifier) {
+        HomeSectionHeader(title = section.title)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            itemsIndexed(
+                items = items,
+                key = { _, item -> item.id },
+                contentType = { _, item -> "vinyl_${item::class}" }
+            ) { _, item ->
+                val (title, subtitle, image) = when (item) {
+                    is HomeItem.SongItem -> Triple(item.song.title, item.song.artist, item.song.thumbnailUrl)
+                    is HomeItem.PlaylistItem -> Triple(item.playlist.name, item.playlist.uploaderName, item.playlist.thumbnailUrl)
+                    is HomeItem.AlbumItem -> Triple(item.album.title, item.album.artist, item.album.thumbnailUrl)
+                    else -> Triple("", "", null)
+                }
+                PersonalizedMixCard(
+                    title = title,
+                    subtitle = subtitle,
+                    imageUrl = image,
+                    onClick = {
+                        when (item) {
+                            is HomeItem.SongItem -> {
+                                val idx = songs.indexOf(item.song)
+                                if (idx != -1) onSongClick(songs, idx)
+                            }
+                            is HomeItem.PlaylistItem -> onPlaylistClick(item.playlist)
+                            is HomeItem.AlbumItem -> onAlbumClick(item.album)
+                            else -> {}
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PersonalizedMixCard(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val coverSize = 152.dp
+    val discPeek = 36.dp
+
+    Column(
+        modifier = Modifier
+            .width(coverSize + discPeek)
+            .bounceClick(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .height(coverSize)
+                .fillMaxWidth()
+        ) {
+            // Vinyl disc — sits behind the sleeve, peeks from the right.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(coverSize)
+                    .offset(x = discPeek - 4.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1A1A1A))
+            ) {
+                // Concentric "record groove" ring + label disc.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(coverSize * 0.55f)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2A2A2A))
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(coverSize * 0.32f)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1A1A1A))
+                )
+            }
+
+            // Sleeve / cover art.
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = title,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .size(coverSize)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(end = discPeek)
+        )
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = discPeek)
             )
         }
     }
