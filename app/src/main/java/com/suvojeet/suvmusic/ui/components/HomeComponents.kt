@@ -65,19 +65,38 @@ fun HomeItemCard(
             )
         }
         is HomeItem.AlbumItem -> {
-            // Render album similar to playlist
-            PlaylistDisplayCard(
-                playlist = PlaylistDisplayItem(
-                    id = item.album.id,
-                    name = item.album.title,
-                    url = "",
-                    uploaderName = item.album.artist,
-                    thumbnailUrl = item.album.thumbnailUrl
-                ),
-                onClick = { 
-                    onAlbumClick(item.album)
-                }
-            )
+            // Albums get a thin "CD spine" sliver on the leading edge so they
+            // read as physical media (album, not playlist) at a glance.
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 6.dp, bottom = 60.dp)
+                        .width(5.dp)
+                        .height(170.dp)
+                        .clip(RoundedCornerShape(topStart = 2.dp, bottomStart = 2.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF2A2A2A),
+                                    Color(0xFF1A1A1A),
+                                    Color(0xFF2A2A2A)
+                                )
+                            )
+                        )
+                )
+                PlaylistDisplayCard(
+                    playlist = PlaylistDisplayItem(
+                        id = item.album.id,
+                        name = item.album.title,
+                        url = "",
+                        uploaderName = item.album.artist,
+                        thumbnailUrl = item.album.thumbnailUrl
+                    ),
+                    onClick = {
+                        onAlbumClick(item.album)
+                    }
+                )
+            }
         }
         is HomeItem.ArtistItem -> {
             // Placeholder for Artist
