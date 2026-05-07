@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/logo_resonance"
-    android:gravity="fill" />
+<!--
+  Resonance launcher foreground. 16.6% inset keeps the vinyl + EQ mark inside
+  the 66dp adaptive-icon safe zone so circular launcher masks don't clip the
+  outer rim of the disc. `gravity="fill"` scales the 512px bitmap into the
+  inset bounds (intrinsic-sized "center" gravity would crop it).
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="16.6%">
+    <bitmap
+        android:src="@drawable/logo_resonance"
+        android:gravity="fill" />
+</inset>
