@@ -888,7 +888,10 @@ class MusicPlayerService : MediaLibraryService() {
                     .setMediaId(ROOT_ID)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
-                            .setIsBrowsable(false)
+                            // The library root IS browsable — its children are the
+                            // browse tree. Stricter Auto/Wear launchers refuse to
+                            // descend into a root flagged non-browsable.
+                            .setIsBrowsable(true)
                             .setIsPlayable(false)
                             .setTitle("SuvMusic")
                             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
@@ -1064,6 +1067,13 @@ class MusicPlayerService : MediaLibraryService() {
                             else -> {
                                 if (parentId.startsWith("section_")) {
                                     val index = parentId.removePrefix("section_").toIntOrNull()
+                                    // After a service rebind, Android Auto often re-asks for
+                                    // "section_N" without re-fetching HOME first, so the cache
+                                    // would be empty and the section would render blank. Refill
+                                    // it lazily here.
+                                    if (cachedHomeSections.isEmpty()) {
+                                        cachedHomeSections = youTubeRepository.getHomeSections()
+                                    }
                                     if (index != null && index in cachedHomeSections.indices) {
                                         val section = cachedHomeSections[index]
 
@@ -1209,8 +1219,22 @@ class MusicPlayerService : MediaLibraryService() {
                          if (item.mediaId.startsWith("shuffle_")) {
                              val playlistId = item.mediaId.removePrefix("shuffle_")
                              try {
-                                 val playlist = youTubeRepository.getPlaylist(playlistId)
-                                 val shuffledSongs = playlist.songs.shuffled()
+                                 // Auto-mix playlists (RD*, RTM*) need the /next endpoint, not
+                                 // /browse — getPlaylist() hangs on them. Mirrors the branch
+                                 // in onGetChildren("playlist_…").
+                                 val isAutoMix = playlistId.startsWith("RD") ||
+                                                 playlistId.startsWith("RTM")
+                                 val playlist = if (isAutoMix) {
+                                     kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                         youTubeRepository.getAutoMixPlaylist(playlistId)
+                                     }
+                                 } else {
+                                     youTubeRepository.getPlaylist(playlistId)
+                                 }
+                                 val shuffledSongs = playlist?.songs?.shuffled().orEmpty()
+                                 // Cache the shuffled order as the queue context so
+                                 // skip-next/prev navigates the shuffled list.
+                                 shuffledSongs.forEach { playlistContextCache[it.id] = shuffledSongs }
                                  shuffledSongs.forEach { finalItems.add(createPlayableMediaItem(it)) }
                              } catch (e: Exception) {
                                  android.util.Log.e("MusicPlayerService", "Shuffle failed for $playlistId", e)
@@ -1225,6 +1249,10 @@ class MusicPlayerService : MediaLibraryService() {
                                  val results = youTubeRepository.search(searchQuery)
                                  if (results.isNotEmpty()) {
                                      val song = results.first()
+                                     // Cache the full result list as the queue context so
+                                     // the expand-to-context path below queues the remaining
+                                     // songs and skip-next works after voice search.
+                                     results.forEach { playlistContextCache[it.id] = results }
                                      val streamUrl = resolveStreamUrlWithRetry(song.id)
                                      if (streamUrl != null) {
                                          createPlayableMediaItem(song).buildUpon()
