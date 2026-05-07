@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/logo_aether"
-    android:gravity="fill" />
+<!--
+  Aether launcher foreground. 16.6% inset keeps the orbital rings + note
+  inside the 66dp adaptive-icon safe zone — the outer ring otherwise gets
+  shaved off on circular launcher masks. `gravity="fill"` scales the 512px
+  bitmap into the inset bounds (intrinsic-sized "center" would crop it).
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="16.6%">
+    <bitmap
+        android:src="@drawable/logo_aether"
+        android:gravity="fill" />
+</inset>
