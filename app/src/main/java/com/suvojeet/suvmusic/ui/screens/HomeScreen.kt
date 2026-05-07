@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -436,7 +439,7 @@ fun HomeScreen(
                                 contentType = { _, section -> "personalized_${section.type}" }
                             ) { index, section ->
                                 val enterModifier = Modifier.animateEnter(index = index)
-                                
+
                                 when (section.type) {
                                     HomeSectionType.QuickPicks -> {
                                         com.suvojeet.suvmusic.ui.components.QuickPicksSection(
@@ -449,12 +452,13 @@ fun HomeScreen(
                                         )
                                     }
                                     else -> {
-                                        com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                        // Personalized rows get the vinyl-disc treatment so
+                                        // they read distinctly from regular YouTube carousels.
+                                        com.suvojeet.suvmusic.ui.components.PersonalizedMixCarousel(
                                             section = section,
                                             onSongClick = onSongClick,
                                             onPlaylistClick = onPlaylistClick,
                                             onAlbumClick = onAlbumClick,
-                                            onSongMoreClick = onSongMoreClickHandler,
                                             modifier = enterModifier,
                                         )
                                     }
@@ -912,63 +916,119 @@ fun QuickAccessCard(
 }
 
 
+/**
+ * Time-aware gradient hero banner. Replaces the plain greeting Row with a
+ * full-width band tinted by hour-of-day (dawn/day/dusk/night) so the top of
+ * Home doesn't blend into the rest of the feed.
+ */
 @Composable
 private fun ProfileHeader(
     modifier: Modifier = Modifier,
     onHistoryClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {}
 ) {
+    val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
     val greeting = remember { getGreeting() }
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val (gradient, glyph, glyphLabel) = remember(hour) {
+        val primary = when {
+            hour < 6 -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
+            hour < 12 -> Triple(Color(0xFFFFB347), Color(0xFFFF7E5F), Icons.Default.WbSunny to "Morning")
+            hour < 17 -> Triple(Color(0xFF36D1DC), Color(0xFF5B86E5), Icons.Default.WbSunny to "Afternoon")
+            hour < 21 -> Triple(Color(0xFFCB356B), Color(0xFF6A2C70), Icons.Default.WbTwilight to "Evening")
+            else -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
+        }
+        Triple(
+            Brush.linearGradient(listOf(primary.first.copy(alpha = 0.85f), primary.second.copy(alpha = 0.85f))),
+            primary.third.first,
+            primary.third.second
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(gradient)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
-        // Greeting
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onBackground,
-            letterSpacing = (-0.5).sp
+        // Decorative glyph drifts toward the trailing edge — purely ornamental.
+        Icon(
+            imageVector = glyph,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.18f),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(96.dp)
+                .offset(x = 16.dp)
         )
 
-        // Actions Row
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onListenTogetherClick),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Group,
-                        contentDescription = "Listen Together",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = glyphLabel.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.7f),
+                    letterSpacing = 2.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = (-0.5).sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Pick something to play",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
             }
 
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onHistoryClick),
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = "History",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.White.copy(alpha = 0.18f),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clickable(onClick = onListenTogetherClick),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = "Listen Together",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color.White.copy(alpha = 0.18f),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clickable(onClick = onHistoryClick),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "History",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

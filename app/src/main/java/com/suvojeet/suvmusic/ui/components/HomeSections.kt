@@ -387,7 +387,9 @@ fun QuickPickItem(
                 .padding(vertical = 6.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Compact thumbnail
+            // Flat-leading thumbnail — square right edge gives the row a
+            // distinctive silhouette vs the squircle/round cards used
+            // elsewhere on Home.
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(highResThumbnail)
@@ -396,12 +398,30 @@ fun QuickPickItem(
                 contentDescription = song.title,
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 14.dp,
+                            bottomStart = 14.dp,
+                            topEnd = 4.dp,
+                            bottomEnd = 4.dp
+                        )
+                    )
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            // Thin vertical accent stripe sets the row apart from a
+            // generic ListItem.
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .width(3.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
@@ -991,6 +1011,162 @@ fun NewReleaseCard(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
                 contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Personalized Mix carousel — a vinyl-disc treatment used only inside the
+// "Personalized for you" block. Cover art sits inside a square sleeve with a
+// black disc peeking out from the trailing edge so these mixes are visually
+// distinct from regular album/playlist cards.
+// -----------------------------------------------------------------------------
+
+@Composable
+fun PersonalizedMixCarousel(
+    section: HomeSection,
+    onSongClick: (List<Song>, Int) -> Unit,
+    onPlaylistClick: (PlaylistDisplayItem) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (section.items.isEmpty()) return
+
+    val items = remember(section.items) { section.items.distinctBy { it.id } }
+    val songs = remember(items) {
+        items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+
+    Column(modifier = modifier) {
+        HomeSectionHeader(title = section.title)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            itemsIndexed(
+                items = items,
+                key = { _, item -> item.id },
+                contentType = { _, item -> "vinyl_${item::class}" }
+            ) { _, item ->
+                val (title, subtitle, image) = when (item) {
+                    is HomeItem.SongItem -> Triple(item.song.title, item.song.artist, item.song.thumbnailUrl)
+                    is HomeItem.PlaylistItem -> Triple(item.playlist.name, item.playlist.uploaderName, item.playlist.thumbnailUrl)
+                    is HomeItem.AlbumItem -> Triple(item.album.title, item.album.artist, item.album.thumbnailUrl)
+                    else -> Triple("", "", null)
+                }
+                PersonalizedMixCard(
+                    title = title,
+                    subtitle = subtitle,
+                    imageUrl = image,
+                    onClick = {
+                        when (item) {
+                            is HomeItem.SongItem -> {
+                                val idx = songs.indexOf(item.song)
+                                if (idx != -1) onSongClick(songs, idx)
+                            }
+                            is HomeItem.PlaylistItem -> onPlaylistClick(item.playlist)
+                            is HomeItem.AlbumItem -> onAlbumClick(item.album)
+                            else -> {}
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PersonalizedMixCard(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val coverSize = 152.dp
+    val discPeek = 36.dp
+
+    Column(
+        modifier = Modifier
+            .width(coverSize + discPeek)
+            .bounceClick(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .height(coverSize)
+                .fillMaxWidth()
+        ) {
+            // Vinyl disc — sits behind the sleeve, peeks from the right.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(coverSize)
+                    .offset(x = discPeek - 4.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1A1A1A))
+            ) {
+                // Concentric "record groove" ring + label disc.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(coverSize * 0.55f)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2A2A2A))
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(coverSize * 0.32f)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1A1A1A))
+                )
+            }
+
+            // Sleeve / cover art.
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = title,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .size(coverSize)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(end = discPeek)
+        )
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = discPeek)
             )
         }
     }
