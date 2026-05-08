@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -63,15 +64,26 @@ class AIEqualizerService @Inject constructor(
             // Restore persistent state
             _promptHistory.value = sessionManager.getAIPromptHistory()
             _isAutoModeEnabled.value = sessionManager.isAutoAIEnabled()
-            
+
             val savedStateJson = sessionManager.getPersistedAIState()
             if (savedStateJson != null) {
                 val restoredState = AudioEffectState.fromJson(savedStateJson)
                 _lastResult.value = restoredState
                 aiState = restoredState
+                // Snapshot the engine BEFORE we re-apply the saved AI state so
+                // A/B Compare has something to flip back to. Without this, the
+                // toggle silently no-ops on app restart because originalState
+                // is null.
+                originalState = spatialAudioProcessor.getCurrentState()
+                stateBeforeAI = originalState
+                // Actually push the saved settings to the audio engine —
+                // previously we only restored the UI label, leaving the engine
+                // in its default flat state.
+                applySettings(restoredState)
+                addLog("Restored saved AI profile to audio engine.")
             }
         }
-        
+
         // Listen for song changes to clear A/B compare state or auto-apply AI
         serviceScope.launch {
             musicPlayer.playerState.filterNotNull().collect { state ->
@@ -79,7 +91,7 @@ class AIEqualizerService @Inject constructor(
                 if (newSongId != currentSongId && newSongId != null) {
                     val oldId = currentSongId
                     currentSongId = newSongId
-                    
+
                     if (oldId != null) {
                         clearABCompareState()
                     }
@@ -106,11 +118,11 @@ class AIEqualizerService @Inject constructor(
 
     private suspend fun autoProcessCurrentSong() {
         val currentSong = musicPlayer.playerState.value.currentSong ?: return
-        
+
         _autoStatus.value = "Analyzing \"${currentSong.title}\"..."
         addLog("AUTO: Song change detected - \"${currentSong.title}\"")
         delay(500)
-        
+
         // 1. Check if we already have saved AI settings for this song
         if (checkAndAutoApplyAIForSong(currentSong.id)) {
             _autoStatus.value = "Profile Restored"
@@ -123,25 +135,61 @@ class AIEqualizerService @Inject constructor(
         // 2. If not, generate new AI profile based on genre/metadata
         _autoStatus.value = "Generating Intelligent Profile..."
         addLog("AUTO: Generating intelligent profile for \"${currentSong.artist}\"...")
-        
+
         val autoPrompt = "Analyze this song: '${currentSong.title}' by '${currentSong.artist}'. " +
                 "Provide a professional audio engineer's EQ and DSP setup that best fits its genre and characteristics. " +
                 "Optimize for clarity, depth, and appropriate energy."
 
-        // Use a default reliable provider/model for auto mode
-        // In a real app, these would come from settings
+        // Use the provider the user selected in AI Settings. Fall back to the
+        // free ChatProxy if the user hasn't supplied a key for their primary
+        // provider — without this fallback, auto mode silently fails for
+        // anyone who picked OpenAI/Anthropic/Gemini but hasn't configured a
+        // key yet.
+        val (provider, apiKey, model) = resolveAutoProvider()
+        addLog("AUTO: Using provider $provider with model $model")
+
         processPrompt(
             prompt = autoPrompt,
-            provider = AIProvider.CHAT_PROXY,
-            apiKey = "",
-            model = "gpt-4o-mini" // Fast and reliable for auto-tuning
+            provider = provider,
+            apiKey = apiKey,
+            model = model,
         )
-        
+
         if (_lastResult.value != null) {
             _autoStatus.value = "Neural Link Established"
             delay(2000)
         }
         _autoStatus.value = null
+    }
+
+    private suspend fun resolveAutoProvider(): Triple<AIProvider, String, String> {
+        val selected = sessionManager.selectedAiProviderFlow.first()
+        val provider = runCatching { AIProvider.valueOf(selected) }.getOrDefault(AIProvider.CHAT_PROXY)
+
+        return when (provider) {
+            AIProvider.OPENAI -> {
+                val key = sessionManager.openaiApiKeyFlow.first()
+                val model = sessionManager.openaiModelFlow.first().ifBlank { "gpt-4o-mini" }
+                if (key.isBlank()) Triple(AIProvider.CHAT_PROXY, "", "gpt-4o-mini")
+                else Triple(AIProvider.OPENAI, key, model)
+            }
+            AIProvider.ANTHROPIC -> {
+                val key = sessionManager.anthropicApiKeyFlow.first()
+                val model = sessionManager.anthropicModelFlow.first().ifBlank { "claude-3-5-sonnet-20240620" }
+                if (key.isBlank()) Triple(AIProvider.CHAT_PROXY, "", "gpt-4o-mini")
+                else Triple(AIProvider.ANTHROPIC, key, model)
+            }
+            AIProvider.GEMINI -> {
+                val key = sessionManager.geminiApiKeyFlow.first()
+                val model = sessionManager.geminiModelFlow.first().ifBlank { "gemini-1.5-flash" }
+                if (key.isBlank()) Triple(AIProvider.CHAT_PROXY, "", "gpt-4o-mini")
+                else Triple(AIProvider.GEMINI, key, model)
+            }
+            AIProvider.CHAT_PROXY -> {
+                val model = sessionManager.chatProxyModelFlow.first().ifBlank { "gpt-4o-mini" }
+                Triple(AIProvider.CHAT_PROXY, "", model)
+            }
+        }
     }
 
     fun addLog(message: String) {
@@ -255,9 +303,15 @@ class AIEqualizerService @Inject constructor(
         val savedSettings = sessionManager.getSongAISettings(songId)
         if (savedSettings != null) {
             addLog("Auto-applying saved AI settings for this song...")
+            // Capture the engine state BEFORE we apply the saved profile so
+            // revert + A/B compare can flip back to the user's pre-AI sound.
+            // (Previously this snapshot was taken AFTER applySettings, which
+            // meant "Original" was identical to the AI state.)
+            val preApply = spatialAudioProcessor.getCurrentState()
+            stateBeforeAI = preApply
+            originalState = preApply
             applySettings(savedSettings.audioEffectState)
             _lastResult.value = savedSettings.audioEffectState
-            stateBeforeAI = spatialAudioProcessor.getCurrentState()
             aiState = savedSettings.audioEffectState
             currentPrompt = savedSettings.prompt
             return true

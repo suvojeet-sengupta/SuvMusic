@@ -167,7 +167,17 @@ class MusicPlayer @Inject constructor(
         }
     }
 
+    // Tracks the most recent BT-connect event so we can debounce
+    // duplicate ACL_CONNECTED + AudioDeviceCallback firings.
+    @Volatile private var lastBluetoothConnectAtMs: Long = 0L
+
     private fun onBluetoothAudioConnected() {
+        // Debounce — onAudioDevicesAdded and ACL_CONNECTED can both fire for
+        // the same device within a few hundred ms.
+        val now = System.currentTimeMillis()
+        if (now - lastBluetoothConnectAtMs < 1500L) return
+        lastBluetoothConnectAtMs = now
+
         scope.launch {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -185,11 +195,91 @@ class MusicPlayer @Inject constructor(
             }
 
             if (sessionManager.isBluetoothAutoplayEnabled()) {
-                // Give the audio route a moment to settle before starting playback
+                // Wait for the audio route to settle, then resume playback.
+                // Some devices report TYPE_BLUETOOTH_A2DP before they're truly
+                // ready to render audio, so retry briefly if play() seems to
+                // not actually start.
                 delay(800)
                 val state = _playerState.value
-                if (state.queue.isNotEmpty() && !state.isPlaying) {
-                    play()
+                if (state.queue.isEmpty()) return@launch
+                if (state.isPlaying) return@launch
+
+                play()
+
+                // Verify playback actually started; some Bluetooth stacks miss
+                // the very first start when the audio route is still settling.
+                repeat(3) { attempt ->
+                    delay(700L * (attempt + 1))
+                    val s = _playerState.value
+                    if (!s.isPlaying && s.queue.isNotEmpty()) {
+                        android.util.Log.i(
+                            "MusicPlayer",
+                            "Bluetooth autoplay retry ${attempt + 1} — controller not playing yet",
+                        )
+                        play()
+                    } else return@launch
+                }
+            }
+        }
+    }
+
+    private fun isBluetoothOutputActive(): Boolean {
+        val devices = try { audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS) } catch (_: Exception) { return false }
+        return devices.any { d ->
+            d.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+            d.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            (android.os.Build.VERSION.SDK_INT >= 31 && (
+                d.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                d.type == AudioDeviceInfo.TYPE_BLE_SPEAKER ||
+                d.type == 30 /* TYPE_BLE_BROADCAST */
+            ))
+        }
+    }
+
+    /**
+     * Announce the current song over the active output device. Ducks the
+     * music-player volume during the announcement and reliably restores it on
+     * completion (or error). Volume + ducking come from user settings.
+     */
+    private fun announceCurrentSong(title: String, artist: String) {
+        scope.launch {
+            val ttsVolumePercent = sessionManager.getAnnounceTtsVolume()
+            val duckPercent = sessionManager.getAnnounceDuckVolume()
+            val ttsVolume = (ttsVolumePercent / 100f).coerceIn(0f, 1f)
+            val duckVolume = (duckPercent / 100f).coerceIn(0f, 1f)
+
+            val controller = mediaController
+            val originalVolume = controller?.volume ?: 1.0f
+
+            ttsVolumeJob?.cancel()
+            ttsVolumeJob = scope.launch {
+                val restored = java.util.concurrent.atomic.AtomicBoolean(false)
+                fun restoreOnce() {
+                    if (restored.compareAndSet(false, true)) {
+                        try { controller?.volume = originalVolume } catch (_: Exception) {}
+                    }
+                }
+
+                try {
+                    try { controller?.volume = duckVolume } catch (_: Exception) {}
+
+                    ttsManager.speak(
+                        text = "Now playing $title by $artist",
+                        volume = ttsVolume,
+                        onDone = { restoreOnce() },
+                        onError = { restoreOnce() },
+                    )
+
+                    // Safety net — if the engine never fires onDone (broken engine,
+                    // process killed during speak, etc.), restore volume after a
+                    // generous timeout so the user doesn't get stuck on ducked audio.
+                    delay(15_000)
+                    restoreOnce()
+                } finally {
+                    // If we get cancelled (e.g., next song starts before the
+                    // current announcement finishes), restore volume so we
+                    // don't leave the player permanently ducked.
+                    restoreOnce()
                 }
             }
         }
@@ -759,20 +849,17 @@ class MusicPlayer @Inject constructor(
                 if (song != null) {
                     scope.launch {
                         sessionManager.addToRecentlyPlayed(song)
-                        
-                        // Speak Song Details (TTS) - Only if Bluetooth is connected
+
+                        // Speak Song Details (TTS) — announce the new track via the
+                        // active audio output. Volume + ducking + Bluetooth-only
+                        // gating come from settings; the announcement runs through
+                        // STREAM_MUSIC + media AudioAttributes so it routes to
+                        // Bluetooth A2DP / BLE headsets correctly.
                         if (sessionManager.isSpeakSongDetailsEnabled()) {
-                            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                            if (audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn) {
-                                // Duck volume
-                                ttsVolumeJob?.cancel()
-                                ttsVolumeJob = scope.launch {
-                                    mediaController?.volume = 0.2f
-                                    ttsManager.speak("Now playing ${song.title} by ${song.artist}")
-                                    // Restore volume after delay (approx 3s)
-                                    delay(3000)
-                                    mediaController?.volume = 1.0f
-                                }
+                            val bluetoothOnly = sessionManager.isAnnounceBluetoothOnly()
+                            val isBluetoothActive = isBluetoothOutputActive()
+                            if (!bluetoothOnly || isBluetoothActive) {
+                                announceCurrentSong(song.title, song.artist)
                             }
                         }
                         

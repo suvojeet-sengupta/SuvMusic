@@ -30,10 +30,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientStart
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
+import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
 
 /**
@@ -67,13 +72,22 @@ fun PlaylistCard(
                 contentAlignment = Alignment.Center
             ) {
                 if (playlist.thumbnailUrl != null) {
+                    val context = LocalContext.current
+                    val highResUrl = remember(playlist.thumbnailUrl) {
+                        ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl, size = 544)
+                            ?: playlist.thumbnailUrl
+                    }
                     AsyncImage(
-                        model = playlist.thumbnailUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(highResUrl)
+                            .crossfade(true)
+                            .size(360)
+                            .build(),
                         contentDescription = playlist.name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    
+
                     // Gradient overlay
                     Box(
                         modifier = Modifier
@@ -141,8 +155,17 @@ fun FeaturedPlaylistCard(
         Box {
             // Background Image
             if (playlist.thumbnailUrl != null) {
+                val context = LocalContext.current
+                val highResUrl = remember(playlist.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl, size = 720)
+                        ?: playlist.thumbnailUrl
+                }
                 AsyncImage(
-                    model = playlist.thumbnailUrl,
+                    model = ImageRequest.Builder(context)
+                        .data(highResUrl)
+                        .crossfade(true)
+                        .size(720)
+                        .build(),
                     contentDescription = playlist.name,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

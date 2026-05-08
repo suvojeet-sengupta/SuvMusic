@@ -1904,6 +1904,9 @@ fun ArtistCard(
     val context = LocalContext.current
     // Get the largest image
     val imageUrl = artist.image.lastOrNull()?.url ?: ""
+    val highResUrl = remember(imageUrl) {
+        ImageUtils.getHighResThumbnailUrl(imageUrl, size = 320) ?: imageUrl
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1919,8 +1922,9 @@ fun ArtistCard(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(highResUrl)
                     .crossfade(true)
+                    .size(240)
                     .build(),
                 contentDescription = artist.name,
                 modifier = Modifier
@@ -1955,6 +1959,9 @@ fun TrackCard(
 ) {
     val context = LocalContext.current
     val imageUrl = track.image.lastOrNull()?.url ?: ""
+    val highResUrl = remember(imageUrl) {
+        ImageUtils.getHighResThumbnailUrl(imageUrl, size = 256) ?: imageUrl
+    }
 
     Row(
         modifier = Modifier
@@ -1969,8 +1976,9 @@ fun TrackCard(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data(imageUrl)
+                .data(highResUrl)
                 .crossfade(true)
+                .size(160)
                 .build(),
             contentDescription = track.name,
             modifier = Modifier

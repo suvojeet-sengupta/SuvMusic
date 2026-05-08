@@ -114,6 +114,9 @@ data class SettingsUiState(
     // Bluetooth
     val bluetoothAutoplayEnabled: Boolean = false,
     val speakSongDetailsEnabled: Boolean = false,
+    val announceTtsVolume: Int = 100,
+    val announceDuckVolume: Int = 30,
+    val announceBluetoothOnly: Boolean = true,
     // Discord RPC
     val discordRpcEnabled: Boolean = false,
     val discordToken: String = "", // Empty means not set
@@ -159,7 +162,16 @@ class SettingsViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    // Initialize uiState synchronously with cached account info so the
+    // Settings header doesn't show a blank avatar/name on entry.
+    private val _uiState = MutableStateFlow(
+        SettingsUiState(
+            isLoggedIn = sessionManager.isLoggedIn(),
+            userName = sessionManager.getCachedUserName(),
+            userAvatarUrl = sessionManager.getCachedUserAvatar(),
+            storedAccounts = sessionManager.getStoredAccounts()
+        )
+    )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     
     // Developer mode - shows JioSaavn option when enabled
@@ -217,7 +229,24 @@ class SettingsViewModel @Inject constructor(
     
     init {
         loadSettings()
-        
+
+        // Live-update the account header as DataStore values change.
+        viewModelScope.launch {
+            sessionManager.userNameFlow.collect { name ->
+                if (name != null) _uiState.update { it.copy(userName = name) }
+            }
+        }
+        viewModelScope.launch {
+            sessionManager.userAvatarFlow.collect { avatar ->
+                if (avatar != null) _uiState.update { it.copy(userAvatarUrl = avatar) }
+            }
+        }
+        viewModelScope.launch {
+            sessionManager.isLoggedInFlow.collect { loggedIn ->
+                _uiState.update { it.copy(isLoggedIn = loggedIn) }
+            }
+        }
+
         viewModelScope.launch {
             sessionManager.audioQualityFlow.collect { quality ->
                 _uiState.update { it.copy(audioQuality = quality) }
@@ -474,6 +503,24 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.announceTtsVolumeFlow.collect { value ->
+                _uiState.update { it.copy(announceTtsVolume = value) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.announceDuckVolumeFlow.collect { value ->
+                _uiState.update { it.copy(announceDuckVolume = value) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.announceBluetoothOnlyFlow.collect { enabled ->
+                _uiState.update { it.copy(announceBluetoothOnly = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.discordRpcEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(discordRpcEnabled = enabled) }
             }
@@ -686,6 +733,9 @@ class SettingsViewModel @Inject constructor(
             val ignoreAudioFocusDuringCalls = sessionManager.isIgnoreAudioFocusDuringCallsEnabled()
             val bluetoothAutoplayEnabled = sessionManager.isBluetoothAutoplayEnabled()
             val speakSongDetailsEnabled = sessionManager.isSpeakSongDetailsEnabled()
+            val announceTtsVolume = sessionManager.getAnnounceTtsVolume()
+            val announceDuckVolume = sessionManager.getAnnounceDuckVolume()
+            val announceBluetoothOnly = sessionManager.isAnnounceBluetoothOnly()
             val discordToken = sessionManager.getDiscordToken()
             val discordUseDetails = sessionManager.isDiscordUseDetailsEnabled()
             val lyricsLineSpacing = sessionManager.getLyricsLineSpacing()
@@ -780,6 +830,9 @@ class SettingsViewModel @Inject constructor(
                     ignoreAudioFocusDuringCalls = ignoreAudioFocusDuringCalls,
                     bluetoothAutoplayEnabled = bluetoothAutoplayEnabled,
                     speakSongDetailsEnabled = speakSongDetailsEnabled,
+                    announceTtsVolume = announceTtsVolume,
+                    announceDuckVolume = announceDuckVolume,
+                    announceBluetoothOnly = announceBluetoothOnly,
                     discordRpcEnabled = discordRpcEnabled,
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
@@ -967,7 +1020,28 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(speakSongDetailsEnabled = enabled) }
         }
     }
-    
+
+    fun setAnnounceTtsVolume(percent: Int) {
+        viewModelScope.launch {
+            sessionManager.setAnnounceTtsVolume(percent)
+            _uiState.update { it.copy(announceTtsVolume = percent.coerceIn(0, 100)) }
+        }
+    }
+
+    fun setAnnounceDuckVolume(percent: Int) {
+        viewModelScope.launch {
+            sessionManager.setAnnounceDuckVolume(percent)
+            _uiState.update { it.copy(announceDuckVolume = percent.coerceIn(0, 100)) }
+        }
+    }
+
+    fun setAnnounceBluetoothOnly(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAnnounceBluetoothOnly(enabled)
+            _uiState.update { it.copy(announceBluetoothOnly = enabled) }
+        }
+    }
+
     fun setDiscordRpcEnabled(enabled: Boolean) {
         viewModelScope.launch {
             sessionManager.setDiscordRpcEnabled(enabled)

@@ -194,6 +194,14 @@ class SessionManager @Inject constructor(
         
         private val BLUETOOTH_AUTOPLAY_ENABLED_KEY = booleanPreferencesKey("bluetooth_autoplay_enabled")
         private val SPEAK_SONG_DETAILS_ENABLED_KEY = booleanPreferencesKey("speak_song_details_enabled")
+        // 0..100. Volume of the TTS announcement itself, expressed as a
+        // percentage of the system media volume.
+        private val ANNOUNCE_TTS_VOLUME_KEY = intPreferencesKey("announce_tts_volume")
+        // 0..100. How much to duck the music while the announcement is
+        // speaking. 0 = mute, 100 = no ducking. Default: 30.
+        private val ANNOUNCE_DUCK_VOLUME_KEY = intPreferencesKey("announce_duck_volume")
+        // When false, announce on every output (incl. phone speaker / wired).
+        private val ANNOUNCE_BLUETOOTH_ONLY_KEY = booleanPreferencesKey("announce_bluetooth_only")
         
         private val DISCORD_RPC_ENABLED_KEY = booleanPreferencesKey("discord_rpc_enabled")
         private val DISCORD_TOKEN_KEY = stringPreferencesKey("discord_token")
@@ -1355,7 +1363,48 @@ class SessionManager @Inject constructor(
             preferences[SPEAK_SONG_DETAILS_ENABLED_KEY] = enabled
         }
     }
-    
+
+    // Announce volume — percentage 0..100. Default 100% (full TTS engine volume).
+    suspend fun getAnnounceTtsVolume(): Int =
+        context.dataStore.data.first()[ANNOUNCE_TTS_VOLUME_KEY] ?: 100
+
+    val announceTtsVolumeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[ANNOUNCE_TTS_VOLUME_KEY] ?: 100
+    }
+
+    suspend fun setAnnounceTtsVolume(percent: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[ANNOUNCE_TTS_VOLUME_KEY] = percent.coerceIn(0, 100)
+        }
+    }
+
+    // How much music is ducked while the announcement plays. 30% by default.
+    suspend fun getAnnounceDuckVolume(): Int =
+        context.dataStore.data.first()[ANNOUNCE_DUCK_VOLUME_KEY] ?: 30
+
+    val announceDuckVolumeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[ANNOUNCE_DUCK_VOLUME_KEY] ?: 30
+    }
+
+    suspend fun setAnnounceDuckVolume(percent: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[ANNOUNCE_DUCK_VOLUME_KEY] = percent.coerceIn(0, 100)
+        }
+    }
+
+    suspend fun isAnnounceBluetoothOnly(): Boolean =
+        context.dataStore.data.first()[ANNOUNCE_BLUETOOTH_ONLY_KEY] ?: true
+
+    val announceBluetoothOnlyFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ANNOUNCE_BLUETOOTH_ONLY_KEY] ?: true
+    }
+
+    suspend fun setAnnounceBluetoothOnly(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ANNOUNCE_BLUETOOTH_ONLY_KEY] = enabled
+        }
+    }
+
     // --- Next Song Preloading ---
     
     suspend fun isNextSongPreloadingEnabled(): Boolean =
@@ -1819,6 +1868,23 @@ class SessionManager @Inject constructor(
             val prefs = encryptedPrefs
             migrateSensitiveData()
 
+            // Mirror the canonical DataStore-stored account info into encrypted
+            // prefs so the next launch can render the Settings header
+            // synchronously. One-time backfill for users who upgraded before
+            // this cache was added.
+            try {
+                if (encryptedPrefs.getString(ACCOUNT_NAME_PREF, null) == null) {
+                    context.dataStore.data.first()[USER_NAME_KEY]?.let {
+                        encryptedPrefs.edit().putString(ACCOUNT_NAME_PREF, it).apply()
+                    }
+                }
+                if (encryptedPrefs.getString(ACCOUNT_AVATAR_PREF, null) == null) {
+                    context.dataStore.data.first()[USER_AVATAR_KEY]?.let {
+                        encryptedPrefs.edit().putString(ACCOUNT_AVATAR_PREF, it).apply()
+                    }
+                }
+            } catch (_: Exception) { /* best-effort backfill */ }
+
             // Auto-enable history sync if logged in (one-time migration or first login)
             if (isLoggedIn()) {
                 val currentPrefs = context.dataStore.data.first()
@@ -1921,7 +1987,11 @@ class SessionManager @Inject constructor(
     
     suspend fun clearCookies() {
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().remove("cookies").apply()
+            encryptedPrefs.edit()
+                .remove("cookies")
+                .remove(ACCOUNT_NAME_PREF)
+                .remove(ACCOUNT_AVATAR_PREF)
+                .apply()
         }
         context.dataStore.edit { preferences ->
             preferences.remove(COOKIES_KEY)
@@ -1932,27 +2002,43 @@ class SessionManager @Inject constructor(
     }
     
     fun isLoggedIn(): Boolean = !getCookies().isNullOrBlank()
-    
-    suspend fun getUserAvatar(): String? = 
-        context.dataStore.data.first()[USER_AVATAR_KEY]
-    
+
+    // Account-info snapshot mirrored into encryptedPrefs so the Settings screen
+    // can render the avatar + name synchronously on entry instead of waiting for
+    // a DataStore read on a coroutine.
+    private val ACCOUNT_NAME_PREF = "cached_user_name"
+    private val ACCOUNT_AVATAR_PREF = "cached_user_avatar"
+
+    fun getCachedUserName(): String? =
+        try { encryptedPrefs.getString(ACCOUNT_NAME_PREF, null) } catch (e: Exception) { null }
+            ?: getStoredAccounts().firstOrNull()?.name
+
+    fun getCachedUserAvatar(): String? =
+        try { encryptedPrefs.getString(ACCOUNT_AVATAR_PREF, null) } catch (e: Exception) { null }
+            ?: getStoredAccounts().firstOrNull()?.avatarUrl
+
+    suspend fun getUserAvatar(): String? =
+        context.dataStore.data.first()[USER_AVATAR_KEY] ?: getCachedUserAvatar()
+
     suspend fun saveUserAvatar(url: String) {
         context.dataStore.edit { preferences ->
             preferences[USER_AVATAR_KEY] = url
         }
+        try { encryptedPrefs.edit().putString(ACCOUNT_AVATAR_PREF, url).apply() } catch (_: Exception) {}
     }
 
     val userAvatarFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[USER_AVATAR_KEY]
     }
 
-    suspend fun getUserName(): String? = 
-        context.dataStore.data.first()[USER_NAME_KEY]
-    
+    suspend fun getUserName(): String? =
+        context.dataStore.data.first()[USER_NAME_KEY] ?: getCachedUserName()
+
     suspend fun saveUserName(name: String) {
         context.dataStore.edit { preferences ->
             preferences[USER_NAME_KEY] = name
         }
+        try { encryptedPrefs.edit().putString(ACCOUNT_NAME_PREF, name).apply() } catch (_: Exception) {}
     }
 
     val userNameFlow: Flow<String?> = context.dataStore.data.map { preferences ->
