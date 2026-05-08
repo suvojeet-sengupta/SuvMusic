@@ -2167,7 +2167,9 @@ class SessionManager @Inject constructor(
         // insertion order, but we re-key into a fresh map of the most recent
         // N entries).
         val pruned = if (current.size > MAX_LOUDNESS_CACHE_ENTRIES) {
-            current.entries.toList().takeLast(MAX_LOUDNESS_CACHE_ENTRIES).toMap()
+            current.entries.toList()
+                .takeLast(MAX_LOUDNESS_CACHE_ENTRIES)
+                .associate { it.key to it.value }
         } else current
         val json = serializeLoudnessJson(pruned)
         context.dataStore.edit { it[LOUDNESS_CACHE_KEY] = json }
