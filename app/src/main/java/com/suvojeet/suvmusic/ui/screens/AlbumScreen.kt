@@ -34,6 +34,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import androidx.compose.ui.platform.LocalContext
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.ui.components.BounceButton
@@ -41,6 +44,7 @@ import com.suvojeet.suvmusic.ui.components.PremiumLoadingScreen
 import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.AlbumViewModel
+import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -133,8 +137,16 @@ fun AlbumScreen(
     ) {
         // Blurred background image - Full screen like Apple Music
         if (album?.thumbnailUrl != null) {
+            val ctx = LocalContext.current
+            val blurredHighRes = remember(album.thumbnailUrl) {
+                ImageUtils.getHighResThumbnailUrl(album.thumbnailUrl, size = 720) ?: album.thumbnailUrl
+            }
             AsyncImage(
-                model = album.thumbnailUrl,
+                model = ImageRequest.Builder(ctx)
+                    .data(blurredHighRes)
+                    .crossfade(true)
+                    .size(720)
+                    .build(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
@@ -444,8 +456,16 @@ private fun AlbumHeader(
                 .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color.LightGray)
         ) {
             if (album.thumbnailUrl != null) {
+                val ctx = LocalContext.current
+                val coverHighRes = remember(album.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(album.thumbnailUrl, size = 720) ?: album.thumbnailUrl
+                }
                 AsyncImage(
-                    model = album.thumbnailUrl,
+                    model = ImageRequest.Builder(ctx)
+                        .data(coverHighRes)
+                        .crossfade(true)
+                        .size(720)
+                        .build(),
                     contentDescription = album.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -755,15 +775,23 @@ private fun LazyItemScope.AlbumSongItem(
                 .background(Color(0xFF2A2A2A))
         ) {
             if (song.thumbnailUrl != null) {
+                val ctx = LocalContext.current
+                val rowHighRes = remember(song.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 256) ?: song.thumbnailUrl
+                }
                 AsyncImage(
-                    model = song.thumbnailUrl,
+                    model = ImageRequest.Builder(ctx)
+                        .data(rowHighRes)
+                        .crossfade(true)
+                        .size(160)
+                        .build(),
                     contentDescription = song.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.width(12.dp))
         
         // Song Info

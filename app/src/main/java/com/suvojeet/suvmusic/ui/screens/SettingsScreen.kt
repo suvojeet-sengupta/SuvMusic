@@ -57,6 +57,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -433,6 +435,39 @@ fun SettingsScreen(
                         checked = uiState.speakSongDetailsEnabled,
                         onCheckedChange = { scope.launch { viewModel.setSpeakSongDetailsEnabled(it) } }
                     )
+
+                    if (uiState.speakSongDetailsEnabled) {
+                        HorizontalDivider()
+                        SettingsSwitchItem(
+                            icon = Icons.Default.HeadsetMic,
+                            title = "Bluetooth only",
+                            subtitle = "Only announce while a Bluetooth output is connected",
+                            checked = uiState.announceBluetoothOnly,
+                            onCheckedChange = { viewModel.setAnnounceBluetoothOnly(it) }
+                        )
+
+                        HorizontalDivider()
+                        SettingsSliderItem(
+                            icon = Icons.Default.Lyrics,
+                            title = "Announcement volume",
+                            subtitle = "${uiState.announceTtsVolume}% — voice loudness",
+                            value = uiState.announceTtsVolume.toFloat(),
+                            valueRange = 0f..100f,
+                            steps = 19,
+                            onValueChange = { viewModel.setAnnounceTtsVolume(it.toInt()) }
+                        )
+
+                        HorizontalDivider()
+                        SettingsSliderItem(
+                            icon = Icons.Default.MusicNote,
+                            title = "Music duck volume",
+                            subtitle = "${uiState.announceDuckVolume}% — music volume while announcing",
+                            value = uiState.announceDuckVolume.toFloat(),
+                            valueRange = 0f..100f,
+                            steps = 19,
+                            onValueChange = { viewModel.setAnnounceDuckVolume(it.toInt()) }
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -1077,4 +1112,63 @@ private fun SettingsSwitchItem(
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
+}
+
+@Composable
+private fun SettingsSliderItem(
+    icon: ImageVector?,
+    title: String,
+    subtitle: String? = null,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(SquircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Medium)
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
 }

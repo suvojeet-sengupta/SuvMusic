@@ -787,8 +787,16 @@ fun CommunityPlaylistCard(
             // Header
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Cover Art
+                val playlistHighRes = remember(item.playlist.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(item.playlist.thumbnailUrl, size = 544)
+                        ?: item.playlist.thumbnailUrl
+                }
                 AsyncImage(
-                    model = item.playlist.thumbnailUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(playlistHighRes)
+                        .crossfade(true)
+                        .size(320)
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .size(80.dp)
@@ -837,8 +845,15 @@ fun CommunityPlaylistCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        val songHighRes = remember(song.thumbnailUrl) {
+                            ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 256) ?: song.thumbnailUrl
+                        }
                         AsyncImage(
-                            model = song.thumbnailUrl,
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(songHighRes)
+                                .crossfade(true)
+                                .size(160)
+                                .build(),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(40.dp)
@@ -1280,6 +1295,9 @@ fun GenreRingCard(
 ) {
     val context = LocalContext.current
     val coverSize = 144.dp
+    val highResUrl = remember(imageUrl) {
+        ImageUtils.getHighResThumbnailUrl(imageUrl, size = 544) ?: imageUrl
+    }
     Column(
         modifier = Modifier
             .width(coverSize)
@@ -1295,8 +1313,9 @@ fun GenreRingCard(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(highResUrl)
                     .crossfade(true)
+                    .size(360)
                     .build(),
                 contentDescription = title,
                 modifier = Modifier
@@ -1444,10 +1463,14 @@ fun PersonalizedMixCard(
             }
 
             // Sleeve / cover art.
+            val sleeveHighRes = remember(imageUrl) {
+                ImageUtils.getHighResThumbnailUrl(imageUrl, size = 544) ?: imageUrl
+            }
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(sleeveHighRes)
                     .crossfade(true)
+                    .size(360)
                     .build(),
                 contentDescription = title,
                 modifier = Modifier
@@ -1713,6 +1736,9 @@ private fun PodiumCard(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val podiumHighRes = remember(image) {
+            ImageUtils.getHighResThumbnailUrl(image, size = 544) ?: image
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1722,8 +1748,9 @@ private fun PodiumCard(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(image)
+                    .data(podiumHighRes)
                     .crossfade(true)
+                    .size(if (isCenter) 480 else 360)
                     .build(),
                 contentDescription = title,
                 modifier = Modifier.fillMaxSize(),
@@ -1837,10 +1864,14 @@ private fun ChartListRow(
             modifier = Modifier.width(36.dp)
         )
 
+        val rowHighRes = remember(image) {
+            ImageUtils.getHighResThumbnailUrl(image, size = 256) ?: image
+        }
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data(image)
+                .data(rowHighRes)
                 .crossfade(true)
+                .size(160)
                 .build(),
             contentDescription = title,
             modifier = Modifier

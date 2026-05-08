@@ -40,6 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.suvojeet.suvmusic.util.ImageUtils
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SortOrder
@@ -194,8 +197,16 @@ fun PlaylistScreen(
         
         // Blurred background image - Full screen like Apple Music
         if (playlist?.thumbnailUrl != null) {
+            val ctx = LocalContext.current
+            val blurredHighRes = remember(playlist.thumbnailUrl) {
+                ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl, size = 720) ?: playlist.thumbnailUrl
+            }
             AsyncImage(
-                model = playlist.thumbnailUrl,
+                model = ImageRequest.Builder(ctx)
+                    .data(blurredHighRes)
+                    .crossfade(true)
+                    .size(720)
+                    .build(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
@@ -690,8 +701,16 @@ private fun PlaylistHeader(
                 .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color.LightGray)
         ) {
             if (playlist.thumbnailUrl != null) {
+                val ctx = LocalContext.current
+                val coverHighRes = remember(playlist.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl, size = 720) ?: playlist.thumbnailUrl
+                }
                 AsyncImage(
-                    model = playlist.thumbnailUrl,
+                    model = ImageRequest.Builder(ctx)
+                        .data(coverHighRes)
+                        .crossfade(true)
+                        .size(720)
+                        .build(),
                     contentDescription = playlist.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -1159,17 +1178,25 @@ private fun LazyItemScope.SongListItem(
                 .background(Color(0xFF2A2A2A))
         ) {
             if (song.thumbnailUrl != null) {
+                val ctx = LocalContext.current
+                val rowHighRes = remember(song.thumbnailUrl) {
+                    ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 256) ?: song.thumbnailUrl
+                }
                 AsyncImage(
-                    model = song.thumbnailUrl,
+                    model = ImageRequest.Builder(ctx)
+                        .data(rowHighRes)
+                        .crossfade(true)
+                        .size(160)
+                        .build(),
                     contentDescription = song.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         // Song Info
         Column(
             modifier = Modifier.weight(1f)

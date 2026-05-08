@@ -15,32 +15,23 @@ class OpenAIClient(private val apiKey: String, private val model: String) : AICl
     private val gson = Gson()
 
     override suspend fun getAudioEffectState(
-        prompt: String, 
+        prompt: String,
         currentStatus: AudioEffectState,
         songContext: SongContext?
     ): Result<AudioEffectState> = withContext(Dispatchers.IO) {
         try {
             val systemPrompt = getSystemPrompt(currentStatus, songContext)
-            val json = JSONObject().apply {
-                put("model", model)
-                put("messages", com.google.gson.JsonArray().apply {
-                    add(JSONObject().apply { put("role", "system"); put("content", systemPrompt) }.toString())
-                    add(JSONObject().apply { put("role", "user"); put("content", prompt) }.toString())
-                })
-                put("response_format", JSONObject().apply { put("type", "json_object") })
-            }
 
-            // OpenAI API is slightly different in message structure, I'll use a simpler way
-            val requestBody = """
-                {
-                    "model": "$model",
-                    "messages": [
-                        {"role": "system", "content": ${JSONObject.quote(systemPrompt)}},
-                        {"role": "user", "content": ${JSONObject.quote(prompt)}}
-                    ],
-                    "response_format": {"type": "json_object"}
-                }
-            """.trimIndent().toRequestBody("application/json".toMediaType())
+            val messages = org.json.JSONArray().apply {
+                put(JSONObject().put("role", "system").put("content", systemPrompt))
+                put(JSONObject().put("role", "user").put("content", prompt))
+            }
+            val payload = JSONObject().apply {
+                put("model", model)
+                put("messages", messages)
+                put("response_format", JSONObject().put("type", "json_object"))
+            }
+            val requestBody = payload.toString().toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()
                 .url("https://api.openai.com/v1/chat/completions")
@@ -49,11 +40,19 @@ class OpenAIClient(private val apiKey: String, private val model: String) : AICl
                 .build()
 
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext Result.failure(Exception("OpenAI error: ${response.code} ${response.message}"))
-                val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful) {
+                    val errBody = response.body?.string().orEmpty()
+                    return@withContext Result.failure(
+                        Exception("OpenAI error: ${response.code} ${response.message}${if (errBody.isNotBlank()) " — $errBody" else ""}")
+                    )
+                }
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("OpenAI: empty response"))
                 val jsonResponse = JSONObject(body)
-                val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-                Result.success(gson.fromJson(content, AudioEffectState::class.java))
+                val content = jsonResponse
+                    .getJSONArray("choices").getJSONObject(0)
+                    .getJSONObject("message").getString("content")
+                Result.success(gson.fromJson(extractJsonObject(content), AudioEffectState::class.java))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -93,7 +92,7 @@ class GeminiClient(private val apiKey: String, private val model: String) : AICl
                 val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
                 val jsonResponse = JSONObject(body)
                 val content = jsonResponse.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
-                Result.success(gson.fromJson(content, AudioEffectState::class.java))
+                Result.success(gson.fromJson(extractJsonObject(content), AudioEffectState::class.java))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -135,7 +134,7 @@ class AnthropicClient(private val apiKey: String, private val model: String) : A
                 val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
                 val jsonResponse = JSONObject(body)
                 val content = jsonResponse.getJSONArray("content").getJSONObject(0).getString("text")
-                Result.success(gson.fromJson(content, AudioEffectState::class.java))
+                Result.success(gson.fromJson(extractJsonObject(content), AudioEffectState::class.java))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -204,20 +203,31 @@ class ChatProxyClient(
                     return Result.failure(Exception("Model '$modelToUse': ${jsonResponse.getString("error")}"))
                 }
                 val answer = jsonResponse.getString("answer")
-                // Extract JSON from answer (might have markdown or extra text)
-                val jsonStart = answer.indexOf("{")
-                val jsonEnd = answer.lastIndexOf("}")
-                if (jsonStart != -1 && jsonEnd != -1) {
-                    val jsonContent = answer.substring(jsonStart, jsonEnd + 1)
-                    return Result.success(gson.fromJson(jsonContent, AudioEffectState::class.java))
-                } else {
+                val jsonContent = extractJsonObject(answer)
+                if (jsonContent.isBlank()) {
                     return Result.failure(Exception("Model '$modelToUse': Invalid response format"))
                 }
+                return Result.success(gson.fromJson(jsonContent, AudioEffectState::class.java))
             }
         } catch (e: Exception) {
             return Result.failure(e)
         }
     }
+}
+
+/**
+ * Strips common wrappers (```json fences, prose) and returns the first
+ * top-level JSON object found in the text. Empty string if no `{...}` pair
+ * exists. Models occasionally ignore the "no markdown" instruction, so this
+ * is a safety net for all four clients.
+ */
+private fun extractJsonObject(text: String): String {
+    if (text.isBlank()) return ""
+    val trimmed = text.trim()
+    val start = trimmed.indexOf('{')
+    val end = trimmed.lastIndexOf('}')
+    if (start == -1 || end == -1 || end <= start) return ""
+    return trimmed.substring(start, end + 1)
 }
 
 private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongContext?): String {
@@ -228,18 +238,14 @@ private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongCo
     return """
         You are an elite senior audio engineer for SuvMusic.
         User's device is playing: $songInfo
-        
-        Live Audio Analysis from Hardware:
-        - Peak Level: ${"%.2f".format(currentStatus.limiterThresholdDb ?: 0f)} (0.0 to 1.0)
-        - RMS Level: (Perceived loudness context)
-        
-        Your goal is to transform the audio based on the user's request AND the live signal data.
+
+        Your goal is to transform the audio based on the user's request.
         Perform "Hardware-level Tuning":
-        - If peak is high, lower limiterThresholdDb to prevent digital clipping.
-        - Adjust limiterRatio and limiterMakeupGain for "mastering" quality.
-        - DO NOT return all 0.0 values unless specifically asked for a flat/reset profile.
+        - Use limiterThresholdDb / limiterRatio / limiterMakeupGain to shape headroom and loudness like a mastering pass.
+        - DO NOT return all 0.0 values unless the user explicitly asks for a flat/reset profile.
         - Actually change the bands to achieve the requested vibe (vibrant, echo, bassy, etc).
-        
+        - Adjacent EQ bands should not jump by more than ~10 dB to avoid phase artifacts.
+
         The app has these low-level parameters:
         - eqEnabled: boolean
         - eqBands: list of 10 floats (-12 to 12 dB)
@@ -255,6 +261,6 @@ private fun getSystemPrompt(currentStatus: AudioEffectState, songContext: SongCo
 
         Current parameters: ${currentStatus.toJson()}
 
-        Return ONLY a JSON object with these keys. No other text.
+        Return ONLY a JSON object with these keys. No other text, no markdown fences.
     """.trimIndent()
 }
