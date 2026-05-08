@@ -1331,9 +1331,13 @@ private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            LoadingIndicator(
-                modifier = Modifier.size(24.dp),
-                color = MaterialTheme.colorScheme.primary
+            // Dancing equalizer bars instead of a generic spinner — feels
+            // like the app is "listening" while it loads more.
+            EqualizerGlyph(
+                barColor = MaterialTheme.colorScheme.primary,
+                barCount = 5,
+                height = 24.dp,
+                barWidth = 3.dp
             )
             Text(
                 text = "Loading more for you...",
@@ -1347,6 +1351,8 @@ private fun LoadingMoreIndicator(modifier: Modifier = Modifier) {
 
 /**
  * Detected mood banner — shows when the engine auto-detects the user's current mood.
+ * The leading badge animates a 4-bar equalizer so the banner feels live and
+ * "listening to you" instead of a static notification.
  */
 @Composable
 private fun DetectedMoodBanner(
@@ -1376,11 +1382,11 @@ private fun DetectedMoodBanner(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(18.dp)
+                EqualizerGlyph(
+                    barColor = MaterialTheme.colorScheme.tertiary,
+                    barCount = 4,
+                    height = 18.dp,
+                    barWidth = 2.5.dp
                 )
             }
 
@@ -1705,6 +1711,11 @@ private fun ForYouBanner(
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
+            // Drifting-sparkle backdrop — six deterministically-placed dots
+            // gently float up and fade. Adds the "personalized magic" feel
+            // without any per-item layout cost.
+            DriftingSparkles()
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2000,6 +2011,124 @@ fun TrackCard(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Animated micro-elements — used by Phase-4 Detected Mood / For You banners and
+// the LoadingMore indicator.
+// -----------------------------------------------------------------------------
+
+/**
+ * Vertical-bar audio equalizer. Each bar runs an out-of-phase animation so
+ * the row reads as live audio, not a generic spinner. Kept lightweight —
+ * one infinite-transition, all bars share its driver.
+ */
+@Composable
+private fun EqualizerGlyph(
+    barColor: Color,
+    barCount: Int,
+    height: androidx.compose.ui.unit.Dp,
+    barWidth: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "equalizer")
+    // Per-bar phase offsets give the dance an organic, non-mechanical feel.
+    val phases = remember(barCount) {
+        when (barCount) {
+            3 -> floatArrayOf(0f, 0.33f, 0.66f)
+            4 -> floatArrayOf(0f, 0.25f, 0.5f, 0.75f)
+            5 -> floatArrayOf(0f, 0.2f, 0.6f, 0.4f, 0.8f)
+            else -> FloatArray(barCount) { it.toFloat() / barCount }
+        }
+    }
+    val durations = remember(barCount) {
+        when (barCount) {
+            3 -> intArrayOf(620, 540, 700)
+            4 -> intArrayOf(620, 540, 700, 580)
+            5 -> intArrayOf(620, 540, 700, 580, 660)
+            else -> IntArray(barCount) { 580 + (it % 3) * 60 }
+        }
+    }
+
+    Row(
+        modifier = modifier.height(height),
+        horizontalArrangement = Arrangement.spacedBy(barWidth * 0.7f),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        for (i in 0 until barCount) {
+            val anim by transition.animateFloat(
+                initialValue = 0.25f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = durations[i],
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing,
+                        delayMillis = (phases[i] * 400f).toInt()
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bar$i"
+            )
+            Box(
+                modifier = Modifier
+                    .width(barWidth)
+                    .fillMaxHeight(anim)
+                    .clip(RoundedCornerShape(50))
+                    .background(barColor)
+            )
+        }
+    }
+}
+
+/**
+ * Six deterministically-placed sparkle dots that drift up + fade across the
+ * For-You banner. Backdrop only — sits behind the banner content. No layout
+ * cost because each dot is just a styled Box.
+ */
+@Composable
+private fun DriftingSparkles(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "sparkles")
+    // Each sparkle: (x-fraction, base y-fraction, period-ms, size-dp, alpha-mul).
+    val sparks = remember {
+        listOf(
+            Triple(0.12f, 0.65f, 2400),
+            Triple(0.28f, 0.20f, 3100),
+            Triple(0.46f, 0.78f, 2700),
+            Triple(0.62f, 0.32f, 2950),
+            Triple(0.78f, 0.70f, 2300),
+            Triple(0.90f, 0.18f, 3300)
+        )
+    }
+    val tint = MaterialTheme.colorScheme.primary
+    Box(modifier = modifier.fillMaxSize()) {
+        sparks.forEachIndexed { idx, (x, y, ms) ->
+            val drift by transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = ms,
+                        easing = LinearEasing,
+                        delayMillis = (idx * 240) % ms
+                    ),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "spark$idx"
+            )
+            // Drift upward by ~14dp and fade out as it nears the top.
+            val verticalOffset = (-14f * drift).dp
+            val alpha = (1f - drift).coerceAtLeast(0f) * 0.55f
+            val size = (3 + (idx % 3)).dp
+            Box(
+                modifier = Modifier
+                    .padding(start = (x * 320).dp, top = (y * 80).dp)
+                    .offset(y = verticalOffset)
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(tint.copy(alpha = alpha))
             )
         }
     }
