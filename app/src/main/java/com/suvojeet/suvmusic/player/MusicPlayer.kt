@@ -75,7 +75,8 @@ class MusicPlayer @Inject constructor(
     private val ttsManager: TTSManager,
     private val spatialAudioProcessor: SpatialAudioProcessor,
     private val nativeSpatialAudio: NativeSpatialAudio,
-    private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
+    private val streamingService: com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService,
+    private val loudnessAnalyzer: LoudnessAnalyzer
 ) {
     
     // ... (existing properties)
@@ -830,7 +831,7 @@ class MusicPlayer @Inject constructor(
                 errorRetrySongId = null
                 
                 val previousSong = _playerState.value.currentSong
-                _playerState.update { 
+                _playerState.update {
                     it.copy(
                         currentSong = song,
                         currentIndex = index,
@@ -843,6 +844,14 @@ class MusicPlayer @Inject constructor(
                         videoNotFound = false, // Reset error flag on track change
                         queue = accurateQueue // Update with accurate queue from player
                     )
+                }
+
+                // Drive volume normalization off the song change. The
+                // analyzer commits the previous song's measurement (if it
+                // ran long enough) and starts sampling RMS for the new one.
+                if (previousSong?.id != song?.id) {
+                    if (previousSong != null) loudnessAnalyzer.onSongEnd()
+                    loudnessAnalyzer.onSongStart(song?.id)
                 }
                 
                 // Add to recently played and track listening history
@@ -1551,21 +1560,41 @@ class MusicPlayer @Inject constructor(
             }
         }
 
-        // Separate lightweight haptics coroutine — no StateFlow updates
+        // Lightweight haptics coroutine — drives MusicHapticsManager off
+        // the native engine's real-time RMS readout. Previously we fed it
+        // a synthetic sawtooth at a fixed 500ms period, which produced
+        // robotic vibration unrelated to the audio. Real RMS gives proper
+        // beat-aware haptics that line up with the music. No StateFlow
+        // updates here — the manager debounces internally.
         scope.launch {
+            // Smoothed reference for amplitude delta — the manager uses
+            // raw amplitude + delta together, but delta from the live RMS
+            // is jittery, so we hand it a lightly smoothed version.
+            var smoothed = 0f
+            val attack = 0.4f  // how quickly the smoothed level rises
+            val release = 0.15f // how quickly it falls (slower → broader peaks)
             while (true) {
                 val controller = mediaController
                 if (controller != null && _playerState.value.isPlaying) {
-                    val currentPos = controller.currentPosition.coerceAtLeast(0L)
-                    val beatPeriod = 500
-                    val timeInBeat = currentPos % beatPeriod
-                    val simulatedAmplitude = if (timeInBeat < 100) {
-                        // Sharp decay from 1.0 to 0.0 over 100ms
-                        1f - (timeInBeat / 100f)
+                    val rawRms = try { nativeSpatialAudio.getRmsLevel() } catch (_: Exception) { 0f }
+                    if (rawRms > 0f) {
+                        val coeff = if (rawRms > smoothed) attack else release
+                        smoothed += (rawRms - smoothed) * coeff
+                        // Stretch to full 0..1 range — typical RMS rarely
+                        // exceeds ~0.4, so feeding it raw would never cross
+                        // the manager's beat threshold.
+                        val amplified = (smoothed * 2.5f).coerceIn(0f, 1f)
+                        musicHapticsManager.processAmplitude(amplified)
                     } else {
-                        0f
+                        // Engine hasn't produced any signal yet (paused, or
+                        // no effect chain attached). Fall back to a quiet
+                        // fixed pulse so the existing legacy beat code path
+                        // still gives some feedback rather than nothing.
+                        val currentPos = controller.currentPosition.coerceAtLeast(0L)
+                        val timeInBeat = currentPos % 500L
+                        val syntheticAmp = if (timeInBeat < 100L) 1f - (timeInBeat / 100f) else 0f
+                        musicHapticsManager.processAmplitude(syntheticAmp)
                     }
-                    musicHapticsManager.processAmplitude(simulatedAmplitude)
                 }
                 delay(50) // haptics still at 50ms, but no StateFlow involved
             }

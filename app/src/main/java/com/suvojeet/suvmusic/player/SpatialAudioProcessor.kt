@@ -23,6 +23,7 @@ class SpatialAudioProcessor @Inject constructor(
     private var isLimiterEnabled = false
     private var isCrossfeedEnabled = true
     private var currentPitch = 1.0f
+    @Volatile private var spatialStrength = 0.7f // 0..1; user-controlled spatial intensity
 
     fun setSpatialEnabled(enabled: Boolean) {
         if (isSpatialEnabled != enabled) {
@@ -31,6 +32,14 @@ class SpatialAudioProcessor @Inject constructor(
             updateCrossfeed()
             checkActive()
         }
+    }
+
+    fun setSpatialStrength(strength01: Float) {
+        spatialStrength = strength01.coerceIn(0f, 1f)
+        // Crossfeed strength scales with spatial strength when spatial is
+        // off, so the "Soundstage Depth" slider keeps having an audible
+        // effect for users on speakers / wired headphones.
+        updateCrossfeed()
     }
 
     fun setCrossfeedEnabled(enabled: Boolean) {
@@ -42,8 +51,11 @@ class SpatialAudioProcessor @Inject constructor(
     }
 
     private fun updateCrossfeed() {
-        // Crossfeed is active if enabled AND spatial is off (to avoid double processing)
-        nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, 0.15f)
+        // Crossfeed is active if enabled AND spatial is off (to avoid double processing).
+        // Strength varies 0.05..0.30 so the slider has a perceivable but
+        // bounded effect on the stereo image.
+        val crossfeedStrength = (0.05f + spatialStrength * 0.25f).coerceIn(0f, 0.5f)
+        nativeSpatialAudio.setCrossfeedParams(isCrossfeedEnabled && !isSpatialEnabled, crossfeedStrength)
     }
     
     fun setEqEnabled(enabled: Boolean) {
@@ -72,25 +84,56 @@ class SpatialAudioProcessor @Inject constructor(
         }
     }
     
-    fun setLimiterConfig(boostEnabled: Boolean, boostAmount: Int, normEnabled: Boolean) {
+    /**
+     * Configure the limiter / makeup gain.
+     *
+     * @param boostEnabled User-enabled "Volume Boost" — adds up to 12 dB
+     *   makeup gain at 100% (down from the previous 15 dB ceiling that
+     *   could clip on already-loud sources).
+     * @param boostAmount  0..100 boost slider position.
+     * @param normEnabled  User-enabled "Volume Normalization".
+     * @param normGainDb   Per-track gain offset coming from
+     *   [LoudnessAnalyzer]. Only used when [normEnabled] is true; if no
+     *   measurement is available yet, the caller passes 0 and we fall back
+     *   to a small flat boost so quiet tracks still get a nudge.
+     */
+    fun setLimiterConfig(
+        boostEnabled: Boolean,
+        boostAmount: Int,
+        normEnabled: Boolean,
+        normGainDb: Float = 0f,
+    ) {
         val shouldEnable = boostEnabled || normEnabled
-        
+
         if (shouldEnable) {
-             var makeupGainDb = 0f
-             if (normEnabled) makeupGainDb += 5.5f
-             if (boostEnabled && boostAmount > 0) {
-                 makeupGainDb += (boostAmount / 100f) * 15f
-             }
-             
-             // Hard limiter params for protection
-             val thresholdDb = -0.1f
-             val ratio = 20.0f
-             val attackMs = 0.1f
-             val releaseMs = 50.0f
-             
-             nativeSpatialAudio.setLimiterParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb)
+            var makeupGainDb = 0f
+            if (normEnabled) {
+                // Use the per-track measurement when present; fall back to a
+                // mild +3 dB so the user still hears a difference on the
+                // very first play of an unmeasured track.
+                makeupGainDb += if (normGainDb != 0f) normGainDb else 3f
+            }
+            if (boostEnabled && boostAmount > 0) {
+                // Cap volume boost at +12 dB (was +15 dB). Beyond this the
+                // limiter has to work hard on already-mastered audio and
+                // distortion becomes audible.
+                makeupGainDb += (boostAmount / 100f) * 12f
+            }
+            // Final safety clamp — prevent the combined gain from driving
+            // the limiter into a regime where it has to attenuate every
+            // sample.
+            makeupGainDb = makeupGainDb.coerceIn(-8f, 14f)
+
+            // Slightly softer protection params than before so the limiter
+            // colours the signal less while still preventing clipping.
+            val thresholdDb = -0.3f
+            val ratio = 12.0f
+            val attackMs = 1.0f
+            val releaseMs = 80.0f
+
+            nativeSpatialAudio.setLimiterParams(thresholdDb, ratio, attackMs, releaseMs, makeupGainDb)
         }
-        
+
         if (isLimiterEnabled != shouldEnable) {
             isLimiterEnabled = shouldEnable
             nativeSpatialAudio.setLimiterEnabled(shouldEnable)
@@ -224,10 +267,14 @@ class SpatialAudioProcessor @Inject constructor(
             return
         }
 
-        // Apply balance/spatial positioning
+        // Apply balance/spatial positioning. The user-configurable
+        // [spatialStrength] (0..1) attenuates the azimuth so that the
+        // "soundstage depth" slider in Playback Settings has a clear
+        // audible effect — at 0% the spatializer is a no-op even when
+        // toggled on, at 100% we use the full π/2 sweep.
         val currentBalance = audioARManager.stereoBalance.value
         if (isSpatialEnabled) {
-            azimuth = currentBalance * (Math.PI.toFloat() / 2f)
+            azimuth = currentBalance * (Math.PI.toFloat() / 2f) * spatialStrength
             elevation = 0f
             nativeSpatialAudio.setLimiterBalance(0f)
         } else {

@@ -139,6 +139,7 @@ interface HiltKoinBridgeEntryPoint {
     fun discordManager(): DiscordManager
     fun spatialAudioProcessor(): SpatialAudioProcessor
     fun updateDownloader(): UpdateDownloader
+    fun loudnessAnalyzer(): com.suvojeet.suvmusic.player.LoudnessAnalyzer
 }
 
 /** One-call accessor used by Koin module blocks. Resolved against the application Context. */

@@ -207,21 +207,39 @@ fun ExpandablePlayerSheet(
                      .align(Alignment.TopCenter)
                      .offset(y = with(density) { collapsedOffsetPx.toDp() })
                      .graphicsLayer {
-                         // Visual feedback for swipe down to dismiss
+                         // Visual feedback for swipe down to dismiss. Use a
+                         // 1:1 mapping (drag distance → translation) so the
+                         // mini player follows the finger naturally, and
+                         // also fade as the user pulls it down so the
+                         // dismiss intent reads even before they reach the
+                         // threshold.
                          if (expansion.value < 0f && swipeDownToDismissEnabled) {
-                             translationY = -expansion.value * dragRange * 0.8f
+                             translationY = -expansion.value * dragRange
+                             alpha = (1f + expansion.value * 1.5f).coerceIn(0.25f, 1f)
                          }
                      }
                      .zIndex(if (isExpanded) 0f else 1f)
                      // Add gesture detection to MiniPlayer
-                     .pointerInput(Unit) {
+                     .pointerInput(swipeDownToDismissEnabled) {
+                        // Swipe-down-to-dismiss is gated on the user
+                        // setting. The dismiss threshold is intentionally
+                        // small (~5% of the drag range, ~25–35dp) so a
+                        // confident downward flick reliably triggers it
+                        // — the previous 10% threshold required a
+                        // long, deliberate drag that often felt unresponsive.
+                        val dismissThreshold = -0.05f
                         detectVerticalDragGestures(
                             onDragEnd = {
                                 coroutineScope.launch {
-                                    if (expansion.value < -0.1f && swipeDownToDismissEnabled) {
-                                        // Swipe down to dismiss/stop
+                                    if (expansion.value <= dismissThreshold && swipeDownToDismissEnabled) {
+                                        // Animate the mini player off the bottom edge before
+                                        // calling onClose so the dismiss reads as motion
+                                        // rather than a hard cut.
+                                        expansion.animateTo(
+                                            targetValue = -0.6f,
+                                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
+                                        )
                                         onClose()
-                                        // Reset expansion for next time it's shown
                                         expansion.snapTo(0f)
                                     } else {
                                         val targetValue = if (expansion.value > 0.4f) 1f else 0f
@@ -253,7 +271,11 @@ fun ExpandablePlayerSheet(
                                 change.consume()
                                 val delta = -dragAmount / dragRange
                                 coroutineScope.launch {
-                                    val minExpansion = if (swipeDownToDismissEnabled) -0.5f else 0f
+                                    // Allow the mini player to be pulled
+                                    // further down (-0.7) so the user gets
+                                    // visual feedback throughout the drag,
+                                    // not just up to the dismiss threshold.
+                                    val minExpansion = if (swipeDownToDismissEnabled) -0.7f else 0f
                                     expansion.snapTo(
                                         (expansion.value + delta).coerceIn(minExpansion, 1f)
                                     )

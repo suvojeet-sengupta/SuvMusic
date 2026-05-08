@@ -1247,12 +1247,22 @@ private fun LazyItemScope.SongListItem(
                                 change.consume()
                                 offsetY += dragAmount.y
                                 val threshold = with(density) { 60.dp.toPx() }
-                                if (offsetY > threshold && currentIndexState < totalSongs - 1) {
-                                    onReorderState?.invoke(currentIndexState, currentIndexState + 1)
+                                // Use a `while` loop with a locally-tracked
+                                // working index so a fast drag that crosses
+                                // several rows in a single callback walks
+                                // through them all instead of stopping
+                                // after one step (which produced visible
+                                // lag when the user flicked quickly).
+                                var workingIndex = currentIndexState
+                                while (offsetY > threshold && workingIndex < totalSongs - 1) {
+                                    onReorderState?.invoke(workingIndex, workingIndex + 1)
+                                    workingIndex += 1
                                     offsetY -= threshold
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                } else if (offsetY < -threshold && currentIndexState > 0) {
-                                    onReorderState?.invoke(currentIndexState, currentIndexState - 1)
+                                }
+                                while (offsetY < -threshold && workingIndex > 0) {
+                                    onReorderState?.invoke(workingIndex, workingIndex - 1)
+                                    workingIndex -= 1
                                     offsetY += threshold
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }

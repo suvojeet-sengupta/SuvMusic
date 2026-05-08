@@ -125,6 +125,7 @@ data class SettingsUiState(
     val audioArEnabled: Boolean = false,
     val audioArSensitivity: Float = 1.0f,
     val audioArAutoCalibrate: Boolean = true,
+    val spatialAudioStrength: Int = 70,
     // Preloading
     val nextSongPreloadingEnabled: Boolean = true,
     val nextSongPreloadDelay: Int = 3, // seconds
@@ -563,6 +564,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            sessionManager.spatialAudioStrengthFlow.collect { value ->
+                _uiState.update { it.copy(spatialAudioStrength = value) }
+            }
+        }
+
+        viewModelScope.launch {
             sessionManager.nextSongPreloadingEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(nextSongPreloadingEnabled = enabled) }
             }
@@ -752,6 +759,7 @@ class SettingsViewModel @Inject constructor(
             val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
             val privacyModeEnabled = sessionManager.isPrivacyModeEnabled()
             val audioArEnabled = sessionManager.isAudioArEnabled()
+            val spatialAudioStrength = sessionManager.getSpatialAudioStrength()
             val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
             val nextSongPreloadDelay = sessionManager.getNextSongPreloadDelay()
             val crossfeedEnabled = sessionManager.isCrossfeedEnabled()
@@ -840,6 +848,7 @@ class SettingsViewModel @Inject constructor(
                     audioArEnabled = audioArEnabled,
                     audioArSensitivity = sessionManager.getAudioArSensitivity(),
                     audioArAutoCalibrate = sessionManager.isAudioArAutoCalibrateEnabled(),
+                    spatialAudioStrength = spatialAudioStrength,
                     nextSongPreloadingEnabled = nextSongPreloadingEnabled,
                     nextSongPreloadDelay = nextSongPreloadDelay,
                     crossfeedEnabled = crossfeedEnabled,
@@ -1088,6 +1097,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioArAutoCalibrate(enabled)
             _uiState.update { it.copy(audioArAutoCalibrate = enabled) }
+        }
+    }
+
+    fun setSpatialAudioStrength(percent: Int) {
+        viewModelScope.launch {
+            sessionManager.setSpatialAudioStrength(percent)
+            _uiState.update { it.copy(spatialAudioStrength = percent.coerceIn(0, 100)) }
         }
     }
 

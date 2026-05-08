@@ -82,6 +82,9 @@ class MusicPlayerService : MediaLibraryService() {
     lateinit var spatialAudioProcessor: com.suvojeet.suvmusic.player.SpatialAudioProcessor
 
     @Inject
+    lateinit var loudnessAnalyzer: com.suvojeet.suvmusic.player.LoudnessAnalyzer
+
+    @Inject
     lateinit var sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager
 
     @Inject
@@ -331,6 +334,33 @@ class MusicPlayerService : MediaLibraryService() {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
                     updateCustomLayout()
+
+                    // Re-apply per-track normalization gain on every song
+                    // change. The Spotify-style normalization caches a
+                    // measured RMS per song and we must update the
+                    // limiter's makeup gain when the track flips.
+                    serviceScope.launch {
+                        val normEnabled = sessionManager.volumeNormalizationEnabledFlow.first()
+                        val boostEnabled = sessionManager.volumeBoostEnabledFlow.first()
+                        val boostAmount = sessionManager.volumeBoostAmountFlow.first()
+                        val gain = if (normEnabled) {
+                            loudnessAnalyzer.getCachedGainDb(mediaItem?.mediaId)
+                        } else 0f
+                        spatialAudioProcessor.setLimiterConfig(
+                            boostEnabled = boostEnabled,
+                            boostAmount = boostAmount,
+                            normEnabled = normEnabled,
+                            normGainDb = gain,
+                        )
+                    }
+
+                    // Drive the loudness analyzer from the player listener
+                    // too. The MusicPlayer client also calls onSongStart,
+                    // but this path is hit even when no UI client is bound
+                    // (e.g., Bluetooth-controlled playback in the
+                    // background) so the cache stays accurate.
+                    loudnessAnalyzer.onSongStart(mediaItem?.mediaId)
+
                     mediaItem?.let { item ->
                         val videoId = item.mediaId
                         if (videoId.isNotEmpty()) {
@@ -587,46 +617,74 @@ class MusicPlayerService : MediaLibraryService() {
                 sessionManager.volumeNormalizationEnabledFlow,
                 sessionManager.volumeBoostEnabledFlow,
                 sessionManager.volumeBoostAmountFlow,
-                sessionManager.audioArEnabledFlow
-            ) { args: Array<Any?> ->
+                sessionManager.audioArEnabledFlow,
+                sessionManager.audioOffloadEnabledFlow,
+            ) { norm, boost, amount, ar, offload ->
                 AudioEffectsState(
-                    normEnabled = args[0] as Boolean,
-                    boostEnabled = args[1] as Boolean,
-                    boostAmount = args[2] as Int,
-                    audioArEnabled = args[3] as Boolean
+                    normEnabled = norm,
+                    boostEnabled = boost,
+                    boostAmount = amount,
+                    audioArEnabled = ar,
+                    offloadAllowed = offload,
                 )
             }.collect { state ->
                  isSpatialAudioActive = state.audioArEnabled
                  spatialAudioProcessor.setSpatialEnabled(state.audioArEnabled)
+
+                 // Look up the per-track gain offset for the current song.
+                 // Falls back to 0 dB when there is no measurement, in which
+                 // case the limiter applies its mild +3 dB baseline boost.
+                 val currentSongId = (mediaLibrarySession?.player as? ExoPlayer)
+                     ?.currentMediaItem?.mediaId
+                 val normGainDb = if (state.normEnabled) {
+                     loudnessAnalyzer.getCachedGainDb(currentSongId)
+                 } else 0f
+
                  spatialAudioProcessor.setLimiterConfig(
                      boostEnabled = state.boostEnabled,
                      boostAmount = state.boostAmount,
-                     normEnabled = state.normEnabled
+                     normEnabled = state.normEnabled,
+                     normGainDb = normGainDb,
                  )
-                 
-                 // Improvement (4): Dynamic Audio Offload
-                 // Offload is incompatible with software processors (Spatial, Limiter, EQ).
-                 // Disable it when any effect is active to ensure the processors are used.
+
+                 // Audio Offload — honour the user's "Audio Offload"
+                 // setting. Offload bypasses our software processors, so we
+                 // can only request it when the user opted in AND no
+                 // software effect is active. Previously we always tried to
+                 // enable offload regardless of the user's preference,
+                 // which silently overrode the toggle in Settings.
                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                      val player = mediaLibrarySession?.player as? ExoPlayer
                      if (player != null) {
                          val isAnyEffectActive = state.audioArEnabled || state.boostEnabled || state.normEnabled
-                         val offloadMode = if (isAnyEffectActive) {
-                             androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
-                         } else {
+                         val shouldOffload = state.offloadAllowed && !isAnyEffectActive
+                         val offloadMode = if (shouldOffload) {
                              androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+                         } else {
+                             androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
                          }
-                         
+
                          player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                              .setAudioOffloadPreferences(
                                  androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
                                      .setAudioOffloadMode(offloadMode)
+                                     // Gapless playback is incompatible with offload on most
+                                     // devices, but the user expects gapless when they enable
+                                     // it; let ExoPlayer fall back to non-offload for those
+                                     // tracks.
                                      .setIsGaplessSupportRequired(false)
                                      .build()
                              )
                              .build()
                      }
                  }
+            }
+        }
+
+        // Spatial strength → SpatialAudioProcessor crossfeed + spatial sweep.
+        serviceScope.launch {
+            sessionManager.spatialAudioStrengthFlow.collect { value ->
+                spatialAudioProcessor.setSpatialStrength(value / 100f)
             }
         }
 
@@ -1672,7 +1730,8 @@ class MusicPlayerService : MediaLibraryService() {
         val normEnabled: Boolean,
         val boostEnabled: Boolean,
         val boostAmount: Int,
-        val audioArEnabled: Boolean
+        val audioArEnabled: Boolean,
+        val offloadAllowed: Boolean,
     )
     
     private fun setupSleepTimerNotification() {

@@ -170,6 +170,12 @@ class SessionManager @Inject constructor(
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
         private val VOLUME_BOOST_ENABLED_KEY = booleanPreferencesKey("volume_boost_enabled")
         private val VOLUME_BOOST_AMOUNT_KEY = intPreferencesKey("volume_boost_amount")
+        // JSON map of {songId -> measured RMS amplitude (0..1)} used for
+        // Spotify-style perceptual loudness normalization.
+        private val LOUDNESS_CACHE_KEY = stringPreferencesKey("loudness_cache_v1")
+        // Spatial audio strength 0..100. Drives how aggressively spatial
+        // panning + crossfeed apply.
+        private val SPATIAL_STRENGTH_KEY = intPreferencesKey("spatial_audio_strength")
         private val SPONSOR_BLOCK_ENABLED_KEY = booleanPreferencesKey("sponsor_block_enabled")
         private val HISTORY_SYNC_MIGRATED_KEY = booleanPreferencesKey("history_sync_migrated")
         private val SPONSOR_BLOCK_CATEGORIES_KEY = stringSetPreferencesKey("sponsor_block_categories_v2")
@@ -2131,7 +2137,84 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun isAudioOffloadEnabled(): Boolean = 
+    // ----- Per-track loudness cache (volume normalization) -----
+    //
+    // We persist a map {songId -> RMS amplitude (0..1)} measured the first
+    // time a track plays. On subsequent plays we apply a per-track gain to
+    // bring the song to a target perceived loudness, similar to Spotify's
+    // -14 LUFS reference. Cap entries to keep the JSON small.
+    private val MAX_LOUDNESS_CACHE_ENTRIES = 5_000
+
+    suspend fun getLoudnessCache(): Map<String, Float> {
+        val raw = context.dataStore.data.first()[LOUDNESS_CACHE_KEY] ?: return emptyMap()
+        return parseLoudnessJson(raw)
+    }
+
+    fun getLoudnessCacheBlocking(): Map<String, Float> {
+        return try {
+            val raw = encryptedPrefs.getString("loudness_cache_mirror", null) ?: return emptyMap()
+            parseLoudnessJson(raw)
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun setLoudnessForSong(songId: String, rms: Float) {
+        if (songId.isBlank() || rms.isNaN() || rms <= 0f) return
+        val current = getLoudnessCache().toMutableMap()
+        current[songId] = rms.coerceIn(0.0001f, 1f)
+        // Trim oldest entries if we exceed the cap (LinkedHashMap preserves
+        // insertion order, but we re-key into a fresh map of the most recent
+        // N entries).
+        val pruned = if (current.size > MAX_LOUDNESS_CACHE_ENTRIES) {
+            current.entries.toList().takeLast(MAX_LOUDNESS_CACHE_ENTRIES).toMap()
+        } else current
+        val json = serializeLoudnessJson(pruned)
+        context.dataStore.edit { it[LOUDNESS_CACHE_KEY] = json }
+        try { encryptedPrefs.edit().putString("loudness_cache_mirror", json).apply() } catch (_: Exception) {}
+    }
+
+    suspend fun clearLoudnessCache() {
+        context.dataStore.edit { it.remove(LOUDNESS_CACHE_KEY) }
+        try { encryptedPrefs.edit().remove("loudness_cache_mirror").apply() } catch (_: Exception) {}
+    }
+
+    private fun parseLoudnessJson(raw: String): Map<String, Float> {
+        return try {
+            val obj = org.json.JSONObject(raw)
+            val out = mutableMapOf<String, Float>()
+            obj.keys().forEach { k ->
+                val v = obj.optDouble(k, Double.NaN).toFloat()
+                if (!v.isNaN() && v > 0f) out[k] = v
+            }
+            out
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun serializeLoudnessJson(map: Map<String, Float>): String {
+        val obj = org.json.JSONObject()
+        map.forEach { (k, v) -> obj.put(k, v.toDouble()) }
+        return obj.toString()
+    }
+
+    // ----- Spatial audio strength -----
+
+    suspend fun getSpatialAudioStrength(): Int =
+        context.dataStore.data.first()[SPATIAL_STRENGTH_KEY] ?: 70
+
+    val spatialAudioStrengthFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[SPATIAL_STRENGTH_KEY] ?: 70
+    }
+
+    suspend fun setSpatialAudioStrength(value: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[SPATIAL_STRENGTH_KEY] = value.coerceIn(0, 100)
+        }
+    }
+
+    suspend fun isAudioOffloadEnabled(): Boolean =
         context.dataStore.data.first()[AUDIO_OFFLOAD_ENABLED_KEY] ?: false
 
     val audioOffloadEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

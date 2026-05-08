@@ -31,17 +31,34 @@ fun LanguageSelectionDialog(
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit
 ) {
+    // Languages users can pick. The order intentionally puts the major
+    // South Asian languages near the top because the app's primary user
+    // base is on the subcontinent — but everything below is also fully
+    // supported through YouTube Music localized recommendations.
     val languages = listOf(
         "English",
         "Hindi",
         "Bengali",
         "Punjabi",
+        "Marathi",
+        "Gujarati",
         "Tamil",
         "Telugu",
+        "Kannada",
         "Malayalam",
+        "Urdu",
         "Spanish",
+        "Portuguese",
+        "French",
+        "German",
+        "Italian",
         "Korean",
-        "Japanese"
+        "Japanese",
+        "Chinese",
+        "Arabic",
+        "Russian",
+        "Turkish",
+        "Indonesian",
     )
 
     var selectedLanguages by remember { mutableStateOf(initialSelection) }
@@ -58,14 +75,23 @@ fun LanguageSelectionDialog(
         text = {
             Column {
                 Text(
-                    "Select preferred languages for recommendations.",
+                    "Select preferred languages. Used to bias home recommendations and search.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
 
+                if (selectedLanguages.isEmpty()) {
+                    Text(
+                        "No languages selected — all languages will be shown.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 LazyColumn(
-                    modifier = Modifier.height(300.dp)
+                    modifier = Modifier.height(360.dp)
                 ) {
                     items(languages) { language ->
                         Row(
@@ -103,7 +129,7 @@ fun LanguageSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(selectedLanguages) }) {
-                Text("Save")
+                Text("Save", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
