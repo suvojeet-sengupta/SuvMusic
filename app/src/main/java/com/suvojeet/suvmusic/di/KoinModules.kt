@@ -121,6 +121,7 @@ private val hiltBridgedModule: Module = module {
     single { bridge(androidContext()).discordManager() }
     single { bridge(androidContext()).spatialAudioProcessor() }
     single { bridge(androidContext()).updateDownloader() }
+    single { bridge(androidContext()).loudnessAnalyzer() }
 
     // MainViewModel uses a deferred Cache accessor (was dagger.Lazy<Cache>) to
     // avoid forcing SimpleCache initialization on app start. Provided as a

@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.math.max
 
 /**
  * Music Haptics Manager - Provides synchronized haptic feedback with music playback.
@@ -58,24 +59,55 @@ class MusicHapticsManager @Inject constructor(
     private var lastHapticTime = 0L
     private var previousAmplitude = 0f
     private var beatDetectionJob: Job? = null
-    
+
     // Configurable parameters
     private var isEnabled = false
     private var currentMode = HapticsMode.BASIC
     private var currentIntensity = HapticsIntensity.MEDIUM
-    
-    // Minimum interval between haptics to prevent motor wear and battery drain
-    private val minHapticIntervalMs = 40L
-    
-    // Threshold values for beat detection
-    private val basicModeThreshold = 0.60f
-    private val advancedModeThreshold = 0.30f
-    private val customModeThreshold = 0.45f
+
+    // Minimum interval between haptics — keep above the beat period for
+    // the slowest popular tempo (~60 BPM = 1 beat/sec) but well below the
+    // fastest (~200 BPM = 0.3s/beat). 80ms gives a dense modes some breathing
+    // room and avoids motor over-driving on fast tracks.
+    private val minHapticIntervalMs = 80L
+
+    // Per-mode trigger profiles: { absolute amplitude floor, amplitude delta needed }.
+    private data class BeatProfile(val floor: Float, val delta: Float)
+
+    private fun profileFor(mode: HapticsMode): BeatProfile = when (mode) {
+        HapticsMode.OFF -> BeatProfile(2f, 2f) // never triggers
+        HapticsMode.BASIC -> BeatProfile(floor = 0.55f, delta = 0.10f)
+        HapticsMode.ADVANCED -> BeatProfile(floor = 0.28f, delta = 0.06f)
+        HapticsMode.CUSTOM -> BeatProfile(floor = 0.40f, delta = 0.08f)
+    }
+
+    // Adaptive baseline of recent amplitudes — the running median of recent
+    // signal lets us catch beats relative to the song's energy instead of
+    // missing peaks on quiet ballads or firing constantly on loud rock.
+    private var recentMax = 0f
 
     init {
-        // Load settings on initialization
+        // Load settings on initialization, then keep them in sync with
+        // SessionManager. Without these flow collectors, toggling
+        // "Music Haptics" or changing mode required restarting the app
+        // before the new setting took effect.
+        scope.launch { refreshSettings() }
         scope.launch {
-            refreshSettings()
+            sessionManager.musicHapticsEnabledFlow.collect { enabled ->
+                isEnabled = enabled
+                if (!enabled) stop()
+            }
+        }
+        scope.launch {
+            sessionManager.hapticsModeFlow.collect { mode ->
+                currentMode = mode
+                if (mode == HapticsMode.OFF) stop()
+            }
+        }
+        scope.launch {
+            sessionManager.hapticsIntensityFlow.collect { intensity ->
+                currentIntensity = intensity
+            }
         }
     }
     
@@ -114,6 +146,8 @@ class MusicHapticsManager @Inject constructor(
         _isActive.value = false
         beatDetectionJob?.cancel()
         beatDetectionJob = null
+        previousAmplitude = 0f
+        recentMax = 0f
         vibrator.cancel()
     }
 
@@ -187,32 +221,37 @@ class MusicHapticsManager @Inject constructor(
         if (!_isActive.value || !isEnabled) {
             return
         }
-        
+        if (currentMode == HapticsMode.OFF) return
+
         val currentTime = System.currentTimeMillis()
-        
+
+        // Decay the running max so the adaptive threshold tracks tempo /
+        // section changes instead of getting stuck high after a loud peak.
+        recentMax = max(recentMax * 0.98f, amplitude)
+
         // Enforce minimum interval between haptics
         if (currentTime - lastHapticTime < minHapticIntervalMs) {
             previousAmplitude = amplitude
             return
         }
-        
-        // Get threshold based on mode
-        val threshold = when (currentMode) {
-            HapticsMode.OFF -> return
-            HapticsMode.BASIC -> basicModeThreshold
-            HapticsMode.ADVANCED -> advancedModeThreshold
-            HapticsMode.CUSTOM -> customModeThreshold
-        }
-        
-        // Beat detection: check for sudden amplitude increase
+
+        val profile = profileFor(currentMode)
+
+        // Adaptive threshold: max(absolute floor, 60% of running peak).
+        // Without the peak-relative term, quiet songs would never trigger
+        // haptics; without the absolute floor, very quiet noise would.
+        val adaptiveThreshold = max(profile.floor, recentMax * 0.6f)
+
+        // Beat detection: amplitude must clear the threshold AND have a
+        // sharp rising edge from the previous sample.
         val amplitudeDelta = amplitude - previousAmplitude
-        val isBeat = amplitude > threshold && amplitudeDelta > 0.12f
-        
+        val isBeat = amplitude >= adaptiveThreshold && amplitudeDelta >= profile.delta
+
         if (isBeat) {
             triggerHaptic(amplitude)
             lastHapticTime = currentTime
         }
-        
+
         previousAmplitude = amplitude
     }
     

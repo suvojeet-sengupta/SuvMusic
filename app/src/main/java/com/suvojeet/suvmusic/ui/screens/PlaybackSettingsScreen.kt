@@ -27,6 +27,7 @@ import com.suvojeet.suvmusic.core.model.HapticsIntensity
 import com.suvojeet.suvmusic.core.model.HapticsMode
 import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.MusicSource
+import com.suvojeet.suvmusic.ui.components.LanguageSelectionDialog
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
@@ -433,6 +434,42 @@ fun PlaybackSettingsScreen(
                                 subtitle = "Set current direction as front",
                                 onClick = { viewModel.calibrateAudioAr() }
                             )
+
+                            // Spatial intensity — separate from head-tracking
+                            // sensitivity. Drives the static azimuth sweep
+                            // and crossfeed strength applied by the
+                            // SpatialAudioProcessor, so users on speakers
+                            // or wired headphones (where head tracking
+                            // doesn't apply) still have a knob.
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Spatial Intensity",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        text = "${uiState.spatialAudioStrength}%",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Slider(
+                                    value = uiState.spatialAudioStrength.toFloat(),
+                                    onValueChange = { viewModel.setSpatialAudioStrength(it.toInt()) },
+                                    valueRange = 0f..100f,
+                                    steps = 19
+                                )
+                            }
                         }
                     }
                 }
@@ -871,6 +908,17 @@ fun PlaybackSettingsScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
+    }
+
+    if (showLanguageDialog) {
+        LanguageSelectionDialog(
+            initialSelection = uiState.preferredLanguages,
+            onDismiss = { showLanguageDialog = false },
+            onSave = { languages ->
+                viewModel.setPreferredLanguages(languages)
+                showLanguageDialog = false
+            }
+        )
     }
 }
 
