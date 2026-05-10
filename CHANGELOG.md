@@ -1,15 +1,5 @@
 # Changelog
 
-## [2.4.1.2] - 2026-05-10
-
-### Fixed
-- **Queue Drag Handle Worked Once Then Died** + **Queue Visibly Snapped on Track Change**: Both came from the same root cause — the up-next list keyed each row as `"${absoluteIndex}_${songId}"`. The absolute index changed every time a row was reordered AND every time `currentIndex` advanced on track transition, so Compose tore down the row's composable slot, which cancelled the in-flight `pointerInput` drag coroutine and reset `offsetY` mid-gesture. Result: drag worked for exactly one threshold's worth and then went dead, and the entire list re-mounted (visibly snapped) on every song change. Switched to `"${songId}#${occurrenceIndex}"` so duplicates stay disambiguated but keys remain stable across reorders and `currentIndex` updates.
-
-## [2.4.1.1] - 2026-05-10
-
-### Fixed
-- **Splash Icon Mismatch After Variant Switch**: After selecting a new launcher icon variant from Appearance, the splash screen could still show the previous (Classic) logo on the next cold start. Two causes: (1) the synchronous SharedPreferences mirror used by `MainActivity.applyVariantSplashTheme()` was written via `apply()`, whose async fsync is not guaranteed to flush before `applyLauncherAlias()` schedules `Process.killProcess()` 600 ms later — switched to `commit()`. (2) Users upgrading to the version that introduced the mirror had a populated DataStore but an empty mirror; the existing seed ran in a background coroutine that didn't reliably finish before the splash window initialised — added a synchronous one-shot seed in `SuvMusicApplication.onCreate()`.
-
 ## [2.4.1.0] - 2026-05-09
 
 ### Added
