@@ -263,12 +263,27 @@ fun ModernQueueView(
                     // Compose's LazyList requires unique keys. The queue can legitimately
                     // contain the same song twice (manual "Add to queue" of a track that
                     // is already enqueued, repeat-one transitions, autoplay echoes), so we
-                    // combine the absolute queue index with the id instead of using the
-                    // bare id — a duplicate id otherwise crashes the list on next render.
+                    // disambiguate duplicates by their *occurrence index* within the list
+                    // rather than by their absolute queue position. The previous
+                    // "${currentIndex + 1 + idx}_${s.id}" scheme made the key change every
+                    // time `currentIndex` advanced (every track transition) and every time
+                    // a row was reordered — which destroyed the row's composable slot
+                    // mid-gesture. That cancelled the in-flight pointerInput drag
+                    // coroutine and reset the row's offsetY, so the drag handle worked
+                    // for exactly one row and then went dead, and the whole list visibly
+                    // snapped on each track change.
+                    val keyedUpNext = remember(upNextSongs) {
+                        val seen = HashMap<String, Int>(upNextSongs.size)
+                        upNextSongs.map { song ->
+                            val occ = seen.getOrDefault(song.id, 0)
+                            seen[song.id] = occ + 1
+                            song to "${song.id}#$occ"
+                        }
+                    }
                     itemsIndexed(
-                        upNextSongs,
-                        key = { idx, s -> "${currentIndex + 1 + idx}_${s.id}" }
-                    ) { indexInList, song ->
+                        keyedUpNext,
+                        key = { _, pair -> pair.second }
+                    ) { indexInList, (song, _) ->
                         val actualIndex = currentIndex + 1 + indexInList
                         ModernQueueListItem(
                             song = song,
