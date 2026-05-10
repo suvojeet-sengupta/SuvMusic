@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.1.1] - 2026-05-10
+
+### Fixed
+- **Splash Icon Mismatch After Variant Switch**: After selecting a new launcher icon variant from Appearance, the splash screen could still show the previous (Classic) logo on the next cold start. Two causes: (1) the synchronous SharedPreferences mirror used by `MainActivity.applyVariantSplashTheme()` was written via `apply()`, whose async fsync is not guaranteed to flush before `applyLauncherAlias()` schedules `Process.killProcess()` 600 ms later — switched to `commit()`. (2) Users upgrading to the version that introduced the mirror had a populated DataStore but an empty mirror; the existing seed ran in a background coroutine that didn't reliably finish before the splash window initialised — added a synchronous one-shot seed in `SuvMusicApplication.onCreate()`.
+
 ## [2.4.1.0] - 2026-05-09
 
 ### Added

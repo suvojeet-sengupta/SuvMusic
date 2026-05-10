@@ -2330,10 +2330,18 @@ class SessionManager @Inject constructor(
         // async-only and would race the splash window initialisation, leaving
         // the splash showing the previous variant's drawable for one launch
         // after a switch.
+        //
+        // commit() (not apply()) because applyLauncherAlias() schedules a
+        // Process.killProcess() 600 ms later, and apply()'s async fsync isn't
+        // guaranteed to flush before the kill — when it didn't, the next
+        // launch read a stale/empty mirror and the splash fell back to the
+        // PULSE default (or, for fresh installs, the Classic activity-alias
+        // theme), so the splash icon failed to match the variant the user
+        // had just selected.
         context.getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
             .edit()
             .putString("logo_variant", variant.name)
-            .apply()
+            .commit()
         applyLauncherAlias(variant)
     }
 
