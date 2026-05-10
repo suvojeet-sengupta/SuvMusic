@@ -80,6 +80,17 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun onCreate() {
         super.onCreate()
 
+        // Seed the synchronous logo-variant mirror BEFORE MainActivity reads it.
+        // SessionManager also seeds it from its init block, but that path runs
+        // inside a coroutine on a background dispatcher and is not guaranteed
+        // to complete before MainActivity.applyVariantSplashTheme() runs on the
+        // very first cold start after the user upgrades to the version that
+        // introduced the mirror — which left the splash showing the wrong
+        // variant. Reading DataStore synchronously here once on launch is
+        // cheap (~tens of ms in the worst case) and runs only when the mirror
+        // is missing.
+        seedLogoVariantMirrorIfMissing()
+
         // Phase 1a: bring Koin up alongside Hilt. The app still routes all DI
         // through Hilt; Koin starts with an empty module list and gets populated
         // slice-by-slice in subsequent phase-1 chunks. Removed in chunk 1d once
@@ -167,6 +178,24 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             .build()
     }
     
+    private fun seedLogoVariantMirrorIfMissing() {
+        val prefs = getSharedPreferences("suvmusic_branding", Context.MODE_PRIVATE)
+        if (prefs.getString("logo_variant", null) != null) return
+        val variantName = try {
+            kotlinx.coroutines.runBlocking {
+                sessionManager.getLogoVariant().name
+            }
+        } catch (e: Exception) {
+            android.util.Log.w(
+                "SuvMusicApplication",
+                "Could not read LogoVariant from DataStore for splash mirror seed",
+                e,
+            )
+            com.suvojeet.suvmusic.core.model.LogoVariant.DEFAULT.name
+        }
+        prefs.edit().putString("logo_variant", variantName).commit()
+    }
+
     private fun setupWorkers() {
         val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.suvojeet.suvmusic.workers.NewReleaseWorker>(
             12, java.util.concurrent.TimeUnit.HOURS
