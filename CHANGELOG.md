@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.1.2] - 2026-05-10
+
+### Fixed
+- **Queue Drag Handle Worked Once Then Died** + **Queue Visibly Snapped on Track Change**: Both came from the same root cause — the up-next list keyed each row as `"${absoluteIndex}_${songId}"`. The absolute index changed every time a row was reordered AND every time `currentIndex` advanced on track transition, so Compose tore down the row's composable slot, which cancelled the in-flight `pointerInput` drag coroutine and reset `offsetY` mid-gesture. Result: drag worked for exactly one threshold's worth and then went dead, and the entire list re-mounted (visibly snapped) on every song change. Switched to `"${songId}#${occurrenceIndex}"` so duplicates stay disambiguated but keys remain stable across reorders and `currentIndex` updates.
+
 ## [2.4.1.1] - 2026-05-10
 
 ### Fixed
