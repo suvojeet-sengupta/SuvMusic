@@ -389,47 +389,23 @@ private fun ClassicTopBar(
             contentAlignment = Alignment.Center
         ) {
             if (isYouTubeSong) {
-                Row(
+                // Single-icon toggle: shows the mode you'll switch TO when tapped.
+                // In audio mode → video icon (tap → switch to video).
+                // In video mode → headphones icon (tap → switch back to audio).
+                Box(
                     modifier = Modifier
-                        .clip(CircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                        .padding(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(44.dp)
+                        .clip(SquircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                        .clickable(onClick = onVideoToggle),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable { if (isVideoMode) onVideoToggle() }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Audio",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable { if (!isVideoMode) onVideoToggle() }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Video",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isVideoMode) androidx.compose.material.icons.Icons.Default.Headphones else androidx.compose.material.icons.Icons.Default.PlayArrow,
+                        contentDescription = if (isVideoMode) "Switch to audio" else "Switch to video",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             } else {
                 Text(

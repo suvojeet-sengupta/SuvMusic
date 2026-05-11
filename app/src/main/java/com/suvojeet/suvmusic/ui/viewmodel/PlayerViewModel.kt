@@ -502,8 +502,14 @@ class PlayerViewModel @Inject constructor(
     
     private fun checkLikeStatus(song: Song) {
         viewModelScope.launch {
-            val likedSongs = youTubeRepository.getLikedMusic()
-            val isLiked = likedSongs.any { it.id == song.id }
+            val isLiked = if (sessionManager.isLoggedIn()) {
+                // Signed-in: source of truth is the user's YT Music "Liked Music" playlist
+                val likedSongs = youTubeRepository.getLikedMusic()
+                likedSongs.any { it.id == song.id }
+            } else {
+                // Signed-out: local-only like state from listening history
+                listeningHistoryRepository.isSongLiked(song.id)
+            }
             musicPlayer.updateLikeStatus(isLiked)
         }
     }
@@ -1255,23 +1261,43 @@ class PlayerViewModel @Inject constructor(
 
     fun likeSong(song: Song) {
         val isCurrent = song.id == playerState.value.currentSong?.id
-        val currentLikeState = if (isCurrent) playerState.value.isLiked else false // We don't track like state for all queue items in PlayerState
-        
+        // We don't track like state for non-current queue items, so for those we
+        // resolve current state lazily inside the coroutine from the local source.
+        val knownCurrentLikeState = if (isCurrent) playerState.value.isLiked else null
+
         viewModelScope.launch {
-            val rating = if (!currentLikeState) "LIKE" else "INDIFFERENT"
-            val success = youTubeRepository.rateSong(song.id, rating)
-            if (success) {
-                if (isCurrent) {
-                    musicPlayer.updateLikeStatus(!currentLikeState)
-                }
-                
-                // Notify recommendation engine of like change
-                recommendationEngine.onSongLikeChanged(song, rating == "LIKE")
-                
-                // Persist like status in local listening history for taste profile
-                listeningHistoryRepository.markAsLiked(song.id, rating == "LIKE")
-                
-                if (rating == "LIKE") {
+            val isSignedIn = sessionManager.isLoggedIn()
+            val currentLikeState = knownCurrentLikeState
+                ?: listeningHistoryRepository.isSongLiked(song.id)
+            val newLikeState = !currentLikeState
+            val rating = if (newLikeState) "LIKE" else "INDIFFERENT"
+
+            // Signed-in: round-trip via YT Music so the user's account stays in sync.
+            // Signed-out: skip the API entirely and treat the local store as the
+            // source of truth — the like still toggles and persists locally.
+            val syncedToYtMusic = if (isSignedIn) {
+                youTubeRepository.rateSong(song.id, rating)
+            } else {
+                false
+            }
+
+            if (isSignedIn && !syncedToYtMusic) {
+                // YT Music rejected the change (network drop, cookie expired, …).
+                // Don't lie to the user by flipping the local UI — bail out.
+                return@launch
+            }
+
+            if (isCurrent) {
+                musicPlayer.updateLikeStatus(newLikeState)
+            }
+
+            recommendationEngine.onSongLikeChanged(song, newLikeState)
+            // Use the song-aware variant so songs that haven't been played yet
+            // (queue / search results) still get a persistent like row.
+            listeningHistoryRepository.markSongAsLiked(song, newLikeState)
+
+            if (isSignedIn) {
+                if (newLikeState) {
                     if (youTubeRepository.isOnline()) {
                         youTubeRepository.getLikedMusic(fetchAll = false)
                     }

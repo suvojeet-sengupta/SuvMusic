@@ -95,13 +95,56 @@ class ListeningHistoryRepository @Inject constructor(
     }
     
     /**
-     * Mark a song as liked.
+     * Mark a song as liked. No-op if the song has no history entry yet —
+     * use [markSongAsLiked] when the caller wants the like to be persisted
+     * for songs that haven't been played (e.g. liking from the queue/search).
      */
     suspend fun markAsLiked(songId: String, isLiked: Boolean) {
         val existing = listeningHistoryDao.getHistoryForSong(songId)
         existing?.let {
             listeningHistoryDao.upsert(it.copy(isLiked = isLiked))
         }
+    }
+
+    /**
+     * Mark a song as liked, creating a zero-play history row if one
+     * doesn't yet exist. This is the path used for the local-only like
+     * flow (user not signed in to YT Music), where the like must persist
+     * even before the song has been played.
+     */
+    suspend fun markSongAsLiked(song: Song, isLiked: Boolean) {
+        val existing = listeningHistoryDao.getHistoryForSong(song.id)
+        val row = existing?.copy(isLiked = isLiked) ?: ListeningHistory(
+            songId = song.id,
+            songTitle = song.title,
+            artist = song.artist,
+            thumbnailUrl = song.thumbnailUrl,
+            playCount = 0,
+            totalDurationMs = 0L,
+            lastPlayed = 0L,
+            firstPlayed = System.currentTimeMillis(),
+            skipCount = 0,
+            completionRate = 0f,
+            isLiked = isLiked,
+            artistId = song.artistId,
+            source = when (song.source) {
+                com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
+                com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE_MUSIC -> "YOUTUBE"
+                com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
+                com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "DOWNLOADED"
+            },
+            album = song.album,
+            duration = song.duration,
+            localUri = song.localUri,
+            releaseDate = song.releaseDate
+        )
+        listeningHistoryDao.upsert(row)
+    }
+
+    /** Returns the local liked state for [songId] (false if no history row exists). */
+    suspend fun isSongLiked(songId: String): Boolean {
+        return listeningHistoryDao.getHistoryForSong(songId)?.isLiked == true
     }
     
     /**

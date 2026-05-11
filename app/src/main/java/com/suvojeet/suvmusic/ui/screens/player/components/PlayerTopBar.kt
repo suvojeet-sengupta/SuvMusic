@@ -3,11 +3,12 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,47 +66,23 @@ fun PlayerTopBar(
             contentAlignment = Alignment.Center
         ) {
             if (isYouTubeSong) {
-                Row(
+                // Single-icon toggle: shows the mode you'll switch TO when tapped.
+                // In audio mode → video icon (tap → switch to video).
+                // In video mode → headphones icon (tap → switch back to audio).
+                Box(
                     modifier = Modifier
-                        .clip(CircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
-                        .padding(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(44.dp)
+                        .clip(SquircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                        .clickable(onClick = onVideoToggle),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable { if (isVideoMode) onVideoToggle() }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Audio",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable { if (!isVideoMode) onVideoToggle() }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Video",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.6f),
-                            fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isVideoMode) Icons.Default.Headphones else Icons.Default.PlayArrow,
+                        contentDescription = if (isVideoMode) "Switch to audio" else "Switch to video",
+                        tint = dominantColors.onBackground,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             } else {
                 Text(
