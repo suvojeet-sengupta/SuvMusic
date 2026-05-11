@@ -27,13 +27,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.ui.screens.player.formatDuration
-import com.suvojeet.suvmusic.ui.screens.player.components.AudioQualityDialog
 
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.CircularProgressIndicator
+
+/**
+ * Per-current-song download progress (0f..1f), or null when the current song isn't downloading.
+ * Provided by PlayerScreen; consumed by [SongInfoSection] to render the download chip.
+ */
+val LocalCurrentDownloadProgress = androidx.compose.runtime.compositionLocalOf<Float?> { null }
 
 @Composable
 fun SongInfoSection(
@@ -55,16 +60,6 @@ fun SongInfoSection(
     isAIEnabled: Boolean = false,
     aiStatus: String? = null
 ) {
-    var showQualityDialog by remember { mutableStateOf(false) }
-
-    if (showQualityDialog) {
-        AudioQualityDialog(
-            showDialog = showQualityDialog,
-            onDismiss = { showQualityDialog = false },
-            dominantColors = dominantColors
-        )
-    }
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -364,40 +359,15 @@ fun SongInfoSection(
                 }
             }
 
-            // Audio Quality Badge
-            if (song != null) {
+            // Download progress chip — only visible while the current song is downloading.
+            // Collapsed: spinner + "Downloading"; tap to expand and reveal the percentage.
+            val downloadProgress = LocalCurrentDownloadProgress.current
+            if (song != null && downloadProgress != null) {
                 Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(
-                            color = dominantColors.onBackground.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                        .clickable { showQualityDialog = true }
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MusicNote,
-                        contentDescription = null,
-                        modifier = Modifier.size(10.dp),
-                        tint = dominantColors.onBackground.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = when (song.source) {
-                            SongSource.JIOSAAVN -> "AAC • 320kbps"
-                            SongSource.LOCAL -> "Local"
-                            else -> "Opus • 160kbps"
-                        },
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = dominantColors.onBackground.copy(alpha = 0.7f)
-                    )
-                }
+                DownloadProgressChip(
+                    progress = downloadProgress,
+                    dominantColors = dominantColors
+                )
             }
         }
 
@@ -497,6 +467,55 @@ fun TimeLabelsWithQuality(
             text = "-${formatDuration(duration - currentPosition)}",
             style = MaterialTheme.typography.labelMedium,
             color = dominantColors.onBackground.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun DownloadProgressChip(
+    progress: Float,
+    dominantColors: DominantColors
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 250),
+        label = "downloadProgress"
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                color = dominantColors.accent.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { expanded = !expanded }
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Box(modifier = Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier.size(12.dp),
+                color = dominantColors.accent,
+                strokeWidth = 1.5.dp,
+                trackColor = dominantColors.accent.copy(alpha = 0.25f)
+            )
+            Icon(
+                imageVector = Icons.Filled.Download,
+                contentDescription = null,
+                modifier = Modifier.size(7.dp),
+                tint = dominantColors.accent
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = if (expanded) "${(animatedProgress * 100).toInt()}%" else "Downloading",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.3.sp
+            ),
+            color = dominantColors.accent
         )
     }
 }

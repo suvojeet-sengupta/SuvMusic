@@ -217,6 +217,7 @@ fun PlayerScreen(
     
     val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle()
     val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle()
+    val currentDownloadProgress by playerViewModel.currentDownloadProgress.collectAsStateWithLifecycle()
 
     // Lyrics appearance
     val lyricsTextPosition by sessionManager.lyricsTextPositionFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.LyricsTextPosition.CENTER)
@@ -341,6 +342,9 @@ fun PlayerScreen(
     if (isInPip) {
         PiPPlayerContent(song = song, isVideoMode = playerState.isVideoMode, player = player)
     } else {
+      androidx.compose.runtime.CompositionLocalProvider(
+        com.suvojeet.suvmusic.ui.screens.player.components.LocalCurrentDownloadProgress provides currentDownloadProgress
+      ) {
         Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
             // Background — skip the mesh gradient for Liquid Glass; it draws its own blurred backdrop.
             if (playerStyle == PlayerStyle.LIQUID_GLASS) {
@@ -510,6 +514,7 @@ fun PlayerScreen(
                 )
             }
         }
+      }
     }
 }
 

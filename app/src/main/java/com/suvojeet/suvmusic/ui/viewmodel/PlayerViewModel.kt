@@ -186,7 +186,18 @@ class PlayerViewModel @Inject constructor(
         )
 
     val sponsorSegments: StateFlow<List<SponsorSegment>> = sponsorBlockRepository.currentSegments
-    
+
+    // Current song's download progress (0f..1f) — null when the current song is not downloading.
+    val currentDownloadProgress: StateFlow<Float?> = combine(
+        musicPlayer.playerState.map { it.currentSong?.id }.distinctUntilChanged(),
+        downloadRepository.downloadProgress
+    ) { id, progressMap -> id?.let { progressMap[it] } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
     fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
     
     // Sleep Timer

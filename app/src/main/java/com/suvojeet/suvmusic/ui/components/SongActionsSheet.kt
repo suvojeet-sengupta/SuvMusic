@@ -237,7 +237,16 @@ fun SongActionsSheet(
                         if (isDownloaded) Icons.Default.FileDownloadDone else Icons.Default.FileDownload,
                         if (isDownloaded) "Downloaded" else "Download",
                         if (isDownloaded) accentColor else contentColor,
-                        { handleAction { if (isDownloaded) onDeleteDownload() else onDownload() } }
+                        {
+                            handleAction {
+                                if (isDownloaded) {
+                                    onDeleteDownload()
+                                } else {
+                                    onDownload()
+                                    com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Started downloading \"${song.title}\"")
+                                }
+                            }
+                        }
                     )
                     
                     val speedLabel = if (currentSpeed == 1.0f) "" else "($currentSpeed x)"
