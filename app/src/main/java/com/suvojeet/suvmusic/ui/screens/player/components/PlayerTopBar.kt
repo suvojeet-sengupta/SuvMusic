@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,23 +68,72 @@ fun PlayerTopBar(
             contentAlignment = Alignment.Center
         ) {
             if (isYouTubeSong) {
-                // Single-icon toggle: shows the mode you'll switch TO when tapped.
-                // In audio mode → video icon (tap → switch to video).
-                // In video mode → headphones icon (tap → switch back to audio).
-                Box(
+                // Dual-mode switcher: Song and Video options (YouTube Music style)
+                Row(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(SquircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f))
-                        .clickable(onClick = onVideoToggle),
-                    contentAlignment = Alignment.Center
+                        .wrapContentSize()
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (isVideoMode) Icons.Default.Headphones else Icons.Default.PlayArrow,
-                        contentDescription = if (isVideoMode) "Switch to audio" else "Switch to video",
-                        tint = dominantColors.onBackground,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    // Song Mode Button
+                    Box(
+                        modifier = Modifier
+                            .height(34.dp)
+                            .clip(CircleShape)
+                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Headphones,
+                                contentDescription = "Audio Mode",
+                                tint = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Song",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (!isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.5f),
+                                fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+
+                    // Video Mode Button
+                    Box(
+                        modifier = Modifier
+                            .height(34.dp)
+                            .clip(CircleShape)
+                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.15f) else Color.Transparent)
+                            .clickable { if (!isVideoMode) onVideoToggle() }
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Video Mode",
+                                tint = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Video",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (isVideoMode) dominantColors.onBackground else dominantColors.onBackground.copy(alpha = 0.5f),
+                                fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
                 }
             } else {
                 Text(
