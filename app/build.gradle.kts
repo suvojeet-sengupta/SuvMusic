@@ -196,8 +196,12 @@ dependencies {
     implementation(libs.androidx.media3.ui.compose)
     implementation(libs.androidx.media3.datasource.cronet) {
         exclude(group = "com.google.android.gms", module = "play-services-cronet")
+        exclude(group = "org.chromium.net", module = "cronet-api")
     }
-    implementation(libs.cronet.embedded)
+    implementation(libs.cronet.embedded) {
+        exclude(group = "org.chromium.net", module = "cronet-common")
+        exclude(group = "org.chromium.net", module = "cronet-api")
+    }
     
     // Media Router
     implementation(libs.androidx.mediarouter)
