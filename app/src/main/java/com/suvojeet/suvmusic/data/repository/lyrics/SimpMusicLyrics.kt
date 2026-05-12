@@ -87,10 +87,23 @@ object SimpMusicLyrics {
             tracks.firstOrNull()
         }
 
-        val lyrics = bestMatch?.syncedLyrics ?: bestMatch?.plainLyrics
+        val lyrics = pickBest(bestMatch)
             ?: throw IllegalStateException("Lyrics unavailable")
-        
+
         lyrics
+    }
+
+    /**
+     * Prefer enhanced LRC ("LRC v2") with inline word timestamps when the API returns it,
+     * fall back to standard synced LRC, then plain text. The richSyncLyrics field is only
+     * preferred when it looks like LRC text (starts with '['), so JSON payloads pass through
+     * to syncedLyrics as a safe fallback.
+     */
+    private fun pickBest(track: LyricsData?): String? {
+        if (track == null) return null
+        val rich = track.richSyncLyrics?.trim()
+        if (!rich.isNullOrEmpty() && rich.startsWith("[")) return rich
+        return track.syncedLyrics ?: track.plainLyrics
     }
 
     suspend fun getAllLyrics(
@@ -110,11 +123,17 @@ object SimpMusicLyrics {
 
         sortedTracks.forEach { track ->
             if (count <= 4) {
-                if (track.syncedLyrics != null && abs((track.duration ?: 0) - duration) <= 5) {
+                val durationOk = abs((track.duration ?: 0) - duration) <= 5
+                val rich = track.richSyncLyrics?.trim()
+                if (!rich.isNullOrEmpty() && rich.startsWith("[") && durationOk) {
+                    count++
+                    callback(rich)
+                }
+                if (track.syncedLyrics != null && durationOk) {
                     count++
                     callback(track.syncedLyrics)
                 }
-                if (track.plainLyrics != null && abs((track.duration ?: 0) - duration) <= 5 && plain == 0) {
+                if (track.plainLyrics != null && durationOk && plain == 0) {
                     count++
                     plain++
                     callback(track.plainLyrics)
