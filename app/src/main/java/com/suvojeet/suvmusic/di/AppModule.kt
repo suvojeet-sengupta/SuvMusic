@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.di.ApplicationScope
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -138,7 +139,8 @@ object AppModule {
         kuGouLyricsProvider: com.suvojeet.suvmusic.kugou.KuGouLyricsProvider,
         lrcLibLyricsProvider: com.suvojeet.suvmusic.lrclib.LrcLibLyricsProvider,
         localLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LocalLyricsProvider,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        lyricsDao: LyricsDao
     ): com.suvojeet.suvmusic.data.repository.LyricsRepository {
         return com.suvojeet.suvmusic.data.repository.LyricsRepository(
             context,
@@ -150,7 +152,8 @@ object AppModule {
             kuGouLyricsProvider,
             lrcLibLyricsProvider,
             localLyricsProvider,
-            sessionManager
+            sessionManager,
+            lyricsDao
         )
     }
 
