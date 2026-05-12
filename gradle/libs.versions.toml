@@ -126,7 +126,7 @@ newpipe-extractor = { group = "com.github.teamnewpipe", name = "NewPipeExtractor
 # Networking
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
-cronet-embedded = { group = "org.chromium.net", name = "cronet-embedded", version = "119.6045.31" }
+cronet-embedded = { group = "org.chromium.net", name = "cronet-embedded", version = "143.7445.0" }
 
 # Retrofit
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
