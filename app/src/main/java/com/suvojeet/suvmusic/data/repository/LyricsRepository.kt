@@ -13,6 +13,9 @@ import com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider
 import com.suvojeet.suvmusic.kugou.KuGouLyricsProvider
 import com.suvojeet.suvmusic.lrclib.LrcLibLyricsProvider
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
+import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
+import com.suvojeet.suvmusic.core.data.local.entity.LyricsEntity
+import com.suvojeet.suvmusic.util.LyricsUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -34,9 +37,56 @@ class LyricsRepository @Inject constructor(
     private val kuGouLyricsProvider: KuGouLyricsProvider,
     private val lrcLibLyricsProvider: LrcLibLyricsProvider,
     private val localLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LocalLyricsProvider,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val lyricsDao: LyricsDao
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
+
+    /**
+     * Hydrate the LRU cache from the persistent lyrics_cache table.
+     * Stores the parsed result under both the provider key and the AUTO key.
+     */
+    private suspend fun getPersisted(songId: String, providerType: LyricsProviderType): Lyrics? {
+        val entity = lyricsDao.get(songId, providerType.name) ?: return null
+        val parsed = LyricsUtils.parseLyrics(entity.lrcContent)
+        if (parsed.isEmpty() && entity.lrcContent.isBlank()) return null
+        return Lyrics(
+            lines = parsed,
+            sourceCredit = entity.sourceCredit,
+            isSynced = entity.isSynced,
+            provider = providerType
+        )
+    }
+
+    /**
+     * Persist a fetched Lyrics object as canonical Enhanced LRC so it survives restarts.
+     * Skipped for AUTO (which is a routing alias, not a real provider).
+     */
+    private suspend fun persist(songId: String, lyrics: Lyrics) {
+        if (lyrics.provider == LyricsProviderType.AUTO) return
+        if (lyrics.lines.isEmpty()) return
+        val lrc = if (lyrics.isSynced) {
+            LyricsUtils.serialize(lyrics.lines, enhanced = true)
+        } else {
+            lyrics.lines.joinToString("\n") { it.text }
+        }
+        runCatching {
+            lyricsDao.upsert(
+                LyricsEntity(
+                    songId = songId,
+                    providerName = lyrics.provider.name,
+                    lrcContent = lrc,
+                    isSynced = lyrics.isSynced,
+                    sourceCredit = lyrics.sourceCredit
+                )
+            )
+        }
+    }
+
+    private fun cacheBoth(songId: String, providerType: LyricsProviderType, lyrics: Lyrics) {
+        cache.put(getCacheKey(songId, LyricsProviderType.AUTO), lyrics)
+        cache.put(getCacheKey(songId, providerType), lyrics)
+    }
 
     /**
      * Cache key helper
@@ -76,20 +126,51 @@ class LyricsRepository @Inject constructor(
 
     suspend fun saveLocalLyrics(song: Song, content: String) = withContext(Dispatchers.IO) {
         localLyricsProvider.saveLyrics(song.id, content)
-        // Clear cache for this song to force reload
+        // Clear in-memory and persistent caches for this song to force reload
         cache.remove(getCacheKey(song.id, LyricsProviderType.LOCAL))
         cache.remove(getCacheKey(song.id, LyricsProviderType.AUTO))
+        runCatching { lyricsDao.deleteForSong(song.id) }
     }
 
     suspend fun getLyrics(song: Song, providerType: LyricsProviderType = LyricsProviderType.AUTO): Lyrics? = withContext(Dispatchers.IO) {
         val cacheKey = getCacheKey(song.id, providerType)
-        
-        // Check cache first
+
+        // Check in-memory cache first
         val cached = cache.get(cacheKey)
         if (cached != null) {
             return@withContext cached
         }
-        
+
+        // Then check the persistent lyrics_cache table (survives app restarts)
+        if (providerType != LyricsProviderType.AUTO) {
+            getPersisted(song.id, providerType)?.let { persisted ->
+                cache.put(cacheKey, persisted)
+                return@withContext persisted
+            }
+        } else {
+            // For AUTO, try the LOCAL row first (highest priority), then any other persisted row
+            getPersisted(song.id, LyricsProviderType.LOCAL)?.let { persisted ->
+                cacheBoth(song.id, LyricsProviderType.LOCAL, persisted)
+                return@withContext persisted
+            }
+            val persistedRows = runCatching { lyricsDao.getAllForSong(song.id) }.getOrDefault(emptyList())
+            persistedRows.firstOrNull { it.isSynced }?.let { row ->
+                val providerEnum = runCatching { LyricsProviderType.valueOf(row.providerName) }
+                    .getOrDefault(LyricsProviderType.AUTO)
+                val parsed = LyricsUtils.parseLyrics(row.lrcContent)
+                if (parsed.isNotEmpty()) {
+                    val lyrics = Lyrics(
+                        lines = parsed,
+                        sourceCredit = row.sourceCredit,
+                        isSynced = true,
+                        provider = providerEnum
+                    )
+                    cacheBoth(song.id, providerEnum, lyrics)
+                    return@withContext lyrics
+                }
+            }
+        }
+
         // If specific provider requested, fetch directly
         if (providerType != LyricsProviderType.AUTO) {
             return@withContext fetchFromProvider(song, providerType)
@@ -107,8 +188,8 @@ class LyricsRepository @Inject constructor(
                 isSynced = lines.any { it.startTimeMs > 0 },
                 provider = LyricsProviderType.LOCAL
             )
-            cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
-            cache.put(getCacheKey(song.id, LyricsProviderType.LOCAL), lyrics)
+            cacheBoth(song.id, LyricsProviderType.LOCAL, lyrics)
+            persist(song.id, lyrics)
             return@withContext lyrics
         }
         
@@ -136,9 +217,8 @@ class LyricsRepository @Inject constructor(
                             isSynced = true,
                             provider = providerEnum
                         )
-                        // Cache for AUTO and specific provider
-                        cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
-                        cache.put(getCacheKey(song.id, providerEnum), lyrics)
+                        cacheBoth(song.id, providerEnum, lyrics)
+                        persist(song.id, lyrics)
                         return@withContext lyrics
                     }
                 }
@@ -150,16 +230,16 @@ class LyricsRepository @Inject constructor(
         // 2. Try LRCLIB for synced lyrics
         val lrcLibLyrics = fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
         if (lrcLibLyrics != null) {
-             cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lrcLibLyrics)
-             cache.put(getCacheKey(song.id, LyricsProviderType.LRCLIB), lrcLibLyrics)
-             return@withContext lrcLibLyrics
+            cacheBoth(song.id, LyricsProviderType.LRCLIB, lrcLibLyrics)
+            persist(song.id, lrcLibLyrics)
+            return@withContext lrcLibLyrics
         }
-        
+
         // 3. Fallback: Get lyrics from the original source (JioSaavn/YouTube)
         val sourceLyrics = fetchFromSource(song)
         if (sourceLyrics != null) {
-            cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), sourceLyrics)
-            cache.put(getCacheKey(song.id, sourceLyrics.provider), sourceLyrics)
+            cacheBoth(song.id, sourceLyrics.provider, sourceLyrics)
+            persist(song.id, sourceLyrics)
             return@withContext sourceLyrics
         }
         
@@ -181,8 +261,8 @@ class LyricsRepository @Inject constructor(
                     isSynced = false,
                     provider = LyricsProviderType.LRCLIB
                 )
-                cache.put(getCacheKey(song.id, LyricsProviderType.AUTO), lyrics)
-                cache.put(getCacheKey(song.id, LyricsProviderType.LRCLIB), lyrics)
+                cacheBoth(song.id, LyricsProviderType.LRCLIB, lyrics)
+                persist(song.id, lyrics)
                 return@withContext lyrics
             }
         } catch (e: Exception) { }
@@ -253,8 +333,9 @@ class LyricsRepository @Inject constructor(
         
         if (result != null) {
             cache.put(getCacheKey(song.id, providerType), result)
+            persist(song.id, result)
         }
-        
+
         return result
     }
 

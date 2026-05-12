@@ -98,7 +98,43 @@ object LyricsUtils {
             }
         }
 
-        return finalize(out.sortedBy { it.startTimeMs })
+        return finalize(mergeBilingual(out.sortedBy { it.startTimeMs }))
+    }
+
+    /**
+     * Collapse consecutive lines that share the exact same start timestamp into a
+     * single line with [LyricsLine.translation] populated. This handles the common
+     * bilingual LRC pattern produced by Musixmatch/Apple Music/Lyricify exports:
+     *
+     *   [00:12.34]Original line
+     *   [00:12.34]翻訳された行
+     *
+     * Only pairs with non-zero, equal start times are merged so legitimate
+     * unsynced/duplicate-zero lines stay intact.
+     */
+    private fun mergeBilingual(lines: List<LyricsLine>): List<LyricsLine> {
+        if (lines.size < 2) return lines
+        val out = ArrayList<LyricsLine>(lines.size)
+        var i = 0
+        while (i < lines.size) {
+            val cur = lines[i]
+            val next = lines.getOrNull(i + 1)
+            if (next != null
+                && cur.startTimeMs > 0L
+                && cur.startTimeMs == next.startTimeMs
+                && cur.text.isNotEmpty()
+                && next.text.isNotEmpty()
+                && cur.text != next.text
+                && cur.translation == null
+            ) {
+                out.add(cur.copy(translation = next.text))
+                i += 2
+            } else {
+                out.add(cur)
+                i += 1
+            }
+        }
+        return out
     }
 
     /**
@@ -234,6 +270,13 @@ object LyricsUtils {
                 sb.append(line.text)
             }
             sb.append('\n')
+            // Round-trip bilingual translation as a sibling line sharing the same timestamp.
+            val tr = line.translation
+            if (!tr.isNullOrBlank()) {
+                sb.append('[').append(formatTime(line.startTimeMs)).append(']')
+                sb.append(tr)
+                sb.append('\n')
+            }
         }
         return sb.toString()
     }

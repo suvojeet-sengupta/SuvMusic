@@ -894,7 +894,49 @@ fun LyricsScreen(
                         }
                     )
                     
-                    // Option 2: Export as PDF
+                    // Option 2: Share as .lrc (Enhanced LRC / "LRC v2")
+                    ListItem(
+                        headlineContent = { Text("Share as .lrc") },
+                        leadingContent = {
+                            Icon(Icons.Default.LibraryMusic, contentDescription = null)
+                        },
+                        modifier = Modifier.clickable {
+                            scope.launch {
+                                sheetState.hide()
+                                showShareSheet = false
+
+                                if (lyrics != null) {
+                                    val uri = com.suvojeet.suvmusic.util.LyricsLrcExporter.exportAndShareLrc(
+                                        context = context,
+                                        lines = lyrics.lines,
+                                        songTitle = songTitle,
+                                        artistName = artistName
+                                    )
+
+                                    if (uri != null) {
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess(
+                                            "Lyrics saved to Documents/SuvMusic"
+                                        )
+
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(
+                                            Intent.createChooser(shareIntent, "Share Lyrics (.lrc)")
+                                        )
+                                    } else {
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.showError(
+                                            "Could not export lyrics"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
+
+                    // Option 3: Export as PDF
                     ListItem(
                         headlineContent = { Text("Export as PDF") },
                         leadingContent = { 
@@ -1282,6 +1324,32 @@ fun LyricsList(
                                 color = animatedTextColor.copy(alpha = lineAlpha),
                                 textAlign = textAlign,
                                 modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        // Bilingual translation rendered as a dimmer subtitle under the line.
+                        val translation = line.translation
+                        if (!translation.isNullOrBlank()) {
+                            val translationAlpha by animateFloatAsState(
+                                targetValue = if (isActive || !lyrics.isSynced) 0.7f else 0.2f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                label = "translationAlpha"
+                            )
+                            Text(
+                                text = translation,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = (fontSize * 0.75f).sp,
+                                    fontWeight = FontWeight.Medium,
+                                    lineHeight = (fontSize * lineSpacingMultiplier * 0.85f).sp
+                                ),
+                                color = animatedTextColor.copy(alpha = translationAlpha),
+                                textAlign = textAlign,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp)
                             )
                         }
                     }

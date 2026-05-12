@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.data.local.AppDatabase
 import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.data.local.dao.DislikedItemDao
+import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 import dagger.Module
 import dagger.Provides
@@ -26,6 +27,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "suvmusic_database"
         )
+        .addMigrations(AppDatabase.MIGRATION_11_12)
         .fallbackToDestructiveMigration()
         .build()
     }
@@ -48,5 +50,10 @@ object DatabaseModule {
     @Provides
     fun provideSongGenreDao(database: AppDatabase): SongGenreDao {
         return database.songGenreDao()
+    }
+
+    @Provides
+    fun provideLyricsDao(database: AppDatabase): LyricsDao {
+        return database.lyricsDao()
     }
 }
