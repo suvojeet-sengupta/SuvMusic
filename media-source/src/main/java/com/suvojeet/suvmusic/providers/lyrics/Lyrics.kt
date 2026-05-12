@@ -23,7 +23,11 @@ data class LyricsLine(
     val startTimeMs: Long = 0L,
     val endTimeMs: Long = 0L,
     val isHeader: Boolean = false,
-    val words: List<LyricsWord>? = null
+    val words: List<LyricsWord>? = null,
+    // Optional translation/secondary line for bilingual lyrics (e.g. EN + JP).
+    // Populated by providers that supply it, or auto-detected from LRC files
+    // where two consecutive lines share the exact same start timestamp.
+    val translation: String? = null
 )
 
 data class LyricsWord(
