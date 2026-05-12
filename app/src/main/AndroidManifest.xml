@@ -70,7 +70,7 @@
         android:theme="@style/Theme.SuvMusic"
         android:usesCleartextTraffic="false"
         android:enableOnBackInvokedCallback="true"
-        tools:targetApi="36">
+        tools:targetApi="37">
         
         <meta-data
             android:name="com.google.android.gms.car.application"
