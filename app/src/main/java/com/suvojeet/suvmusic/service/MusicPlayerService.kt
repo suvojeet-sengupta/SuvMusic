@@ -216,10 +216,10 @@ class MusicPlayerService : MediaLibraryService() {
         
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                10_000,  // minBufferMs
+                15_000,  // minBufferMs (was 10_000) — keep more buffer for jittery networks
                 50_000,  // maxBufferMs
-                2_500,   // bufferForPlaybackMs
-                5_000    // bufferForPlaybackAfterRebufferMs
+                3_500,   // bufferForPlaybackMs (was 2_500) — start with healthier buffer to avoid immediate stutter
+                6_000    // bufferForPlaybackAfterRebufferMs (was 5_000)
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .setBackBuffer(10_000, true) // Increase back buffer slightly for seeking back

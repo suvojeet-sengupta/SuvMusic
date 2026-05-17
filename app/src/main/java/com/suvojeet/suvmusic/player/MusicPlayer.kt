@@ -292,7 +292,7 @@ class MusicPlayer @Inject constructor(
     
     // Configurable Preloading
     private var nextSongPreloadingEnabled = true
-    private var nextSongPreloadDelay = 3
+    private var nextSongPreloadDelay = 1
 
     // Automix master switch (Playback Settings -> Automix). Gates automatic queue
     // extension when autoplay/radio is active. Default matches SessionManager.
@@ -1480,13 +1480,21 @@ class MusicPlayer @Inject constructor(
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
                     val bufferedPercentage = controller.bufferedPercentage
+                    val bufferedAheadMs = (controller.bufferedPosition - currentPos).coerceAtLeast(0L)
                     val playbackState = controller.playbackState
 
                     // Optimization 5: Buffer-aware speed adjustment.
-                    // If the buffer is critically low (< 2%), we slow down slightly to avoid a hard pause.
-                    if (playbackState == Player.STATE_READY && bufferedPercentage < 2 && controller.isPlaying) {
+                    // Use absolute buffer-ahead (ms) instead of percentage. Percentage breaks
+                    // for long songs: a 4-min track with 2.5s buffer = 1%, which would trigger
+                    // slowdown every time a song starts (LoadControl only buffers 2.5s before play).
+                    // Trigger only after 5s into the track so song-start doesn't get slowed.
+                    val shouldSlow = playbackState == Player.STATE_READY &&
+                        bufferedAheadMs < 2000L &&
+                        controller.isPlaying &&
+                        currentPos > 5000L
+                    if (shouldSlow) {
                         if (controller.playbackParameters.speed == _playerState.value.playbackSpeed) {
-                           android.util.Log.d("MusicPlayer", "Buffer low ($bufferedPercentage%), adjusting speed to 0.95x")
+                           android.util.Log.d("MusicPlayer", "Buffer low (${bufferedAheadMs}ms ahead, $bufferedPercentage%), adjusting speed to 0.95x")
                            controller.setPlaybackSpeed(_playerState.value.playbackSpeed * 0.95f)
                         }
                     } else if (controller.playbackParameters.speed != _playerState.value.playbackSpeed) {
@@ -1537,13 +1545,15 @@ class MusicPlayer @Inject constructor(
                         saveCurrentPlaybackState()
                     }
                     
-                    // Check if we need to preload next song for gapless playback.
+                    // Always try to preload the next song's stream URL so manual Next
+                    // and auto-transitions are both fast. The early-transition seek (true
+                    // gapless skip) still gates on isGaplessPlaybackEnabled below.
+                    checkPreloadNextSong(currentPos, duration)
+
                     // Skip the early-transition seek when a crossfade is already in flight
                     // for this track — otherwise the gapless skip races the crossfade and
                     // the new track ends up at full volume before the fade-in plays.
                     if (sessionManager.isGaplessPlaybackEnabled()) {
-                        checkPreloadNextSong(currentPos, duration)
-
                         // Early transition logic
                         val wallPlayTime = System.currentTimeMillis() - songPlayStartWallTime
                         if (!crossfadeTriggered && crossfadeMs == 0 &&
@@ -1709,6 +1719,8 @@ class MusicPlayer @Inject constructor(
         
         isPreloading = true
         lastPreloadAttemptTime = System.currentTimeMillis()
+        val pt0 = System.currentTimeMillis()
+        android.util.Log.i("PlaybackTrace", "[PRELOAD] start nextId=${nextSong.id} posMs=$currentPosition durationMs=$duration videoMode=$isVideoMode shuffle=${state.shuffleEnabled}")
         preloadJob = scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
@@ -1742,9 +1754,12 @@ class MusicPlayer @Inject constructor(
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
+                    android.util.Log.i("PlaybackTrace", "[PRELOAD] OK nextId=${nextSong.id} elapsed=${System.currentTimeMillis() - pt0}ms")
+                } else {
+                    android.util.Log.w("PlaybackTrace", "[PRELOAD] FAIL nextId=${nextSong.id} elapsed=${System.currentTimeMillis() - pt0}ms")
                 }
             } catch (e: Exception) {
-                // Preload failed, will resolve on transition
+                android.util.Log.e("PlaybackTrace", "[PRELOAD] EXCEPTION nextId=${nextSong.id} msg=${e.message} elapsed=${System.currentTimeMillis() - pt0}ms", e)
             } finally {
                 isPreloading = false
             }

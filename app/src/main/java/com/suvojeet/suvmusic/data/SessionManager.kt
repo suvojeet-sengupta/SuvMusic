@@ -1427,10 +1427,10 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun getNextSongPreloadDelay(): Int =
-        context.dataStore.data.first()[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 3
+        context.dataStore.data.first()[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 1
 
     val nextSongPreloadDelayFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 3
+        preferences[NEXT_SONG_PRELOAD_DELAY_KEY] ?: 1
     }
     
     suspend fun setNextSongPreloadDelay(seconds: Int) {
