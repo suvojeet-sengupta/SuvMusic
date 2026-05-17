@@ -1,3 +1,38 @@
+<!-- 
+  SEO METADATA
+  Keywords: SuvMusic, Suvojeet Sengupta, Music Streaming, Android, Jetpack Compose, Native Audio Engine, High-Resolution Audio, Open Source, C++ JNI, WSOLA, Parametric EQ, Spatial Audio, Material 3, Listen Together, Spotify Migration, ACRA, NewPipe Extractor
+  Description: SuvMusic is a premium, open-source high-fidelity music streaming application for Android by Suvojeet Sengupta.
+-->
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SuvMusic",
+  "operatingSystem": "Android",
+  "applicationCategory": "MusicApplication",
+  "description": "High-Fidelity Music Streaming for Android with Native C++ Audio Engine.",
+  "url": "https://github.com/suvojeet-sengupta/SuvMusic",
+  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases",
+  "softwareVersion": "2.5.0.0",
+  "author": {
+    "@type": "Person",
+    "name": "Suvojeet Sengupta",
+    "url": "https://suvojeetsengupta.in",
+    "sameAs": [
+      "https://github.com/suvojeet-sengupta",
+      "https://www.linkedin.com/in/suvojeet-sengupta/"
+    ],
+    "jobTitle": "Senior Android Engineer"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+
 <div align="center">
   <img src="screenshots/suvmusic_banner.png" alt="SuvMusic Banner" width="100%" />
 
@@ -177,10 +212,21 @@ SuvMusic is an independent project featuring original UI/UX and a custom audio e
 ## Developer
 
 **Suvojeet Sengupta**
-Senior Android Engineer
+*Senior Android Engineer & Software Architect*
 
+[View Full Developer Profile & Portfolio](DEVELOPER.md)
+
+Suvojeet is a specialized Android engineer with a passion for high-performance mobile systems and audio engineering. With extensive experience in **Kotlin**, **Jetpack Compose**, and **C++ JNI**, he focuses on building low-latency applications that push the boundaries of the Android platform.
+
+### Expertise & Focus
+- **Mobile Systems**: Advanced Android architecture (Clean Architecture, Multi-module).
+- **Audio Engineering**: Custom DSP, JNI bridges, and native audio processing.
+- **Open Source**: Committed to building transparent, privacy-focused software for the global community.
+
+### Connect
 [![GitHub](https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=for-the-badge&logo=github)](https://github.com/suvojeet-sengupta)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/suvojeet-sengupta/)
+[![Website](https://img.shields.io/badge/Personal_Site-Suvojeet.in-FF5722?style=for-the-badge&logo=google-chrome&logoColor=white)](https://suvojeetsengupta.in)
 [![Email](https://img.shields.io/badge/Email-suvojeet@suvojeetsengupta.in-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:suvojeet@suvojeetsengupta.in)
 [![Donate via Coindrop](https://img.shields.io/badge/Support-Coindrop-007BFF?style=for-the-badge&logo=heart&logoColor=white)](https://coindrop.to/suvojeet_sengupta)
 
