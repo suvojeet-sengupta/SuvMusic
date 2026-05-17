@@ -368,7 +368,12 @@ class YouTubeRepository @Inject constructor(
      * Use this when switching to Video Mode to play the actual video instead of static art track.
      */
     suspend fun getBestVideoId(song: Song): String = withContext(Dispatchers.IO) {
-        if (!networkMonitor.isCurrentlyConnected()) return@withContext song.id
+        val bt0 = System.currentTimeMillis()
+        if (!networkMonitor.isCurrentlyConnected()) {
+            android.util.Log.w("PlaybackTrace", "[BEST_VIDEO_ID] offline, returning original id=${song.id}")
+            return@withContext song.id
+        }
+        android.util.Log.i("PlaybackTrace", "[BEST_VIDEO_ID] searching origId=${song.id} title=${song.title}")
         
         // If it's already likely a video (not from "Topic" channel), keep it
         // Note: NewPipe extractor might settle on "Unknown Artist" if not detailed, 
@@ -385,10 +390,12 @@ class YouTubeRepository @Inject constructor(
         try {
             val query = "${song.title} ${song.artist} Official Video"
             val results = search(query, FILTER_VIDEOS)
-            
-            // Return the first video result if available
-            return@withContext results.firstOrNull()?.id ?: song.id
+
+            val picked = results.firstOrNull()?.id ?: song.id
+            android.util.Log.i("PlaybackTrace", "[BEST_VIDEO_ID] resolved origId=${song.id} -> $picked results=${results.size} elapsed=${System.currentTimeMillis() - bt0}ms")
+            return@withContext picked
         } catch (e: Exception) {
+            android.util.Log.e("PlaybackTrace", "[BEST_VIDEO_ID] EXCEPTION origId=${song.id} msg=${e.message} elapsed=${System.currentTimeMillis() - bt0}ms", e)
             e.printStackTrace()
             return@withContext song.id
         }
