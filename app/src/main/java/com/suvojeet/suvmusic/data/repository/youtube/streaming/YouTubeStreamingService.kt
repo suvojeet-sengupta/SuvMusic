@@ -81,52 +81,34 @@ class YouTubeStreamingService @Inject constructor(
      * Uses user's audio quality preference and caches the result.
      */
     suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
-        val gt0 = System.currentTimeMillis()
         val cacheKey = "audio_$videoId"
         if (!forceLow) {
             streamCache.get(cacheKey)?.let { cached ->
                 if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
-                    android.util.Log.i("PlaybackTrace", "[YT_AUDIO] CACHE_HIT videoId=$videoId ageMs=${System.currentTimeMillis() - cached.timestamp}")
                     return@withContext cached.url
                 }
             }
         } else {
             streamCache.remove(cacheKey)
-            android.util.Log.i("PlaybackTrace", "[YT_AUDIO] CACHE_BYPASS forceLow videoId=$videoId")
         }
 
         // In-flight dedup: piggyback on an existing fetch for the same videoId.
         // Key is videoId+forceLow so a high-quality fetch doesn't deliver a low-quality URL.
         // computeIfAbsent is atomic — closes the check-then-put race window.
         val inflightKey = "$videoId|$forceLow"
-        var createdNew = false
         val deferred = inFlightAudio.computeIfAbsent(inflightKey) {
-            createdNew = true
             dedupScope.async {
                 try {
                     val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, forceLow)
                     if (primaryResult != null) {
-                        android.util.Log.i("PlaybackTrace", "[YT_AUDIO] OK primary videoId=$videoId totalMs=${System.currentTimeMillis() - gt0}")
                         return@async primaryResult
                     }
-                    android.util.Log.w("PlaybackTrace", "[YT_AUDIO] primary FAILED, trying music.youtube videoId=$videoId elapsed=${System.currentTimeMillis() - gt0}ms")
                     android.util.Log.d("YouTubeStreaming", "Primary resolution failed for $videoId, trying music fallback")
-                    val fallback = resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
-                    if (fallback != null) {
-                        android.util.Log.i("PlaybackTrace", "[YT_AUDIO] OK music-fallback videoId=$videoId totalMs=${System.currentTimeMillis() - gt0}")
-                    } else {
-                        android.util.Log.e("PlaybackTrace", "[YT_AUDIO] FAIL all sources videoId=$videoId totalMs=${System.currentTimeMillis() - gt0}")
-                    }
-                    fallback
+                    resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
                 } finally {
                     inFlightAudio.remove(inflightKey)
                 }
             }
-        }
-        if (createdNew) {
-            android.util.Log.i("PlaybackTrace", "[YT_AUDIO] CACHE_MISS videoId=$videoId fetching...")
-        } else {
-            android.util.Log.i("PlaybackTrace", "[YT_AUDIO] IN_FLIGHT_JOIN videoId=$videoId — awaiting existing fetch")
         }
         deferred.await()
     }
@@ -175,7 +157,6 @@ class YouTubeStreamingService @Inject constructor(
                 else -> "m4a"
             }
             android.util.Log.d("YouTubeStreaming", "Audio fetched in ${latency}ms for $videoId. Bitrate: ${bestAudioStream?.averageBitrate}kbps")
-            android.util.Log.i("PlaybackTrace", "[YT_AUDIO] EXTRACT videoId=$videoId source=${if (streamUrl.contains("music.youtube")) "music" else "primary"} quality=$audioQuality streams=${audioStreams.size} bitrate=${bestAudioStream?.averageBitrate} format=$extension latencyMs=$latency")
 
             bestAudioStream?.content?.also { url ->
                 streamCache.put(cacheKey, CachedStream(url, extension, System.currentTimeMillis()))
@@ -197,7 +178,6 @@ class YouTubeStreamingService @Inject constructor(
     }
     
     suspend fun getVideoStreamResult(videoId: String, quality: com.suvojeet.suvmusic.core.model.VideoQuality? = null, forceLow: Boolean = false): VideoStreamResult? = withContext(Dispatchers.IO) {
-        val gt0 = System.currentTimeMillis()
         val targetQuality = if (forceLow) {
             com.suvojeet.suvmusic.core.model.VideoQuality.LOW
         } else {
@@ -210,13 +190,11 @@ class YouTubeStreamingService @Inject constructor(
         if (forceLow) {
             streamCache.remove(videoCacheKey)
             streamCache.remove(audioCacheKey)
-            android.util.Log.i("PlaybackTrace", "[YT_VIDEO] CACHE_BYPASS forceLow videoId=$videoId q=$targetQuality")
         } else {
             val cachedVideo = streamCache.get(videoCacheKey)
             val cachedAudio = streamCache.get(audioCacheKey)
 
             if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
-                android.util.Log.i("PlaybackTrace", "[YT_VIDEO] CACHE_HIT videoId=$videoId q=$targetQuality hasAudio=${cachedAudio != null}")
                 return@withContext VideoStreamResult(
                     videoUrl = cachedVideo.url,
                     audioUrl = cachedAudio?.url
@@ -225,34 +203,19 @@ class YouTubeStreamingService @Inject constructor(
         }
 
         val inflightKey = "$videoId|${targetQuality.name}|$forceLow"
-        var createdNew = false
         val deferred = inFlightVideo.computeIfAbsent(inflightKey) {
-            createdNew = true
             dedupScope.async {
                 try {
                     val primaryResult = resolveVideoWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, targetQuality)
                     if (primaryResult != null) {
-                        android.util.Log.i("PlaybackTrace", "[YT_VIDEO] OK primary videoId=$videoId res=${primaryResult.resolution} hasAudio=${primaryResult.audioUrl != null} totalMs=${System.currentTimeMillis() - gt0}")
                         return@async primaryResult
                     }
-                    android.util.Log.w("PlaybackTrace", "[YT_VIDEO] primary FAILED, trying music.youtube videoId=$videoId elapsed=${System.currentTimeMillis() - gt0}ms")
                     android.util.Log.d("YouTubeStreaming", "Primary video resolution failed for $videoId, trying music fallback")
-                    val fallback = resolveVideoWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, targetQuality)
-                    if (fallback != null) {
-                        android.util.Log.i("PlaybackTrace", "[YT_VIDEO] OK music-fallback videoId=$videoId totalMs=${System.currentTimeMillis() - gt0}")
-                    } else {
-                        android.util.Log.e("PlaybackTrace", "[YT_VIDEO] FAIL all sources videoId=$videoId totalMs=${System.currentTimeMillis() - gt0}")
-                    }
-                    fallback
+                    resolveVideoWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, targetQuality)
                 } finally {
                     inFlightVideo.remove(inflightKey)
                 }
             }
-        }
-        if (createdNew) {
-            android.util.Log.i("PlaybackTrace", "[YT_VIDEO] CACHE_MISS videoId=$videoId q=$targetQuality fetching...")
-        } else {
-            android.util.Log.i("PlaybackTrace", "[YT_VIDEO] IN_FLIGHT_JOIN videoId=$videoId q=$targetQuality — awaiting existing fetch")
         }
         deferred.await()
     }

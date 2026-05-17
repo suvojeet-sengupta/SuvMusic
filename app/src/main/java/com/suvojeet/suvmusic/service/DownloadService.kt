@@ -35,6 +35,11 @@ class DownloadService : Service() {
 
     companion object {
         private const val TAG = "DownloadService"
+        // Dedicated logcat tag shared with DownloadRepository for an
+        // end-to-end trace of any one download: enqueue -> stream URL ->
+        // open -> copy -> tag -> save -> persist (or any failure stage).
+        // adb logcat -s DownloadTrace:V DownloadService:V
+        private const val DL_TAG = "DownloadTrace"
         private const val CHANNEL_ID = "download_channel"
         private const val NOTIFICATION_ID = 2001
         private const val COMPLETE_NOTIFICATION_ID = 2002
@@ -133,6 +138,7 @@ class DownloadService : Service() {
     
     override fun onCreate() {
         super.onCreate()
+        android.util.Log.i(DL_TAG, "[SVC] onCreate")
         createNotificationChannel()
         observeDownloadProgress()
         // Reset batch counters every time the service spins up. If a prior
@@ -144,6 +150,7 @@ class DownloadService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.i(DL_TAG, "[SVC] onStartCommand action=${intent?.action} startId=$startId")
         // Fix for Android 12+ ForegroundServiceDidNotStartInTimeException
         // We must call startForeground immediately
         startForeground(NOTIFICATION_ID, createProgressNotification("Starting service...", 0, 0, 0))
@@ -157,6 +164,8 @@ class DownloadService : Service() {
                     // Treat single download as adding to queue
                     downloadRepository.downloadSongToQueue(song)
                     processQueue()
+                } else {
+                    android.util.Log.w(DL_TAG, "[SVC] START_DOWNLOAD with null/invalid song JSON")
                 }
             }
             ACTION_PROCESS_QUEUE -> {
@@ -191,10 +200,16 @@ class DownloadService : Service() {
     }
 
     private fun processQueue() {
-        if (batchJob?.isActive == true) return
+        if (batchJob?.isActive == true) {
+            android.util.Log.d(DL_TAG, "[SVC] processQueue ignored — batchJob already active")
+            return
+        }
 
         batchJob = serviceScope.launch {
-            Log.d(TAG, "Starting queue processing")
+            android.util.Log.i(
+                DL_TAG,
+                "[SVC] batch start queueSize=${downloadRepository.queueState.value.size}",
+            )
 
             while (true) {
                 val song = downloadRepository.popFromQueue()
@@ -206,9 +221,10 @@ class DownloadService : Service() {
                     // before we tear down — if a new item slipped in, keep
                     // looping; otherwise stop for real.
                     if (downloadRepository.queueState.value.isNotEmpty()) {
+                        android.util.Log.d(DL_TAG, "[SVC] queue race — re-checking")
                         continue
                     }
-                    Log.d(TAG, "Queue empty, stopping service")
+                    android.util.Log.i(DL_TAG, "[SVC] queue drained, stopping service")
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     break
@@ -225,7 +241,10 @@ class DownloadService : Service() {
                 updateForegroundNotification(song.title, 0, newDone, total)
 
                 try {
-                    Log.d(TAG, "Downloading: ${song.title}")
+                    android.util.Log.i(
+                        DL_TAG,
+                        "[SVC] start id=${song.id} ($newDone/$total) title=${song.title}",
+                    )
                     // Tri-state result: SKIPPED for already-downloaded/
                     // in-flight songs gets no completion toast (the old
                     // Boolean returned `true` for skipped, so the user saw

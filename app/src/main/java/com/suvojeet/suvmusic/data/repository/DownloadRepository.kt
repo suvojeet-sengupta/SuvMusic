@@ -48,6 +48,9 @@ class DownloadRepository @Inject constructor(
     companion object {
         private const val TAG = "DownloadRepository"
         private const val SUVMUSIC_FOLDER = "SuvMusic"
+        // Dedicated logcat tag for end-to-end download tracing.
+        // `adb logcat -s DownloadTrace:V` to capture all download events.
+        private const val DL_TAG = "DownloadTrace"
     }
     
     private val gson = com.google.gson.GsonBuilder()
@@ -382,18 +385,22 @@ class DownloadRepository @Inject constructor(
 
         val customLocationUri = sessionManager.getDownloadLocation()
         if (customLocationUri != null) {
+            android.util.Log.i(DL_TAG, "[SAVE] route=custom_saf id=$songId subfolder=$subfolder")
             return saveToCustomLocation(fileName, inputStream, customLocationUri, subfolder, extension)
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            android.util.Log.i(DL_TAG, "[SAVE] route=mediastore id=$songId subfolder=$subfolder")
             saveToMediaStore(songId, fileName, inputStream, subfolder, extension)
         } else {
+            android.util.Log.i(DL_TAG, "[SAVE] route=public_folder id=$songId subfolder=$subfolder")
             saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
     }
 
     private fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
+            android.util.Log.i(DL_TAG, "[SAVE_SAF] start fileName=$fileName treeUri=$treeUri")
             val rootUri = Uri.parse(treeUri)
             var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
 
@@ -420,6 +427,7 @@ class DownloadRepository @Inject constructor(
 
             newFile.uri
         } catch (e: Exception) {
+            android.util.Log.e(DL_TAG, "[SAVE_SAF] EXCEPTION fileName=$fileName msg=${e.message}", e)
             Log.e(TAG, "Error saving to custom location", e)
             null
         }
@@ -427,6 +435,7 @@ class DownloadRepository @Inject constructor(
 
     private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
+            android.util.Log.i(DL_TAG, "[SAVE_MS] start fileName=$fileName subfolder=$subfolder")
             val relativePath = if (subfolder != null) {
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
             } else {
@@ -455,6 +464,11 @@ class DownloadRepository @Inject constructor(
             }
             uri
         } catch (e: Exception) {
+            android.util.Log.e(
+                DL_TAG,
+                "[SAVE_MS] EXCEPTION fileName=$fileName msg=${e.message} — falling back to public folder",
+                e,
+            )
             Log.e(TAG, "Error saving to MediaStore", e)
             saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
@@ -462,6 +476,7 @@ class DownloadRepository @Inject constructor(
 
     private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
         return try {
+            android.util.Log.i(DL_TAG, "[SAVE_PUB] start fileName=$fileName subfolder=$subfolder")
             val rootFolder = getPublicMusicFolder()
             val targetFolder = if (subfolder != null) {
                 File(rootFolder, sanitizeFileName(subfolder)).apply { mkdirs() }
@@ -475,6 +490,7 @@ class DownloadRepository @Inject constructor(
             }
             file.toUri()
         } catch (e: Exception) {
+            android.util.Log.e(DL_TAG, "[SAVE_PUB] EXCEPTION fileName=$fileName msg=${e.message}", e)
             Log.e(TAG, "Error saving to Music folder", e)
             null
         }
@@ -811,13 +827,26 @@ class DownloadRepository @Inject constructor(
      */
     suspend fun downloadSong(song: Song): com.suvojeet.suvmusic.core.model.DownloadResult =
         withContext(Dispatchers.IO) {
+            val t0 = System.currentTimeMillis()
+            android.util.Log.i(
+                DL_TAG,
+                "[ENTER] id=${song.id} src=${song.source} title=${song.title} " +
+                    "artist=${song.artist} videoMode=${song.isVideo}",
+            )
+
             // Mutex-guarded admission check. We record the in-flight job
             // *inside* the lock so a concurrent cancelDownload() call can't
             // observe a window where _downloadingIds has the id but
             // activeDownloadJobs doesn't.
             val canDownload = downloadMutex.withLock {
-                if (_downloadedSongs.value.any { it.id == song.id }) return@withLock false
-                if (_downloadingIds.value.contains(song.id)) return@withLock false
+                if (_downloadedSongs.value.any { it.id == song.id }) {
+                    android.util.Log.i(DL_TAG, "[SKIP] id=${song.id} reason=already_downloaded")
+                    return@withLock false
+                }
+                if (_downloadingIds.value.contains(song.id)) {
+                    android.util.Log.i(DL_TAG, "[SKIP] id=${song.id} reason=already_in_flight")
+                    return@withLock false
+                }
                 _downloadingIds.update { it + song.id }
                 val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
                 if (job != null) activeDownloadJobs[song.id] = job
@@ -827,6 +856,11 @@ class DownloadRepository @Inject constructor(
             if (!canDownload) return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.SKIPPED
 
             try {
+                val rt0 = System.currentTimeMillis()
+                android.util.Log.i(
+                    DL_TAG,
+                    "[STREAM_URL] fetch start id=${song.id} src=${song.source}",
+                )
                 val streamResult = when (song.source) {
                     SongSource.JIOSAAVN -> {
                         val url = jioSaavnRepository.getStreamUrl(song.id, 320)
@@ -834,22 +868,50 @@ class DownloadRepository @Inject constructor(
                     }
                     else -> youTubeRepository.getStreamUrlForDownload(song.id)
                 }
+                val streamElapsed = System.currentTimeMillis() - rt0
                 if (streamResult == null) {
+                    android.util.Log.e(
+                        DL_TAG,
+                        "[STREAM_URL] FAILED id=${song.id} src=${song.source} " +
+                            "elapsed=${streamElapsed}ms totalElapsed=${System.currentTimeMillis() - t0}ms",
+                    )
                     clearInFlight(song.id)
                     return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
                 }
 
                 val (streamUrl, extension) = streamResult
+                android.util.Log.i(
+                    DL_TAG,
+                    "[STREAM_URL] OK id=${song.id} extension=$extension " +
+                        "urlPrefix=${streamUrl.take(80)} elapsed=${streamElapsed}ms",
+                )
+
                 val ok = downloadUsingSharedCache(song, streamUrl, extension)
-                if (ok) com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS
-                else com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+                val total = System.currentTimeMillis() - t0
+                if (ok) {
+                    android.util.Log.i(DL_TAG, "[DONE] SUCCESS id=${song.id} totalElapsed=${total}ms")
+                    com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS
+                } else {
+                    android.util.Log.w(DL_TAG, "[DONE] FAILED id=${song.id} totalElapsed=${total}ms")
+                    com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Cancellation flows through; clear state but don't log as
                 // an error and let the exception propagate so the parent
                 // coroutine knows the job stopped.
+                android.util.Log.w(
+                    DL_TAG,
+                    "[CANCELLED] id=${song.id} totalElapsed=${System.currentTimeMillis() - t0}ms",
+                )
                 clearInFlight(song.id)
                 throw e
             } catch (e: Exception) {
+                android.util.Log.e(
+                    DL_TAG,
+                    "[EXCEPTION] downloadSong id=${song.id} causeType=${e.javaClass.simpleName} " +
+                        "msg=${e.message} totalElapsed=${System.currentTimeMillis() - t0}ms",
+                    e,
+                )
                 Log.e(TAG, "Download error for ${song.id}", e)
                 clearInFlight(song.id)
                 com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
@@ -872,6 +934,7 @@ class DownloadRepository @Inject constructor(
         streamUrl: String,
         extension: String,
     ): Boolean = withContext(Dispatchers.IO) {
+        val ct0 = System.currentTimeMillis()
         val uri = android.net.Uri.parse(streamUrl)
         val dataSpec = androidx.media3.datasource.DataSpec.Builder()
             .setUri(uri)
@@ -883,11 +946,19 @@ class DownloadRepository @Inject constructor(
 
         try {
             dataSource = dataSourceFactory.createDataSource()
+            val openT0 = System.currentTimeMillis()
             val length = dataSource.open(dataSpec)
             val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
+            android.util.Log.i(
+                DL_TAG,
+                "[OPEN] OK id=${song.id} contentLength=$contentLength " +
+                    "openMs=${System.currentTimeMillis() - openT0}",
+            )
 
             _downloadProgress.update { it + (song.id to 0f) }
 
+            val copyT0 = System.currentTimeMillis()
+            android.util.Log.i(DL_TAG, "[COPY] start id=${song.id} tempFile=${tempFile.absolutePath}")
             // .use{} on both streams so a throw mid-copy (network drop,
             // cancellation, disk full) still releases the file handle.
             androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec).use { input ->
@@ -897,20 +968,50 @@ class DownloadRepository @Inject constructor(
                     }
                 }
             }
+            val copyMs = System.currentTimeMillis() - copyT0
+            val writtenBytes = tempFile.length()
+            val throughputKbps = if (copyMs > 0) (writtenBytes * 8 / copyMs).toInt() else 0
+            android.util.Log.i(
+                DL_TAG,
+                "[COPY] OK id=${song.id} bytes=$writtenBytes copyMs=$copyMs " +
+                    "throughput=${throughputKbps}kbps",
+            )
 
+            val tagT0 = System.currentTimeMillis()
             tagAudioFile(tempFile, song)
+            android.util.Log.i(
+                DL_TAG,
+                "[TAG] OK id=${song.id} tagMs=${System.currentTimeMillis() - tagT0}",
+            )
 
+            val saveT0 = System.currentTimeMillis()
             val downloadedUri = tempFile.inputStream().use { input ->
                 saveFileToPublicDownloads(
                     song.id, song.artist, song.title, input,
                     song.customFolderPath, extension,
                 )
             } ?: run {
+                android.util.Log.e(
+                    DL_TAG,
+                    "[SAVE] FAILED id=${song.id} all destinations returned null " +
+                        "elapsed=${System.currentTimeMillis() - saveT0}ms",
+                )
                 clearInFlight(song.id)
                 return@withContext false
             }
+            android.util.Log.i(
+                DL_TAG,
+                "[SAVE] OK id=${song.id} uri=$downloadedUri " +
+                    "saveMs=${System.currentTimeMillis() - saveT0}",
+            )
 
+            val thumbT0 = System.currentTimeMillis()
             val localThumbnailUrl = downloadAndSaveThumbnail(song) ?: song.thumbnailUrl
+            android.util.Log.i(
+                DL_TAG,
+                "[THUMB] id=${song.id} localResolved=${localThumbnailUrl != song.thumbnailUrl} " +
+                    "thumbMs=${System.currentTimeMillis() - thumbT0}",
+            )
 
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
@@ -933,12 +1034,27 @@ class DownloadRepository @Inject constructor(
             saveDownloads()
             _downloadingIds.update { it - song.id }
             _downloadProgress.update { it - song.id }
+            android.util.Log.i(
+                DL_TAG,
+                "[PERSIST] OK id=${song.id} totalNow=${_downloadedSongs.value.size} " +
+                    "stageElapsed=${System.currentTimeMillis() - ct0}ms",
+            )
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
             // Caller cancelled mid-stream. Clean up everything we wrote.
+            android.util.Log.w(
+                DL_TAG,
+                "[COPY] CANCELLED id=${song.id} stageElapsed=${System.currentTimeMillis() - ct0}ms",
+            )
             clearInFlight(song.id)
             throw e
         } catch (e: Exception) {
+            android.util.Log.e(
+                DL_TAG,
+                "[COPY] EXCEPTION id=${song.id} causeType=${e.javaClass.simpleName} " +
+                    "msg=${e.message} stageElapsed=${System.currentTimeMillis() - ct0}ms",
+                e,
+            )
             Log.e(TAG, "Error in downloadUsingSharedCache", e)
             clearInFlight(song.id)
             false
@@ -979,7 +1095,13 @@ class DownloadRepository @Inject constructor(
         song: Song,
         onReadyToPlay: (android.net.Uri) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
+        val t0 = System.currentTimeMillis()
+        android.util.Log.i(
+            DL_TAG,
+            "[PROGRESSIVE] enter id=${song.id} title=${song.title}",
+        )
         if (_downloadedSongs.value.any { it.id == song.id }) {
+            android.util.Log.i(DL_TAG, "[PROGRESSIVE] already-downloaded id=${song.id}")
             _downloadedSongs.value.find { it.id == song.id }?.localUri?.let { uri ->
                 withContext(Dispatchers.Main) { onReadyToPlay(Uri.parse(uri)) }
             }
@@ -1002,6 +1124,10 @@ class DownloadRepository @Inject constructor(
         try {
             val streamResult = youTubeRepository.getStreamUrlForDownload(song.id)
             if (streamResult == null) {
+                android.util.Log.e(
+                    DL_TAG,
+                    "[PROGRESSIVE] STREAM_URL_FAIL id=${song.id} elapsed=${System.currentTimeMillis() - t0}ms",
+                )
                 clearInFlight(song.id)
                 return@withContext false
             }
@@ -1014,7 +1140,13 @@ class DownloadRepository @Inject constructor(
                 .newCall(Request.Builder().url(streamUrl).build())
                 .execute()
                 .use { response ->
-                    if (!response.isSuccessful) return@use null
+                    if (!response.isSuccessful) {
+                        android.util.Log.e(
+                            DL_TAG,
+                            "[PROGRESSIVE] HTTP_FAIL id=${song.id} code=${response.code}",
+                        )
+                        return@use null
+                    }
 
                     val contentLength = response.body.contentLength()
                     val minBytesForPlayback = 480 * 1024L
@@ -1086,11 +1218,25 @@ class DownloadRepository @Inject constructor(
             saveDownloads()
             _downloadingIds.update { it - song.id }
             _downloadProgress.update { it - song.id }
+            android.util.Log.i(
+                DL_TAG,
+                "[PROGRESSIVE] OK id=${song.id} totalElapsed=${System.currentTimeMillis() - t0}ms",
+            )
             true
         } catch (e: kotlinx.coroutines.CancellationException) {
+            android.util.Log.w(
+                DL_TAG,
+                "[PROGRESSIVE] CANCELLED id=${song.id} totalElapsed=${System.currentTimeMillis() - t0}ms",
+            )
             clearInFlight(song.id)
             throw e
         } catch (e: Exception) {
+            android.util.Log.e(
+                DL_TAG,
+                "[PROGRESSIVE] EXCEPTION id=${song.id} causeType=${e.javaClass.simpleName} " +
+                    "msg=${e.message} totalElapsed=${System.currentTimeMillis() - t0}ms",
+                e,
+            )
             Log.e(TAG, "Progressive download error for ${song.id}", e)
             clearInFlight(song.id)
             false
@@ -1101,16 +1247,23 @@ class DownloadRepository @Inject constructor(
     }
 
     fun cancelDownload(songId: String) {
+        val hadJob = activeDownloadJobs[songId] != null
         activeDownloadJobs[songId]?.cancel()
+        var removedFromQueue = false
         val iterator = downloadQueue.iterator()
         while (iterator.hasNext()) {
             if (iterator.next().id == songId) {
                 iterator.remove()
+                removedFromQueue = true
                 break
             }
         }
         _downloadingIds.update { it - songId }
         _downloadProgress.update { it - songId }
+        android.util.Log.i(
+            DL_TAG,
+            "[CANCEL] id=$songId hadActiveJob=$hadJob removedFromQueue=$removedFromQueue",
+        )
     }
 
     suspend fun deleteDownload(songId: String) = withContext(Dispatchers.IO) {
@@ -1362,6 +1515,11 @@ class DownloadRepository @Inject constructor(
 
     fun downloadSongs(songs: List<Song>) {
         val newSongs = songs.filter { song -> _downloadedSongs.value.none { it.id == song.id } && downloadQueue.none { it.id == song.id } && !_downloadingIds.value.contains(song.id) }
+        android.util.Log.i(
+            DL_TAG,
+            "[ENQUEUE] requested=${songs.size} added=${newSongs.size} " +
+                "skipped=${songs.size - newSongs.size} queueSizeAfter=${downloadQueue.size + newSongs.size}",
+        )
         if (newSongs.isEmpty()) return
         downloadQueue.addAll(newSongs)
         _queueState.value = downloadQueue.toList()
