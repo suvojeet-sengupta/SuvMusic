@@ -509,7 +509,7 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private fun saveToCustomLocationWithProgress(
+    private suspend fun saveToCustomLocationWithProgress(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
@@ -549,7 +549,7 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private fun saveToMediaStoreWithProgress(
+    private suspend fun saveToMediaStoreWithProgress(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
@@ -590,7 +590,7 @@ class DownloadRepository @Inject constructor(
             null
         }
     }    
-    private fun saveToPublicFolderWithProgress(
+    private suspend fun saveToPublicFolderWithProgress(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
@@ -616,7 +616,16 @@ class DownloadRepository @Inject constructor(
         }
     }
     
-    private fun copyWithProgress(
+    /**
+     * Suspending copy so cancellation actually stops the byte pump.
+     *
+     * The previous non-suspend version meant a cancel from
+     * [cancelDownload] only flipped UI state — the OkHttp/DataSource read
+     * loop kept running until the upstream finished, draining bandwidth
+     * and storage long after the user had moved on. `ensureActive()` on
+     * each chunk converts the next read into a cooperative exit point.
+     */
+    private suspend fun copyWithProgress(
         input: InputStream,
         output: java.io.OutputStream,
         contentLength: Long,
@@ -626,18 +635,30 @@ class DownloadRepository @Inject constructor(
         var bytesRead: Int
         var totalBytesRead = 0L
         var lastProgressUpdate = 0L
-        
+
         while (input.read(buffer).also { bytesRead = it } != -1) {
+            currentCoroutineContext().ensureActive()
             output.write(buffer, 0, bytesRead)
             totalBytesRead += bytesRead
-            
+
             if (contentLength > 0 && totalBytesRead - lastProgressUpdate > 50 * 1024) {
                 val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
                 onProgress(progress)
                 lastProgressUpdate = totalBytesRead
             }
         }
-        
+
+        // Surface "received fewer bytes than expected" as a real failure
+        // instead of silently keeping a truncated file. Without this,
+        // a TCP RST mid-stream produced a partial m4a that "played" for a
+        // few seconds and then ended — the user thought the download had
+        // worked. Allow a small tolerance for content-length lies from CDNs.
+        if (contentLength > 0 && totalBytesRead < contentLength - 4096) {
+            throw java.io.IOException(
+                "Truncated download: got $totalBytesRead of $contentLength bytes"
+            )
+        }
+
         if (contentLength > 0) {
             onProgress(1f)
         }
@@ -764,7 +785,12 @@ class DownloadRepository @Inject constructor(
                 fos.write(json.toByteArray(Charsets.UTF_8))
                 atomicFile.finishWrite(fos)
             } catch (e: Exception) {
-                atomicFile.failWrite(fos)
+                // Guard the null case: if startWrite() itself threw, fos
+                // is still null and failWrite(null) NPE's on Android < 30.
+                if (fos != null) {
+                    try { atomicFile.failWrite(fos) } catch (_: Exception) {}
+                }
+                Log.e(TAG, "AtomicFile write failed", e)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error saving downloads", e)
@@ -773,115 +799,179 @@ class DownloadRepository @Inject constructor(
 
     private val downloadMutex = kotlinx.coroutines.sync.Mutex()
 
-    suspend fun downloadSong(song: Song): Boolean = withContext(Dispatchers.IO) {
-        val canDownload = downloadMutex.withLock {
-            if (_downloadedSongs.value.any { it.id == song.id }) return@withLock false
-            if (_downloadingIds.value.contains(song.id)) return@withLock false
-            _downloadingIds.update { it + song.id }
-            true
+    /**
+     * Download a single song. Returns a tri-state outcome:
+     *  - SUCCESS — wrote the file, song now in `downloadedSongs`.
+     *  - SKIPPED — already downloaded or already in flight; no work done.
+     *  - FAILED  — stream URL or copy failed; state cleaned up.
+     *
+     * Previously returned `Boolean` and used `true` for both SUCCESS and
+     * SKIPPED, which made [DownloadService] post a "Download complete"
+     * notification for songs the user had already downloaded.
+     */
+    suspend fun downloadSong(song: Song): com.suvojeet.suvmusic.core.model.DownloadResult =
+        withContext(Dispatchers.IO) {
+            // Mutex-guarded admission check. We record the in-flight job
+            // *inside* the lock so a concurrent cancelDownload() call can't
+            // observe a window where _downloadingIds has the id but
+            // activeDownloadJobs doesn't.
+            val canDownload = downloadMutex.withLock {
+                if (_downloadedSongs.value.any { it.id == song.id }) return@withLock false
+                if (_downloadingIds.value.contains(song.id)) return@withLock false
+                _downloadingIds.update { it + song.id }
+                val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+                if (job != null) activeDownloadJobs[song.id] = job
+                true
+            }
+
+            if (!canDownload) return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.SKIPPED
+
+            try {
+                val streamResult = when (song.source) {
+                    SongSource.JIOSAAVN -> {
+                        val url = jioSaavnRepository.getStreamUrl(song.id, 320)
+                        if (url != null) url to "m4a" else null
+                    }
+                    else -> youTubeRepository.getStreamUrlForDownload(song.id)
+                }
+                if (streamResult == null) {
+                    clearInFlight(song.id)
+                    return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+                }
+
+                val (streamUrl, extension) = streamResult
+                val ok = downloadUsingSharedCache(song, streamUrl, extension)
+                if (ok) com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS
+                else com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Cancellation flows through; clear state but don't log as
+                // an error and let the exception propagate so the parent
+                // coroutine knows the job stopped.
+                clearInFlight(song.id)
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Download error for ${song.id}", e)
+                clearInFlight(song.id)
+                com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+            } finally {
+                activeDownloadJobs.remove(song.id)
+            }
         }
 
-        if (!canDownload) return@withContext true
-        
-        val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
-        if (job != null) activeDownloadJobs[song.id] = job
-        
-        try {
-            val streamResult = when (song.source) {
-                SongSource.JIOSAAVN -> {
-                    val url = jioSaavnRepository.getStreamUrl(song.id, 320)
-                    if (url != null) url to "m4a" else null
-                }
-                else -> youTubeRepository.getStreamUrlForDownload(song.id)
-            }
-            if (streamResult == null) {
-                downloadMutex.withLock { _downloadingIds.update { it - song.id } }
-                return@withContext false
-            }
-            
-            val (streamUrl, extension) = streamResult
-            return@withContext downloadUsingSharedCache(song, streamUrl, extension)
-        } catch (e: Exception) {
-            Log.e(TAG, "Download error for ${song.id}", e)
-            downloadMutex.withLock { _downloadingIds.update { it - song.id } }
-            _downloadProgress.update { it - song.id }
-            false
-        } finally {
-            activeDownloadJobs.remove(song.id)
-        }
+    /**
+     * Single cleanup path so success/failure/cancellation all leave the
+     * same state behind — no orphaned entries in any of the three flows.
+     */
+    private fun clearInFlight(songId: String) {
+        _downloadingIds.update { it - songId }
+        _downloadProgress.update { it - songId }
     }
 
-    private suspend fun downloadUsingSharedCache(song: Song, streamUrl: String, extension: String): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun downloadUsingSharedCache(
+        song: Song,
+        streamUrl: String,
+        extension: String,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val uri = android.net.Uri.parse(streamUrl)
+        val dataSpec = androidx.media3.datasource.DataSpec.Builder()
+            .setUri(uri)
+            .setKey(song.id)
+            .build()
+
+        val tempFile = File(context.cacheDir, "${song.id}_download.$extension")
+        var dataSource: androidx.media3.datasource.DataSource? = null
+
         try {
-            val uri = android.net.Uri.parse(streamUrl)
-            val dataSpec = androidx.media3.datasource.DataSpec.Builder()
-                .setUri(uri)
-                .setKey(song.id)
-                .build()
-            val dataSource = dataSourceFactory.createDataSource()
-            
+            dataSource = dataSourceFactory.createDataSource()
             val length = dataSource.open(dataSpec)
             val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
-            
+
             _downloadProgress.update { it + (song.id to 0f) }
-            
-            val tempFile = File(context.cacheDir, "${song.id}_download.$extension")
-            val inputStream = androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec)
-            
-            FileOutputStream(tempFile).use { outputStream ->
-                copyWithProgress(inputStream, outputStream, contentLength) { progress ->
-                    _downloadProgress.update { it + (song.id to progress) }
+
+            // .use{} on both streams so a throw mid-copy (network drop,
+            // cancellation, disk full) still releases the file handle.
+            androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec).use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    copyWithProgress(input, output, contentLength) { progress ->
+                        _downloadProgress.update { it + (song.id to progress) }
+                    }
                 }
             }
-            dataSource.close()
-            
+
             tagAudioFile(tempFile, song)
-            
+
             val downloadedUri = tempFile.inputStream().use { input ->
-                saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
-            }
-            
-            if (tempFile.exists()) tempFile.delete()
-            
-            if (downloadedUri == null) {
-                _downloadingIds.update { it - song.id }
-                _downloadProgress.update { it - song.id }
+                saveFileToPublicDownloads(
+                    song.id, song.artist, song.title, input,
+                    song.customFolderPath, extension,
+                )
+            } ?: run {
+                clearInFlight(song.id)
                 return@withContext false
             }
-            
-            val currentThumbnailUrl = song.thumbnailUrl
-            var localThumbnailUrl = currentThumbnailUrl
-            if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
-                try {
-                    val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
-                    val thumbBytes = downloadThumbnailBytes(url = highResThumbnailUrl)
-                    if (thumbBytes != null) {
-                        val thumbnailsDir = File(context.filesDir, "thumbnails")
-                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
-                        val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        FileOutputStream(thumbFile).use { it.write(thumbBytes) }
-                        localThumbnailUrl = thumbFile.toUri().toString()
-                    }
-                } catch (e: Exception) {}
-            }
+
+            val localThumbnailUrl = downloadAndSaveThumbnail(song) ?: song.thumbnailUrl
 
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
                 localUri = downloadedUri.toString(),
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source
+                originalSource = song.source,
             )
 
+            // Order matters for UI consistency. The PlayerViewModel
+            // observer uses combine(downloadedSongs, downloadingIds) and
+            // the `downloaded` branch takes priority over `downloading`.
+            // So we publish into `downloadedSongs` FIRST — at that point
+            // the combined snapshot is (downloaded ✓, downloading ✓) and
+            // the icon flips straight to "downloaded". Clearing the
+            // in-flight flags afterward emits another DOWNLOADED snapshot
+            // (still downloaded ✓, no longer downloading), so the icon
+            // never flickers back through NOT_DOWNLOADED on the way.
             _downloadedSongs.update { it + downloadedSong }
             saveDownloads()
             _downloadingIds.update { it - song.id }
+            _downloadProgress.update { it - song.id }
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Caller cancelled mid-stream. Clean up everything we wrote.
+            clearInFlight(song.id)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error in downloadUsingSharedCache", e)
-            _downloadingIds.update { it - song.id }
-            _downloadProgress.update { it - song.id }
+            clearInFlight(song.id)
             false
+        } finally {
+            // Always: release upstream and delete the temp file. Without
+            // this finally, cancelled/failed downloads orphaned partial
+            // .m4a files in cacheDir and the cache grew unbounded over
+            // time. Wrap each in its own try so a throw in one doesn't
+            // leak the other.
+            try { dataSource?.close() } catch (_: Exception) {}
+            try { if (tempFile.exists()) tempFile.delete() } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Best-effort thumbnail download. Returns the local file:// URI on
+     * success, null on failure or when there's no remote URL — caller
+     * falls back to the original (possibly remote) thumbnailUrl.
+     */
+    private suspend fun downloadAndSaveThumbnail(song: Song): String? {
+        val remote = song.thumbnailUrl
+        if (remote.isNullOrEmpty() || !remote.startsWith("http")) return null
+        return try {
+            val highResUrl = getHighResThumbnailUrl(remote, song.id)
+            val bytes = downloadThumbnailBytes(highResUrl) ?: return null
+            val thumbnailsDir = File(context.filesDir, "thumbnails").apply {
+                if (!exists()) mkdirs()
+            }
+            val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
+            FileOutputStream(thumbFile).use { it.write(bytes) }
+            thumbFile.toUri().toString()
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -895,124 +985,118 @@ class DownloadRepository @Inject constructor(
             }
             return@withContext true
         }
-        
+
+        // Register the job in activeDownloadJobs so cancelDownload() can
+        // actually stop a progressive download. Without this the remove()
+        // in finally was a no-op and progressive cancels silently failed.
         _downloadingIds.update { it + song.id }
         _downloadProgress.update { it + (song.id to 0f) }
-        
+        kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+            ?.let { activeDownloadJobs[song.id] = it }
+
+        val tempDir = File(context.cacheDir, "progressive_downloads").apply {
+            if (!exists()) mkdirs()
+        }
+        var tempFile: File? = null
+
         try {
             val streamResult = youTubeRepository.getStreamUrlForDownload(song.id)
             if (streamResult == null) {
-                _downloadingIds.update { it - song.id }
-                _downloadProgress.update { it - song.id }
+                clearInFlight(song.id)
                 return@withContext false
             }
-            
+
             val (streamUrl, extension) = streamResult
-            val tempDir = File(context.cacheDir, "progressive_downloads")
-            if (!tempDir.exists()) tempDir.mkdirs()
-            val tempFile = File(tempDir, "${song.id}.$extension.tmp")
-            var finalUri: android.net.Uri? = null
+            tempFile = File(tempDir, "${song.id}.$extension.tmp")
+            val tmp = tempFile  // smart-cast helper for use inside lambdas
 
-            val request = Request.Builder().url(streamUrl).build()
-            val response = downloadClient.newCall(request).execute()
-            try {
-                if (!response.isSuccessful) {
-                    _downloadingIds.update { it - song.id }
-                    _downloadProgress.update { it - song.id }
-                    return@withContext false
-                }
+            val finalUri: android.net.Uri? = downloadClient
+                .newCall(Request.Builder().url(streamUrl).build())
+                .execute()
+                .use { response ->
+                    if (!response.isSuccessful) return@use null
 
-                val contentLength = response.body.contentLength()
-                val minBytesForPlayback = 480 * 1024L
-                var playbackTriggered = false
-                var totalBytesRead = 0L
+                    val contentLength = response.body.contentLength()
+                    val minBytesForPlayback = 480 * 1024L
+                    var playbackTriggered = false
+                    var totalBytesRead = 0L
 
-                response.body.byteStream().use { inputStream ->
-                    FileOutputStream(tempFile).use { outputStream ->
-                        val buffer = ByteArray(8192)
-                        var bytesRead: Int
-                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                            // Honour cancellation promptly. Without this the user's
-                            // tap on Cancel only stopped the cooperative coroutine
-                            // bookkeeping while OkHttp/file copy kept reading bytes
-                            // until the next chunk boundary — the row disappeared
-                            // from UI but bandwidth/storage kept draining. Inside
-                            // the .use { } lambdas there's no CoroutineScope
-                            // receiver, so reach for the suspending context form.
-                            currentCoroutineContext().ensureActive()
-                            outputStream.write(buffer, 0, bytesRead)
-                            totalBytesRead += bytesRead
-                            if (contentLength > 0) {
-                                val progress = (totalBytesRead.toFloat() / contentLength).coerceIn(0f, 1f)
-                                _downloadProgress.update { it + (song.id to progress) }
-                            }
-                            if (!playbackTriggered && totalBytesRead >= minBytesForPlayback) {
-                                playbackTriggered = true
-                                withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
+                    response.body.byteStream().use { inputStream ->
+                        FileOutputStream(tmp).use { outputStream ->
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                currentCoroutineContext().ensureActive()
+                                outputStream.write(buffer, 0, bytesRead)
+                                totalBytesRead += bytesRead
+                                if (contentLength > 0) {
+                                    val progress = (totalBytesRead.toFloat() / contentLength)
+                                        .coerceIn(0f, 1f)
+                                    _downloadProgress.update { it + (song.id to progress) }
+                                }
+                                if (!playbackTriggered && totalBytesRead >= minBytesForPlayback) {
+                                    playbackTriggered = true
+                                    withContext(Dispatchers.Main) { onReadyToPlay(tmp.toUri()) }
+                                }
                             }
                         }
                     }
-                }
 
-                if (!playbackTriggered && tempFile.exists()) {
-                    withContext(Dispatchers.Main) { onReadyToPlay(tempFile.toUri()) }
-                }
+                    if (contentLength > 0 && totalBytesRead < contentLength - 4096) {
+                        throw java.io.IOException(
+                            "Truncated progressive download: " +
+                                "$totalBytesRead of $contentLength bytes",
+                        )
+                    }
 
-                tagAudioFile(tempFile, song)
-                finalUri = tempFile.inputStream().use { input ->
-                    saveFileToPublicDownloads(song.id, song.artist, song.title, input, song.customFolderPath, extension)
+                    if (!playbackTriggered && tmp.exists()) {
+                        withContext(Dispatchers.Main) { onReadyToPlay(tmp.toUri()) }
+                    }
+
+                    tagAudioFile(tmp, song)
+                    tmp.inputStream().use { input ->
+                        saveFileToPublicDownloads(
+                            song.id, song.artist, song.title, input,
+                            song.customFolderPath, extension,
+                        )
+                    }
                 }
-            } finally {
-                // Always clean up: the .tmp is no longer needed once it has
-                // been copied to the public Music folder, AND any cancellation
-                // / failure path that leaves the .tmp partial must not orphan
-                // it in the cache directory (storage bloated over time).
-                response.close()
-                if (tempFile.exists()) tempFile.delete()
-            }
 
             if (finalUri == null) {
-                _downloadingIds.update { it - song.id }
-                _downloadProgress.update { it - song.id }
+                clearInFlight(song.id)
                 return@withContext false
             }
-            
-            val currentThumbnailUrl = song.thumbnailUrl
-            var localThumbnailUrl = currentThumbnailUrl
-            if (!currentThumbnailUrl.isNullOrEmpty() && currentThumbnailUrl.startsWith("http")) {
-                try {
-                    val highResThumbnailUrl = getHighResThumbnailUrl(currentThumbnailUrl, song.id)
-                    val thumbBytes = downloadThumbnailBytes(url = highResThumbnailUrl)
-                    if (thumbBytes != null) {
-                        val thumbnailsDir = File(context.filesDir, "thumbnails")
-                        if (!thumbnailsDir.exists()) thumbnailsDir.mkdirs()
-                        val thumbFile = File(thumbnailsDir, "${song.id}.jpg")
-                        FileOutputStream(thumbFile).use { it.write(thumbBytes) }
-                        localThumbnailUrl = thumbFile.toUri().toString()
-                    }
-                } catch (e: Exception) {}
-            }
-            
+
+            val localThumbnailUrl = downloadAndSaveThumbnail(song) ?: song.thumbnailUrl
+
             val downloadedSong = song.copy(
                 source = SongSource.DOWNLOADED,
                 localUri = finalUri.toString(),
                 thumbnailUrl = localThumbnailUrl,
                 streamUrl = null,
-                originalSource = song.source
+                originalSource = song.source,
             )
-            
+
+            // Same ordering rationale as downloadUsingSharedCache:
+            // publish to downloadedSongs first so the combine()-based
+            // observer never sees a snapshot that's neither downloaded
+            // nor downloading (which would flicker the icon back to the
+            // default download glyph).
             _downloadedSongs.update { it + downloadedSong }
             saveDownloads()
             _downloadingIds.update { it - song.id }
             _downloadProgress.update { it - song.id }
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            clearInFlight(song.id)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Progressive download error for ${song.id}", e)
-            _downloadingIds.update { it - song.id }
-            _downloadProgress.update { it - song.id }
+            clearInFlight(song.id)
             false
         } finally {
-             activeDownloadJobs.remove(song.id)
+            activeDownloadJobs.remove(song.id)
+            try { if (tempFile?.exists() == true) tempFile.delete() } catch (_: Exception) {}
         }
     }
 

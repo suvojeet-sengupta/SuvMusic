@@ -78,7 +78,17 @@ class DownloadService : Service() {
                 action = ACTION_CANCEL_DOWNLOAD
                 putExtra("song_id", songId)
             }
-            context.startService(intent)
+            // Android 8+: bare startService() throws IllegalStateException
+            // when the app is in the background and the service isn't
+            // already running. Cancel often arrives at exactly that moment
+            // (user closes app, then dismisses a queued download from a
+            // resumed activity). startForegroundService keeps us legal —
+            // onStartCommand promotes us immediately.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         }
         
         private fun songToJson(song: Song): String {
@@ -125,6 +135,12 @@ class DownloadService : Service() {
         super.onCreate()
         createNotificationChannel()
         observeDownloadProgress()
+        // Reset batch counters every time the service spins up. If a prior
+        // run crashed mid-batch (currentDone=2, currentTotal=5), the
+        // persisted-in-memory pair would stick around and the next batch
+        // would extend it to (2, 5+N) — notifications start at "(2/N)".
+        // A fresh service instance starts with a clean slate.
+        downloadRepository.updateBatchProgress(0, 0)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -176,49 +192,72 @@ class DownloadService : Service() {
 
     private fun processQueue() {
         if (batchJob?.isActive == true) return
-        
+
         batchJob = serviceScope.launch {
             Log.d(TAG, "Starting queue processing")
-            
+
             while (true) {
                 val song = downloadRepository.popFromQueue()
                 if (song == null) {
+                    // Race fix: a startBatchDownload() that arrived between
+                    // our last popFromQueue() and now would have called
+                    // processQueue() and bailed early because batchJob was
+                    // still active (we're inside it). Re-check the queue
+                    // before we tear down — if a new item slipped in, keep
+                    // looping; otherwise stop for real.
+                    if (downloadRepository.queueState.value.isNotEmpty()) {
+                        continue
+                    }
                     Log.d(TAG, "Queue empty, stopping service")
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     break
                 }
-                
+
                 // Atomic increment so a concurrent caller-thread call to
                 // downloadSongs() resizing the batch can't produce
                 // "(5/3)" or "(7/3)" notification counters.
                 downloadRepository.incrementBatchDone()
                 val (newDone, total) = downloadRepository.batchProgress.value
 
-                // Active tracking
                 activeDownloads[song.id] = song.title
                 primaryNotificationSongId = song.id
-
-                // Initial notification
                 updateForegroundNotification(song.title, 0, newDone, total)
 
                 try {
                     Log.d(TAG, "Downloading: ${song.title}")
-                    val success = downloadRepository.downloadSong(song)
-                    
-                    if (success) {
-                        showCompleteNotification(song.title, true)
-                    } else {
-                        showCompleteNotification(song.title, false)
+                    // Tri-state result: SKIPPED for already-downloaded/
+                    // in-flight songs gets no completion toast (the old
+                    // Boolean returned `true` for skipped, so the user saw
+                    // "Download complete" for songs they'd already saved).
+                    when (downloadRepository.downloadSong(song)) {
+                        com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS ->
+                            showCompleteNotification(song.title, true)
+                        com.suvojeet.suvmusic.core.model.DownloadResult.FAILED ->
+                            showCompleteNotification(song.title, false)
+                        com.suvojeet.suvmusic.core.model.DownloadResult.SKIPPED -> {
+                            /* no notification — silent skip */
+                        }
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // The user cancelled THIS song (cancelDownload routes
+                    // through the per-song job). We must not propagate the
+                    // exception — that would tear down the batchJob and
+                    // strand the rest of the queue. Re-check whether the
+                    // parent scope is still active; if it's also being
+                    // cancelled (e.g. service shutdown), the next
+                    // suspending call below will throw and exit the loop
+                    // for us. Otherwise carry on with the next song.
+                    Log.d(TAG, "Cancelled: ${song.title}")
+                    if (!isActive) throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Download error", e)
                     showCompleteNotification(song.title, false)
                 } finally {
-                     activeDownloads.remove(song.id)
-                     if (primaryNotificationSongId == song.id) {
-                         primaryNotificationSongId = null
-                     }
+                    activeDownloads.remove(song.id)
+                    if (primaryNotificationSongId == song.id) {
+                        primaryNotificationSongId = null
+                    }
                 }
             }
         }
@@ -281,10 +320,6 @@ class DownloadService : Service() {
         } catch (e: Exception) {
             // Service restart/foreground issues
         }
-    }
-    
-    private fun updateProgressNotification(songTitle: String, progress: Int) {
-        // Unused legacy helper, keeping for safety if needed or remove
     }
     
     private fun showCompleteNotification(songTitle: String, success: Boolean) {

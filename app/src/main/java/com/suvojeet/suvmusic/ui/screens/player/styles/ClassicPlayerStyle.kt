@@ -558,13 +558,56 @@ private fun ClassicBottomActions(
                 Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "Related", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
 
-            IconButton(onClick = onDownloadClick, modifier = Modifier.weight(1f)) {
-                val icon = when(downloadState) {
-                    com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADED -> Icons.Default.CheckCircle
-                    com.suvojeet.suvmusic.core.model.DownloadState.FAILED -> Icons.Default.Error
-                    else -> Icons.Default.Download
+            IconButton(
+                // While a download is running, suppress further taps —
+                // a re-tap would just be a no-op at the repo layer but
+                // disabling the click communicates "I'm working on it".
+                enabled = downloadState != com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADING,
+                onClick = onDownloadClick,
+                modifier = Modifier.weight(1f),
+            ) {
+                AnimatedContent(
+                    targetState = downloadState,
+                    transitionSpec = {
+                        (scaleIn(spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(tween(180)))
+                            .togetherWith(scaleOut(tween(120)) + fadeOut(tween(120)))
+                    },
+                    label = "classic-download-state",
+                ) { state ->
+                    when (state) {
+                        com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADING -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(iconSize),
+                                strokeWidth = 2.dp,
+                                color = dominantColors.accent,
+                            )
+                        }
+                        com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADED -> {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Downloaded",
+                                tint = dominantColors.accent,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
+                        com.suvojeet.suvmusic.core.model.DownloadState.FAILED -> {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = "Download failed — tap to retry",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
+                        com.suvojeet.suvmusic.core.model.DownloadState.NOT_DOWNLOADED -> {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Download",
+                                tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
+                    }
                 }
-                Icon(imageVector = icon, contentDescription = "Download", tint = if (downloadState == com.suvojeet.suvmusic.core.model.DownloadState.DOWNLOADED) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
 
             IconButton(onClick = onCastClick, modifier = Modifier.weight(1f)) {
