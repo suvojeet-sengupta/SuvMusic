@@ -86,6 +86,7 @@ class MusicPlayer @Inject constructor(
     private var currentResolutionJob: Job? = null
     private var preloadJob: Job? = null
     private var ttsVolumeJob: Job? = null
+    private var announceDebounceJob: Job? = null
 
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -243,7 +244,20 @@ class MusicPlayer @Inject constructor(
      * completion (or error). Volume + ducking come from user settings.
      */
     private fun announceCurrentSong(title: String, artist: String) {
-        scope.launch {
+        // Cancel any pending announcement (debounce window) and stop any TTS that's
+        // already speaking. This prevents the "skip 5 songs, hear 5 announcements"
+        // bug: rapid transitions now only announce the song the user settles on.
+        announceDebounceJob?.cancel()
+        ttsVolumeJob?.cancel()
+        ttsManager.stop()
+
+        announceDebounceJob = scope.launch {
+            // Wait briefly before speaking. If another transition arrives within
+            // this window, the job is cancelled above and we never speak the
+            // skipped-over song. 800ms is short enough to feel responsive when
+            // the user lands on a song, long enough to swallow rapid Next presses.
+            delay(800)
+
             val ttsVolumePercent = sessionManager.getAnnounceTtsVolume()
             val duckPercent = sessionManager.getAnnounceDuckVolume()
             val ttsVolume = (ttsVolumePercent / 100f).coerceIn(0f, 1f)
@@ -252,7 +266,6 @@ class MusicPlayer @Inject constructor(
             val controller = mediaController
             val originalVolume = controller?.volume ?: 1.0f
 
-            ttsVolumeJob?.cancel()
             ttsVolumeJob = scope.launch {
                 val restored = java.util.concurrent.atomic.AtomicBoolean(false)
                 fun restoreOnce() {

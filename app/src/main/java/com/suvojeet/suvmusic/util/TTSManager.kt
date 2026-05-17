@@ -194,8 +194,14 @@ class TTSManager @Inject constructor(
             putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
         }
 
+        // QUEUE_FLUSH: replaces any pending/in-progress utterance with this one.
+        // Why: when the user skips rapidly, each song transition calls speak();
+        // QUEUE_ADD would line up every skipped song, announcing them all in sequence.
+        // QUEUE_FLUSH ensures only the latest announcement is spoken. The cancelled
+        // utterance fires onStop (interrupted=true) → its onError callback restores
+        // ducked music volume so we don't leak ducking state.
         val result = try {
-            engine.speak(req.text, TextToSpeech.QUEUE_ADD, params, req.id)
+            engine.speak(req.text, TextToSpeech.QUEUE_FLUSH, params, req.id)
         } catch (e: Exception) {
             Log.e("TTSManager", "speak() threw", e)
             TextToSpeech.ERROR
