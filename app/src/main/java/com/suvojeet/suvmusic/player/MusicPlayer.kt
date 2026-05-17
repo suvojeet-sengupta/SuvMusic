@@ -662,7 +662,6 @@ class MusicPlayer @Inject constructor(
     
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            android.util.Log.i("PlaybackTrace", "[STATE] isPlaying=$isPlaying songId=${_playerState.value.currentSong?.id} t=${System.currentTimeMillis()}")
             _playerState.update { it.copy(isPlaying = isPlaying) }
             
             // Music Haptics integration
@@ -677,14 +676,6 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onPlaybackStateChanged(playbackState: Int) {
-            val stateName = when (playbackState) {
-                Player.STATE_IDLE -> "IDLE"
-                Player.STATE_BUFFERING -> "BUFFERING"
-                Player.STATE_READY -> "READY"
-                Player.STATE_ENDED -> "ENDED"
-                else -> "UNKNOWN($playbackState)"
-            }
-            android.util.Log.i("PlaybackTrace", "[STATE] playbackState=$stateName songId=${_playerState.value.currentSong?.id} t=${System.currentTimeMillis()}")
             _playerState.update {
                 it.copy(
                     isLoading = playbackState == Player.STATE_BUFFERING,
@@ -788,14 +779,6 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            val reasonName = when (reason) {
-                Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
-                Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
-                Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "PLAYLIST_CHANGED"
-                Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
-                else -> "UNKNOWN($reason)"
-            }
-            android.util.Log.i("PlaybackTrace", "[TRANSITION] reason=$reasonName mediaId=${mediaItem?.mediaId} uriPrefix=${mediaItem?.localConfiguration?.uri?.toString()?.take(60)} t=${System.currentTimeMillis()}")
             // Reset crossfade guard + restore volume for the incoming track.
             // Skip the volume restore while a crossfade is mid fade-in; otherwise we
             // overwrite the ramp and the new track jumps to full volume instantly.
@@ -1059,8 +1042,6 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onPlayerError(error: PlaybackException) {
-            val curUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
-            android.util.Log.e("PlaybackTrace", "[ERROR] code=${error.errorCodeName}(${error.errorCode}) msg=${error.message} causeType=${error.cause?.javaClass?.simpleName} songId=${_playerState.value.currentSong?.id} uriPrefix=${curUri?.take(60)} t=${System.currentTimeMillis()}", error)
             // Log error
             android.util.Log.e("MusicPlayer", "Playback error: ${error.errorCodeName} (${error.errorCode})", error)
             
@@ -1246,8 +1227,6 @@ class MusicPlayer @Inject constructor(
     }
     
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
-        val rt0 = System.currentTimeMillis()
-        android.util.Log.i("PlaybackTrace", "[RESOLVE] enter id=${song.id} src=${song.source} index=$index shouldPlay=$shouldPlay videoMode=${_playerState.value.isVideoMode}")
         try {
             _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
             
@@ -1297,7 +1276,6 @@ class MusicPlayer @Inject constructor(
                 }
                 streamUrl = result?.first
                 audioStreamUrl = result?.second
-                android.util.Log.i("PlaybackTrace", "[RESOLVE] attempt=${attempts + 1} timedOut=${result == null} gotUrl=${streamUrl != null} id=${song.id} elapsed=${System.currentTimeMillis() - rt0}ms")
                 if (streamUrl == null) {
                     attempts++
                     if (attempts < 2) delay(1000)
@@ -1337,7 +1315,6 @@ class MusicPlayer @Inject constructor(
 
             // Handle null stream URL - show error and clear loading state
             if (streamUrl == null) {
-                android.util.Log.e("PlaybackTrace", "[RESOLVE] FAILED id=${song.id} videoMode=${_playerState.value.isVideoMode} totalElapsed=${System.currentTimeMillis() - rt0}ms")
                 android.util.Log.e("MusicPlayer", "Failed to resolve stream URL for: ${song.id} after retries")
                 
                 val isVideoMode = _playerState.value.isVideoMode
@@ -1415,8 +1392,6 @@ class MusicPlayer @Inject constructor(
                                   controller.play()
                              }
                         }
-                        android.util.Log.i("PlaybackTrace", "[RESOLVE] OK replaced+prepared id=${song.id} totalElapsed=${System.currentTimeMillis() - rt0}ms")
-
                         // Clear loading state after successful resolution
                         _playerState.update { it.copy(isLoading = false, error = null) }
                     } else {
@@ -1429,7 +1404,6 @@ class MusicPlayer @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("PlaybackTrace", "[RESOLVE] EXCEPTION id=${song.id} msg=${e.message} elapsed=${System.currentTimeMillis() - rt0}ms", e)
             _playerState.update { it.copy(error = e.message, isLoading = false) }
         }
     }
@@ -1732,8 +1706,6 @@ class MusicPlayer @Inject constructor(
         
         isPreloading = true
         lastPreloadAttemptTime = System.currentTimeMillis()
-        val pt0 = System.currentTimeMillis()
-        android.util.Log.i("PlaybackTrace", "[PRELOAD] start nextId=${nextSong.id} posMs=$currentPosition durationMs=$duration videoMode=$isVideoMode shuffle=${state.shuffleEnabled}")
         preloadJob = scope.launch {
             try {
                 val streamUrl = when (nextSong.source) {
@@ -1767,15 +1739,12 @@ class MusicPlayer @Inject constructor(
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
-                    android.util.Log.i("PlaybackTrace", "[PRELOAD] OK nextId=${nextSong.id} elapsed=${System.currentTimeMillis() - pt0}ms")
-                } else {
-                    android.util.Log.w("PlaybackTrace", "[PRELOAD] FAIL nextId=${nextSong.id} elapsed=${System.currentTimeMillis() - pt0}ms")
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Expected: user pressed Next / new song chosen mid-preload. Re-throw to honor cancellation.
                 throw e
-            } catch (e: Exception) {
-                android.util.Log.e("PlaybackTrace", "[PRELOAD] EXCEPTION nextId=${nextSong.id} msg=${e.message} elapsed=${System.currentTimeMillis() - pt0}ms", e)
+            } catch (_: Exception) {
+                // Preload failure is non-fatal — playback falls back to on-demand resolve.
             } finally {
                 isPreloading = false
             }
@@ -1822,9 +1791,6 @@ class MusicPlayer @Inject constructor(
     private var playJob: Job? = null
 
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false) {
-        val t0 = System.currentTimeMillis()
-        android.util.Log.i("PlaybackTrace", "[PLAY_SONG] enter id=${song.id} src=${song.source} videoMode=${_playerState.value.isVideoMode} forceLow=$forceLow controller=${if (mediaController == null) "NULL" else "OK"} t=$t0")
-
         // Cancel any pending play request
         playJob?.cancel()
         currentResolutionJob?.cancel()
@@ -1859,7 +1825,6 @@ class MusicPlayer @Inject constructor(
                 // Optimization 1: Parallelize queue resolution.
                 // Building the list of MediaItems can be slow for large queues.
                 // Only the startIndex item actually performs network resolution here.
-                android.util.Log.i("PlaybackTrace", "[PLAY_SONG] building ${queue.size} mediaItems (resolve only index=$startIndex) elapsed=${System.currentTimeMillis() - t0}ms")
                 val mediaItems = coroutineScope {
                     queue.mapIndexed { index, s ->
                         async {
@@ -1867,7 +1832,6 @@ class MusicPlayer @Inject constructor(
                         }
                     }.awaitAll()
                 }
-                android.util.Log.i("PlaybackTrace", "[PLAY_SONG] mediaItems built count=${mediaItems.size} elapsed=${System.currentTimeMillis() - t0}ms")
 
                 queueMutex.withLock {
                     mediaController?.let { controller ->
@@ -1881,24 +1845,19 @@ class MusicPlayer @Inject constructor(
                         if (autoPlay) {
                             controller.play()
                         }
-                        android.util.Log.i("PlaybackTrace", "[PLAY_SONG] controller.setMediaItems+prepare+play done id=${song.id} elapsed=${System.currentTimeMillis() - t0}ms")
                     } ?: run {
-                        android.util.Log.e("PlaybackTrace", "[PLAY_SONG] FAIL mediaController is NULL id=${song.id} elapsed=${System.currentTimeMillis() - t0}ms")
                         _playerState.update { it.copy(error = "Music service not connected", isLoading = false) }
                     }
                 }
             } catch (e: Exception) {
                 // Ignore cancellations
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.e("PlaybackTrace", "[PLAY_SONG] EXCEPTION id=${song.id} msg=${e.message} elapsed=${System.currentTimeMillis() - t0}ms", e)
                 _playerState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
     
     private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true, forceLow: Boolean = false): MediaItem {
-        val ct0 = System.currentTimeMillis()
-        android.util.Log.i("PlaybackTrace", "[CREATE_MEDIA_ITEM] enter id=${song.id} src=${song.source} resolveStream=$resolveStream forceLow=$forceLow")
         var audioStreamUrl: String? = null
 
         val uri = when (song.source) {
@@ -1988,8 +1947,6 @@ class MusicPlayer @Inject constructor(
             )
         }
 
-        val isPlaceholder = uri.isBlank() || uri.contains("placeholder.invalid") || uri.contains("youtube.com/watch") || uri.contains("youtu.be/")
-        android.util.Log.i("PlaybackTrace", "[CREATE_MEDIA_ITEM] done id=${song.id} placeholder=$isPlaceholder hasAudioUrl=${!audioStreamUrl.isNullOrEmpty()} uriPrefix=${uri.take(60)} elapsed=${System.currentTimeMillis() - ct0}ms")
         return builder.build()
     }
 
