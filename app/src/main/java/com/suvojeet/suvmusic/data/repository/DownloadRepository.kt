@@ -959,13 +959,32 @@ class DownloadRepository @Inject constructor(
 
             val copyT0 = System.currentTimeMillis()
             android.util.Log.i(DL_TAG, "[COPY] start id=${song.id} tempFile=${tempFile.absolutePath}")
-            // .use{} on both streams so a throw mid-copy (network drop,
+            // Wrap the already-opened DataSource in a plain InputStream.
+            // We CANNOT use androidx.media3.datasource.DataSourceInputStream
+            // here: its checkOpened() lazily calls dataSource.open(dataSpec)
+            // on the first read, and CronetDataSource.open() has
+            // Assertions.checkState(!opened) which throws IllegalStateException
+            // because we already opened it above to read contentLength.
+            // That double-open is exactly the [COPY] EXCEPTION we were
+            // seeing in the field — every download failing at byte 0.
+            val input: InputStream = object : InputStream() {
+                private val single = ByteArray(1)
+                override fun read(): Int {
+                    val n = dataSource!!.read(single, 0, 1)
+                    return if (n == androidx.media3.common.C.RESULT_END_OF_INPUT) -1
+                    else single[0].toInt() and 0xFF
+                }
+                override fun read(b: ByteArray, off: Int, len: Int): Int {
+                    val n = dataSource!!.read(b, off, len)
+                    return if (n == androidx.media3.common.C.RESULT_END_OF_INPUT) -1 else n
+                }
+            }
+            // .use{} on output so a throw mid-copy (network drop,
             // cancellation, disk full) still releases the file handle.
-            androidx.media3.datasource.DataSourceInputStream(dataSource, dataSpec).use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    copyWithProgress(input, output, contentLength) { progress ->
-                        _downloadProgress.update { it + (song.id to progress) }
-                    }
+            // Upstream DataSource is released in the outer finally.
+            FileOutputStream(tempFile).use { output ->
+                copyWithProgress(input, output, contentLength) { progress ->
+                    _downloadProgress.update { it + (song.id to progress) }
                 }
             }
             val copyMs = System.currentTimeMillis() - copyT0
