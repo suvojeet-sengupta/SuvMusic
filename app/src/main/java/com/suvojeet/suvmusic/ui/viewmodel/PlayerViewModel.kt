@@ -525,15 +525,16 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
+        android.util.Log.i("PlaybackTrace", "[TAP] vm.playSong id=${song.id} src=${song.source} title=${song.title} queueSize=${queue.size} startIndex=$startIndex t=${System.currentTimeMillis()}")
         // Reset radio base so Autoplay adapts to this new song
         radioBaseSongId = null
         _isRadioMode.value = false
         musicPlayer.updateRadioMode(false)
         smartQueueManager.reset()
-        
+
         // Notify recommendation engine of the new song context
         recommendationEngine.onSongPlayed(song)
-        
+
         musicPlayer.playSong(song, queue, startIndex)
     }
     
