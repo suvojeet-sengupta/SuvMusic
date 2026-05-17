@@ -1758,6 +1758,9 @@ class MusicPlayer @Inject constructor(
                 } else {
                     android.util.Log.w("PlaybackTrace", "[PRELOAD] FAIL nextId=${nextSong.id} elapsed=${System.currentTimeMillis() - pt0}ms")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Expected: user pressed Next / new song chosen mid-preload. Re-throw to honor cancellation.
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("PlaybackTrace", "[PRELOAD] EXCEPTION nextId=${nextSong.id} msg=${e.message} elapsed=${System.currentTimeMillis() - pt0}ms", e)
             } finally {
