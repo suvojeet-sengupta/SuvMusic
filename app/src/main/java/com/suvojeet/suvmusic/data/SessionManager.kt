@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.core.model.Artist
@@ -2959,10 +2960,14 @@ class SessionManager @Inject constructor(
                 HomeItem.ArtistItem(artist)
             }
             "explore" -> {
+                val browseId = data.optString("browseId", "")
                 HomeItem.ExploreItem(
                     title = data.optString("title"),
-                    iconRes = data.optInt("iconRes"),
-                    browseId = data.optString("browseId", "")
+                    // Never trust persisted iconRes — R.drawable IDs are reassigned by R8
+                    // across builds, so a cached value from a prior install will point at
+                    // a missing resource and crash painterResource. Derive from browseId.
+                    iconRes = exploreIconForBrowseId(browseId),
+                    browseId = browseId
                 )
             }
             else -> null
@@ -3015,13 +3020,25 @@ class SessionManager @Inject constructor(
                 obj.put("type", "explore")
                 val data = JSONObject().apply {
                     put("title", item.title)
-                    put("iconRes", item.iconRes)
+                    // iconRes deliberately omitted — re-derived from browseId on read.
                     put("browseId", item.browseId)
                 }
                 obj.put("data", data)
             }
         }
         return obj
+    }
+
+    // Single source of truth for explore-tile icons. Keep in sync with
+    // YouTubeRepository.getExploreSection(). Persisted JSON only carries
+    // browseId; iconRes is resolved here on read so a build with reassigned
+    // R.drawable IDs doesn't crash painterResource on stale cached data.
+    private fun exploreIconForBrowseId(browseId: String): Int = when (browseId) {
+        "FEmusic_new_releases" -> R.drawable.ic_music_note
+        "FEmusic_charts" -> R.drawable.ic_waveform
+        "FEmusic_moods_and_genres" -> R.drawable.ic_play
+        "FEmusic_podcasts" -> R.drawable.ic_launcher_monochrome
+        else -> R.drawable.ic_music_note
     }
 
     private fun jsonToSong(songObj: JSONObject): Song? {
