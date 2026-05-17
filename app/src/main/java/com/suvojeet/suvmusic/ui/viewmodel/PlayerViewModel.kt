@@ -464,39 +464,30 @@ class PlayerViewModel @Inject constructor(
 
     
     private fun observeDownloads() {
+        // Single combined observer instead of two separate collectors that
+        // raced each other. The old setup had `downloadedSongs.collect` and
+        // `downloadingIds.collect` both calling `checkDownloadStatus`,
+        // which read the same two flows back. Depending on which collector
+        // fired first when a download finished, the UI could read a stale
+        // "still in downloadingIds" snapshot and stick at DOWNLOADING until
+        // the second collector fired. `combine` here gives us a single
+        // atomic snapshot every time *any* of the three flows changes, so
+        // the player icon flips to the right state in one shot.
         viewModelScope.launch {
-            // Wait a bit for downloads to be loaded, then check initial state
-            delay(500)
-            val currentSong = playerState.value.currentSong
-            if (currentSong != null) {
-                checkDownloadStatus(currentSong)
-            }
-        }
-        
-        viewModelScope.launch {
-            downloadRepository.downloadedSongs.collect {
-                val currentSong = playerState.value.currentSong
-                if (currentSong != null) {
-                    checkDownloadStatus(currentSong)
+            combine(
+                playerState.map { it.currentSong?.id }.distinctUntilChanged(),
+                downloadRepository.downloadedSongs,
+                downloadRepository.downloadingIds,
+            ) { currentSongId, downloaded, downloading ->
+                when {
+                    currentSongId == null -> DownloadState.NOT_DOWNLOADED
+                    downloaded.any { it.id == currentSongId } -> DownloadState.DOWNLOADED
+                    downloading.contains(currentSongId) -> DownloadState.DOWNLOADING
+                    else -> DownloadState.NOT_DOWNLOADED
                 }
             }
-        }
-        
-        viewModelScope.launch {
-            downloadRepository.downloadingIds.collect { downloadingIds ->
-                val currentSong = playerState.value.currentSong ?: return@collect
-                if (downloadingIds.contains(currentSong.id)) {
-                    musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-                } else {
-                     // If it was downloading and now it's not, check if it's downloaded or failed
-                     // This overlaps with the downloadedSongs collector but handles the transition faster
-                     if (downloadRepository.isDownloaded(currentSong.id)) {
-                         musicPlayer.updateDownloadState(DownloadState.DOWNLOADED)
-                     } else {
-                         musicPlayer.updateDownloadState(DownloadState.NOT_DOWNLOADED)
-                     }
-                }
-            }
+                .distinctUntilChanged()
+                .collect { musicPlayer.updateDownloadState(it) }
         }
     }
     
