@@ -1067,7 +1067,6 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val success = downloadRepository.downloadSongProgressive(song) { tempUri ->
                 // First chunk ready - start playing from temp file
-                Log.d("PlayerViewModel", "Progressive download ready, playing from: $tempUri")
                 // The song is already playing (streaming), we just continue
                 // The file will be saved when download completes
             }
