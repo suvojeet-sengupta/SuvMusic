@@ -138,7 +138,6 @@ class DownloadService : Service() {
     
     override fun onCreate() {
         super.onCreate()
-        android.util.Log.i(DL_TAG, "[SVC] onCreate")
         createNotificationChannel()
         observeDownloadProgress()
         // Reset batch counters every time the service spins up. If a prior
@@ -150,7 +149,6 @@ class DownloadService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        android.util.Log.i(DL_TAG, "[SVC] onStartCommand action=${intent?.action} startId=$startId")
         // Fix for Android 12+ ForegroundServiceDidNotStartInTimeException
         // We must call startForeground immediately
         startForeground(NOTIFICATION_ID, createProgressNotification("Starting service...", 0, 0, 0))
@@ -165,7 +163,6 @@ class DownloadService : Service() {
                     downloadRepository.downloadSongToQueue(song)
                     processQueue()
                 } else {
-                    android.util.Log.w(DL_TAG, "[SVC] START_DOWNLOAD with null/invalid song JSON")
                 }
             }
             ACTION_PROCESS_QUEUE -> {
@@ -201,7 +198,6 @@ class DownloadService : Service() {
 
     private fun processQueue() {
         if (batchJob?.isActive == true) {
-            android.util.Log.d(DL_TAG, "[SVC] processQueue ignored — batchJob already active")
             return
         }
 
@@ -221,10 +217,8 @@ class DownloadService : Service() {
                     // before we tear down — if a new item slipped in, keep
                     // looping; otherwise stop for real.
                     if (downloadRepository.queueState.value.isNotEmpty()) {
-                        android.util.Log.d(DL_TAG, "[SVC] queue race — re-checking")
                         continue
                     }
-                    android.util.Log.i(DL_TAG, "[SVC] queue drained, stopping service")
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     break
@@ -267,7 +261,6 @@ class DownloadService : Service() {
                     // cancelled (e.g. service shutdown), the next
                     // suspending call below will throw and exit the loop
                     // for us. Otherwise carry on with the next song.
-                    Log.d(TAG, "Cancelled: ${song.title}")
                     if (!isActive) throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Download error", e)

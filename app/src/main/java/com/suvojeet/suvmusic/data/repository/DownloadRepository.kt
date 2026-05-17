@@ -131,7 +131,6 @@ class DownloadRepository @Inject constructor(
             if (hasNewSongs) {
                 _downloadedSongs.value = currentSongs
                 saveDownloads()
-                Log.d(TAG, "Added new untracked files to downloads")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error scanning downloads folder", e)
@@ -385,22 +384,18 @@ class DownloadRepository @Inject constructor(
 
         val customLocationUri = sessionManager.getDownloadLocation()
         if (customLocationUri != null) {
-            android.util.Log.i(DL_TAG, "[SAVE] route=custom_saf id=$songId subfolder=$subfolder")
             return saveToCustomLocation(fileName, inputStream, customLocationUri, subfolder, extension)
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            android.util.Log.i(DL_TAG, "[SAVE] route=mediastore id=$songId subfolder=$subfolder")
             saveToMediaStore(songId, fileName, inputStream, subfolder, extension)
         } else {
-            android.util.Log.i(DL_TAG, "[SAVE] route=public_folder id=$songId subfolder=$subfolder")
             saveToPublicFolder(songId, fileName, inputStream, subfolder)
         }
     }
 
     private fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
-            android.util.Log.i(DL_TAG, "[SAVE_SAF] start fileName=$fileName treeUri=$treeUri")
             val rootUri = Uri.parse(treeUri)
             var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
 
@@ -427,7 +422,6 @@ class DownloadRepository @Inject constructor(
 
             newFile.uri
         } catch (e: Exception) {
-            android.util.Log.e(DL_TAG, "[SAVE_SAF] EXCEPTION fileName=$fileName msg=${e.message}", e)
             Log.e(TAG, "Error saving to custom location", e)
             null
         }
@@ -435,7 +429,6 @@ class DownloadRepository @Inject constructor(
 
     private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
         return try {
-            android.util.Log.i(DL_TAG, "[SAVE_MS] start fileName=$fileName subfolder=$subfolder")
             val relativePath = if (subfolder != null) {
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
             } else {
@@ -476,7 +469,6 @@ class DownloadRepository @Inject constructor(
 
     private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
         return try {
-            android.util.Log.i(DL_TAG, "[SAVE_PUB] start fileName=$fileName subfolder=$subfolder")
             val rootFolder = getPublicMusicFolder()
             val targetFolder = if (subfolder != null) {
                 File(rootFolder, sanitizeFileName(subfolder)).apply { mkdirs() }
@@ -490,7 +482,6 @@ class DownloadRepository @Inject constructor(
             }
             file.toUri()
         } catch (e: Exception) {
-            android.util.Log.e(DL_TAG, "[SAVE_PUB] EXCEPTION fileName=$fileName msg=${e.message}", e)
             Log.e(TAG, "Error saving to Music folder", e)
             null
         }
@@ -840,11 +831,9 @@ class DownloadRepository @Inject constructor(
             // activeDownloadJobs doesn't.
             val canDownload = downloadMutex.withLock {
                 if (_downloadedSongs.value.any { it.id == song.id }) {
-                    android.util.Log.i(DL_TAG, "[SKIP] id=${song.id} reason=already_downloaded")
                     return@withLock false
                 }
                 if (_downloadingIds.value.contains(song.id)) {
-                    android.util.Log.i(DL_TAG, "[SKIP] id=${song.id} reason=already_in_flight")
                     return@withLock false
                 }
                 _downloadingIds.update { it + song.id }
@@ -889,10 +878,8 @@ class DownloadRepository @Inject constructor(
                 val ok = downloadUsingSharedCache(song, streamUrl, extension)
                 val total = System.currentTimeMillis() - t0
                 if (ok) {
-                    android.util.Log.i(DL_TAG, "[DONE] SUCCESS id=${song.id} totalElapsed=${total}ms")
                     com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS
                 } else {
-                    android.util.Log.w(DL_TAG, "[DONE] FAILED id=${song.id} totalElapsed=${total}ms")
                     com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -958,7 +945,6 @@ class DownloadRepository @Inject constructor(
             _downloadProgress.update { it + (song.id to 0f) }
 
             val copyT0 = System.currentTimeMillis()
-            android.util.Log.i(DL_TAG, "[COPY] start id=${song.id} tempFile=${tempFile.absolutePath}")
             // Wrap the already-opened DataSource in a plain InputStream.
             // We CANNOT use androidx.media3.datasource.DataSourceInputStream
             // here: its checkOpened() lazily calls dataSource.open(dataSpec)
@@ -1120,7 +1106,6 @@ class DownloadRepository @Inject constructor(
             "[PROGRESSIVE] enter id=${song.id} title=${song.title}",
         )
         if (_downloadedSongs.value.any { it.id == song.id }) {
-            android.util.Log.i(DL_TAG, "[PROGRESSIVE] already-downloaded id=${song.id}")
             _downloadedSongs.value.find { it.id == song.id }?.localUri?.let { uri ->
                 withContext(Dispatchers.Main) { onReadyToPlay(Uri.parse(uri)) }
             }
