@@ -2583,6 +2583,10 @@ class SessionManager @Inject constructor(
                         )
                         items.add(RecentSearchItem.PlaylistItem(playlist))
                     }
+                    "QUERY" -> {
+                        val query = obj.getString("query")
+                        items.add(RecentSearchItem.QueryItem(query))
+                    }
                 }
             }
             items
@@ -2630,6 +2634,10 @@ class SessionManager @Inject constructor(
                     obj.put("author", p.author)
                     obj.put("thumbnailUrl", p.thumbnailUrl ?: "")
                     obj.put("description", p.description ?: "")
+                }
+                is RecentSearchItem.QueryItem -> {
+                    obj.put("item_type", "QUERY")
+                    obj.put("query", searchItem.query)
                 }
             }
             jsonArray.put(obj)
