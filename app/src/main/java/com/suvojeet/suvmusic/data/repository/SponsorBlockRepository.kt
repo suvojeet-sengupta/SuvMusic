@@ -80,7 +80,10 @@ class SponsorBlockRepository @Inject constructor(
 
     fun loadSegments(videoId: String) {
         if (!isEnabled) return
-        if (videoId == lastVideoId) return
+        
+        // If it's the same video and we already have segments, don't re-fetch.
+        // If we don't have segments (previous fail), we allow a re-fetch.
+        if (videoId == lastVideoId && _currentSegments.value.isNotEmpty()) return
 
         lastVideoId = videoId
         _currentSegments.value = emptyList()
@@ -89,20 +92,31 @@ class SponsorBlockRepository @Inject constructor(
         Log.d("SponsorBlock", "Loading segments for $videoId")
 
         scope.launch {
-            try {
-                val response = httpClient.get("https://sponsor.ajay.app/api/skipSegments") {
-                    parameter("videoID", videoId)
-                    parameter(
-                        "categories",
-                        "[\"sponsor\",\"selfpromo\",\"interaction\",\"intro\",\"outro\",\"music_offtopic\"]",
-                    )
+            var retryDelay = 2000L
+            var success = false
+            var attempts = 0
+            
+            while (!success && attempts < 3) {
+                try {
+                    val response = httpClient.get("https://sponsor.ajay.app/api/skipSegments") {
+                        parameter("videoID", videoId)
+                        parameter(
+                            "categories",
+                            "[\"sponsor\",\"selfpromo\",\"interaction\",\"intro\",\"outro\",\"music_offtopic\"]",
+                        )
+                    }
+                    val segments: List<SponsorSegment> = response.body()
+                    _currentSegments.value = segments
+                    Log.d("SponsorBlock", "Loaded ${segments.size} segments for $videoId")
+                    success = true
+                } catch (t: Throwable) {
+                    attempts++
+                    Log.e("SponsorBlock", "Attempt $attempts failed to load for $videoId: ${t.message}")
+                    if (attempts < 3) {
+                        kotlinx.coroutines.delay(retryDelay)
+                        retryDelay *= 2 // Exponential backoff
+                    }
                 }
-                val segments: List<SponsorSegment> = response.body()
-                _currentSegments.value = segments
-                Log.d("SponsorBlock", "Loaded ${segments.size} segments")
-            } catch (t: Throwable) {
-                Log.e("SponsorBlock", "Failed to load: ${t.message}")
-                _currentSegments.value = emptyList()
             }
         }
     }
