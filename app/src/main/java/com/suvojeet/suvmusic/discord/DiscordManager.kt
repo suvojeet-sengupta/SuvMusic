@@ -22,7 +22,7 @@ class DiscordManager @Inject constructor(
     private var token: String? = null
     private var isEnabled: Boolean = false
     private var useDetails: Boolean = false
-    private var isPrivacyMode: Boolean = false
+    private var isIncognitoMode: Boolean = false
     
     private val scope = CoroutineScope(Dispatchers.IO)
     private var initializationJob: Job? = null
@@ -43,8 +43,8 @@ class DiscordManager @Inject constructor(
         
         initializationJob?.cancel()
         initializationJob = scope.launch {
-            sessionManager.privacyModeEnabledFlow.collect { enabled ->
-                isPrivacyMode = enabled
+            sessionManager.incognitoModeEnabledFlow.collect { enabled ->
+                isIncognitoMode = enabled
                 if (enabled) {
                     discordRPC?.updateActivity(name = "SuvMusic", state = null, details = null)
                 }
@@ -122,7 +122,7 @@ class DiscordManager @Inject constructor(
         currentPosition: Long
     ) {
         if (!isEnabled || discordRPC == null) return
-        if (isPrivacyMode) return 
+        if (isIncognitoMode) return 
         
         if (isPlaying) {
              val startTime = System.currentTimeMillis() - currentPosition

@@ -133,7 +133,6 @@ fun SettingsScreen(
     // Floating Player
     val scope = rememberCoroutineScope()
     val floatingPlayerEnabled by viewModel.dynamicIslandEnabled.collectAsState(initial = false)
-    val offlineModeEnabled by viewModel.offlineModeEnabled.collectAsState(initial = false)
     val sponsorBlockEnabled by viewModel.sponsorBlockEnabled.collectAsState(initial = true)
 
     Scaffold(
@@ -305,21 +304,11 @@ fun SettingsScreen(
                 SettingsSectionTitle("General")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsSwitchItem(
-                        icon = Icons.Default.WifiOff,
-                        title = "Offline Mode",
-                        subtitle = "Only play downloaded songs",
-                        checked = offlineModeEnabled,
-                        onCheckedChange = { scope.launch { viewModel.setOfflineMode(it) } }
-                    )
-                    
-                    HorizontalDivider()
-
-                    SettingsSwitchItem(
                         icon = Icons.Default.VisibilityOff,
-                        title = "Privacy Mode",
+                        title = "Incognito Mode",
                         subtitle = "Stop history & activity sharing",
-                        checked = uiState.privacyModeEnabled,
-                        onCheckedChange = { viewModel.setPrivacyModeEnabled(it) }
+                        checked = uiState.incognitoModeEnabled,
+                        onCheckedChange = { viewModel.setIncognitoModeEnabled(it) }
                     )
                     
                     HorizontalDivider()

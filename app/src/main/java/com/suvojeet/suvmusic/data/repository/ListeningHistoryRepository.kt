@@ -26,7 +26,7 @@ class ListeningHistoryRepository @Inject constructor(
         durationListenedMs: Long,
         wasSkipped: Boolean = false
     ) {
-        if (sessionManager.isPrivacyModeEnabled()) return
+        if (sessionManager.isIncognitoModeEnabled()) return
 
         val existing = listeningHistoryDao.getHistoryForSong(song.id)
         

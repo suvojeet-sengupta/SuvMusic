@@ -121,7 +121,7 @@ data class SettingsUiState(
     val discordRpcEnabled: Boolean = false,
     val discordToken: String = "", // Empty means not set
     val discordUseDetails: Boolean = false,
-    val privacyModeEnabled: Boolean = false,
+    val incognitoModeEnabled: Boolean = false,
     val audioArEnabled: Boolean = false,
     val audioArSensitivity: Float = 1.0f,
     val audioArAutoCalibrate: Boolean = true,
@@ -181,9 +181,6 @@ class SettingsViewModel @Inject constructor(
     // Dynamic Island enabled state
     val dynamicIslandEnabled = sessionManager.dynamicIslandEnabledFlow
     
-    // Offline Mode enabled state
-    val offlineModeEnabled = sessionManager.offlineModeFlow
-    
     // Volume Slider enabled state
     val volumeSliderEnabledFlow = sessionManager.volumeSliderEnabledFlow // Renamed to avoid name clash
 
@@ -197,8 +194,8 @@ class SettingsViewModel @Inject constructor(
     // Discord RPC
     val discordRpcEnabled = sessionManager.discordRpcEnabledFlow
 
-    // Privacy Mode
-    val privacyModeEnabled = sessionManager.privacyModeEnabledFlow
+    // Incognito Mode
+    val incognitoModeEnabled = sessionManager.incognitoModeEnabledFlow
 
     // Audio AR
     val audioArEnabled = sessionManager.audioArEnabledFlow
@@ -215,10 +212,6 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun setDynamicIslandEnabled(enabled: Boolean) {
         sessionManager.setDynamicIslandEnabled(enabled)
-    }
-    
-    suspend fun setOfflineMode(enabled: Boolean) {
-        sessionManager.setOfflineMode(enabled)
     }
     
     fun setVolumeSliderEnabled(enabled: Boolean) {
@@ -540,8 +533,8 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.privacyModeEnabledFlow.collect { enabled ->
-                _uiState.update { it.copy(privacyModeEnabled = enabled) }
+            sessionManager.incognitoModeEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(incognitoModeEnabled = enabled) }
             }
         }
 
@@ -757,7 +750,7 @@ class SettingsViewModel @Inject constructor(
             val updateChannel = sessionManager.getUpdateChannel()
             val youtubeHistorySyncEnabled = sessionManager.isYouTubeHistorySyncEnabled()
             val discordRpcEnabled = sessionManager.isDiscordRpcEnabled()
-            val privacyModeEnabled = sessionManager.isPrivacyModeEnabled()
+            val incognitoModeEnabled = sessionManager.isIncognitoModeEnabled()
             val audioArEnabled = sessionManager.isAudioArEnabled()
             val spatialAudioStrength = sessionManager.getSpatialAudioStrength()
             val nextSongPreloadingEnabled = sessionManager.isNextSongPreloadingEnabled()
@@ -844,7 +837,7 @@ class SettingsViewModel @Inject constructor(
                     discordRpcEnabled = discordRpcEnabled,
                     discordToken = discordToken,
                     discordUseDetails = discordUseDetails,
-                    privacyModeEnabled = privacyModeEnabled,
+                    incognitoModeEnabled = incognitoModeEnabled,
                     audioArEnabled = audioArEnabled,
                     audioArSensitivity = sessionManager.getAudioArSensitivity(),
                     audioArAutoCalibrate = sessionManager.isAudioArAutoCalibrateEnabled(),
@@ -1072,10 +1065,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setPrivacyModeEnabled(enabled: Boolean) {
+    fun setIncognitoModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            sessionManager.setPrivacyModeEnabled(enabled)
-            _uiState.update { it.copy(privacyModeEnabled = enabled) }
+            sessionManager.setIncognitoModeEnabled(enabled)
+            _uiState.update { it.copy(incognitoModeEnabled = enabled) }
         }
     }
 
