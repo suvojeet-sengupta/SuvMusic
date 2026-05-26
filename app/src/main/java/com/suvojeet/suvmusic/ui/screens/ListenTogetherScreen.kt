@@ -551,39 +551,40 @@ fun SetupContent(
                     .weight(1f)
                     .height(150.dp),
                 shape = SquircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 tonalElevation = 2.dp
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    BasicTextField(
+                    OutlinedTextField(
                         value = roomCode,
                         onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { 
+                            Text(
+                                "CODE", 
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
+                            ) 
+                        },
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textStyle = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Black, 
                             textAlign = TextAlign.Center,
-                            letterSpacing = 2.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            letterSpacing = 2.sp
                         ),
-                        decorationBox = { innerTextField ->
-                            if (roomCode.isEmpty()) {
-                                Text(
-                                    "CODE", 
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
-                            innerTextField()
-                        }
+                        shape = SquircleShape,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.Transparent,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
                     )
                     
                     Button(
