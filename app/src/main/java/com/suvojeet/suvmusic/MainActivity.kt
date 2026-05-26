@@ -194,11 +194,20 @@ class MainActivity : ComponentActivity() {
         enableMaxRefreshRate()
         
         lifecycleScope.launch {
+            // Check for manual updates on launch
             val channel = sessionManager.getUpdateChannel()
             updateViewModel.checkForUpdate(
                 com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
                 isNightly = channel == com.suvojeet.suvmusic.core.model.UpdateChannel.NIGHTLY
             )
+
+            // Also check if PeriodicUpdateWorker found anything while app was closed
+            val pendingCode = sessionManager.getPendingUpdateVersionCode()
+            if (pendingCode != null && pendingCode > com.suvojeet.suvmusic.BuildConfig.VERSION_CODE) {
+                val pendingName = sessionManager.getPendingUpdateVersionName() ?: "New Version"
+                // Trigger the UpdateAvailable state in ViewModel so the dialog shows
+                updateViewModel.triggerUpdateAvailable(pendingCode, pendingName)
+            }
         }
         
         // Initialize audio manager for volume control

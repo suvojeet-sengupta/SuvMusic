@@ -165,6 +165,8 @@ class SessionManager @Inject constructor(
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
         private val PLAYER_STYLE_KEY = stringPreferencesKey("player_style")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
+        private val PENDING_UPDATE_VERSION_CODE_KEY = intPreferencesKey("pending_update_version_code")
+        private val PENDING_UPDATE_VERSION_NAME_KEY = stringPreferencesKey("pending_update_version_name")
         private val SWIPE_DOWN_TO_DISMISS_ENABLED_KEY = booleanPreferencesKey("swipe_down_to_dismiss_enabled")
         private val PLAYER_ANIMATED_BACKGROUND_KEY = booleanPreferencesKey("player_animated_background")
         private val AUDIO_OFFLOAD_ENABLED_KEY = booleanPreferencesKey("audio_offload_enabled")
@@ -834,6 +836,26 @@ class SessionManager @Inject constructor(
             preferences[UPDATE_CHANNEL_KEY] = channel.name
         }
     }
+
+    suspend fun setPendingUpdateInfo(versionCode: Int, versionName: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PENDING_UPDATE_VERSION_CODE_KEY] = versionCode
+            preferences[PENDING_UPDATE_VERSION_NAME_KEY] = versionName
+        }
+    }
+
+    suspend fun clearPendingUpdateInfo() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(PENDING_UPDATE_VERSION_CODE_KEY)
+            preferences.remove(PENDING_UPDATE_VERSION_NAME_KEY)
+        }
+    }
+
+    suspend fun getPendingUpdateVersionCode(): Int? =
+        context.dataStore.data.first()[PENDING_UPDATE_VERSION_CODE_KEY]
+
+    suspend fun getPendingUpdateVersionName(): String? =
+        context.dataStore.data.first()[PENDING_UPDATE_VERSION_NAME_KEY]
     
     suspend fun getDoubleTapSeekSeconds(): Int = 
         context.dataStore.data.first()[DOUBLE_TAP_SEEK_SECONDS_KEY] ?: 10
