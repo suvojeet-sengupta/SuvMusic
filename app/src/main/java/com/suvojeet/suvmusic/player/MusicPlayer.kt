@@ -1522,7 +1522,6 @@ class MusicPlayer @Inject constructor(
                         bufferingStartWallTime = 0L
                     }
 
-                    val currentState = _playerState.value
                     val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
                                      currentState.duration != duration ||
                                      currentState.bufferedPercentage != bufferedPercentage
