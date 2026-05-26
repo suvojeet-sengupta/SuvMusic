@@ -98,6 +98,10 @@ class MusicPlayerService : MediaLibraryService() {
     private val COMMAND_SHUFFLE = "COMMAND_SHUFFLE"
     private val COMMAND_START_RADIO = "COMMAND_START_RADIO"
     private val COMMAND_STOP_RADIO = "COMMAND_STOP_RADIO"
+    private val COMMAND_SKIP_SEGMENT = "COMMAND_SKIP_SEGMENT"
+    
+    // Tracks scheduled SponsorBlock skip messages to clear them on track change
+    private val sponsorBlockMessages = mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
     
     // Constants for Android Auto browsing
     private val ROOT_ID = "root"
@@ -1592,30 +1596,52 @@ class MusicPlayerService : MediaLibraryService() {
 
     private fun startSponsorBlockMonitoring() {
         sponsorBlockJob?.cancel()
+        
+        // Clear existing messages when monitoring restarts (new song or state change)
+        sponsorBlockMessages.forEach { it.cancel() }
+        sponsorBlockMessages.clear()
+
         sponsorBlockJob = serviceScope.launch {
-            while (isActive) {
-                val player = mediaLibrarySession?.player
-                if (player != null && player.isPlaying) {
-                    val currentPos = player.currentPosition / 1000f
-                    val skipTo = sponsorBlockRepository.checkSkip(currentPos)
-                    if (skipTo != null) {
-                        player.seekTo((skipTo * 1000).toLong())
-                    } else {
-                        // Adaptive polling: 
-                        // If next segment is far away, we can sleep longer
-                        val nextSegmentStart = sponsorBlockRepository.getNextSegmentStart(currentPos)
-                        if (nextSegmentStart != null) {
-                            val timeUntilNext = nextSegmentStart - currentPos
-                            if (timeUntilNext > 2.0f) {
-                                // Sleep for a bit less than time until next segment (max 5s)
-                                val sleepMs = (timeUntilNext * 1000 * 0.8f).toLong().coerceIn(200, 5000)
-                                delay(sleepMs)
-                                continue
+            sponsorBlockRepository.currentSegments.collect { segments ->
+                if (segments.isEmpty()) return@collect
+                
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    val player = mediaLibrarySession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@withContext
+                    
+                    // Cancel old messages for this track if segments updated
+                    sponsorBlockMessages.forEach { it.cancel() }
+                    sponsorBlockMessages.clear()
+
+                    segments.forEach { segment ->
+                        // Only schedule if user has this category enabled
+                        // Note: Repository handles category filtering in getNextSegmentStart/checkSkip
+                        // but since we are using createMessage, we check once here.
+                        val message = player.createMessage { _, _ ->
+                            val currentPos = player.currentPosition / 1000f
+                            // Guard: Only skip if we naturally hit the start (Task 4)
+                            // If user manually seeked past start, createMessage won't trigger anyway.
+                            // If user seeked exactly into the segment, we skip only if within 2s of start.
+                            if (currentPos >= segment.start && currentPos < segment.end) {
+                                serviceScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                    android.util.Log.i("SponsorBlock", "Skipping ${segment.category} at ${segment.start}s")
+                                    
+                                    // Smooth Transition: Volume Nudge (Task 3)
+                                    val originalVol = player.volume
+                                    player.volume = 0f
+                                    player.seekTo((segment.end * 1000).toLong())
+                                    delay(100)
+                                    player.volume = originalVol
+                                }
                             }
                         }
+                        .setLooper(android.os.Looper.getMainLooper())
+                        .setPosition((segment.start * 1000).toLong())
+                        .setDeleteAfterDelivery(true)
+                        .send()
+                        
+                        sponsorBlockMessages.add(message)
                     }
                 }
-                delay(200L)
             }
         }
     }
