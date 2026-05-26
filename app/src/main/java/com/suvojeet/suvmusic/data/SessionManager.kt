@@ -248,6 +248,7 @@ class SessionManager @Inject constructor(
         private val PLAYLIST_SORT_TYPE_KEY = stringPreferencesKey("playlist_sort_type")
         private val PLAYLIST_SORT_ORDER_KEY = booleanPreferencesKey("playlist_sort_order")
         private val HOME_SECTIONS_VISIBILITY_KEY = stringSetPreferencesKey("home_sections_visibility")
+        private val LIBRARY_VIEW_MODE_KEY = stringPreferencesKey("library_view_mode")
         
         private val FILTER_LOCAL_BY_DURATION_ENABLED_KEY = booleanPreferencesKey("filter_local_by_duration_enabled")
         private val LOCAL_DURATION_FILTER_THRESHOLD_KEY = intPreferencesKey("local_duration_filter_threshold")
@@ -1591,9 +1592,18 @@ class SessionManager @Inject constructor(
 
     // --- Library Settings ---
 
-    suspend fun isFilterLocalByDurationEnabled(): Boolean =
+    suspend fun isFilterLocalByDurationEnabled(): Boolean = 
         context.dataStore.data.first()[FILTER_LOCAL_BY_DURATION_ENABLED_KEY] ?: false
 
+    val libraryViewModeFlow: kotlinx.coroutines.flow.Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[LIBRARY_VIEW_MODE_KEY] ?: "GRID"
+    }
+
+    suspend fun setLibraryViewMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[LIBRARY_VIEW_MODE_KEY] = mode
+        }
+    }
     val filterLocalByDurationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[FILTER_LOCAL_BY_DURATION_ENABLED_KEY] ?: false
     }

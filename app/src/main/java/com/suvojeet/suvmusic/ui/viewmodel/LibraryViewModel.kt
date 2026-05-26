@@ -117,11 +117,20 @@ class LibraryViewModel @Inject constructor(
         observeLibraryPlaylists()
         observeImportService()
         observeLikedSongs()
-        observeDurationFilterSettings()
+        observeSettings() // Renamed for broader scope
         schedulePeriodicSync()
     }
 
-    private fun observeDurationFilterSettings() {
+    private fun observeSettings() {
+        // Observe View Mode
+        viewModelScope.launch {
+            sessionManager.libraryViewModeFlow.collect { modeStr ->
+                val mode = try { LibraryViewMode.valueOf(modeStr) } catch (e: Exception) { LibraryViewMode.GRID }
+                _uiState.update { it.copy(viewMode = mode) }
+            }
+        }
+
+        // Observe Duration Filter
         viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
                 sessionManager.filterLocalByDurationEnabledFlow,
@@ -609,7 +618,10 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun setViewMode(mode: LibraryViewMode) {
-        _uiState.update { it.copy(viewMode = mode) }
+        viewModelScope.launch {
+            sessionManager.setLibraryViewMode(mode.name)
+            _uiState.update { it.copy(viewMode = mode) }
+        }
     }
 
     fun setSortOption(option: LibrarySortOption) {
