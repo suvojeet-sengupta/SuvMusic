@@ -214,7 +214,7 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
         )
 
         // Periodic Update Check (Every 24 hours)
-        val updateRequest = androidx.work.PeriodicWorkRequestBuilder<com.suvojeet.suvmusic.updater.PeriodicUpdateWorker>(
+        val updateRequest = androidx.work.PeriodicWorkRequestBuilder<com.suvojeet.suvmusic.workers.PeriodicUpdateWorker>(
             24, java.util.concurrent.TimeUnit.HOURS
         )
             .setConstraints(

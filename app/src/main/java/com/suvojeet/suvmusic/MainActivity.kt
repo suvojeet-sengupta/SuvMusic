@@ -1144,8 +1144,14 @@ fun SuvMusicApp(
             val info = (updateState as UpdateState.UpdateAvailable).info
             UpdateDialog(
                 updateInfo = info,
-                onDismiss = { updateViewModel.dismissDialog() },
-                onUpdate = { updateViewModel.downloadAndInstallUpdate(info) }
+                onDismiss = { 
+                    lifecycleScope.launch { sessionManager.clearPendingUpdateInfo() }
+                    updateViewModel.dismissDialog() 
+                },
+                onUpdate = { 
+                    lifecycleScope.launch { sessionManager.clearPendingUpdateInfo() }
+                    updateViewModel.downloadAndInstallUpdate(info) 
+                }
             )
         }
         

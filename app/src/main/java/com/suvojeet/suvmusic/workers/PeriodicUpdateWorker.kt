@@ -1,15 +1,14 @@
-package com.suvojeet.suvmusic.updater
+package com.suvojeet.suvmusic.workers
 
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.updater.UpdateChecker
+import com.suvojeet.suvmusic.core.model.UpdateChannel
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-
-import com.suvojeet.suvmusic.core.model.UpdateChannel
 
 class PeriodicUpdateWorker(
     context: Context,
@@ -31,10 +30,6 @@ class PeriodicUpdateWorker(
                 val currentVersionCode = getVersionCode()
                 if (updateInfo.versionCode > currentVersionCode) {
                     Log.i("PeriodicUpdateWorker", "New update available: ${updateInfo.versionName}")
-                    // Note: We don't show a dialog from a background worker.
-                    // Instead, we could post a notification or set a flag.
-                    // For now, let's just update a "new update available" flag in session manager
-                    // so the UI can show a badge or prompt on next launch.
                     sessionManager.setPendingUpdateInfo(updateInfo.versionCode, updateInfo.versionName)
                 }
             }

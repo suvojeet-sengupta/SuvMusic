@@ -18,8 +18,7 @@ sealed class UpdateState {
 
 class UpdateViewModel @Inject constructor(
     private val checker: UpdateChecker,
-    private val downloader: UpdateDownloader,
-    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
+    private val downloader: UpdateDownloader
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
@@ -79,9 +78,6 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun downloadAndInstallUpdate(info: UpdateInfo) {
-        viewModelScope.launch {
-            sessionManager.clearPendingUpdateInfo()
-        }
         downloader.downloadAndInstall(info.downloadUrl, info.versionName, info.sha256)
     }
 
@@ -98,9 +94,6 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun dismissDialog() {
-        viewModelScope.launch {
-            sessionManager.clearPendingUpdateInfo()
-        }
         _updateState.value = UpdateState.Idle
     }
     
