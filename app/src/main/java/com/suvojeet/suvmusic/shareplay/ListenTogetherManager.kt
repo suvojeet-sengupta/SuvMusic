@@ -217,11 +217,11 @@ class ListenTogetherManager @Inject constructor(
             }
         }
         
-        // Monitor Privacy Mode
+        // Monitor Incognito Mode
         scope.launch {
-            sessionManager.privacyModeEnabledFlow.collect { privacyEnabled ->
-                if (privacyEnabled && isInRoom) {
-                    Log.i(TAG, "Privacy Mode enabled, leaving Listen Together room.")
+            sessionManager.incognitoModeEnabledFlow.collect { incognitoEnabled ->
+                if (incognitoEnabled && isInRoom) {
+                    Log.i(TAG, "Incognito Mode enabled, leaving Listen Together room.")
                     leaveRoom()
                 }
             }
@@ -747,8 +747,8 @@ class ListenTogetherManager @Inject constructor(
     }
     fun createRoom(username: String) {
         scope.launch {
-            if (sessionManager.isPrivacyModeEnabled()) {
-                Log.w(TAG, "Cannot create room in Privacy Mode")
+            if (sessionManager.isIncognitoModeEnabled()) {
+                Log.w(TAG, "Cannot create room in Incognito Mode")
                 return@launch
             }
             client.createRoom(username)
@@ -757,8 +757,8 @@ class ListenTogetherManager @Inject constructor(
     
     fun joinRoom(roomCode: String, username: String) {
          scope.launch {
-            if (sessionManager.isPrivacyModeEnabled()) {
-                Log.w(TAG, "Cannot join room in Privacy Mode")
+            if (sessionManager.isIncognitoModeEnabled()) {
+                Log.w(TAG, "Cannot join room in Incognito Mode")
                 return@launch
             }
             client.joinRoom(roomCode, username)

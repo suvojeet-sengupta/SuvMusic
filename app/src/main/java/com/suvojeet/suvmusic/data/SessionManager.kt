@@ -117,7 +117,6 @@ class SessionManager @Inject constructor(
         private val APP_THEME_KEY = stringPreferencesKey("app_theme")
         private val LOGO_VARIANT_KEY = stringPreferencesKey("logo_variant")
         private val ENDLESS_QUEUE_ENABLED_KEY = booleanPreferencesKey("endless_queue_enabled")
-        private val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
         private val VOLUME_SLIDER_ENABLED_KEY = booleanPreferencesKey("volume_slider_enabled")
         private val VOLUME_NORMALIZATION_ENABLED_KEY = booleanPreferencesKey("volume_normalization_enabled")
         private val MINI_PLAYER_ALPHA_KEY = floatPreferencesKey("mini_player_alpha")
@@ -213,7 +212,6 @@ class SessionManager @Inject constructor(
         private val DISCORD_RPC_ENABLED_KEY = booleanPreferencesKey("discord_rpc_enabled")
         private val DISCORD_TOKEN_KEY = stringPreferencesKey("discord_token")
         private val DISCORD_USE_DETAILS_KEY = booleanPreferencesKey("discord_use_details")
-        private val PRIVACY_MODE_ENABLED_KEY = booleanPreferencesKey("privacy_mode_enabled")
         
         // Audio AR
         private val AUDIO_AR_ENABLED_KEY = booleanPreferencesKey("audio_ar_enabled")
@@ -724,19 +722,6 @@ class SessionManager @Inject constructor(
     suspend fun setEndlessQueue(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ENDLESS_QUEUE_ENABLED_KEY] = enabled
-        }
-    }
-    
-    suspend fun isOfflineModeEnabled(): Boolean = 
-        context.dataStore.data.first()[OFFLINE_MODE_ENABLED_KEY] ?: false
-    
-    val offlineModeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[OFFLINE_MODE_ENABLED_KEY] ?: false
-    }
-    
-    suspend fun setOfflineMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[OFFLINE_MODE_ENABLED_KEY] = enabled
         }
     }
     
@@ -1632,21 +1617,6 @@ class SessionManager @Inject constructor(
         }
     }
 
-
-    // --- Privacy Mode ---
-
-    suspend fun isPrivacyModeEnabled(): Boolean =
-        context.dataStore.data.first()[PRIVACY_MODE_ENABLED_KEY] ?: false
-
-    val privacyModeEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PRIVACY_MODE_ENABLED_KEY] ?: false
-    }
-
-    suspend fun setPrivacyModeEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PRIVACY_MODE_ENABLED_KEY] = enabled
-        }
-    }
 
     // --- Audio AR ---
 

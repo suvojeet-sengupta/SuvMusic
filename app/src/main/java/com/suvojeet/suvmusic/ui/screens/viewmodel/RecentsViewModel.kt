@@ -23,7 +23,7 @@ class RecentsViewModel @Inject constructor(
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
 ) : ViewModel() {
 
-    val incognitoModeEnabled: StateFlow<Boolean> = repository.sessionManager.privacyModeEnabledFlow
+    val incognitoModeEnabled: StateFlow<Boolean> = repository.sessionManager.incognitoModeEnabledFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _selectedSongs = MutableStateFlow<Set<String>>(emptySet())
@@ -41,7 +41,7 @@ class RecentsViewModel @Inject constructor(
 
     fun setIncognitoMode(enabled: Boolean) {
         viewModelScope.launch {
-            repository.sessionManager.setPrivacyModeEnabled(enabled)
+            repository.sessionManager.setIncognitoModeEnabled(enabled)
         }
     }
 
