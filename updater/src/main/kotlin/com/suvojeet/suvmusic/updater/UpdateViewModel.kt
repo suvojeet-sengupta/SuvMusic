@@ -18,7 +18,8 @@ sealed class UpdateState {
 
 class UpdateViewModel @Inject constructor(
     private val checker: UpdateChecker,
-    private val downloader: UpdateDownloader
+    private val downloader: UpdateDownloader,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) : ViewModel() {
 
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
@@ -78,10 +79,28 @@ class UpdateViewModel @Inject constructor(
     }
 
     fun downloadAndInstallUpdate(info: UpdateInfo) {
+        viewModelScope.launch {
+            sessionManager.clearPendingUpdateInfo()
+        }
         downloader.downloadAndInstall(info.downloadUrl, info.versionName, info.sha256)
     }
 
+    fun triggerUpdateAvailable(versionCode: Int, versionName: String) {
+        // Create a temporary UpdateInfo to trigger the UI
+        val info = UpdateInfo(
+            versionCode = versionCode,
+            versionName = versionName,
+            downloadUrl = "", // Will be re-fetched when user clicks update
+            sha256 = null
+        )
+        // Actually, better to re-fetch full info to get the real download URL
+        checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE, silent = true)
+    }
+
     fun dismissDialog() {
+        viewModelScope.launch {
+            sessionManager.clearPendingUpdateInfo()
+        }
         _updateState.value = UpdateState.Idle
     }
     
