@@ -271,35 +271,6 @@ fun EqualizerSheet(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(contentAlignment = Alignment.TopEnd) {
-                        androidx.compose.material3.IconButton(
-                            onClick = {
-                                onDismiss()
-                                onAIEqualizerClick()
-                            },
-                            enabled = isEnabled
-                        ) {
-                            androidx.compose.material3.Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Equalizer",
-                                tint = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.5f)
-                            )
-                        }
-                        if (isEnabled) {
-                            BetaBadge(
-                                modifier = Modifier
-                                    .padding(top = 2.dp, end = 2.dp)
-                                    .graphicsLayer { 
-                                        scaleX = 0.65f
-                                        scaleY = 0.65f
-                                        transformOrigin = TransformOrigin.Center
-                                    },
-                                containerColor = finalAccentColor,
-                                contentColor = Color.White
-                            )
-                        }
-                    }
-
                     androidx.compose.material3.TextButton(
                         onClick = {
                             onReset()
@@ -320,6 +291,8 @@ fun EqualizerSheet(
                             color = if (isEnabled) resetEnabledColor else resetDisabledColor
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Box(contentAlignment = Alignment.TopEnd) {
                         androidx.compose.material3.IconButton(
@@ -349,16 +322,40 @@ fun EqualizerSheet(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(12.dp))
                     
-                    Switch(
-                        checked = isEnabled,
-                        onCheckedChange = { 
-                            isEnabled = it
-                            onEnabledChange(it)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        colors = switchColors
-                    )
+                    // Master Switch with Label for visibility
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isEnabled) finalAccentColor.copy(alpha = 0.1f) else Color.Transparent)
+                            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+                            .clickable {
+                                isEnabled = !isEnabled
+                                onEnabledChange(isEnabled)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                    ) {
+                        Text(
+                            text = if (isEnabled) "ON" else "OFF",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Black,
+                            color = if (isEnabled) finalAccentColor else finalContentColor.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Switch(
+                            checked = isEnabled,
+                            onCheckedChange = { 
+                                isEnabled = it
+                                onEnabledChange(it)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            colors = switchColors,
+                            modifier = Modifier.scale(0.85f)
+                        )
+                    }
                 }
             }
 
