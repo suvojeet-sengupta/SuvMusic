@@ -1563,11 +1563,15 @@ class MusicPlayerService : MediaLibraryService() {
         // Read the cached setting synchronously — the framework decides whether
         // to keep the service alive immediately after this method returns, so
         // launching a coroutine to read DataStore raced that decision.
+        val player = mediaLibrarySession?.player
         if (stopMusicOnTaskClearCached) {
+            // Fix: Explicitly pause and clear queue so Media3 releases the foreground state
+            player?.pause()
+            player?.clearMediaItems()
             stopSelf()
             return
         }
-        val player = mediaLibrarySession?.player
+        
         if (player?.playWhenReady == false && player.mediaItemCount == 0) {
             stopSelf()
         }
