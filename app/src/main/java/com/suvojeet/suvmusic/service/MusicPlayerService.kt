@@ -579,22 +579,19 @@ class MusicPlayerService : MediaLibraryService() {
                     // Suppression cleared. Only resume if playback was actually running
                     // when suppression started AND the user has auto-resume enabled.
                     val shouldResume = wasPlayingBeforeSuppression
-                    wasPlayingBeforeSuppression = false
-                    if (!shouldResume) {
-                        android.util.Log.d(
-                            "MusicPlayerService",
-                            "Suppression cleared but user had paused before — leaving paused.",
-                        )
-                        return
-                    }
-                    serviceScope.launch {
-                        if (sessionManager.isAutoResumeAfterCallEnabled()) {
-                            android.util.Log.d("MusicPlayerService", "Suppression cleared and was playing — resuming.")
-                            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                mediaLibrarySession?.player?.play()
+                    
+                    // Logic Fix: Only clear the flag if we are actually resuming or if focus is solid.
+                    // This prevents Instagram scrolls from accidentally clearing the 'was playing' state
+                    // while allowing phone calls to resume correctly.
+                    if (shouldResume) {
+                        serviceScope.launch {
+                            if (sessionManager.isAutoResumeAfterCallEnabled()) {
+                                android.util.Log.d("MusicPlayerService", "Suppression cleared and was playing — resuming.")
+                                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    mediaLibrarySession?.player?.play()
+                                }
+                                wasPlayingBeforeSuppression = false
                             }
-                        } else {
-                            android.util.Log.d("MusicPlayerService", "Suppression cleared but auto-resume disabled — staying paused.")
                         }
                     }
                 }
