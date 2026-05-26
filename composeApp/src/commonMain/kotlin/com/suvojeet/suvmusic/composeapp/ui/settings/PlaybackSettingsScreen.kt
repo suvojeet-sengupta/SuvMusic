@@ -706,10 +706,30 @@ private fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+        else Color.Transparent
+    )
+
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
         supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = { LeadingIconBox(icon) },
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        },
         trailingContent = {
             Switch(
                 checked = checked,
@@ -721,8 +741,11 @@ private fun SwitchRow(
             )
         },
         modifier = Modifier
+            .fillMaxWidth()
+            .clip(SquircleShape)
+            .background(backgroundColor)
             .clickable { onCheckedChange(!checked) }
-            .clip(SquircleShape),
+            .padding(horizontal = 4.dp),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
