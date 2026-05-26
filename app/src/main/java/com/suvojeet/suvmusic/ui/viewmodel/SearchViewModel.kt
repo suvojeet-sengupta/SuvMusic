@@ -315,12 +315,21 @@ class SearchViewModel @Inject constructor(
         search()
     }
     
-    fun search() {
+    fun search(saveToHistory: Boolean = true) {
         val query = _uiState.value.query
         if (query.isBlank()) return
         
         // Hide suggestions when searching
         _uiState.update { it.copy(showSuggestions = false) }
+        
+        // Add to recent searches when a search is explicitly performed
+        if (saveToHistory) {
+            val trimmedQuery = query.trim()
+            viewModelScope.launch {
+                sessionManager.addRecentSearch(RecentSearchItem.QueryItem(trimmedQuery))
+                loadRecentSearches()
+            }
+        }
         
         searchInternal(query)
     }
@@ -481,7 +490,7 @@ class SearchViewModel @Inject constructor(
                 showSuggestions = false
             )
         }
-        search()
+        search(saveToHistory = false)
         
         // Move to top of recent logic is handled by adding it again
         viewModelScope.launch {

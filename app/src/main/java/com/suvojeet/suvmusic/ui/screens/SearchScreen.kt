@@ -653,9 +653,38 @@ private fun AlbumSearchCard(album: Album, onClick: () -> Unit) {
 
 @Composable
 private fun RecentSearchItemRow(item: RecentSearchItem, onSongClick: (List<Song>, Int) -> Unit, onArtistClick: (String) -> Unit, onAlbumClick: (Album) -> Unit, onPlaylistClick: (String) -> Unit, onMoreClick: (Song) -> Unit, viewModel: SearchViewModel) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    
     when (item) {
         is RecentSearchItem.SongItem -> SearchResultItem(song = item.song, onClick = { viewModel.onRecentSearchClick(item); onSongClick(listOf(item.song), 0) }, onArtistClick = onArtistClick, onMoreClick = { onMoreClick(item.song) })
         is RecentSearchItem.AlbumItem -> AlbumSearchListItem(album = item.album, onClick = { viewModel.onRecentSearchClick(item); onAlbumClick(item.album) })
         is RecentSearchItem.PlaylistItem -> PlaylistSearchListItem(playlist = item.playlist, onClick = { viewModel.onRecentSearchClick(item); onPlaylistClick(item.playlist.id) })
+        is RecentSearchItem.QueryItem -> QuerySearchItem(query = item.query, accentColor = accentColor, onClick = { viewModel.onRecentSearchClick(item) })
+    }
+}
+
+@Composable
+private fun QuerySearchItem(query: String, accentColor: Color, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = query,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
