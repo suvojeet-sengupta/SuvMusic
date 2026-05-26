@@ -1145,11 +1145,11 @@ fun SuvMusicApp(
             UpdateDialog(
                 updateInfo = info,
                 onDismiss = { 
-                    lifecycleScope.launch { sessionManager.clearPendingUpdateInfo() }
+                    scope.launch { sessionManager.clearPendingUpdateInfo() }
                     updateViewModel.dismissDialog() 
                 },
                 onUpdate = { 
-                    lifecycleScope.launch { sessionManager.clearPendingUpdateInfo() }
+                    scope.launch { sessionManager.clearPendingUpdateInfo() }
                     updateViewModel.downloadAndInstallUpdate(info) 
                 }
             )
