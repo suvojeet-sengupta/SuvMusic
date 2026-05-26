@@ -81,16 +81,9 @@ class UpdateViewModel @Inject constructor(
         downloader.downloadAndInstall(info.downloadUrl, info.versionName, info.sha256)
     }
 
-    fun triggerUpdateAvailable(versionCode: Int, versionName: String) {
-        // Create a temporary UpdateInfo to trigger the UI
-        val info = UpdateInfo(
-            versionCode = versionCode,
-            versionName = versionName,
-            downloadUrl = "", // Will be re-fetched when user clicks update
-            sha256 = null
-        )
-        // Actually, better to re-fetch full info to get the real download URL
-        checkForUpdate(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE, silent = true)
+    fun triggerUpdateAvailable(versionCode: Int, versionName: String, currentVersionCode: Int) {
+        // We re-fetch to get the real download URL and sha256
+        checkForUpdate(currentVersionCode, silent = true)
     }
 
     fun dismissDialog() {
