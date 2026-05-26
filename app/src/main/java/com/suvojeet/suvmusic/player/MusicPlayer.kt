@@ -844,12 +844,15 @@ class MusicPlayer @Inject constructor(
                 errorRetrySongId = null
                 
                 val previousSong = _playerState.value.currentSong
+                val isSameSong = previousSong?.id == song?.id
+
                 _playerState.update {
                     it.copy(
                         currentSong = song,
                         currentIndex = index,
-                        currentPosition = 0L,
-                        duration = controller.duration.coerceAtLeast(0L),
+                        // Fix: Don't reset position if we're just re-resolving the same song
+                        currentPosition = if (isSameSong) it.currentPosition else 0L,
+                        duration = if (controller.duration > 0) controller.duration else it.duration,
                         isLiked = false,
                         isDisliked = false,
                         downloadState = DownloadState.NOT_DOWNLOADED,
@@ -1466,6 +1469,15 @@ class MusicPlayer @Inject constructor(
                 mediaController?.let { controller ->
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
+                    val currentState = _playerState.value
+
+                    // Bug Fix: Ignore anomalous 0ms position reports from ExoPlayer while playing.
+                    // If the player is active and has already progressed, a sudden 0ms report
+                    // is usually a transient state during buffer underflows or internal re-connects.
+                    if (controller.isPlaying && currentPos == 0L && currentState.currentPosition > 1000L) {
+                        return@collect
+                    }
+
                     val bufferedPercentage = controller.bufferedPercentage
                     val bufferedAheadMs = (controller.bufferedPosition - currentPos).coerceAtLeast(0L)
                     val playbackState = controller.playbackState
