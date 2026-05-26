@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
             if (pendingCode != null && pendingCode > com.suvojeet.suvmusic.BuildConfig.VERSION_CODE) {
                 val pendingName = sessionManager.getPendingUpdateVersionName() ?: "New Version"
                 // Trigger the UpdateAvailable state in ViewModel so the dialog shows
-                updateViewModel.triggerUpdateAvailable(pendingCode, pendingName)
+                updateViewModel.triggerUpdateAvailable(pendingCode, pendingName, com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
             }
         }
         
