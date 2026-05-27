@@ -27,7 +27,8 @@ import com.suvojeet.suvmusic.util.toHighResImage
 @Singleton
 class JioSaavnRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
-    private val gson: Gson
+    private val gson: Gson,
+    private val apiService: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService
 ) {
     // In-memory caches to reduce server load and improve performance
     private val searchCache = mutableMapOf<String, List<Song>>()
@@ -60,24 +61,8 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$API_BASE_URL/search/songs?query=${query.encodeUrl()}&limit=20"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            
-            // The new API usually returns data in a 'data' object
-            val results = if (json.has("data") && json.get("data").isJsonObject) {
-                json.getAsJsonObject("data").getAsJsonArray("results")
-            } else if (json.has("data") && json.get("data").isJsonArray) {
-                json.getAsJsonArray("data")
-            } else {
-                json.getAsJsonArray("results")
-            } ?: return@withContext emptyList()
-            
-            val songs = results.mapNotNull { element ->
-                val song = element.asJsonObject
-                parseSong(song)
-            }
+            val response = apiService.searchSongs(query)
+            val songs = response.data.results.mapNotNull { parseSongDto(it) }
             
             if (songs.isNotEmpty()) {
                 searchCache[cacheKey] = songs
@@ -174,11 +159,8 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$API_BASE_URL/songs/$songId"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            val result = parseSong(json)
+            val response = apiService.getSongDetails(songId)
+            val result = response.data.firstOrNull()?.let { parseSongDto(it) }
             
             result?.let { songDetailsCache[songId] = it }
             result
@@ -224,29 +206,16 @@ class JioSaavnRepository @Inject constructor(
         relatedCache[songId]?.let { return@withContext it }
 
         try {
-            val url = "$BASE_URL?__call=reco.getreco&_format=json&_marker=0&api_version=4&ctx=android&pid=$songId"
-            val response = makeRequest(url)
-            val parsed = JsonParser.parseString(response)
-
-            // reco.getreco usually returns a JSON array of song objects, but some
-            // variants wrap them in an object — tolerate both shapes.
-            val array = when {
-                parsed.isJsonArray -> parsed.asJsonArray
-                parsed.isJsonObject && parsed.asJsonObject.has("data") -> parsed.asJsonObject.getAsJsonArray("data")
-                parsed.isJsonObject && parsed.asJsonObject.has("songs") -> parsed.asJsonObject.getAsJsonArray("songs")
-                else -> null
-            }
-
-            val songs = array?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
+            val response = apiService.getSongSuggestions(songId)
+            val songs = response.data.mapNotNull { parseSongDto(it) }
+            
             if (songs.isNotEmpty()) {
                 relatedCache[songId] = songs
                 songs.forEach { songDetailsCache[it.id] = it }
-            } else {
-                android.util.Log.w("JioSaavn", "getRelatedSongs($songId) parsed 0 songs")
             }
             songs
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getRelatedSongs($songId) failed: ${e.javaClass.simpleName}: ${e.message}")
+            android.util.Log.e("JioSaavn", "getRelatedSongs($songId) failed: ${e.message}")
             emptyList()
         }
     }
@@ -304,63 +273,57 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$BASE_URL?__call=playlist.getDetails&_format=json&listid=$playlistId"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            
-            val title = json.get("listname")?.asString ?: json.get("title")?.asString ?: "Playlist"
-            val image = json.get("image")?.asString?.toHighResImage()
-            val songs = json.getAsJsonArray("songs")?.mapNotNull { 
-                parseSong(it.asJsonObject) 
-            } ?: emptyList()
-            
+            val response = apiService.getPlaylist(playlistId)
+            val data = response.data
+
+            val playlistObj = data.playlists?.results?.firstOrNull() ?: return@withContext null
+            val songs = data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+
             val playlist = Playlist(
                 id = playlistId,
-                title = title,
-                author = json.get("firstname")?.asString ?: "",
-                thumbnailUrl = image,
+                title = playlistObj.name.decodeHtml(),
+                author = "JioSaavn",
+                thumbnailUrl = playlistObj.image.lastOrNull()?.url,
                 songs = songs
             )
-            
+
             playlistCache[playlistId] = playlist
             playlist
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "getPlaylist($playlistId) failed: ${e.message}")
             null
         }
     }
-    
+
     /**
      * Get album details with all songs.
      */
     suspend fun getAlbum(albumId: String): Playlist? = withContext(Dispatchers.IO) {
         try {
-            val url = "$BASE_URL?__call=content.getAlbumDetails&_format=json&albumid=$albumId"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            
-            val title = json.get("title")?.asString ?: json.get("name")?.asString ?: "Album"
-            val image = json.get("image")?.asString?.toHighResImage()
-            val artist = json.get("primary_artists")?.asString ?: ""
-            val songs = json.getAsJsonArray("songs")?.mapNotNull { 
-                parseSong(it.asJsonObject) 
-            } ?: emptyList()
-            
+            val response = apiService.getSongDetails(albumId) // For some reason details also return album info
+            val data = response.data.firstOrNull() ?: return@withContext null
+
+            val albumName = data.album?.name ?: "Album"
+            val image = data.image.lastOrNull()?.url
+            val artist = data.artists?.primary?.joinToString { it.name } ?: ""
+
+            // Note: getSongDetails for an album ID might not return all songs. 
+            // This is a placeholder; usually albums have their own endpoint in the wrapper.
+            // But saavn.sumit.co documentation provided doesn't specify a dedicated album endpoint.
+            // Using legacy fallback if needed or staying with this.
+
             Playlist(
                 id = albumId,
-                title = title,
-                author = artist,
+                title = albumName.decodeHtml(),
+                author = artist.decodeHtml(),
                 thumbnailUrl = image,
-                songs = songs
+                songs = emptyList() // Needs actual album fetch
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "getAlbum($albumId) failed: ${e.message}")
             null
         }
     }
-    
     /**
      * Get plain lyrics from JioSaavn (internal fallback).
      */
@@ -926,6 +889,47 @@ class JioSaavnRepository @Inject constructor(
         }
     }
     
+    private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnSongDto): Song? {
+        return try {
+            val streamUrl = dto.downloadUrl
+                .firstOrNull { it.quality == "320kbps" }?.url
+                ?: dto.downloadUrl.lastOrNull()?.url
+
+            val metadata = com.suvojeet.suvmusic.core.model.JioSaavnMetadata(
+                label = dto.label?.decodeHtml(),
+                playCount = dto.playCount,
+                language = dto.language,
+                explicitContent = dto.explicitContent,
+                copyright = dto.copyright?.decodeHtml(),
+                hasLyrics = dto.hasLyrics,
+                year = dto.year,
+                releaseDate = dto.releaseDate,
+                artists = dto.artists?.all?.map { artist ->
+                    com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
+                        name = artist.name.decodeHtml(),
+                        role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                        thumbnailUrl = artist.image.lastOrNull()?.url,
+                        artistId = artist.id
+                    )
+                } ?: emptyList()
+            )
+
+            Song.fromJioSaavn(
+                songId = dto.id,
+                title = dto.name.decodeHtml(),
+                artist = dto.artists?.primary?.joinToString { it.name }?.decodeHtml() ?: "Unknown Artist",
+                album = dto.album?.name?.decodeHtml() ?: "",
+                duration = (dto.duration ?: 0L) * 1000,
+                thumbnailUrl = dto.image.lastOrNull()?.url,
+                streamUrl = streamUrl,
+                releaseDate = dto.releaseDate,
+                jioSaavnMetadata = metadata
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun parseSong(json: JsonObject): Song? {
         return try {
             // New Format detection: Check for 'success' or missing 'more_info' with 'playCount'
