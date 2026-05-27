@@ -62,6 +62,7 @@ import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.RecentSearchItem
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
@@ -299,27 +300,39 @@ fun SearchScreen(
                         }
                     }
 
-                    // Tab Selection (YouTube / Local)
+                    // Tab Selection (YouTube / JioSaavn / Local). YouTube tab is
+                    // hidden when the active music source is JioSaavn so the user
+                    // gets a JioSaavn-only experience.
+                    val visibleTabs = remember(uiState.currentSource) {
+                        buildList {
+                            if (uiState.currentSource != MusicSource.JIOSAAVN) add(SearchTab.YOUTUBE_MUSIC)
+                            add(SearchTab.JIOSAAVN)
+                            add(SearchTab.YOUR_LIBRARY)
+                        }
+                    }
+                    val visibleSelectedIdx = visibleTabs.indexOf(uiState.selectedTab).coerceAtLeast(0)
                     TabRow(
-                        selectedTabIndex = uiState.selectedTab.ordinal,
+                        selectedTabIndex = visibleSelectedIdx,
                         containerColor = Color.Transparent,
                         contentColor = accentColor,
                         divider = {},
                         indicator = { tabPositions ->
-                            if (uiState.selectedTab.ordinal < tabPositions.size) {
+                            if (visibleSelectedIdx < tabPositions.size) {
                                 TabRowDefaults.SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[uiState.selectedTab.ordinal]),
+                                    Modifier.tabIndicatorOffset(tabPositions[visibleSelectedIdx]),
                                     color = accentColor
                                 )
                             }
                         },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        Tab(
-                            selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
-                            onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
-                            text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
-                        )
+                        if (uiState.currentSource != MusicSource.JIOSAAVN) {
+                            Tab(
+                                selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
+                                onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
+                                text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
+                            )
+                        }
                         Tab(
                             selected = uiState.selectedTab == SearchTab.JIOSAAVN,
                             onClick = { viewModel.onTabChange(SearchTab.JIOSAAVN) },

@@ -554,14 +554,25 @@ class JioSaavnRepository @Inject constructor(
             android.util.Log.e("JioSaavn", "Error fetching dynamic home sections", e)
         }
 
-        // Fallback if dynamic fetch returns empty or fails
-        if (sections.isEmpty()) {
-            return@withContext fetchStaticHomeSections()
+        // Always merge the static catalogue on top of whatever dynamic gave us.
+        // Launch data is region-dependent and often returns only 1–2 sections,
+        // which leaves the home screen feeling empty. Dedupe by title so a
+        // section appearing in both sources isn't shown twice.
+        try {
+            val staticSections = fetchStaticHomeSections()
+            if (staticSections.isNotEmpty()) {
+                val existingTitles = sections.map { it.title }.toMutableSet()
+                for (s in staticSections) {
+                    if (existingTitles.add(s.title)) sections.add(s)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("JioSaavn", "Static home merge failed: ${e.message}")
         }
-        
+
         sections
     }
-    
+
     /**
      * Fallback: Get home sections with manual fetches if Launch Data fails.
      */

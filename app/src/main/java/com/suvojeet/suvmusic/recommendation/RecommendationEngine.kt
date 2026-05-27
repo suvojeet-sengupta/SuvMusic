@@ -471,18 +471,85 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS)
         if (cached != null) return@coroutineScope cached
 
-        // JioSaavn source: a lightweight personalized layer on top of the JioSaavn
-        // discover sections that HomeViewModel already loads. Quick picks + recent.
+        // JioSaavn source: assemble a personalized layer on top of the JioSaavn
+        // discover sections that HomeViewModel loads separately. Mirrors the
+        // YouTube branch's variety (quick picks + artist mixes + genre + recent)
+        // so HQ home doesn't feel half-empty once the user has any history.
         if (isJioSaavnSource()) {
+            val jioProfile = tasteProfileBuilder.getProfile()
             val jioSections = mutableListOf<HomeSection>()
-            val quickPicks = getPersonalizedRecommendations(20)
-            if (quickPicks.isNotEmpty()) {
-                jioSections.add(HomeSection(
-                    title = "Quick picks",
-                    items = quickPicks.map { HomeItem.SongItem(it) },
-                    type = HomeSectionType.QuickPicks
-                ))
+            val jioSeenIds = mutableSetOf<String>()
+            val jioSeenFingerprints = mutableSetOf<String>()
+
+            // 1) Quick picks — JioSaavn-seeded recommendations
+            try {
+                val quickPicks = getPersonalizedRecommendations(20)
+                val unique = deduplicate(quickPicks, jioSeenIds, jioSeenFingerprints)
+                if (unique.isNotEmpty()) {
+                    jioSections.add(HomeSection(
+                        title = "Quick picks",
+                        items = unique.map { HomeItem.SongItem(it) },
+                        type = HomeSectionType.QuickPicks
+                    ))
+                }
+            } catch (e: Exception) { Log.w(TAG, "JioSaavn quick picks failed", e) }
+
+            // 2) Based on recent listening — seeded from the latest JioSaavn play
+            try {
+                val seed = recentJioSaavnSeedIds(1).firstOrNull()
+                if (seed != null) {
+                    val related = jioSaavnRepository.getRelatedSongs(seed)
+                    val scored = scoreAndRank(related, jioProfile)
+                    val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
+                    if (unique.isNotEmpty()) {
+                        jioSections.add(HomeSection(
+                            title = "Based on recent listening",
+                            items = unique.map { HomeItem.SongItem(it) },
+                            type = HomeSectionType.HorizontalCarousel
+                        ))
+                    }
+                }
+            } catch (e: Exception) { Log.w(TAG, "JioSaavn recent-based failed", e) }
+
+            // 3) Top-artist mixes — only when the profile has enough data
+            if (jioProfile.hasEnoughData) {
+                val topArtists = jioProfile.artistAffinities.keys.take(2)
+                for (artist in topArtists) {
+                    try {
+                        val songs = jioSaavnRepository.search("$artist top songs")
+                        val scored = scoreAndRank(songs, jioProfile)
+                        val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
+                        if (unique.isNotEmpty()) {
+                            val displayName = artist.replaceFirstChar { it.titlecase() }
+                            jioSections.add(HomeSection(
+                                title = "Your $displayName Mix",
+                                items = unique.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            ))
+                        }
+                    } catch (e: Exception) { Log.w(TAG, "JioSaavn artist mix failed for $artist", e) }
+                }
             }
+
+            // 4) Top-genre "Because you like X" rows
+            if (jioProfile.hasEnoughData) {
+                val topGenres = GenreTaxonomy.topGenres(jioProfile.genreAffinityVector, n = 2)
+                for ((genreName, _) in topGenres) {
+                    try {
+                        val songs = jioSaavnRepository.search("$genreName songs")
+                        val scored = scoreAndRank(songs, jioProfile)
+                        val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(12)
+                        if (unique.isNotEmpty()) {
+                            jioSections.add(HomeSection(
+                                title = "Because you like $genreName",
+                                items = unique.map { HomeItem.SongItem(it) },
+                                type = HomeSectionType.HorizontalCarousel
+                            ))
+                        }
+                    } catch (e: Exception) { Log.w(TAG, "JioSaavn genre row failed for $genreName", e) }
+                }
+            }
+
             if (jioSections.isNotEmpty()) cache.putSections(RecommendationCache.Keys.HOME_SECTIONS, jioSections)
             return@coroutineScope jioSections
         }
