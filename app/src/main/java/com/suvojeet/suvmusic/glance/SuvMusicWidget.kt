@@ -41,6 +41,7 @@ import androidx.glance.unit.ColorProvider
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.request.allowHardware
 import coil3.toBitmap
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.model.RepeatMode
@@ -89,10 +90,19 @@ class SuvMusicWidget : GlanceAppWidget() {
                             val request = ImageRequest.Builder(context)
                                 .data(currentSong.thumbnailUrl)
                                 .size(256, 256)
+                                // Software bitmap is required for RemoteViews, and lets us
+                                // own a private copy below.
+                                .allowHardware(false)
                                 .build()
                             val result = context.imageLoader.execute(request)
                             if (result is SuccessResult) {
-                                artworkBitmap = result.image.toBitmap()
+                                // IMPORTANT: execute() returns the bitmap held by the shared
+                                // memory cache. We must NOT keep/recycle that instance — the
+                                // same bitmap is reused by every AsyncImage for this URL, and
+                                // recycling it crashes Compose ("trying to use a recycled
+                                // bitmap"). Take an owned copy that this widget can recycle.
+                                val shared = result.image.toBitmap()
+                                artworkBitmap = shared.copy(Bitmap.Config.ARGB_8888, false)
                             }
                         } catch (e: Exception) {
                             android.util.Log.w("SuvMusicWidget", "Artwork load failed: ${e.message}")
