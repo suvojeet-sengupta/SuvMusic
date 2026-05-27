@@ -1385,7 +1385,10 @@ class MusicPlayer @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _playerState.update { it.copy(error = e.message, isLoading = false) }
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    android.util.Log.e("MusicPlayer", "Resolution failed: ${e.message}", e)
+                    _playerState.update { it.copy(error = e.message, isLoading = false) }
+                }
             }
         }
     }
@@ -2655,8 +2658,10 @@ class MusicPlayer @Inject constructor(
                 
                 _playerState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                android.util.Log.e("MusicPlayer", "Error toggling video mode", e)
-                _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode, error = e.message) }
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    android.util.Log.e("MusicPlayer", "Error toggling video mode", e)
+                    _playerState.update { it.copy(isLoading = false, isVideoMode = !newVideoMode, error = e.message) }
+                }
             }
         }
     }
