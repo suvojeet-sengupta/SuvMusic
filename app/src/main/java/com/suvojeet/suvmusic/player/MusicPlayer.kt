@@ -1313,6 +1313,7 @@ class MusicPlayer @Inject constructor(
                 // its own YouTube fallback above, and JioSaavn has no video streams).
                 if (streamUrl == null && !_playerState.value.isVideoMode) {
                     val matchQuery = "${song.title} ${song.artist}".trim()
+                    android.util.Log.w("MusicPlayer", "Primary stream failed for ${song.source} '${song.title}' — attempting cross-source fallback")
                     try {
                         when (song.source) {
                             SongSource.JIOSAAVN -> {
@@ -1325,6 +1326,7 @@ class MusicPlayer @Inject constructor(
                                         youTubeRepository.getStreamUrl(ytId)
                                     }
                                 }
+                                android.util.Log.w("MusicPlayer", "JioSaavn->YouTube fallback: ytId=$ytId, resolved=${streamUrl != null}")
                             }
                             SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> {
                                 // YouTube failed -> resolve via JioSaavn
@@ -1336,6 +1338,7 @@ class MusicPlayer @Inject constructor(
                                         jioSaavnRepository.getStreamUrl(jsId)
                                     }
                                 }
+                                android.util.Log.w("MusicPlayer", "YouTube->JioSaavn fallback: jsId=$jsId, resolved=${streamUrl != null}")
                             }
                             else -> {}
                         }
