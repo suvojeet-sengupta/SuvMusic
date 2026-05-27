@@ -1,7 +1,7 @@
 package com.suvojeet.suvmusic.core.model
 
 /**
- * Primary music source preference (YouTube Music vs JioSaavn HQ vs both).
+ * Primary music source preference (YouTube Music vs JioSaavn HQ).
  *
  * Lifted from `app/.../data/SessionManager.kt` to commonMain so the new
  * commonMain PlaybackSettingsScreen can reference it without depending on
@@ -10,5 +10,4 @@ package com.suvojeet.suvmusic.core.model
 enum class MusicSource {
     YOUTUBE,
     JIOSAAVN,
-    BOTH,
 }

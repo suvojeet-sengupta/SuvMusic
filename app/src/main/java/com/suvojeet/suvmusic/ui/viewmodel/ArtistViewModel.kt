@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
@@ -193,6 +194,20 @@ class ArtistViewModel @Inject constructor(
             }
             
             try {
+                // JioSaavn source: build artist radio natively from the artist's top
+                // songs + JioSaavn related-song recommendations.
+                if (sessionManager.getMusicSource() == MusicSource.JIOSAAVN) {
+                    val jioSongs = mutableListOf<Song>()
+                    jioSongs.addAll(currentArtist.songs)
+                    currentArtist.songs.firstOrNull()?.id?.let { seedId ->
+                        _uiState.update { it.copy(radioStatus = "Building ${currentArtist.name} radio...") }
+                        val related = jioSaavnRepository.getRelatedSongs(seedId)
+                        jioSongs.addAll(related.filter { s -> jioSongs.none { it.id == s.id } })
+                    }
+                    onPlaylistReady(if (jioSongs.isNotEmpty()) jioSongs.distinctBy { it.id } else currentArtist.songs)
+                    return@launch
+                }
+
                 // 1. Get radio ID
                 val radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }
                 val allSongs = mutableListOf<Song>()

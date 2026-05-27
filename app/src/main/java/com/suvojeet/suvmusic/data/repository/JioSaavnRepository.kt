@@ -240,6 +240,89 @@ class JioSaavnRepository @Inject constructor(
         }
     }
 
+    // ==================== Radio / Related / Recommendations ====================
+
+    private val relatedCache = mutableMapOf<String, List<Song>>()
+
+    /**
+     * Get songs related to [songId] using JioSaavn's recommendation endpoint.
+     * This powers native autoplay/radio when JioSaavn is the active source.
+     */
+    suspend fun getRelatedSongs(songId: String): List<Song> = withContext(Dispatchers.IO) {
+        relatedCache[songId]?.let { return@withContext it }
+
+        try {
+            val url = "$BASE_URL?__call=reco.getreco&_format=json&_marker=0&api_version=4&ctx=android&pid=$songId"
+            val response = makeRequest(url)
+            val parsed = JsonParser.parseString(response)
+
+            // reco.getreco usually returns a JSON array of song objects, but some
+            // variants wrap them in an object — tolerate both shapes.
+            val array = when {
+                parsed.isJsonArray -> parsed.asJsonArray
+                parsed.isJsonObject && parsed.asJsonObject.has("data") -> parsed.asJsonObject.getAsJsonArray("data")
+                parsed.isJsonObject && parsed.asJsonObject.has("songs") -> parsed.asJsonObject.getAsJsonArray("songs")
+                else -> null
+            }
+
+            val songs = array?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
+            if (songs.isNotEmpty()) {
+                relatedCache[songId] = songs
+                songs.forEach { songDetailsCache[it.id] = it }
+            } else {
+                android.util.Log.w("JioSaavn", "getRelatedSongs($songId) parsed 0 songs")
+            }
+            songs
+        } catch (e: Exception) {
+            android.util.Log.e("JioSaavn", "getRelatedSongs($songId) failed: ${e.javaClass.simpleName}: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Build a pool of recommended songs seeded from the user's recent JioSaavn plays.
+     * Falls back to trending/home content when no seeds are available, so the
+     * home screen and queue always have JioSaavn material to work with.
+     */
+    suspend fun getRecommendations(seedSongIds: List<String>): List<Song> = withContext(Dispatchers.IO) {
+        val pool = mutableListOf<Song>()
+        try {
+            for (seed in seedSongIds.take(5)) {
+                pool.addAll(getRelatedSongs(seed))
+                if (pool.size >= 40) break
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("JioSaavn", "getRecommendations seed pass failed: ${e.message}")
+        }
+
+        // Fallback: pull songs out of the home/discover sections if seeds were dry.
+        if (pool.isEmpty()) {
+            try {
+                getHomeSections().forEach { section ->
+                    section.items.forEach { item ->
+                        if (item is com.suvojeet.suvmusic.core.model.HomeItem.SongItem) pool.add(item.song)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("JioSaavn", "getRecommendations home fallback failed: ${e.message}")
+            }
+        }
+
+        pool.distinctBy { it.id }
+    }
+
+    /**
+     * Get top songs for an artist (used for artist radio on JioSaavn).
+     */
+    suspend fun getArtistTopSongs(artistId: String): List<Song> = withContext(Dispatchers.IO) {
+        try {
+            getArtist(artistId)?.songs ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("JioSaavn", "getArtistTopSongs($artistId) failed: ${e.message}")
+            emptyList()
+        }
+    }
+
     /**
      * Get playlist details with all songs.
      */

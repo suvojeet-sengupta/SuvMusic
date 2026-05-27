@@ -4,8 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +29,8 @@ data class AlbumUiState(
 
 class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
+    private val sessionManager: SessionManager,
     private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
@@ -89,19 +94,33 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Check if it's a local album (numeric ID)
+                // Try local first (numeric ID + present in MediaStore). JioSaavn album
+                // IDs are also numeric, so a numeric ID that isn't a real local album
+                // falls through to the cloud source below.
                 val isLocal = albumId.toLongOrNull() != null
-                
-                val album = if (isLocal) {
+                val localAlbum = if (isLocal) {
                     val id = albumId.toLong()
                     val localAlbums = localAudioRepository.getAllLocalAlbums()
-                    val albumBase = localAlbums.find { it.id == albumId }
-                    if (albumBase != null) {
-                        val songs = localAudioRepository.getSongsByAlbum(id)
-                        albumBase.copy(songs = songs)
-                    } else null
-                } else {
-                    youTubeRepository.getAlbum(albumId)
+                    localAlbums.find { it.id == albumId }?.let { base ->
+                        base.copy(songs = localAudioRepository.getSongsByAlbum(id))
+                    }
+                } else null
+
+                val album = localAlbum ?: run {
+                    if (sessionManager.getMusicSource() == MusicSource.JIOSAAVN) {
+                        // JioSaavn returns an album as a Playlist; map it to the Album model.
+                        jioSaavnRepository.getAlbum(albumId)?.let { pl ->
+                            Album(
+                                id = albumId,
+                                title = pl.title,
+                                artist = pl.author,
+                                thumbnailUrl = pl.thumbnailUrl,
+                                songs = pl.songs
+                            )
+                        }
+                    } else {
+                        youTubeRepository.getAlbum(albumId)
+                    }
                 }
                 
                 // Merge with initial data if fetch failed partially or returns default

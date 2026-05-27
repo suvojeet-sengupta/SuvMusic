@@ -588,28 +588,31 @@ fun ImmersiveArtistHeader(
                     }
                 }
 
-                Button(
-                    onClick = onSubscribe,
-                    shape = PillShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSubscribed) Color.White.copy(alpha = 0.2f) else Color.White,
-                        contentColor = if (isSubscribed) Color.White else Color.Black
-                    ),
-                    modifier = Modifier.height(48.dp).weight(1f)
-                ) {
-                    if (isSubscribing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = if (isSubscribed) Color.White else Color.Black,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(
-                            text = if (isSubscribed) stringResource(R.string.action_following).uppercase() else stringResource(R.string.action_follow).uppercase(),
-                            fontWeight = FontWeight.ExtraBold,
-                            style = MaterialTheme.typography.labelLarge,
-                            letterSpacing = 1.sp
-                        )
+                // Subscribe/Follow is a YouTube-only feature; hide it for JioSaavn artists.
+                if (artist.id.startsWith("UC") || artist.id.startsWith("FE")) {
+                    Button(
+                        onClick = onSubscribe,
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSubscribed) Color.White.copy(alpha = 0.2f) else Color.White,
+                            contentColor = if (isSubscribed) Color.White else Color.Black
+                        ),
+                        modifier = Modifier.height(48.dp).weight(1f)
+                    ) {
+                        if (isSubscribing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = if (isSubscribed) Color.White else Color.Black,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = if (isSubscribed) stringResource(R.string.action_following).uppercase() else stringResource(R.string.action_follow).uppercase(),
+                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.labelLarge,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
             }

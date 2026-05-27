@@ -3,7 +3,10 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.BrowseCategory
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +25,9 @@ data class MoodAndGenresUiState(
 )
 
 class MoodAndGenresViewModel @Inject constructor(
-    private val repository: YouTubeRepository
+    private val repository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MoodAndGenresUiState())
@@ -55,9 +60,13 @@ class MoodAndGenresViewModel @Inject constructor(
                 ) 
             }
             
-            val songs = repository.getCategoryContent(browseId, params, title)
-            
-            _uiState.update { 
+            val songs = if (sessionManager.getMusicSource() == MusicSource.JIOSAAVN) {
+                jioSaavnRepository.search(title)
+            } else {
+                repository.getCategoryContent(browseId, params, title)
+            }
+
+            _uiState.update {
                 it.copy(
                     categorySongs = songs,
                     isLoadingContent = false
