@@ -31,7 +31,8 @@ data class Song(
     val collectionName: String? = null, // Name of the collection
     val isMembersOnly: Boolean = false, // Whether this song is exclusive to channel members
     val releaseDate: String? = null, // Release date of the song
-    val addedAt: Long = 0L // Timestamp when added to playlist/library
+    val addedAt: Long = 0L, // Timestamp when added to playlist/library
+    val jioSaavnMetadata: JioSaavnMetadata? = null // Detailed metadata for JioSaavn songs
 ) {
     companion object {
         /**
@@ -78,7 +79,8 @@ data class Song(
             duration: Long,
             thumbnailUrl: String?,
             streamUrl: String? = null,
-            releaseDate: String? = null
+            releaseDate: String? = null,
+            jioSaavnMetadata: JioSaavnMetadata? = null
         ): Song? {
             if (songId.isBlank()) return null
             return Song(
@@ -90,7 +92,8 @@ data class Song(
                 thumbnailUrl = thumbnailUrl,
                 source = SongSource.JIOSAAVN,
                 streamUrl = streamUrl,
-                releaseDate = releaseDate
+                releaseDate = releaseDate,
+                jioSaavnMetadata = jioSaavnMetadata
             )
         }
     }

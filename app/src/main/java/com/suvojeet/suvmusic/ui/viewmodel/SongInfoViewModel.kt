@@ -27,6 +27,9 @@ class SongInfoViewModel @Inject constructor(
     
     private val _releaseDate = MutableStateFlow<String?>(null)
     val releaseDate: StateFlow<String?> = _releaseDate.asStateFlow()
+
+    private val _jioSaavnMetadata = MutableStateFlow<com.suvojeet.suvmusic.core.model.JioSaavnMetadata?>(null)
+    val jioSaavnMetadata: StateFlow<com.suvojeet.suvmusic.core.model.JioSaavnMetadata?> = _jioSaavnMetadata.asStateFlow()
     
     private var lastArtistString: String? = null
     private var lastSongId: String? = null
@@ -35,6 +38,7 @@ class SongInfoViewModel @Inject constructor(
         if (songId == lastSongId) return
         lastSongId = songId
         _releaseDate.value = null
+        _jioSaavnMetadata.value = null
         
         viewModelScope.launch {
             try {
@@ -53,11 +57,20 @@ class SongInfoViewModel @Inject constructor(
                     null
                 }
                 
-                if (song?.releaseDate != null) {
-                    _releaseDate.value = if (song.releaseDate!!.contains("T")) {
-                        formatDateString(song.releaseDate!!)
-                    } else {
-                        song.releaseDate
+                if (song != null) {
+                    if (song.releaseDate != null) {
+                        _releaseDate.value = if (song.releaseDate!!.contains("T")) {
+                            formatDateString(song.releaseDate!!)
+                        } else {
+                            song.releaseDate
+                        }
+                    }
+                    
+                    if (song.jioSaavnMetadata != null) {
+                        _jioSaavnMetadata.value = song.jioSaavnMetadata
+                        if (song.jioSaavnMetadata.artists.isNotEmpty()) {
+                            _artistCredits.value = song.jioSaavnMetadata.artists
+                        }
                     }
                 }
             } catch (e: Exception) {
