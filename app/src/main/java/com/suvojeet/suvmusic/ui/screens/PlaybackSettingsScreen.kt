@@ -108,6 +108,19 @@ fun PlaybackSettingsScreen(
                         },
                         onClick = { showMusicSourceSheet = true }
                     )
+
+                    // Hybrid audio only makes sense when browsing from YouTube.
+                    if (uiState.musicSource == MusicSource.YOUTUBE) {
+                        HorizontalDivider()
+
+                        PlaybackSwitchItem(
+                            icon = Icons.Default.GraphicEq,
+                            title = "Stream audio from JioSaavn",
+                            subtitle = "Browse on YouTube but play in HQ (320 kbps) from JioSaavn when a match is found",
+                            checked = uiState.preferJioSaavnAudio,
+                            onCheckedChange = { viewModel.setPreferJioSaavnAudio(it) }
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }

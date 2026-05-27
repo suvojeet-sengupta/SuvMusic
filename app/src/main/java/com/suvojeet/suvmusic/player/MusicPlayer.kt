@@ -126,6 +126,11 @@ class MusicPlayer @Inject constructor(
     // Cache for resolved video IDs for non-YouTube songs (SongId -> VideoId)
     // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
     private val resolvedVideoIds = android.util.LruCache<String, String>(100)
+
+    // Hybrid playback cache: YouTube songId -> matched JioSaavn songId.
+    // A blank value ("") is a negative cache marker meaning "searched, no
+    // confident JioSaavn match" so we don't repeat the search every play.
+    private val hybridJioSaavnIds = android.util.LruCache<String, String>(200)
     
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
@@ -1237,6 +1242,86 @@ class MusicPlayer @Inject constructor(
         }
     }
     
+    /**
+     * Hybrid playback: try to stream a YouTube-sourced [song] from JioSaavn's
+     * HQ catalogue (320 kbps) instead. Returns a JioSaavn stream URL when a
+     * confident title+artist (and, when known, duration) match is found, else
+     * null so the caller falls back to the normal YouTube stream.
+     */
+    private suspend fun resolveHybridJioSaavnStream(song: Song): String? {
+        // Positive/negative cache so we don't repeat the search on every play.
+        hybridJioSaavnIds[song.id]?.let { cached ->
+            if (cached.isBlank()) return null
+            return kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                jioSaavnRepository.getStreamUrl(cached)
+            }
+        }
+        return try {
+            val query = "${song.title} ${song.artist}".trim()
+            val candidates = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                jioSaavnRepository.search(query)
+            } ?: emptyList()
+            val match = pickBestJioSaavnMatch(song, candidates)
+            if (match == null) {
+                hybridJioSaavnIds.put(song.id, "") // negative-cache the miss
+                null
+            } else {
+                hybridJioSaavnIds.put(song.id, match.id)
+                kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                    jioSaavnRepository.getStreamUrl(match.id)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicPlayer", "Hybrid JioSaavn resolve failed: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Picks the most likely JioSaavn equivalent of a YouTube [song]. Requires a
+     * strong title-token overlap and, when both durations are known, a duration
+     * within ±7 s — this rejects remixes / live / sped-up versions.
+     */
+    private fun pickBestJioSaavnMatch(song: Song, candidates: List<Song>): Song? {
+        if (candidates.isEmpty()) return null
+        fun normalize(s: String): Set<String> =
+            s.lowercase()
+                .replace(Regex("\\(.*?\\)|\\[.*?]"), " ") // drop (feat..)/[remix] etc.
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .split(Regex("\\s+"))
+                .filter { it.isNotBlank() && it.length > 1 }
+                .toSet()
+
+        val targetTitle = normalize(song.title)
+        val targetArtist = normalize(song.artist)
+        if (targetTitle.isEmpty()) return null
+
+        var best: Song? = null
+        var bestScore = 0.0
+        for (c in candidates) {
+            val cTitle = normalize(c.title)
+            if (cTitle.isEmpty()) continue
+            val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
+            if (titleOverlap < 0.6) continue // title must mostly match
+
+            // Duration gate (only when both are known).
+            if (song.duration > 0 && c.duration > 0) {
+                if (kotlin.math.abs(song.duration - c.duration) > 7_000L) continue
+            }
+
+            val cArtist = normalize(c.artist)
+            val artistOverlap = if (targetArtist.isEmpty() || cArtist.isEmpty()) 0.0
+                else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
+
+            val score = titleOverlap + artistOverlap * 0.5
+            if (score > bestScore) {
+                bestScore = score
+                best = c
+            }
+        }
+        return best
+    }
+
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
         resolutionMutex.withLock {
             try {
@@ -1248,6 +1333,22 @@ class MusicPlayer @Inject constructor(
                 // Resolve stream URL for the song based on source with timeout protection
                 var streamUrl: String? = null
                 var audioStreamUrl: String? = null // For dual-stream video (720p/1080p)
+
+                // --- HYBRID AUDIO (YouTube metadata, JioSaavn audio) ---
+                // When the user opts in, stream YouTube-sourced songs from
+                // JioSaavn HQ if a confident match exists. Browsing/metadata is
+                // untouched; only the audio stream is swapped. Falls through to
+                // the normal YouTube path below when no match is found.
+                if ((song.source == SongSource.YOUTUBE || song.source == SongSource.YOUTUBE_MUSIC) &&
+                    !_playerState.value.isVideoMode &&
+                    sessionManager.isPreferJioSaavnAudio()
+                ) {
+                    streamUrl = resolveHybridJioSaavnStream(song)
+                    if (streamUrl != null) {
+                        android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from JioSaavn HQ")
+                    }
+                }
+
                 var attempts = 0
                 while (streamUrl == null && attempts < 2) {
                     val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) {
@@ -1927,8 +2028,13 @@ class MusicPlayer @Inject constructor(
                             "https://placeholder.invalid/${song.id}"
                         }
                     } else {
+                        // Hybrid: prefer JioSaavn HQ audio for YouTube songs when
+                        // the user opted in and a confident match exists.
+                        val hybrid = if (sessionManager.isPreferJioSaavnAudio())
+                            resolveHybridJioSaavnStream(song) else null
                         // Retry once if first attempt fails
-                        youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
+                        hybrid
+                            ?: youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                             ?: run {
                                 kotlinx.coroutines.delay(500)
                                 youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
