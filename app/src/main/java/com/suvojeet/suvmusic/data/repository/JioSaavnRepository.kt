@@ -36,11 +36,10 @@ class JioSaavnRepository @Inject constructor(
     private val playlistCache = mutableMapOf<String, Playlist>()
 
     companion object {
-        // JioSaavn internal API endpoint.
-        private const val BASE_URL = "https://www.jiosaavn.com/api.php"
-
-        // Public DES key used by JioSaavn to encrypt media URLs (DES/ECB/PKCS5).
-        private const val DES_KEY = "38346591"
+        // New JioSaavn API wrapper endpoint
+        private const val API_BASE_URL = "https://saavn.sumit.co/api"
+        // Legacy internal API endpoint (kept for backward compatibility if needed)
+        private const val INTERNAL_BASE_URL = "https://www.jiosaavn.com/api.php"
 
         // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"
@@ -58,12 +57,12 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$BASE_URL?__call=search.getResults&_format=json&_marker=0&n=20&q=${query.encodeUrl()}"
+            val url = "$API_BASE_URL/search/songs?query=${query.encodeUrl()}&limit=20"
             val response = makeRequest(url)
             
             val json = JsonParser.parseString(response).asJsonObject
             
-            // Flexible results extraction
+            // The new API usually returns data in a 'data' object
             val results = if (json.has("data") && json.get("data").isJsonObject) {
                 json.getAsJsonObject("data").getAsJsonArray("results")
             } else if (json.has("data") && json.get("data").isJsonArray) {
@@ -81,12 +80,10 @@ class JioSaavnRepository @Inject constructor(
                 searchCache[cacheKey] = songs
                 // Also cache individual song details
                 songs.forEach { song -> songDetailsCache[song.id] = song }
-            } else {
-                android.util.Log.w("JioSaavn", "search('$query') parsed 0 songs from response")
             }
             songs
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "search('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
+            android.util.Log.e("JioSaavn", "search('$query') failed: ${e.message}")
             emptyList()
         }
     }
@@ -174,30 +171,22 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$BASE_URL?__call=song.getDetails&_format=json&pids=$songId"
+            val url = "$API_BASE_URL/songs/$songId"
             val response = makeRequest(url)
             
             val json = JsonParser.parseString(response).asJsonObject
-            val songs = json.getAsJsonObject("songs") ?: json.getAsJsonObject(songId)
-            
-            val result = if (songs != null && songs.has(songId)) {
-                parseSong(songs.getAsJsonObject(songId))
-            } else {
-                // Try parsing as direct song object
-                parseSong(json)
-            }
+            val result = parseSong(json)
             
             result?.let { songDetailsCache[songId] = it }
             result
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "getSongDetails($songId) failed: ${e.message}")
             null
         }
     }
     
     /**
      * Get stream URL for a song (320kbps).
-     * JioSaavn returns encrypted URLs that need to be decrypted.
      */
     suspend fun getStreamUrl(songId: String, quality: Int = 320): String? = withContext(Dispatchers.IO) {
         val cacheKey = "${songId}_$quality"
@@ -206,44 +195,16 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            val url = "$BASE_URL?__call=song.getDetails&_format=json&pids=$songId"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            
-            // Find the song in response
-            val songJson = if (json.has(songId)) {
-                json.getAsJsonObject(songId)
-            } else if (json.has("songs")) {
-                val songs = json.getAsJsonObject("songs")
-                if (songs.has(songId)) songs.getAsJsonObject(songId) else null
-            } else {
-                json
-            }
-            
-            val streamUrl = songJson?.let { song ->
-                val encryptedUrl = song.get("encrypted_media_url")?.asString
-                    ?: song.get("more_info")?.asJsonObject?.get("encrypted_media_url")?.asString
-                
-                encryptedUrl?.let { encrypted ->
-                    decryptUrl(encrypted)?.let { decrypted ->
-                        // Replace quality suffix based on requested quality
-                        when (quality) {
-                            320 -> decrypted.replace(QUALITY_96, QUALITY_320).replace(QUALITY_160, QUALITY_320)
-                            160 -> decrypted.replace(QUALITY_96, QUALITY_160).replace(QUALITY_320, QUALITY_160)
-                            else -> decrypted
-                        }
-                    }
-                }
-            }
+            val song = getSongDetails(songId)
+            val streamUrl = song?.streamUrl
             
             if (streamUrl == null) {
-                android.util.Log.w("JioSaavn", "getStreamUrl($songId): could not resolve a stream URL (no/failed encrypted_media_url)")
+                android.util.Log.w("JioSaavn", "getStreamUrl($songId): could not resolve a stream URL from details")
             }
             streamUrl?.let { streamUrlCache[cacheKey] = it }
             streamUrl
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getStreamUrl($songId) failed: ${e.javaClass.simpleName}: ${e.message}")
+            android.util.Log.e("JioSaavn", "getStreamUrl($songId) failed: ${e.message}")
             null
         }
     }
