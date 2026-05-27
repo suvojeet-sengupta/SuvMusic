@@ -32,8 +32,12 @@ interface JioSaavnApiService {
         @Query("limit") limit: Int = 20
     ): JioSaavnSongDetailsResponse
 
+    @GET("albums")
+    suspend fun getAlbumDetails(
+        @Query("id") albumId: String
+    ): JioSaavnSongDetailsResponse // Album response usually shares the SongDetails list structure in data
+
     @GET("playlists")
     suspend fun getPlaylist(
         @Query("id") playlistId: String
-    ): JioSaavnSearchResponse // Using SearchResponse as it shares similar structure for playlists
-}
+    ): JioSaavnSearchResponse}

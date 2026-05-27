@@ -1482,6 +1482,25 @@ class MusicPlayer @Inject constructor(
                             .build()
                     )
 
+                // JioSaavn Mandatory Headers Fix:
+                // JioSaavn CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
+                // We detect JioSaavn source by URI host or by song source.
+                val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (streamUrl != null && streamUrl.contains("saavncdn.com"))
+                
+                if (isJioSaavnSource) {
+                    mediaItemBuilder.setRequestMetadata(
+                        MediaItem.RequestMetadata.Builder()
+                            .setExtras(android.os.Bundle().apply {
+                                val headers = android.os.Bundle().apply {
+                                    putString("Referer", "https://www.jiosaavn.com/")
+                                    putString("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
+                                }
+                                putBundle("headers", headers)
+                            })
+                            .build()
+                    )
+                }
+
                 if (!audioStreamUrl.isNullOrEmpty()) {
                     mediaItemBuilder.setRequestMetadata(
                         MediaItem.RequestMetadata.Builder()
@@ -2058,17 +2077,37 @@ class MusicPlayer @Inject constructor(
             .setUri(uri)
             .setMediaId(song.id)
             .setCustomCacheKey(cacheKey)
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(song.title)
-                                        .setArtist(song.artist)
-                                        .setAlbumTitle(song.album)
-                                        .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                                        .setIsPlayable(true)
-                                        .setIsBrowsable(false)
-                                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                                        .build()
-                                )        
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(song.title)
+                    .setArtist(song.artist)
+                    .setAlbumTitle(song.album)
+                    .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                    .setIsPlayable(true)
+                    .setIsBrowsable(false)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                    .build()
+            )
+
+        // JioSaavn Mandatory Headers Fix:
+        // JioSaavn CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
+        // We detect JioSaavn source by URI host or by song source (including hybrid resolution).
+        val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (uri != null && uri.contains("saavncdn.com"))
+        
+        if (isJioSaavnSource) {
+            builder.setRequestMetadata(
+                MediaItem.RequestMetadata.Builder()
+                    .setExtras(android.os.Bundle().apply {
+                        val headers = android.os.Bundle().apply {
+                            putString("Referer", "https://www.jiosaavn.com/")
+                            putString("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
+                        }
+                        putBundle("headers", headers)
+                    })
+                    .build()
+            )
+        }
+        
         // Pass audio URL for dual-stream merging (video-only + audio-only)
         if (!audioStreamUrl.isNullOrEmpty()) {
             builder.setRequestMetadata(

@@ -272,14 +272,20 @@ class JioSaavnRepository @Inject constructor(
             val response = apiService.getPlaylist(playlistId)
             val data = response.data
 
-            val playlistObj = data.playlists?.results?.firstOrNull() ?: return@withContext null
+            // In some wrapper versions, playlist info might be in 'playlists' or direct 'name/id' fields
+            val playlistObj = data.playlists?.results?.firstOrNull()
+            val title = playlistObj?.name ?: "" 
+            val image = playlistObj?.image?.lastOrNull()?.url
+            
             val songs = data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+
+            if (songs.isEmpty()) return@withContext null
 
             val playlist = Playlist(
                 id = playlistId,
-                title = playlistObj.name.decodeHtml(),
+                title = title.decodeHtml().ifBlank { "Playlist" },
                 author = "JioSaavn",
-                thumbnailUrl = playlistObj.image.lastOrNull()?.url,
+                thumbnailUrl = image,
                 songs = songs
             )
 
@@ -296,24 +302,22 @@ class JioSaavnRepository @Inject constructor(
      */
     suspend fun getAlbum(albumId: String): Playlist? = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.getSongDetails(albumId) // For some reason details also return album info
-            val data = response.data.firstOrNull() ?: return@withContext null
-
-            val albumName = data.album?.name ?: "Album"
-            val image = data.image.lastOrNull()?.url
-            val artist = data.artists?.primary?.joinToString { it.name } ?: ""
-
-            // Note: getSongDetails for an album ID might not return all songs. 
-            // This is a placeholder; usually albums have their own endpoint in the wrapper.
-            // But saavn.sumit.co documentation provided doesn't specify a dedicated album endpoint.
-            // Using legacy fallback if needed or staying with this.
+            val response = apiService.getAlbumDetails(albumId)
+            val songs = response.data.mapNotNull { parseSongDto(it) }
+            
+            if (songs.isEmpty()) return@withContext null
+            
+            val firstSong = response.data.first()
+            val albumName = firstSong.album?.name ?: "Album"
+            val image = firstSong.image.lastOrNull()?.url
+            val artist = firstSong.artists?.primary?.joinToString { it.name } ?: ""
 
             Playlist(
                 id = albumId,
                 title = albumName.decodeHtml(),
                 author = artist.decodeHtml(),
                 thumbnailUrl = image,
-                songs = emptyList() // Needs actual album fetch
+                songs = songs
             )
         } catch (e: Exception) {
             android.util.Log.e("JioSaavn", "getAlbum($albumId) failed: ${e.message}")
