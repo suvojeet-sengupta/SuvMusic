@@ -84,6 +84,8 @@ class MusicPlayer @Inject constructor(
     // Caching
     private var cachingJob: Job? = null
     private var currentResolutionJob: Job? = null
+    private val resolutionMutex = kotlinx.coroutines.sync.Mutex()
+    private var preloadedTimestamp: Long = 0L
     private var preloadJob: Job? = null
     private var ttsVolumeJob: Job? = null
     private var announceDebounceJob: Job? = null
@@ -975,7 +977,13 @@ class MusicPlayer @Inject constructor(
                     // (in shuffle mode, we cache the URL without calling replaceMediaItem
                     // to avoid disrupting ExoPlayer's internal state). Apply it now.
                     val capturedPreloadUrl = preloadedStreamUrl
-                    if (needsResolution && preloadedNextSongId == song.id && capturedPreloadUrl != null) {
+                    
+                    // Expiration Guard: YouTube URLs typically expire in 4-6 hours. 
+                    // If preloaded URL is older than 3 hours, force re-resolve.
+                    val isExpired = song.source == SongSource.YOUTUBE && 
+                                    (System.currentTimeMillis() - preloadedTimestamp) > (3 * 3600 * 1000L)
+
+                    if (needsResolution && preloadedNextSongId == song.id && capturedPreloadUrl != null && !isExpired) {
                         val cachedUrl = capturedPreloadUrl
                         val cachedIsVideo = preloadedIsVideoMode
                         preloadedNextSongId = null
@@ -1230,8 +1238,9 @@ class MusicPlayer @Inject constructor(
     }
     
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
-        try {
-            _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
+        resolutionMutex.withLock {
+            try {
+                _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
             
             // Check for Developer Mode restriction for JioSaavn
             if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
@@ -1285,16 +1294,19 @@ class MusicPlayer @Inject constructor(
                 }
             }
 
-            // --- SEARCH FALLBACK ---
             // If direct resolution failed after retries, try searching for an alternative ID
             // This is a powerful recovery mechanism for "This video is not available" errors
             if (streamUrl == null && song.source == SongSource.YOUTUBE) {
                 android.util.Log.d("MusicPlayer", "Direct resolution failed for ${song.id}, attempting search fallback...")
                 try {
-                    val fallbackId = youTubeRepository.getBestVideoId(song)
+                    // Reduce timeout to 6s for faster failure recovery
+                    val fallbackId = kotlinx.coroutines.withTimeoutOrNull(5000L) {
+                        youTubeRepository.getBestVideoId(song)
+                    } ?: song.id
+                    
                     if (fallbackId != song.id) {
                         android.util.Log.d("MusicPlayer", "Found fallback ID: $fallbackId for original ID: ${song.id}. Resolving...")
-                        val fallbackResult = kotlinx.coroutines.withTimeoutOrNull(15_000L) {
+                        val fallbackResult = kotlinx.coroutines.withTimeoutOrNull(6_000L) {
                             if (_playerState.value.isVideoMode) {
                                 val videoResult = youTubeRepository.getVideoStreamResult(fallbackId)
                                 Pair(videoResult?.videoUrl, videoResult?.audioUrl)
@@ -1413,8 +1425,12 @@ class MusicPlayer @Inject constructor(
 
 
     private fun startAggressiveCaching(contentId: String, streamUrl: String) {
+        cachingJob?.cancel()
         cachingJob = scope.launch(Dispatchers.IO) {
             try {
+                // Yield to ensure previous job's cancellation is processed by the system
+                kotlinx.coroutines.yield()
+                
                 val dataSpec = androidx.media3.datasource.DataSpec.Builder()
                     .setUri(streamUrl)
                     .setKey(contentId) // Must match the player's custom cache key
@@ -1750,6 +1766,7 @@ class MusicPlayer @Inject constructor(
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
                     preloadedIsVideoMode = isVideoMode
+                    preloadedTimestamp = System.currentTimeMillis()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Expected: user pressed Next / new song chosen mid-preload. Re-throw to honor cancellation.
