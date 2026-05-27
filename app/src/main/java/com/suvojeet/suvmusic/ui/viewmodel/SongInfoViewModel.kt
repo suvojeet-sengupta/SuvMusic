@@ -3,6 +3,8 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
+import com.suvojeet.suvmusic.core.model.JioSaavnMetadata
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -28,8 +30,8 @@ class SongInfoViewModel @Inject constructor(
     private val _releaseDate = MutableStateFlow<String?>(null)
     val releaseDate: StateFlow<String?> = _releaseDate.asStateFlow()
 
-    private val _jioSaavnMetadata = MutableStateFlow<com.suvojeet.suvmusic.core.model.JioSaavnMetadata?>(null)
-    val jioSaavnMetadata: StateFlow<com.suvojeet.suvmusic.core.model.JioSaavnMetadata?> = _jioSaavnMetadata.asStateFlow()
+    private val _jioSaavnMetadata = MutableStateFlow<JioSaavnMetadata?>(null)
+    val jioSaavnMetadata: StateFlow<JioSaavnMetadata?> = _jioSaavnMetadata.asStateFlow()
     
     private var lastArtistString: String? = null
     private var lastSongId: String? = null
@@ -58,18 +60,20 @@ class SongInfoViewModel @Inject constructor(
                 }
                 
                 if (song != null) {
-                    if (song.releaseDate != null) {
-                        _releaseDate.value = if (song.releaseDate!!.contains("T")) {
-                            formatDateString(song.releaseDate!!)
+                    val date = song.releaseDate
+                    if (date != null) {
+                        _releaseDate.value = if (date.contains("T")) {
+                            formatDateString(date)
                         } else {
-                            song.releaseDate
+                            date
                         }
                     }
                     
-                    if (song.jioSaavnMetadata != null) {
-                        _jioSaavnMetadata.value = song.jioSaavnMetadata
-                        if (song.jioSaavnMetadata.artists.isNotEmpty()) {
-                            _artistCredits.value = song.jioSaavnMetadata.artists
+                    val metadata = song.jioSaavnMetadata
+                    if (metadata != null) {
+                        _jioSaavnMetadata.value = metadata
+                        if (metadata.artists.isNotEmpty()) {
+                            _artistCredits.value = metadata.artists
                         }
                     }
                 }
