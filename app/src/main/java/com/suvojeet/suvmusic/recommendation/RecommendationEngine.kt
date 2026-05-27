@@ -7,6 +7,9 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.HomeItem
 import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeSectionType
+import com.suvojeet.suvmusic.core.model.MusicSource
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -42,6 +45,8 @@ class RecommendationEngine @Inject constructor(
     private val listeningHistoryDao: ListeningHistoryDao,
     private val dislikedItemDao: DislikedItemDao,
     private val youTubeRepository: YouTubeRepository,
+    private val jioSaavnRepository: JioSaavnRepository,
+    private val sessionManager: SessionManager,
     private val tasteProfileBuilder: TasteProfileBuilder,
     private val cache: RecommendationCache,
     private val nativeScorer: NativeRecommendationScorer,
@@ -129,6 +134,36 @@ class RecommendationEngine @Inject constructor(
     }
 
     // ============================================================================================
+    // SOURCE AWARENESS — JioSaavn vs YouTube dispatch
+    // ============================================================================================
+
+    /** True when the user's selected music source is JioSaavn. */
+    private suspend fun isJioSaavnSource(): Boolean =
+        try { sessionManager.getMusicSource() == MusicSource.JIOSAAVN } catch (e: Exception) { false }
+
+    /** Most recent JioSaavn-source song IDs from listening history, for seeding recommendations. */
+    private suspend fun recentJioSaavnSeedIds(limit: Int = 5): List<String> = try {
+        listeningHistoryDao.getAllHistory()
+            .filter { it.source == "JIOSAAVN" }
+            .sortedByDescending { it.lastPlayed }
+            .take(limit)
+            .map { it.songId }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    /**
+     * Source-aware song search used by all discovery/section generators so the
+     * home screen stays consistent with the active source (JioSaavn vs YouTube).
+     */
+    private suspend fun searchSongs(query: String): List<Song> = try {
+        if (isJioSaavnSource()) jioSaavnRepository.search(query)
+        else youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    // ============================================================================================
     // PUBLIC API — Home Screen
     // ============================================================================================
 
@@ -150,15 +185,20 @@ class RecommendationEngine @Inject constructor(
         val sections = mutableListOf<HomeSection>()
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
+        val useJioSaavn = isJioSaavnSource()
 
         val deferredSections = topGenres.map { (genreName, _) ->
             async(Dispatchers.IO) {
                 apiSemaphore.withPermit {
                     try {
-                        val songs = youTubeRepository.search(
-                            "$genreName music mix",
-                            YouTubeRepository.FILTER_SONGS
-                        )
+                        val songs = if (useJioSaavn) {
+                            jioSaavnRepository.search("$genreName songs")
+                        } else {
+                            youTubeRepository.search(
+                                "$genreName music mix",
+                                YouTubeRepository.FILTER_SONGS
+                            )
+                        }
                         val scored = scoreAndRank(songs, profile)
                         val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                         if (unique.isNotEmpty()) {
@@ -222,7 +262,7 @@ class RecommendationEngine @Inject constructor(
             async(Dispatchers.IO) {
                 apiSemaphore.withPermit {
                     try {
-                        val songs = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                        val songs = searchSongs(query)
                         val scored = scoreAndRank(songs, profile)
                         val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                         if (unique.isNotEmpty()) {
@@ -410,7 +450,7 @@ class RecommendationEngine @Inject constructor(
                 async(Dispatchers.IO) {
                     apiSemaphore.withPermit {
                         try {
-                            val songs = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                            val songs = searchSongs(query)
                             val scored = scoreAndRank(songs, profile)
                             val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                             if (unique.isNotEmpty()) {
@@ -430,6 +470,22 @@ class RecommendationEngine @Inject constructor(
     suspend fun getPersonalizedHomeSections(): List<HomeSection> = coroutineScope {
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS)
         if (cached != null) return@coroutineScope cached
+
+        // JioSaavn source: a lightweight personalized layer on top of the JioSaavn
+        // discover sections that HomeViewModel already loads. Quick picks + recent.
+        if (isJioSaavnSource()) {
+            val jioSections = mutableListOf<HomeSection>()
+            val quickPicks = getPersonalizedRecommendations(20)
+            if (quickPicks.isNotEmpty()) {
+                jioSections.add(HomeSection(
+                    title = "Quick picks",
+                    items = quickPicks.map { HomeItem.SongItem(it) },
+                    type = HomeSectionType.QuickPicks
+                ))
+            }
+            if (jioSections.isNotEmpty()) cache.putSections(RecommendationCache.Keys.HOME_SECTIONS, jioSections)
+            return@coroutineScope jioSections
+        }
 
         val profile = tasteProfileBuilder.getProfile()
         val sections = mutableListOf<HomeSection>()
@@ -543,6 +599,19 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSongs(RecommendationCache.Keys.QUICK_PICKS)
         if (cached != null) return cached.take(limit)
 
+        // JioSaavn source: build recommendations natively from JioSaavn reco + home content.
+        if (isJioSaavnSource()) {
+            val profile = tasteProfileBuilder.getProfile()
+            val seeds = recentJioSaavnSeedIds(5)
+            val candidates = jioSaavnRepository.getRecommendations(seeds)
+            val seenIds = mutableSetOf<String>()
+            val seenFingerprints = mutableSetOf<String>()
+            val unique = deduplicate(candidates, seenIds, seenFingerprints)
+            val scored = scoreAndRank(unique, profile)
+            if (scored.isNotEmpty()) cache.putSongs(RecommendationCache.Keys.QUICK_PICKS, scored)
+            return scored.take(limit)
+        }
+
         val profile = tasteProfileBuilder.getProfile()
         val candidates = mutableListOf<Song>()
         val seenIds = mutableSetOf<String>()
@@ -630,7 +699,18 @@ class RecommendationEngine @Inject constructor(
         seenIds.add(currentSong.id)
         val seenFingerprints = currentQueue.map { getSongFingerprint(it) }.toMutableSet()
         seenFingerprints.add(getSongFingerprint(currentSong))
-        
+
+        // JioSaavn source: continue the queue natively with JioSaavn related/reco songs.
+        if (isJioSaavnSource()) {
+            val jioCandidates = mutableListOf<Song>()
+            jioCandidates.addAll(jioSaavnRepository.getRelatedSongs(currentSong.id))
+            if (jioCandidates.size < count) {
+                jioCandidates.addAll(jioSaavnRepository.getRecommendations(recentJioSaavnSeedIds(5)))
+            }
+            val unique = deduplicate(jioCandidates, seenIds, seenFingerprints)
+            return@withContext scoreAndRank(unique, profile).take(count)
+        }
+
         val candidates = mutableListOf<Song>()
 
         // 1. YT Music related songs
@@ -689,6 +769,15 @@ class RecommendationEngine @Inject constructor(
         val candidates = mutableListOf<Song>()
         val seenIds = excludeIds.toMutableSet()
         val seenFingerprints = mutableSetOf<String>()
+
+        // JioSaavn source: keep the radio going natively with JioSaavn related/reco songs.
+        if (isJioSaavnSource()) {
+            candidates.addAll(deduplicate(jioSaavnRepository.getRelatedSongs(seedSongId), seenIds, seenFingerprints))
+            if (candidates.size < count * 2) {
+                candidates.addAll(deduplicate(jioSaavnRepository.getRecommendations(recentJioSaavnSeedIds(5)), seenIds, seenFingerprints))
+            }
+            return@withContext scoreAndRank(candidates, profile).take(count)
+        }
 
         // 1. Related songs from the seed
         try {
@@ -785,7 +874,7 @@ class RecommendationEngine @Inject constructor(
 
         val candidates = mutableListOf<Song>()
         try {
-            val results = youTubeRepository.search("$artist mix", YouTubeRepository.FILTER_SONGS)
+            val results = searchSongs("$artist mix")
             candidates.addAll(results)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get artist mix for $artist", e)
@@ -793,7 +882,7 @@ class RecommendationEngine @Inject constructor(
 
         if (candidates.size < limit / 2) {
             try {
-                val more = youTubeRepository.search(artist, YouTubeRepository.FILTER_SONGS)
+                val more = searchSongs(artist)
                 val seenIds = candidates.map { it.id }.toMutableSet()
                 val seenFingerprints = candidates.map { getSongFingerprint(it) }.toMutableSet()
                 candidates.addAll(deduplicate(more, seenIds, seenFingerprints))
@@ -818,7 +907,7 @@ class RecommendationEngine @Inject constructor(
 
         val candidates = mutableListOf<Song>()
         try {
-            val moodSongs = youTubeRepository.search("$mood music", YouTubeRepository.FILTER_SONGS)
+            val moodSongs = searchSongs("$mood music")
             candidates.addAll(moodSongs)
         } catch (e: Exception) {
             // Fallback
@@ -1212,7 +1301,7 @@ class RecommendationEngine @Inject constructor(
                     async {
                         apiSemaphore.withPermit {
                             try {
-                                youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                                searchSongs(query)
                             } catch (e: Exception) {
                                 emptyList()
                             }
@@ -1287,7 +1376,7 @@ class RecommendationEngine @Inject constructor(
         }
 
         return try {
-            val songs = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+            val songs = searchSongs(query)
             val scored = scoreAndRank(songs, tasteProfileBuilder.getProfile())
             deduplicate(scored, seenIds, seenFingerprints).take(12)
         } catch (e: Exception) {

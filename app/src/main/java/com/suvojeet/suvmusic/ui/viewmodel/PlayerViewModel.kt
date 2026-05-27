@@ -435,7 +435,11 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _isFetchingRelated.value = true
             try {
-                val songs = youTubeRepository.getRelatedSongs(videoId)
+                val songs = if (playerState.value.currentSong?.source == SongSource.JIOSAAVN) {
+                    jioSaavnRepository.getRelatedSongs(videoId)
+                } else {
+                    youTubeRepository.getRelatedSongs(videoId)
+                }
                 _relatedSongsState.value = songs
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error fetching related songs", e)

@@ -125,7 +125,6 @@ fun PlaybackSettingsScreen(
                     subtitle = when (state.musicSource) {
                         MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
                         MusicSource.JIOSAAVN -> "HQ Audio (320 kbps)"
-                        MusicSource.BOTH -> "Both"
                     },
                     onClick = { showMusicSourceSheet = true },
                 )

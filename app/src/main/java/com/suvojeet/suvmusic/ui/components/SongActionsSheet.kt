@@ -263,7 +263,10 @@ fun SongActionsSheet(
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     ModernActionItem(Icons.Default.Info, "Song Details", contentColor, { handleAction(onViewInfo) })
-                    ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
+                    // Comments are a YouTube-only feature; JioSaavn has no comments API.
+                    if (song.source != com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                        ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
+                    }
 
                     if (onRemoveFromQueue != null) {
                         Spacer(modifier = Modifier.height(8.dp))
