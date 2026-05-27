@@ -77,12 +77,13 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
-     * Search for artists on JioSaavn.
+     * Search for artists on JioSaavn (Legacy fallback for rich profiles).
      */
     suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
         try {
             val url = "$BASE_URL?__call=search.getArtistResults&_format=json&n=5&q=${query.encodeUrl()}"
             val response = makeRequest(url)
+            
             val json = JsonParser.parseString(response).asJsonObject
             val results = json.getAsJsonArray("results") ?: return@withContext emptyList()
             
@@ -99,19 +100,15 @@ class JioSaavnRepository @Inject constructor(
                 )
             }
         } catch (e: Exception) {
-            e.printStackTrace()
             emptyList()
         }
     }
     
     /**
-     * Get artist details by ID.
+     * Get detailed artist profile (Legacy internal API).
      */
     suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {
         try {
-            // Try fetching artist details using webapi.get
-            // JioSaavn uses a "token" (which is the ID we get from search) or a permalink
-            // Usually the ID from search results is the one we need.
             val url = "$BASE_URL?__call=webapi.get&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
             val response = makeRequest(url)
             val json = JsonParser.parseString(response).asJsonObject
@@ -145,7 +142,6 @@ class JioSaavnRepository @Inject constructor(
                 albums = topAlbums
             )
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
