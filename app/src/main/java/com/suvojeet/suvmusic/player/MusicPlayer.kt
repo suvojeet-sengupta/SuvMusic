@@ -1241,185 +1241,152 @@ class MusicPlayer @Inject constructor(
         resolutionMutex.withLock {
             try {
                 _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
-            
-            // Check for Developer Mode restriction for JioSaavn
-            if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
-                 _playerState.update {
-                    it.copy(
-                        error = "RESTRICTED_HQ_AUDIO",
-                        isLoading = false
-                    )
-                 }
-                 return
-            }
-            
-            // Cancel previous caching job
-            cachingJob?.cancel()
-            
-            // Resolve stream URL for the song based on source with timeout protection
-            // Added explicit retry here in case the repository layer's retry exhausted or for other issues
-            var streamUrl: String? = null
-            var audioStreamUrl: String? = null  // For dual-stream video (720p/1080p)
-            var attempts = 0
-            while (streamUrl == null && attempts < 2) { // Retry 1 time (total 2 attempts)
-                val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) { // Increased timeout
-                    when (song.source) {
-                        SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.orEmpty(), null)
-                        SongSource.JIOSAAVN -> Pair(jioSaavnRepository.getStreamUrl(song.id), null)
-                        else -> {
-                            if (_playerState.value.isVideoMode) {
-                                // Smart Video Matching with dual-stream support for 720p/1080p
-                                val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also { 
-                                    resolvedVideoIds.put(song.id, it) 
-                                }
-                                // Use getVideoStreamResult for proper quality
-                                val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
-                                if (videoResult != null) {
-                                    android.util.Log.d("MusicPlayer", "Video stream: ${videoResult.resolution}, has separate audio: ${videoResult.audioUrl != null}")
-                                    Pair(videoResult.videoUrl, videoResult.audioUrl)
+
+                // Check for Developer Mode restriction for JioSaavn
+                if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
+                    _playerState.update {
+                        it.copy(
+                            error = "RESTRICTED_HQ_AUDIO",
+                            isLoading = false
+                        )
+                    }
+                    return@withLock
+                }
+
+                // Cancel previous caching job
+                cachingJob?.cancel()
+
+                // Resolve stream URL for the song based on source with timeout protection
+                var streamUrl: String? = null
+                var audioStreamUrl: String? = null // For dual-stream video (720p/1080p)
+                var attempts = 0
+                while (streamUrl == null && attempts < 2) {
+                    val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) {
+                        when (song.source) {
+                            SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.orEmpty(), null)
+                            SongSource.JIOSAAVN -> Pair(jioSaavnRepository.getStreamUrl(song.id), null)
+                            else -> {
+                                if (_playerState.value.isVideoMode) {
+                                    val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also {
+                                        resolvedVideoIds.put(song.id, it)
+                                    }
+                                    val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                                    if (videoResult != null) {
+                                        Pair(videoResult.videoUrl, videoResult.audioUrl)
+                                    } else {
+                                        Pair(null, null)
+                                    }
                                 } else {
-                                    Pair(null, null)
+                                    Pair(youTubeRepository.getStreamUrl(song.id), null)
                                 }
-                            } else {
-                                Pair(youTubeRepository.getStreamUrl(song.id), null)
                             }
                         }
                     }
+                    streamUrl = result?.first
+                    audioStreamUrl = result?.second
+                    if (streamUrl == null) {
+                        attempts++
+                        if (attempts < 2) delay(1000)
+                    }
                 }
-                streamUrl = result?.first
-                audioStreamUrl = result?.second
+
+                // --- SEARCH FALLBACK ---
+                if (streamUrl == null && song.source == SongSource.YOUTUBE) {
+                    try {
+                        val fallbackId = kotlinx.coroutines.withTimeoutOrNull(5000L) {
+                            youTubeRepository.getBestVideoId(song)
+                        } ?: song.id
+
+                        if (fallbackId != song.id) {
+                            val fallbackResult = kotlinx.coroutines.withTimeoutOrNull(6_000L) {
+                                if (_playerState.value.isVideoMode) {
+                                    val videoResult = youTubeRepository.getVideoStreamResult(fallbackId)
+                                    Pair(videoResult?.videoUrl, videoResult?.audioUrl)
+                                } else {
+                                    Pair(youTubeRepository.getStreamUrl(fallbackId), null)
+                                }
+                            }
+
+                            if (fallbackResult?.first != null) {
+                                streamUrl = fallbackResult.first
+                                audioStreamUrl = fallbackResult.second
+                                resolvedVideoIds.put(song.id, fallbackId)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicPlayer", "Search fallback failed", e)
+                    }
+                }
+
                 if (streamUrl == null) {
-                    attempts++
-                    if (attempts < 2) delay(1000)
-                }
-            }
-
-            // If direct resolution failed after retries, try searching for an alternative ID
-            // This is a powerful recovery mechanism for "This video is not available" errors
-            if (streamUrl == null && song.source == SongSource.YOUTUBE) {
-                android.util.Log.d("MusicPlayer", "Direct resolution failed for ${song.id}, attempting search fallback...")
-                try {
-                    // Reduce timeout to 6s for faster failure recovery
-                    val fallbackId = kotlinx.coroutines.withTimeoutOrNull(5000L) {
-                        youTubeRepository.getBestVideoId(song)
-                    } ?: song.id
-                    
-                    if (fallbackId != song.id) {
-                        android.util.Log.d("MusicPlayer", "Found fallback ID: $fallbackId for original ID: ${song.id}. Resolving...")
-                        val fallbackResult = kotlinx.coroutines.withTimeoutOrNull(6_000L) {
-                            if (_playerState.value.isVideoMode) {
-                                val videoResult = youTubeRepository.getVideoStreamResult(fallbackId)
-                                Pair(videoResult?.videoUrl, videoResult?.audioUrl)
-                            } else {
-                                Pair(youTubeRepository.getStreamUrl(fallbackId), null)
-                            }
-                        }
-
-                        if (fallbackResult?.first != null) {
-                            android.util.Log.i("MusicPlayer", "Search fallback successful for ${song.id} -> $fallbackId")
-                            streamUrl = fallbackResult.first
-                            audioStreamUrl = fallbackResult.second
-                            // Update resolved ID cache so we don't search again for this song session
-                            resolvedVideoIds.put(song.id, fallbackId)
-                        }
+                    val isVideoMode = _playerState.value.isVideoMode
+                    _playerState.update {
+                        it.copy(
+                            error = if (!isVideoMode) "Could not load song. Please check your connection." else null,
+                            videoNotFound = isVideoMode,
+                            isLoading = false
+                        )
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("MusicPlayer", "Search fallback failed", e)
+                    return@withLock
                 }
-            }
 
-            // Handle null stream URL - show error and clear loading state
-            if (streamUrl == null) {
-                android.util.Log.e("MusicPlayer", "Failed to resolve stream URL for: ${song.id} after retries")
-                
-                val isVideoMode = _playerState.value.isVideoMode
-                _playerState.update { 
-                    it.copy(
-                        error = if (!isVideoMode) "Could not load song. Please check your connection." else null,
-                        videoNotFound = isVideoMode,
-                        isLoading = false
+                val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+
+                if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
+                    startAggressiveCaching(cacheKey, streamUrl)
+                }
+
+                val mediaItemBuilder = MediaItem.Builder()
+                    .setUri(streamUrl)
+                    .setMediaId(song.id)
+                    .setCustomCacheKey(cacheKey)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.title)
+                            .setArtist(song.artist)
+                            .setAlbumTitle(song.album)
+                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                            .setIsPlayable(true)
+                            .setIsBrowsable(false)
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                            .build()
+                    )
+
+                if (!audioStreamUrl.isNullOrEmpty()) {
+                    mediaItemBuilder.setRequestMetadata(
+                        MediaItem.RequestMetadata.Builder()
+                            .setExtras(android.os.Bundle().apply {
+                                putString("audioStreamUrl", audioStreamUrl)
+                            })
+                            .build()
                     )
                 }
-                return
-            }
-            
-            val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
 
-            // Start aggressive caching in background
-            if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
-                startAggressiveCaching(cacheKey, streamUrl)
-            }
+                val newMediaItem = mediaItemBuilder.build()
 
-            // Build MediaItem
-            // For dual-stream video (720p/1080p), audio URL is passed via RequestMetadata extras
-            // so the service-side DualStreamMediaSourceFactory can create MergingMediaSource.
-            val finalUri = streamUrl
-            
-            android.util.Log.d("MusicPlayer", "Final URI: $finalUri, audioStreamUrl: $audioStreamUrl")
-            
-            val mediaItemBuilder = MediaItem.Builder()
-                .setUri(finalUri)
-                .setMediaId(song.id)
-                .setCustomCacheKey(cacheKey) // CRITICAL: Stable cache key
-                                    .setMediaMetadata(
-                                        MediaMetadata.Builder()
-                                            .setTitle(song.title)
-                                            .setArtist(song.artist)
-                                            .setAlbumTitle(song.album)
-                                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                                            .setIsPlayable(true)
-                                            .setIsBrowsable(false)
-                                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                                            .build()
-                                    )            
-            // Pass audio URL for dual-stream merging (video-only + audio-only)
-            if (!audioStreamUrl.isNullOrEmpty()) {
-                mediaItemBuilder.setRequestMetadata(
-                    MediaItem.RequestMetadata.Builder()
-                        .setExtras(android.os.Bundle().apply {
-                            putString("audioStreamUrl", audioStreamUrl)
-                        })
-                        .build()
-                )
-            }
-            
-            val newMediaItem = mediaItemBuilder.build()
-            
-            mediaController?.let { controller ->
-                // Verify that the item at this index is still the one we resolved
-                // This prevents race conditions where queue changed while we were fetching
-                if (index < controller.mediaItemCount) {
-                    val currentItem = controller.getMediaItemAt(index)
-                    if (currentItem.mediaId == song.id) {
-                        // Replace current item with resolved stream and play
-                        val oldPos = controller.currentPosition // Remember pos if replacing same item (re-resolve case)
-                        
-                        controller.replaceMediaItem(index, newMediaItem)
+                mediaController?.let { controller ->
+                    if (index < controller.mediaItemCount) {
+                        val currentItem = controller.getMediaItemAt(index)
+                        if (currentItem.mediaId == song.id) {
+                            val oldPos = controller.currentPosition
+                            controller.replaceMediaItem(index, newMediaItem)
 
-
-                        // If we are replacing the currently playing item
-                        if (index == controller.currentMediaItemIndex) {
-                             controller.prepare()
-                             // Always restore position if valid (handles quality switch and error recovery)
-                             if (oldPos > 0) controller.seekTo(oldPos)
-
-                             if (shouldPlay) {
-                                  controller.play()
-                             }
+                            if (index == controller.currentMediaItemIndex) {
+                                controller.prepare()
+                                if (oldPos > 0) controller.seekTo(oldPos)
+                                if (shouldPlay) controller.play()
+                            }
+                            _playerState.update { it.copy(isLoading = false, error = null) }
+                        } else {
+                            _playerState.update { it.copy(isLoading = false) }
                         }
-                        // Clear loading state after successful resolution
-                        _playerState.update { it.copy(isLoading = false, error = null) }
                     } else {
-                        // Queue changed, discard this update
                         _playerState.update { it.copy(isLoading = false) }
                     }
-                } else {
-                    // Index out of bounds - clear loading state
-                    _playerState.update { it.copy(isLoading = false) }
                 }
+            } catch (e: Exception) {
+                _playerState.update { it.copy(error = e.message, isLoading = false) }
             }
-        } catch (e: Exception) {
-            _playerState.update { it.copy(error = e.message, isLoading = false) }
         }
     }
 
