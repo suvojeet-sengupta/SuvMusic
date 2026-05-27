@@ -73,14 +73,26 @@ object AppModule {
     fun provideGson(): Gson {
         return Gson()
     }
+
+    @Provides
+    @Singleton
+    fun provideJioSaavnApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService {
+        return retrofit2.Retrofit.Builder()
+            .baseUrl("https://saavn.sumit.co/api/")
+            .client(okHttpClient)
+            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+            .build()
+            .create(com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService::class.java)
+    }
     
     @Provides
     @Singleton
     fun provideJioSaavnRepository(
         okHttpClient: OkHttpClient,
-        gson: Gson
+        gson: Gson,
+        apiService: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService
     ): JioSaavnRepository {
-        return JioSaavnRepository(okHttpClient, gson)
+        return JioSaavnRepository(okHttpClient, gson, apiService)
     }
     
     @Provides
