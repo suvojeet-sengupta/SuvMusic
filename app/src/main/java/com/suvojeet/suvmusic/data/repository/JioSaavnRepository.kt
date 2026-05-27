@@ -62,12 +62,12 @@ class JioSaavnRepository @Inject constructor(
 
         try {
             val response = apiService.searchSongs(query)
-            val songs = response.data.results.mapNotNull { parseSongDto(it) }
+            val songs = response.data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
             
             if (songs.isNotEmpty()) {
                 searchCache[cacheKey] = songs
                 // Also cache individual song details
-                songs.forEach { song -> songDetailsCache[song.id] = song }
+                songs.forEach { song: Song -> songDetailsCache[song.id] = song }
             }
             songs
         } catch (e: Exception) {
@@ -1094,79 +1094,52 @@ class JioSaavnRepository @Inject constructor(
      * Uses autocomplete endpoint for best "instant search" results.
      */
     suspend fun searchAll(query: String): SearchResults = withContext(Dispatchers.IO) {
-        // Helper: safely pull the "data" array out of a category object, tolerating
-        // shape differences (missing key, object instead of array, etc.).
-        fun categoryData(json: JsonObject, key: String): com.google.gson.JsonArray? {
-            return try {
-                json.getAsJsonObject(key)?.getAsJsonArray("data")
-                    ?: json.getAsJsonArray(key)
-            } catch (e: Exception) {
-                null
-            }
-        }
-
         try {
-            val url = "$BASE_URL?__call=autocomplete.get&_format=json&cc=in&includeMetaTags=1&query=${query.encodeUrl()}"
-            val response = makeRequest(url)
-            val json = JsonParser.parseString(response).asJsonObject
+            val response = apiService.searchAll(query)
+            val data = response.data
 
-            // Parse Songs — fall back to the canonical search.getResults endpoint
-            // if autocomplete returns no songs (its shape changes occasionally).
-            var songs = categoryData(json, "songs")?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
+            // Parse Songs
+            var songs = data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
             if (songs.isEmpty()) {
                 android.util.Log.w("JioSaavn", "searchAll('$query'): autocomplete returned no songs, falling back to search.getResults")
                 songs = search(query)
             }
 
             // Parse Albums
-            val albums = if (json.has("albums")) {
-                (categoryData(json, "albums") ?: com.google.gson.JsonArray()).mapNotNull { element ->
-                    val obj = element.asJsonObject
-                    val id = obj.get("id")?.asString ?: return@mapNotNull null
-                    val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
-                    val image = obj.get("image")?.asString?.toHighResImage()
-                    val artist = obj.get("music")?.asString ?: "" // 'music' key usually holds artist in autocomplete
-                    val year = obj.get("year")?.asString
-                    
-                    com.suvojeet.suvmusic.core.model.Album(id, title.decodeHtml(), artist.decodeHtml(), image, year)
-                }
-            } else emptyList()
+            val albums = data.albums?.results?.mapNotNull { dto ->
+                com.suvojeet.suvmusic.core.model.Album(
+                    id = dto.id,
+                    title = dto.name.decodeHtml(),
+                    artist = "", // Album DTO in new API might not have direct artist string
+                    thumbnailUrl = dto.image.lastOrNull()?.url,
+                    year = dto.year
+                )
+            } ?: emptyList()
             
             // Parse Artists
-            val artists = if (json.has("artists")) {
-                (categoryData(json, "artists") ?: com.google.gson.JsonArray()).mapNotNull { element ->
-                    val obj = element.asJsonObject
-                    val id = obj.get("id")?.asString ?: return@mapNotNull null
-                    val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
-                    val image = obj.get("image")?.asString?.toHighResImage()
-
-                    com.suvojeet.suvmusic.core.model.Artist(id, title.decodeHtml(), image)
-                }
-            } else emptyList()
+            val artists = data.artists?.results?.mapNotNull { dto ->
+                com.suvojeet.suvmusic.core.model.Artist(
+                    id = dto.id ?: "",
+                    name = dto.name.decodeHtml(),
+                    thumbnailUrl = dto.image.lastOrNull()?.url
+                )
+            } ?: emptyList()
 
             // Parse Playlists
-            val playlists = if (json.has("playlists")) {
-                (categoryData(json, "playlists") ?: com.google.gson.JsonArray()).mapNotNull { element ->
-                    val obj = element.asJsonObject
-                    val id = obj.get("id")?.asString ?: return@mapNotNull null
-                    val title = obj.get("title")?.asString ?: ""
-                    val image = obj.get("image")?.asString?.toHighResImage()
-                    
-                    // Create lightweight Playlist object
-                    Playlist(
-                        id = id,
-                        title = title.decodeHtml(),
-                        author = "JioSaavn",
-                        thumbnailUrl = image,
-                        songs = emptyList()
-                    )
-                }
-            } else emptyList()
+            val playlists = data.playlists?.results?.mapNotNull { dto ->
+                Playlist(
+                    id = dto.id,
+                    title = dto.name.decodeHtml(),
+                    author = "JioSaavn",
+                    thumbnailUrl = dto.image.lastOrNull()?.url,
+                    songs = emptyList()
+                )
+            } ?: emptyList()
             
             return@withContext SearchResults(songs, albums, artists, playlists)
 
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "searchAll('$query') failed: ${e.javaClass.simpleName}: ${e.message} — falling back to search.getResults")
+            android.util.Log.e("JioSaavn", "searchAll('$query') failed: ${e.message} — falling back to search.getResults")
             // Even if autocomplete fails entirely, still try to return songs so the tab isn't empty.
             return@withContext SearchResults(songs = search(query))
         }

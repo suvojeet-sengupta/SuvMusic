@@ -208,6 +208,8 @@ dependencies {
     // Networking
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
 
     // Retrofit removed in KMP phase 3a — last consumer (SponsorBlockRepository)
     // moved to Ktor. Drop converter-gson too.
