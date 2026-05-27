@@ -932,101 +932,51 @@ class JioSaavnRepository @Inject constructor(
 
     private fun parseSong(json: JsonObject): Song? {
         return try {
-            // New Format detection: Check for 'success' or missing 'more_info' with 'playCount'
-            val isNewFormat = json.has("playCount") || (json.has("success") && json.has("data"))
-            
-            if (isNewFormat) {
-                return parseSongNewFormat(json)
+            // Check if it's the new wrapper format (has 'success' and 'data')
+            if (json.has("success") && json.has("data")) {
+                val data = json.get("data")
+                return if (data.isJsonArray) {
+                    val first = data.asJsonArray.firstOrNull()?.asJsonObject
+                    first?.let { parseSongJsonObject(it) }
+                } else if (data.isJsonObject) {
+                    parseSongJsonObject(data.asJsonObject)
+                } else null
             }
 
-            val id = (json.get("id")?.asString 
-                ?: json.get("perma_url")?.asString?.substringAfterLast("/"))
-                ?.takeIf { it.isNotBlank() }
-                ?: return null
-            
-            // Check for more_info object
-            val moreInfo = if (json.has("more_info") && json.get("more_info").isJsonObject) {
-                json.getAsJsonObject("more_info")
-            } else {
-                null
-            }
-
-            val title = json.get("song")?.asString 
-                ?: json.get("title")?.asString 
-                ?: json.get("name")?.asString 
-                ?: "Unknown"
-            
-            val artistsJson = moreInfo?.get("primary_artists")?.asString
-                ?: moreInfo?.get("singers")?.asString
-                ?: moreInfo?.get("music")?.asString
-                ?: json.get("primary_artists")?.asString 
-                ?: json.get("singers")?.asString 
-                ?: json.get("music")?.asString 
-                ?: "Unknown Artist"
-            
-            val album = moreInfo?.get("album")?.asString
-                ?: json.get("album")?.asString ?: ""
-            
-            val durationStr = moreInfo?.get("duration")?.asString
-                ?: json.get("duration")?.asString ?: "0"
-            val duration = (durationStr.toLongOrNull() ?: 0L) * 1000 // Convert to milliseconds
-            
-            val image = json.get("image")?.asString?.toHighResImage()
-
-            val releaseDate = json.get("release_date")?.asString
-                ?: moreInfo?.get("release_date")?.asString
-                ?: json.get("year")?.asString
-                ?: moreInfo?.get("year")?.asString
-
-            Song.fromJioSaavn(
-                songId = id,
-                title = title.decodeHtml(),
-                artist = artistsJson.decodeHtml(),
-                album = album.decodeHtml(),
-                duration = duration,
-                thumbnailUrl = image,
-                releaseDate = releaseDate
-            )
+            // Fallback for internal API format
+            parseSongInternal(json)
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
 
-    private fun parseSongNewFormat(json: JsonObject): Song? {
+    private fun parseSongJsonObject(json: JsonObject): Song? {
         return try {
-            // If it's a wrapper, get the first item from data array
-            val songJson = if (json.has("success") && json.has("data") && json.get("data").isJsonArray) {
-                json.getAsJsonArray("data").get(0).asJsonObject
-            } else {
-                json
-            }
-
-            val id = songJson.get("id")?.asString ?: return null
-            val title = songJson.get("name")?.asString ?: "Unknown"
+            val id = json.get("id")?.asString ?: return null
+            val title = json.get("name")?.asString ?: json.get("song")?.asString ?: "Unknown"
             
-            val albumObj = if (songJson.has("album") && songJson.get("album").isJsonObject) {
-                songJson.getAsJsonObject("album")
+            val albumObj = if (json.has("album") && json.get("album").isJsonObject) {
+                json.getAsJsonObject("album")
             } else null
+            val albumName = albumObj?.get("name")?.asString ?: json.get("album")?.asString ?: ""
             
-            val albumName = albumObj?.get("name")?.asString ?: ""
+            val duration = (json.get("duration")?.asLong ?: 0L) * 1000
             
-            val duration = (songJson.get("duration")?.asLong ?: 0L) * 1000
-            
-            // Get highest resolution image
-            val images = songJson.getAsJsonArray("image")
+            val images = json.getAsJsonArray("image")
             val thumbnailUrl = if (images != null && images.size() > 0) {
                 images.last().asJsonObject.get("url")?.asString
+            } else json.get("image")?.asString?.toHighResImage()
+            
+            val releaseDate = json.get("releaseDate")?.asString ?: json.get("release_date")?.asString
+            
+            val artistsObj = if (json.has("artists") && json.get("artists").isJsonObject) {
+                json.getAsJsonObject("artists")
             } else null
             
-            val releaseDate = songJson.get("releaseDate")?.asString
+            val primaryArtists = artistsObj?.getAsJsonArray("primary")?.map { it.asJsonObject.get("name")?.asString ?: "" }
+                ?: json.get("primary_artists")?.asString?.split(",")?.map { it.trim() }
+                ?: emptyList()
             
-            // Artist Credits
-            val artistsObj = if (songJson.has("artists") && songJson.get("artists").isJsonObject) {
-                songJson.getAsJsonObject("artists")
-            } else null
-            
-            val primaryArtists = artistsObj?.getAsJsonArray("primary")?.map { it.asJsonObject.get("name")?.asString ?: "" } ?: emptyList()
             val artistName = primaryArtists.joinToString(", ").ifBlank { "Unknown Artist" }
             
             val allArtists = artistsObj?.getAsJsonArray("all")?.mapNotNull { element ->
@@ -1044,17 +994,18 @@ class JioSaavnRepository @Inject constructor(
                 )
             } ?: emptyList()
 
-            // Stream URL (if available)
-            val streamUrl = songJson.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
+            val streamUrl = json.getAsJsonArray("downloadUrl")?.lastOrNull { 
+                it.asJsonObject.get("quality")?.asString == "320kbps" 
+            }?.asJsonObject?.get("url")?.asString ?: json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
 
             val metadata = com.suvojeet.suvmusic.core.model.JioSaavnMetadata(
-                label = songJson.get("label")?.asString?.decodeHtml(),
-                playCount = songJson.get("playCount")?.asLong,
-                language = songJson.get("language")?.asString,
-                explicitContent = songJson.get("explicitContent")?.asBoolean,
-                copyright = songJson.get("copyright")?.asString?.decodeHtml(),
-                hasLyrics = songJson.get("hasLyrics")?.asBoolean,
-                year = songJson.get("year")?.asString,
+                label = json.get("label")?.asString?.decodeHtml(),
+                playCount = json.get("playCount")?.asLong,
+                language = json.get("language")?.asString,
+                explicitContent = json.get("explicitContent")?.asBoolean,
+                copyright = json.get("copyright")?.asString?.decodeHtml(),
+                hasLyrics = json.get("hasLyrics")?.asBoolean,
+                year = json.get("year")?.asString,
                 releaseDate = releaseDate,
                 artists = allArtists
             )
@@ -1071,7 +1022,38 @@ class JioSaavnRepository @Inject constructor(
                 jioSaavnMetadata = metadata
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun parseSongInternal(json: JsonObject): Song? {
+        return try {
+            val id = (json.get("id")?.asString 
+                ?: json.get("perma_url")?.asString?.substringAfterLast("/"))
+                ?.takeIf { it.isNotBlank() }
+                ?: return null
+            
+            val moreInfo = if (json.has("more_info") && json.get("more_info").isJsonObject) {
+                json.getAsJsonObject("more_info")
+            } else null
+
+            val title = json.get("song")?.asString ?: json.get("title")?.asString ?: json.get("name")?.asString ?: "Unknown"
+            val artistsJson = moreInfo?.get("primary_artists")?.asString ?: json.get("primary_artists")?.asString ?: "Unknown Artist"
+            val album = moreInfo?.get("album")?.asString ?: json.get("album")?.asString ?: ""
+            val duration = (moreInfo?.get("duration")?.asString?.toLongOrNull() ?: json.get("duration")?.asString?.toLongOrNull() ?: 0L) * 1000
+            val image = json.get("image")?.asString?.toHighResImage()
+            val releaseDate = json.get("release_date")?.asString ?: moreInfo?.get("release_date")?.asString ?: json.get("year")?.asString
+
+            Song.fromJioSaavn(
+                songId = id,
+                title = title.decodeHtml(),
+                artist = artistsJson.decodeHtml(),
+                album = album.decodeHtml(),
+                duration = duration,
+                thumbnailUrl = image,
+                releaseDate = releaseDate
+            )
+        } catch (e: Exception) {
             null
         }
     }
