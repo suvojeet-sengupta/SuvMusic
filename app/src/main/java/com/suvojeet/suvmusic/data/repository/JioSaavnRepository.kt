@@ -38,8 +38,11 @@ class JioSaavnRepository @Inject constructor(
     companion object {
         // New JioSaavn API wrapper endpoint
         private const val API_BASE_URL = "https://saavn.sumit.co/api"
-        // Legacy internal API endpoint (kept for backward compatibility if needed)
-        private const val INTERNAL_BASE_URL = "https://www.jiosaavn.com/api.php"
+        // Legacy internal API endpoint
+        private const val BASE_URL = "https://www.jiosaavn.com/api.php"
+
+        // Public DES key used by JioSaavn to encrypt media URLs (DES/ECB/PKCS5).
+        private const val DES_KEY = "38346591"
 
         // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"
