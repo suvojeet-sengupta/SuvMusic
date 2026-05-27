@@ -253,7 +253,7 @@ fun PlaybackSettingsScreen(
                 SwitchRow(
                     icon = Icons.Default.Equalizer,
                     title = "Volume Normalization",
-                    subtitle = "Adjust volume to a standard level",
+                    subtitle = "Evens out loud and quiet tracks so every song plays at a similar volume. Off by default.",
                     checked = state.volumeNormalizationEnabled,
                     onCheckedChange = callbacks.onSetVolumeNormalizationEnabled,
                 )
