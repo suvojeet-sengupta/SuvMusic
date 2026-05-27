@@ -688,8 +688,6 @@ fun PlaybackSettingsScreen(
 
     // Music Source Bottom Sheet
     if (showMusicSourceSheet) {
-        val isDeveloperMode by viewModel.isDeveloperMode.collectAsState(initial = false)
-        
         ModalBottomSheet(
             onDismissRequest = { showMusicSourceSheet = false },
             sheetState = musicSourceSheetState,
@@ -705,17 +703,15 @@ fun PlaybackSettingsScreen(
                 )
                 
                 Text(
-                    text = if (isDeveloperMode) "HQ Audio offers higher quality (320 kbps) audio" else "Select your preferred music source",
+                    text = "Choose where SuvMusic streams from. HQ Audio offers higher quality (320 kbps) audio.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
-                
+
                 val sourceOptions = buildList {
                     add(MusicSource.YOUTUBE to "YouTube Music (256 kbps max)")
-                    if (isDeveloperMode) {
-                        add(MusicSource.JIOSAAVN to "HQ Audio (320 kbps)")
-                    }
+                    add(MusicSource.JIOSAAVN to "HQ Audio (320 kbps)")
                 }
                 
                 sourceOptions.forEach { (source, label) ->

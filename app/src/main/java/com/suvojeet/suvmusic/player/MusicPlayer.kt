@@ -1242,17 +1242,6 @@ class MusicPlayer @Inject constructor(
             try {
                 _playerState.update { it.copy(isLoading = true, videoNotFound = false) }
 
-                // Check for Developer Mode restriction for JioSaavn
-                if (song.source == SongSource.JIOSAAVN && !sessionManager.isDeveloperMode()) {
-                    _playerState.update {
-                        it.copy(
-                            error = "RESTRICTED_HQ_AUDIO",
-                            isLoading = false
-                        )
-                    }
-                    return@withLock
-                }
-
                 // Cancel previous caching job
                 cachingJob?.cancel()
 
@@ -1315,6 +1304,43 @@ class MusicPlayer @Inject constructor(
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("MusicPlayer", "Search fallback failed", e)
+                    }
+                }
+
+                // --- CROSS-SOURCE FALLBACK (YouTube <-> JioSaavn) ---
+                // If the song's native source can't produce a stream, try the other
+                // provider by matching on title + artist. Audio-only (video mode has
+                // its own YouTube fallback above, and JioSaavn has no video streams).
+                if (streamUrl == null && !_playerState.value.isVideoMode) {
+                    val matchQuery = "${song.title} ${song.artist}".trim()
+                    try {
+                        when (song.source) {
+                            SongSource.JIOSAAVN -> {
+                                // JioSaavn failed -> resolve via YouTube
+                                val ytId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                    youTubeRepository.search(matchQuery, YouTubeRepository.FILTER_SONGS).firstOrNull()?.id
+                                }
+                                if (!ytId.isNullOrBlank()) {
+                                    streamUrl = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                        youTubeRepository.getStreamUrl(ytId)
+                                    }
+                                }
+                            }
+                            SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> {
+                                // YouTube failed -> resolve via JioSaavn
+                                val jsId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                    jioSaavnRepository.search(matchQuery).firstOrNull()?.id
+                                }
+                                if (!jsId.isNullOrBlank()) {
+                                    streamUrl = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                        jioSaavnRepository.getStreamUrl(jsId)
+                                    }
+                                }
+                            }
+                            else -> {}
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicPlayer", "Cross-source fallback failed", e)
                     }
                 }
 
