@@ -107,6 +107,9 @@ class SessionManager @Inject constructor(
         private val LIBRARY_LIKED_SONGS_CACHE_KEY = stringPreferencesKey("library_liked_songs_cache")
         
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
+        // Hybrid playback: keep YouTube for browsing/metadata but stream the
+        // actual audio from JioSaavn (HQ 320 kbps) when a matching track exists.
+        private val PREFER_JIOSAAVN_AUDIO_KEY = booleanPreferencesKey("prefer_jiosaavn_audio")
         private val DEV_MODE_KEY = stringPreferencesKey("_dx_mode")
         private val DYNAMIC_ISLAND_ENABLED_KEY = booleanPreferencesKey("dynamic_island_enabled")
         
@@ -2491,6 +2494,25 @@ class SessionManager @Inject constructor(
     suspend fun setMusicSource(source: MusicSource) {
         context.dataStore.edit { preferences ->
             preferences[MUSIC_SOURCE_KEY] = source.name
+        }
+    }
+
+    /**
+     * When enabled, YouTube/YouTube Music songs are streamed from JioSaavn's
+     * HQ catalogue (320 kbps) when a confident title+artist match is found.
+     * Browsing/metadata stays on YouTube; only the audio stream is swapped.
+     * Falls back to the original YouTube stream when no match exists.
+     */
+    suspend fun isPreferJioSaavnAudio(): Boolean =
+        context.dataStore.data.first()[PREFER_JIOSAAVN_AUDIO_KEY] ?: false
+
+    val preferJioSaavnAudioFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PREFER_JIOSAAVN_AUDIO_KEY] ?: false
+    }
+
+    suspend fun setPreferJioSaavnAudio(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PREFER_JIOSAAVN_AUDIO_KEY] = enabled
         }
     }
     

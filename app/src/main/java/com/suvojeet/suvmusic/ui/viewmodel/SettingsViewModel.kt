@@ -53,6 +53,7 @@ data class SettingsUiState(
     val automixEnabled: Boolean = true,
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
+    val preferJioSaavnAudio: Boolean = false,
     val doubleTapSeekSeconds: Int = 10,
     val volumeNormalizationEnabled: Boolean = true,
     val betterLyricsEnabled: Boolean = true,
@@ -704,6 +705,7 @@ class SettingsViewModel @Inject constructor(
             val automixEnabled = sessionManager.isAutomixEnabled()
             val volumeSliderEnabled = sessionManager.isVolumeSliderEnabled()
             val musicSource = sessionManager.getMusicSource()
+            val preferJioSaavnAudio = sessionManager.isPreferJioSaavnAudio()
             val doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds()
             val volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
             val betterLyricsEnabled = sessionManager.doesEnableBetterLyrics()
@@ -788,6 +790,7 @@ class SettingsViewModel @Inject constructor(
                     automixEnabled = automixEnabled,
                     volumeSliderEnabled = volumeSliderEnabled,
                     musicSource = musicSource,
+                    preferJioSaavnAudio = preferJioSaavnAudio,
                     doubleTapSeekSeconds = doubleTapSeekSeconds,
                     volumeNormalizationEnabled = volumeNormalizationEnabled,
                     betterLyricsEnabled = betterLyricsEnabled,
@@ -1297,6 +1300,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setMusicSource(source)
             _uiState.update { it.copy(musicSource = source) }
+        }
+    }
+
+    fun setPreferJioSaavnAudio(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setPreferJioSaavnAudio(enabled)
+            _uiState.update { it.copy(preferJioSaavnAudio = enabled) }
         }
     }
     
