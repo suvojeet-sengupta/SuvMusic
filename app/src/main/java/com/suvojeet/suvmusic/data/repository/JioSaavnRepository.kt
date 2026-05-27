@@ -5,7 +5,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.util.SecureConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -22,10 +21,8 @@ import com.suvojeet.suvmusic.util.toHighResImage
 
 /**
  * Repository for fetching music from JioSaavn.
- * Uses JioSaavn's internal API endpoints (unofficial).
+ * Uses JioSaavn's public (unofficial) internal API endpoints.
  * Supports 320kbps high-quality audio.
- * 
- * NOTE: This is a developer-only feature, hidden from public UI.
  */
 @Singleton
 class JioSaavnRepository @Inject constructor(
@@ -39,14 +36,12 @@ class JioSaavnRepository @Inject constructor(
     private val playlistCache = mutableMapOf<String, Playlist>()
 
     companion object {
-        // Base URL retrieved from encrypted config at runtime
-        private val BASE_URL: String
-            get() = SecureConfig.getJioSaavnBaseUrl()
-        
-        // DES key for URL decryption - obfuscated
-        private val DES_KEY: String
-            get() = SecureConfig.getJioSaavnDesKey()
-        
+        // JioSaavn internal API endpoint.
+        private const val BASE_URL = "https://www.jiosaavn.com/api.php"
+
+        // Public DES key used by JioSaavn to encrypt media URLs (DES/ECB/PKCS5).
+        private const val DES_KEY = "38346591"
+
         // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"
         private const val QUALITY_160 = "_160.mp4"
@@ -78,10 +73,12 @@ class JioSaavnRepository @Inject constructor(
                 searchCache[cacheKey] = songs
                 // Also cache individual song details
                 songs.forEach { song -> songDetailsCache[song.id] = song }
+            } else {
+                android.util.Log.w("JioSaavn", "search('$query') parsed 0 songs from response")
             }
             songs
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "search('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
             emptyList()
         }
     }
@@ -232,14 +229,17 @@ class JioSaavnRepository @Inject constructor(
                 }
             }
             
+            if (streamUrl == null) {
+                android.util.Log.w("JioSaavn", "getStreamUrl($songId): could not resolve a stream URL (no/failed encrypted_media_url)")
+            }
             streamUrl?.let { streamUrlCache[cacheKey] = it }
             streamUrl
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("JioSaavn", "getStreamUrl($songId) failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
-    
+
     /**
      * Get playlist details with all songs.
      */
@@ -839,7 +839,7 @@ class JioSaavnRepository @Inject constructor(
         // Derive referer dynamically
         val referer = BASE_URL.substringBefore("/api")  + "/"
         val origin = referer.dropLast(1)
-        
+
         val request = Request.Builder()
             .url(url)
             .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36")
@@ -848,9 +848,15 @@ class JioSaavnRepository @Inject constructor(
             .addHeader("Accept", "application/json, text/plain, */*")
             .addHeader("Accept-Language", "en-US,en;q=0.9")
             .build()
-        
+
         return okHttpClient.newCall(request).execute().use { response ->
-            response.body.string()
+            val body = response.body.string()
+            if (!response.isSuccessful) {
+                android.util.Log.e("JioSaavn", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
+            } else {
+                android.util.Log.d("JioSaavn", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
+            }
+            body
         }
     }
     
@@ -943,19 +949,33 @@ class JioSaavnRepository @Inject constructor(
      * Uses autocomplete endpoint for best "instant search" results.
      */
     suspend fun searchAll(query: String): SearchResults = withContext(Dispatchers.IO) {
+        // Helper: safely pull the "data" array out of a category object, tolerating
+        // shape differences (missing key, object instead of array, etc.).
+        fun categoryData(json: JsonObject, key: String): com.google.gson.JsonArray? {
+            return try {
+                json.getAsJsonObject(key)?.getAsJsonArray("data")
+                    ?: json.getAsJsonArray(key)
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         try {
-            val url = "$BASE_URL?__call=autocomplete.get&_format=json&query=${query.encodeUrl()}"
+            val url = "$BASE_URL?__call=autocomplete.get&_format=json&cc=in&includeMetaTags=1&query=${query.encodeUrl()}"
             val response = makeRequest(url)
             val json = JsonParser.parseString(response).asJsonObject
-            
-            // Parse Songs
-            val songs = if (json.has("songs")) {
-                json.getAsJsonObject("songs").getAsJsonArray("data").mapNotNull { parseSong(it.asJsonObject) }
-            } else emptyList()
-            
+
+            // Parse Songs — fall back to the canonical search.getResults endpoint
+            // if autocomplete returns no songs (its shape changes occasionally).
+            var songs = categoryData(json, "songs")?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
+            if (songs.isEmpty()) {
+                android.util.Log.w("JioSaavn", "searchAll('$query'): autocomplete returned no songs, falling back to search.getResults")
+                songs = search(query)
+            }
+
             // Parse Albums
             val albums = if (json.has("albums")) {
-                json.getAsJsonObject("albums").getAsJsonArray("data").mapNotNull { element ->
+                (categoryData(json, "albums") ?: com.google.gson.JsonArray()).mapNotNull { element ->
                     val obj = element.asJsonObject
                     val id = obj.get("id")?.asString ?: return@mapNotNull null
                     val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
@@ -969,19 +989,19 @@ class JioSaavnRepository @Inject constructor(
             
             // Parse Artists
             val artists = if (json.has("artists")) {
-                json.getAsJsonObject("artists").getAsJsonArray("data").mapNotNull { element ->
+                (categoryData(json, "artists") ?: com.google.gson.JsonArray()).mapNotNull { element ->
                     val obj = element.asJsonObject
                     val id = obj.get("id")?.asString ?: return@mapNotNull null
                     val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
                     val image = obj.get("image")?.asString?.toHighResImage()
-                    
+
                     com.suvojeet.suvmusic.core.model.Artist(id, title.decodeHtml(), image)
                 }
             } else emptyList()
-            
+
             // Parse Playlists
             val playlists = if (json.has("playlists")) {
-                json.getAsJsonObject("playlists").getAsJsonArray("data").mapNotNull { element ->
+                (categoryData(json, "playlists") ?: com.google.gson.JsonArray()).mapNotNull { element ->
                     val obj = element.asJsonObject
                     val id = obj.get("id")?.asString ?: return@mapNotNull null
                     val title = obj.get("title")?.asString ?: ""
@@ -999,10 +1019,11 @@ class JioSaavnRepository @Inject constructor(
             } else emptyList()
             
             return@withContext SearchResults(songs, albums, artists, playlists)
-            
+
         } catch (e: Exception) {
-            e.printStackTrace()
-            return@withContext SearchResults()
+            android.util.Log.e("JioSaavn", "searchAll('$query') failed: ${e.javaClass.simpleName}: ${e.message} — falling back to search.getResults")
+            // Even if autocomplete fails entirely, still try to return songs so the tab isn't empty.
+            return@withContext SearchResults(songs = search(query))
         }
     }
 }
