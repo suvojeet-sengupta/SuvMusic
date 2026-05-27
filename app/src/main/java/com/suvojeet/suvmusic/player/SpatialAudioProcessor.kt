@@ -21,7 +21,7 @@ class SpatialAudioProcessor @Inject constructor(
     
     private var isSpatialEnabled = false
     private var isLimiterEnabled = false
-    private var isCrossfeedEnabled = true
+    private var isCrossfeedEnabled = false
     private var currentPitch = 1.0f
     @Volatile private var spatialStrength = 0.7f // 0..1; user-controlled spatial intensity
 

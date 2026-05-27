@@ -132,7 +132,7 @@ data class SettingsUiState(
     // Crossfade (smooth volume-fade between tracks)
     val crossfadeMs: Int = 0,
     // Crossfeed
-    val crossfeedEnabled: Boolean = true,
+    val crossfeedEnabled: Boolean = false,
     // Equalizer
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },

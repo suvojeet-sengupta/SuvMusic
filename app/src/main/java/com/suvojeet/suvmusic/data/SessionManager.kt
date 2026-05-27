@@ -1451,10 +1451,10 @@ class SessionManager @Inject constructor(
     // --- Crossfeed ---
 
     suspend fun isCrossfeedEnabled(): Boolean =
-        context.dataStore.data.first()[CROSSFEED_ENABLED_KEY] ?: true
+        context.dataStore.data.first()[CROSSFEED_ENABLED_KEY] ?: false
 
     val crossfeedEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[CROSSFEED_ENABLED_KEY] ?: true
+        preferences[CROSSFEED_ENABLED_KEY] ?: false
     }
 
     suspend fun setCrossfeedEnabled(enabled: Boolean) {
