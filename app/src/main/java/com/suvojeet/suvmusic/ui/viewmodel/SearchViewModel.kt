@@ -139,12 +139,16 @@ class SearchViewModel @Inject constructor(
                     MusicSource.JIOSAAVN -> SearchTab.JIOSAAVN
                     else -> SearchTab.YOUTUBE_MUSIC
                 }
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         currentSource = source,
                         selectedTab = defaultTab
-                    ) 
+                    )
                 }
+                // Browse categories are source-specific (YT moods/genres vs
+                // a curated JioSaavn list), so refresh them whenever the
+                // user switches their primary source.
+                loadBrowseCategories()
             }
         }
     }
@@ -158,8 +162,13 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCategoriesLoading = true) }
             try {
-                val categories = youTubeRepository.getMoodsAndGenres()
-                _uiState.update { 
+                val source = sessionManager.getMusicSource()
+                val categories = if (source == MusicSource.JIOSAAVN) {
+                    jioSaavnBrowseCategories()
+                } else {
+                    youTubeRepository.getMoodsAndGenres()
+                }
+                _uiState.update {
                     it.copy(
                         browseCategories = categories,
                         isCategoriesLoading = false
@@ -170,9 +179,26 @@ class SearchViewModel @Inject constructor(
             }
         }
     }
-    
+
+    /**
+     * Curated set of browse categories surfaced when JioSaavn is the active
+     * source. Each entry maps to a JioSaavn search query at click time via the
+     * "jiosaavn:" prefix on [BrowseCategory.browseId].
+     */
+    private fun jioSaavnBrowseCategories(): List<BrowseCategory> = listOf(
+        "Bollywood", "Punjabi", "Hindi Pop", "Romantic", "Party",
+        "Workout", "Lo-fi", "Devotional", "Classical", "Rock",
+        "Hip Hop", "Indie", "Tamil", "Telugu", "English Pop"
+    ).map { title ->
+        BrowseCategory(
+            title = title,
+            browseId = "jiosaavn:$title",
+            params = null
+        )
+    }
+
     fun onCategoryClick(category: BrowseCategory) {
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 selectedCategory = category,
                 query = category.title,
@@ -180,23 +206,36 @@ class SearchViewModel @Inject constructor(
                 isSearchActive = true
             )
         }
-        
+
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val results = youTubeRepository.getCategoryContent(
-                    browseId = category.browseId,
-                    params = category.params
-                )
-                _uiState.update { 
-                    it.copy(
-                        results = results,
-                        isLoading = false
+                if (category.browseId.startsWith("jiosaavn:")) {
+                    val results = jioSaavnRepository.search(category.title)
+                    _uiState.update {
+                        it.copy(
+                            results = results,
+                            artistResults = emptyList(),
+                            albumResults = emptyList(),
+                            playlistResults = emptyList(),
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    val results = youTubeRepository.getCategoryContent(
+                        browseId = category.browseId,
+                        params = category.params
                     )
+                    _uiState.update {
+                        it.copy(
+                            results = results,
+                            isLoading = false
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         error = e.message,
                         isLoading = false
@@ -259,8 +298,23 @@ class SearchViewModel @Inject constructor(
         suggestionJob = viewModelScope.launch {
             _uiState.update { it.copy(isSuggestionsLoading = true) }
             try {
-                val suggestions = youTubeRepository.getSearchSuggestions(query)
-                _uiState.update { 
+                val source = sessionManager.getMusicSource()
+                val suggestions = if (source == MusicSource.JIOSAAVN) {
+                    // JioSaavn has no dedicated suggest endpoint, but its
+                    // autocomplete-backed `searchAll` returns the same song
+                    // titles a user would expect in the suggestion list.
+                    jioSaavnRepository.searchAll(query)
+                        .songs
+                        .asSequence()
+                        .map { it.title }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .take(8)
+                        .toList()
+                } else {
+                    youTubeRepository.getSearchSuggestions(query)
+                }
+                _uiState.update {
                     it.copy(
                         suggestions = suggestions,
                         isSuggestionsLoading = false
