@@ -55,6 +55,7 @@ fun SongInfoSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
+    val jioSaavnMetadata by viewModel.jioSaavnMetadata.collectAsState()
     
     // Get high resolution thumbnail URL
     val highResThumbnail = remember(song.thumbnailUrl, song.id) {
@@ -66,10 +67,11 @@ fun SongInfoSheet(
     
     LaunchedEffect(isVisible, song.artist, song.id) {
         if (isVisible) {
-            viewModel.fetchArtistCredits(song.artist, song.source)
-            if (song.releaseDate == null) {
-                viewModel.fetchSongDetails(song.id, song.source, song.originalSource)
+            // First fetch basic artist credits (will be overridden if detailed metadata is found)
+            if (artistCredits.isEmpty() || song.artist != (viewModel.artistCredits.value.firstOrNull()?.name ?: "")) {
+                viewModel.fetchArtistCredits(song.artist, song.source)
             }
+            viewModel.fetchSongDetails(song.id, song.source, song.originalSource)
         }
     }
     
@@ -174,13 +176,22 @@ fun SongInfoSheet(
                         border = BorderStroke(1.dp, (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            val stats = listOf(
-                                "Content ID" to song.id,
-                                "Source" to song.source.name,
-                                "Codec" to (audioCodec ?: "Opus"),
-                                "Bitrate" to (audioBitrate?.let { "${it} kbps" } ?: "Variable"),
-                                "Duration" to formatDurationForCredits(song.duration)
-                            )
+                            val stats = remember(song.id, song.source, audioCodec, audioBitrate, song.duration, jioSaavnMetadata) {
+                                val list = mutableListOf(
+                                    "Content ID" to song.id,
+                                    "Source" to song.source.name,
+                                    "Codec" to (audioCodec ?: "Opus"),
+                                    "Bitrate" to (audioBitrate?.let { "${it} kbps" } ?: "Variable"),
+                                    "Duration" to formatDurationForCredits(song.duration)
+                                )
+                                
+                                jioSaavnMetadata?.let { meta ->
+                                    meta.playCount?.let { list.add("Play Count" to String.format("%,d", it)) }
+                                    meta.language?.let { list.add("Language" to it.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }) }
+                                    meta.label?.let { list.add("Label" to it) }
+                                }
+                                list
+                            }
                             
                             stats.forEach { (label, value) ->
                                 Row(
@@ -241,12 +252,20 @@ fun SongInfoSheet(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown", isDarkTheme)
+                            
+                            jioSaavnMetadata?.explicitContent?.let { isExplicit ->
+                                if (isExplicit) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
+                                    InfoRow(Icons.Default.Album, "Content", "Explicit Content", isDarkTheme)
+                                }
+                            }
+
                             if (!song.album.isNullOrBlank()) {
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                                 InfoRow(Icons.Default.Album, "Album", song.album!!, isDarkTheme)
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
-                            InfoRow(Icons.Default.Copyright, "Copyright", "© ${song.artist}", isDarkTheme)
+                            InfoRow(Icons.Default.Copyright, "Copyright", jioSaavnMetadata?.copyright ?: "© ${song.artist}", isDarkTheme)
                         }
                     }
 
