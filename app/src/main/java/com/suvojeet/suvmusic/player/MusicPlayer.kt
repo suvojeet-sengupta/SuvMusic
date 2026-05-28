@@ -349,6 +349,15 @@ class MusicPlayer @Inject constructor(
             sessionManager.automixEnabledFlow.collect { automixEnabled = it }
         }
 
+        // When the user switches their primary source, drop the hybrid resolution
+        // cache so previously-negative-cached misses get re-resolved against the
+        // new HQ catalogue choice.
+        scope.launch {
+            sessionManager.musicSourceFlow.collect {
+                hybridRemoteIds.evictAll()
+            }
+        }
+
         connectToService()
         
         // Setup sleep timer callback
@@ -1307,11 +1316,15 @@ class MusicPlayer @Inject constructor(
             val cTitle = normalize(c.title)
             if (cTitle.isEmpty()) continue
             val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
-            if (titleOverlap < 0.6) continue // title must mostly match
+            // Looser title gate: a 40% token overlap is enough. Catches songs where
+            // the YouTube title carries extra noise like "Official Video", "Lyrics",
+            // album/year tags, etc.
+            if (titleOverlap < 0.4) continue
 
-            // Duration gate (only when both are known).
+            // Duration gate (only when both are known). Widened to ±15s to tolerate
+            // intros/outros that differ between YouTube and the HQ source.
             if (song.duration > 0 && c.duration > 0) {
-                if (kotlin.math.abs(song.duration - c.duration) > 7_000L) continue
+                if (kotlin.math.abs(song.duration - c.duration) > 15_000L) continue
             }
 
             val cArtist = normalize(c.artist)
@@ -1351,6 +1364,8 @@ class MusicPlayer @Inject constructor(
                     streamUrl = resolveHybridRemoteStream(song)
                     if (streamUrl != null) {
                         android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from RemoteAudio HQ")
+                    } else {
+                        android.util.Log.w("MusicPlayer", "Hybrid: no HQ match for '${song.title}' - ${song.artist}; falling back to YouTube")
                     }
                 }
 
