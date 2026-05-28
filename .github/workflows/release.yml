@@ -42,6 +42,30 @@ jobs:
         LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
         LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
 
+    # Guard production releases against upstream-service fingerprint
+    # leaks in source or shipped APK. See build.yml for the same check.
+    - name: Static fingerprint scan
+      run: |
+        set -e
+        PATTERN='jiosaavn|saavn\.sumit|saavncdn|38346591'
+
+        if git grep -i -n -E "$PATTERN" -- ':!*.md' ':!docs/'; then
+          echo "::error::Plaintext upstream fingerprint in source code"
+          exit 1
+        fi
+
+        APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+        if [ -z "$APK" ]; then
+          echo "::error::No release APK found"
+          exit 1
+        fi
+        hits=$(strings "$APK" 2>/dev/null | grep -i -c -E "$PATTERN" || true)
+        if [ "$hits" -ne 0 ]; then
+          echo "::error::Fingerprint leak in APK ($hits hits):"
+          strings "$APK" | grep -i -E "$PATTERN" | head -20 || true
+          exit 1
+        fi
+
     - name: Generate Release Notes
       id: release_notes
       run: |
