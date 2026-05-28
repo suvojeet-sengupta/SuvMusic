@@ -115,8 +115,8 @@ fun PlaybackSettingsScreen(
 
                         PlaybackSwitchItem(
                             icon = Icons.Default.GraphicEq,
-                            title = "Stream audio from RemoteAudio",
-                            subtitle = "Browse on YouTube but play in HQ (320 kbps) from RemoteAudio when a match is found",
+                            title = "Stream HQ Audio",
+                            subtitle = "Browse on YouTube but play in HQ (320 kbps) when a match is found",
                             checked = uiState.preferRemoteAudio,
                             onCheckedChange = { viewModel.setPreferRemoteAudio(it) }
                         )

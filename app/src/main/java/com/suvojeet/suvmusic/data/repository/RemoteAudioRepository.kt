@@ -287,7 +287,7 @@ class RemoteAudioRepository @Inject constructor(
             val playlist = Playlist(
                 id = playlistId,
                 title = title.decodeHtml().ifBlank { "Playlist" },
-                author = "RemoteAudio",
+                author = "",
                 thumbnailUrl = image,
                 songs = songs
             )
@@ -391,7 +391,7 @@ class RemoteAudioRepository @Inject constructor(
                             val count = obj.get("song_count")?.asInt ?: obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "RemoteAudio", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "Featured", image, count)
                             )
                         }
                         "chart" -> {
@@ -401,7 +401,7 @@ class RemoteAudioRepository @Inject constructor(
                             val count = obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "RemoteAudio Chart", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "Top Charts", image, count)
                             )
                         }
                         "radio_station" -> {
@@ -539,7 +539,7 @@ class RemoteAudioRepository @Inject constructor(
                                 id = chartId,
                                 name = title.decodeHtml(),
                                 url = "",
-                                uploaderName = "RemoteAudio Charts",
+                                uploaderName = "Top Charts",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -649,7 +649,7 @@ class RemoteAudioRepository @Inject constructor(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "RemoteAudio",
+                                uploaderName = "Featured",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -765,7 +765,7 @@ class RemoteAudioRepository @Inject constructor(
                                 id = "radio_$radioId",
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "RemoteAudio Radio",
+                                uploaderName = "Radio",
                                 thumbnailUrl = image,
                                 songCount = 0
                             )
@@ -820,7 +820,7 @@ class RemoteAudioRepository @Inject constructor(
                             id = plId,
                             name = name.decodeHtml(),
                             url = "",
-                            uploaderName = "RemoteAudio",
+                            uploaderName = "Featured",
                             thumbnailUrl = image,
                             songCount = songCount
                         )
@@ -849,7 +849,7 @@ class RemoteAudioRepository @Inject constructor(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "RemoteAudio",
+                                uploaderName = "Featured",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -1133,7 +1133,7 @@ class RemoteAudioRepository @Inject constructor(
                 Playlist(
                     id = id,
                     title = (dto.name ?: "Playlist").decodeHtml(),
-                    author = "RemoteAudio",
+                    author = "",
                     thumbnailUrl = dto.image?.lastOrNull()?.url,
                     songs = emptyList()
                 )
