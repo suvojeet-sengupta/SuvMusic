@@ -155,13 +155,20 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
+            android.util.Log.i("SuvMusicJioSaavn", "Fetching details for song: $songId")
             val response = apiService.getSongDetails(songId)
             val result = response.data.firstOrNull()?.let { parseSongDto(it) }
             
+            if (result == null) {
+                android.util.Log.e("SuvMusicJioSaavn", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data.size}")
+            } else {
+                android.util.Log.i("SuvMusicJioSaavn", "Successfully fetched details for: ${result.title}")
+            }
+
             result?.let { songDetailsCache[songId] = it }
             result
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getSongDetails($songId) failed: ${e.message}")
+            android.util.Log.e("SuvMusicJioSaavn", "getSongDetails($songId) failed", e)
             null
         }
     }
@@ -176,16 +183,20 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
+            android.util.Log.i("SuvMusicJioSaavn", "Resolving stream URL for $songId (Requested quality: $quality)")
             val song = getSongDetails(songId)
             val streamUrl = song?.streamUrl
             
             if (streamUrl == null) {
-                android.util.Log.w("JioSaavn", "getStreamUrl($songId): could not resolve a stream URL from details")
+                android.util.Log.e("SuvMusicJioSaavn", "Could not resolve stream URL for $songId. Details might be missing downloadUrl.")
+            } else {
+                android.util.Log.i("SuvMusicJioSaavn", "Resolved stream URL: $streamUrl")
             }
+
             streamUrl?.let { streamUrlCache[cacheKey] = it }
             streamUrl
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getStreamUrl($songId) failed: ${e.message}")
+            android.util.Log.e("SuvMusicJioSaavn", "getStreamUrl($songId) failed", e)
             null
         }
     }
