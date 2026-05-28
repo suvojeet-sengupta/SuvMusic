@@ -7,7 +7,7 @@ fun String.encodeUrl(): String {
 }
 
 fun String.toHighResImage(): String {
-    // JioSaavn images: replace resolution suffix for higher quality
+    // RemoteAudio images: replace resolution suffix for higher quality
     return this.replace("150x150", "500x500")
         .replace("50x50", "500x500")
 }

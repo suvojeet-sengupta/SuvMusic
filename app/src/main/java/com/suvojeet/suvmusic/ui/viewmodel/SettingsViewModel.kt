@@ -53,7 +53,7 @@ data class SettingsUiState(
     val automixEnabled: Boolean = true,
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
-    val preferJioSaavnAudio: Boolean = false,
+    val preferRemoteAudio: Boolean = false,
     val doubleTapSeekSeconds: Int = 10,
     val volumeNormalizationEnabled: Boolean = true,
     val betterLyricsEnabled: Boolean = true,
@@ -176,7 +176,7 @@ class SettingsViewModel @Inject constructor(
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     
-    // Developer mode - shows JioSaavn option when enabled
+    // Developer mode - shows RemoteAudio option when enabled
     val isDeveloperMode = sessionManager.developerModeFlow
     
     // Dynamic Island enabled state
@@ -705,7 +705,7 @@ class SettingsViewModel @Inject constructor(
             val automixEnabled = sessionManager.isAutomixEnabled()
             val volumeSliderEnabled = sessionManager.isVolumeSliderEnabled()
             val musicSource = sessionManager.getMusicSource()
-            val preferJioSaavnAudio = sessionManager.isPreferJioSaavnAudio()
+            val preferRemoteAudio = sessionManager.isPreferRemoteAudio()
             val doubleTapSeekSeconds = sessionManager.getDoubleTapSeekSeconds()
             val volumeNormalizationEnabled = sessionManager.isVolumeNormalizationEnabled()
             val betterLyricsEnabled = sessionManager.doesEnableBetterLyrics()
@@ -790,7 +790,7 @@ class SettingsViewModel @Inject constructor(
                     automixEnabled = automixEnabled,
                     volumeSliderEnabled = volumeSliderEnabled,
                     musicSource = musicSource,
-                    preferJioSaavnAudio = preferJioSaavnAudio,
+                    preferRemoteAudio = preferRemoteAudio,
                     doubleTapSeekSeconds = doubleTapSeekSeconds,
                     volumeNormalizationEnabled = volumeNormalizationEnabled,
                     betterLyricsEnabled = betterLyricsEnabled,
@@ -1303,10 +1303,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setPreferJioSaavnAudio(enabled: Boolean) {
+    fun setPreferRemoteAudio(enabled: Boolean) {
         viewModelScope.launch {
-            sessionManager.setPreferJioSaavnAudio(enabled)
-            _uiState.update { it.copy(preferJioSaavnAudio = enabled) }
+            sessionManager.setPreferRemoteAudio(enabled)
+            _uiState.update { it.copy(preferRemoteAudio = enabled) }
         }
     }
     

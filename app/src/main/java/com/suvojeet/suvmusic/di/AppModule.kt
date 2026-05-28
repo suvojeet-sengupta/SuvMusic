@@ -3,7 +3,7 @@ package com.suvojeet.suvmusic.di
 import android.content.Context
 import com.google.gson.Gson
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.player.MusicPlayer
@@ -76,23 +76,23 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideJioSaavnApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService {
+    fun provideRemoteAudioApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService {
         return retrofit2.Retrofit.Builder()
             .baseUrl("https://saavn.sumit.co/api/")
             .client(okHttpClient)
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
             .build()
-            .create(com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService::class.java)
+            .create(com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService::class.java)
     }
     
     @Provides
     @Singleton
-    fun provideJioSaavnRepository(
+    fun provideRemoteAudioRepository(
         okHttpClient: OkHttpClient,
         gson: Gson,
-        apiService: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService
-    ): JioSaavnRepository {
-        return JioSaavnRepository(okHttpClient, gson, apiService)
+        apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService
+    ): RemoteAudioRepository {
+        return RemoteAudioRepository(okHttpClient, gson, apiService)
     }
     
     @Provides
@@ -109,7 +109,7 @@ object AppModule {
     fun provideMusicPlayer(
         @ApplicationContext context: Context,
         youTubeRepository: YouTubeRepository,
-        jioSaavnRepository: JioSaavnRepository,
+        remoteAudioRepository: RemoteAudioRepository,
         sessionManager: SessionManager,
         sleepTimerManager: com.suvojeet.suvmusic.player.SleepTimerManager,
         listeningHistoryRepository: com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository,
@@ -125,7 +125,7 @@ object AppModule {
         return MusicPlayer(
             context,
             youTubeRepository,
-            jioSaavnRepository,
+            remoteAudioRepository,
             sessionManager,
             sleepTimerManager,
             listeningHistoryRepository,
@@ -145,7 +145,7 @@ object AppModule {
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
         youTubeRepository: YouTubeRepository,
-        jioSaavnRepository: JioSaavnRepository,
+        remoteAudioRepository: RemoteAudioRepository,
         betterLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.BetterLyricsProvider,
         simpMusicLyricsProvider: com.suvojeet.suvmusic.simpmusic.SimpMusicLyricsProvider,
         kuGouLyricsProvider: com.suvojeet.suvmusic.kugou.KuGouLyricsProvider,
@@ -158,7 +158,7 @@ object AppModule {
             context,
             okHttpClient,
             youTubeRepository,
-            jioSaavnRepository,
+            remoteAudioRepository,
             betterLyricsProvider,
             simpMusicLyricsProvider,
             kuGouLyricsProvider,

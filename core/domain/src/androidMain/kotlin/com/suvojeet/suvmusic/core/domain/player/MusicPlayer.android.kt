@@ -21,7 +21,7 @@ import kotlin.random.Random
  *
  * Mirrors the Desktop VLCJ actual: pure-Kotlin queue/repeat/shuffle on
  * top, single-track playback below. ExoPlayer plays whatever URL is in
- * [Song.streamUrl] (resolved YouTube/JioSaavn streams) or [Song.localUri]
+ * [Song.streamUrl] (resolved YouTube/RemoteAudio streams) or [Song.localUri]
  * (local/downloaded files); URL resolution is upstream's problem.
  *
  * The richer Android player at `:app/.../player/MusicPlayer.kt` keeps

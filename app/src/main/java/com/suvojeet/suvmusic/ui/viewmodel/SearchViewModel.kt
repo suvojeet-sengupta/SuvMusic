@@ -9,7 +9,7 @@ import com.suvojeet.suvmusic.core.model.BrowseCategory
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.RecentSearchItem
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.core.model.MusicSource
@@ -38,7 +38,7 @@ sealed class SearchEvent {
 
 enum class SearchTab {
     YOUTUBE_MUSIC,
-    JIOSAAVN,
+    REMOTE,
     YOUR_LIBRARY
 }
 
@@ -86,7 +86,7 @@ data class SearchUiState(
 @OptIn(FlowPreview::class)
 class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     private val musicPlayer: MusicPlayer,
@@ -99,7 +99,7 @@ class SearchViewModel @Inject constructor(
     private val _events = MutableSharedFlow<SearchEvent>()
     val events: SharedFlow<SearchEvent> = _events.asSharedFlow()
     
-    // Developer mode - shows JioSaavn tab when enabled
+    // Developer mode - shows RemoteAudio tab when enabled
     val isDeveloperMode = sessionManager.developerModeFlow
     
     private val _searchQuery = MutableStateFlow("")
@@ -136,7 +136,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.musicSourceFlow.collect { source ->
                 val defaultTab = when (source) {
-                    MusicSource.JIOSAAVN -> SearchTab.JIOSAAVN
+                    MusicSource.REMOTE -> SearchTab.REMOTE
                     else -> SearchTab.YOUTUBE_MUSIC
                 }
                 _uiState.update {
@@ -146,7 +146,7 @@ class SearchViewModel @Inject constructor(
                     )
                 }
                 // Browse categories are source-specific (YT moods/genres vs
-                // a curated JioSaavn list), so refresh them whenever the
+                // a curated RemoteAudio list), so refresh them whenever the
                 // user switches their primary source.
                 loadBrowseCategories()
             }
@@ -163,8 +163,8 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(isCategoriesLoading = true) }
             try {
                 val source = sessionManager.getMusicSource()
-                val categories = if (source == MusicSource.JIOSAAVN) {
-                    jioSaavnBrowseCategories()
+                val categories = if (source == MusicSource.REMOTE) {
+                    remoteAudioBrowseCategories()
                 } else {
                     youTubeRepository.getMoodsAndGenres()
                 }
@@ -181,18 +181,18 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * Curated set of browse categories surfaced when JioSaavn is the active
-     * source. Each entry maps to a JioSaavn search query at click time via the
-     * "jiosaavn:" prefix on [BrowseCategory.browseId].
+     * Curated set of browse categories surfaced when RemoteAudio is the active
+     * source. Each entry maps to a RemoteAudio search query at click time via the
+     * "remote:" prefix on [BrowseCategory.browseId].
      */
-    private fun jioSaavnBrowseCategories(): List<BrowseCategory> = listOf(
+    private fun remoteAudioBrowseCategories(): List<BrowseCategory> = listOf(
         "Bollywood", "Punjabi", "Hindi Pop", "Romantic", "Party",
         "Workout", "Lo-fi", "Devotional", "Classical", "Rock",
         "Hip Hop", "Indie", "Tamil", "Telugu", "English Pop"
     ).map { title ->
         BrowseCategory(
             title = title,
-            browseId = "jiosaavn:$title",
+            browseId = "remote:$title",
             params = null
         )
     }
@@ -211,8 +211,8 @@ class SearchViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                if (category.browseId.startsWith("jiosaavn:")) {
-                    val results = jioSaavnRepository.search(category.title)
+                if (category.browseId.startsWith("remote:")) {
+                    val results = remoteAudioRepository.search(category.title)
                     _uiState.update {
                         it.copy(
                             results = results,
@@ -299,11 +299,11 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(isSuggestionsLoading = true) }
             try {
                 val source = sessionManager.getMusicSource()
-                val suggestions = if (source == MusicSource.JIOSAAVN) {
-                    // JioSaavn has no dedicated suggest endpoint, but its
+                val suggestions = if (source == MusicSource.REMOTE) {
+                    // RemoteAudio has no dedicated suggest endpoint, but its
                     // autocomplete-backed `searchAll` returns the same song
                     // titles a user would expect in the suggestion list.
-                    jioSaavnRepository.searchAll(query)
+                    remoteAudioRepository.searchAll(query)
                         .songs
                         .asSequence()
                         .map { it.title }
@@ -462,9 +462,9 @@ class SearchViewModel @Inject constructor(
                             }
                         }
                     }
-                    SearchTab.JIOSAAVN -> {
-                        // Search JioSaavn (320kbps) - Comprehensive search
-                        val results = jioSaavnRepository.searchAll(query)
+                    SearchTab.REMOTE -> {
+                        // Search RemoteAudio (320kbps) - Comprehensive search
+                        val results = remoteAudioRepository.searchAll(query)
                         _uiState.update { 
                             it.copy(
                                 results = results.songs,

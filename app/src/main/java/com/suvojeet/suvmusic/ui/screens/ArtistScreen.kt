@@ -588,7 +588,7 @@ fun ImmersiveArtistHeader(
                     }
                 }
 
-                // Subscribe/Follow is a YouTube-only feature; hide it for JioSaavn artists.
+                // Subscribe/Follow is a YouTube-only feature; hide it for RemoteAudio artists.
                 if (artist.id.startsWith("UC") || artist.id.startsWith("FE")) {
                     Button(
                         onClick = onSubscribe,

@@ -98,18 +98,18 @@ class SessionManager @Inject constructor(
         private const val MAX_RECENTLY_PLAYED = 50
         
         private val HOME_CACHE_KEY = stringPreferencesKey("home_cache")
-        private val JIOSAAVN_HOME_CACHE_KEY = stringPreferencesKey("jiosaavn_home_cache")
+        private val REMOTE_HOME_CACHE_KEY = stringPreferencesKey("remote_home_cache")
         private val QUICK_PICKS_CACHE_KEY = stringPreferencesKey("quick_picks_cache")
         private val LAST_FETCH_TIME_YOUTUBE_KEY = longPreferencesKey("last_fetch_time_youtube")
-        private val LAST_FETCH_TIME_JIOSAAVN_KEY = longPreferencesKey("last_fetch_time_jiosaavn")
+        private val LAST_FETCH_TIME_REMOTE_KEY = longPreferencesKey("last_fetch_time_remote")
         
         private val LIBRARY_PLAYLISTS_CACHE_KEY = stringPreferencesKey("library_playlists_cache")
         private val LIBRARY_LIKED_SONGS_CACHE_KEY = stringPreferencesKey("library_liked_songs_cache")
         
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
         // Hybrid playback: keep YouTube for browsing/metadata but stream the
-        // actual audio from JioSaavn (HQ 320 kbps) when a matching track exists.
-        private val PREFER_JIOSAAVN_AUDIO_KEY = booleanPreferencesKey("prefer_jiosaavn_audio")
+        // actual audio from RemoteAudio (HQ 320 kbps) when a matching track exists.
+        private val PREFER_REMOTE_AUDIO_KEY = booleanPreferencesKey("prefer_remote_audio")
         private val DEV_MODE_KEY = stringPreferencesKey("_dx_mode")
         private val DYNAMIC_ISLAND_ENABLED_KEY = booleanPreferencesKey("dynamic_island_enabled")
         
@@ -1938,7 +1938,7 @@ class SessionManager @Inject constructor(
             kotlin.Pair(RECENTLY_PLAYED_KEY, "recently_played"),
             kotlin.Pair(LAST_FM_USERNAME_KEY, "last_fm_username"),
             kotlin.Pair(HOME_CACHE_KEY, "home_cache"),
-            kotlin.Pair(JIOSAAVN_HOME_CACHE_KEY, "jiosaavn_home_cache"),
+            kotlin.Pair(REMOTE_HOME_CACHE_KEY, "remote_home_cache"),
             kotlin.Pair(LIBRARY_PLAYLISTS_CACHE_KEY, "library_playlists_cache"),
             kotlin.Pair(LIBRARY_LIKED_SONGS_CACHE_KEY, "library_liked_songs_cache")
         )
@@ -2498,21 +2498,21 @@ class SessionManager @Inject constructor(
     }
 
     /**
-     * When enabled, YouTube/YouTube Music songs are streamed from JioSaavn's
+     * When enabled, YouTube/YouTube Music songs are streamed from RemoteAudio's
      * HQ catalogue (320 kbps) when a confident title+artist match is found.
      * Browsing/metadata stays on YouTube; only the audio stream is swapped.
      * Falls back to the original YouTube stream when no match exists.
      */
-    suspend fun isPreferJioSaavnAudio(): Boolean =
-        context.dataStore.data.first()[PREFER_JIOSAAVN_AUDIO_KEY] ?: false
+    suspend fun isPreferRemoteAudio(): Boolean =
+        context.dataStore.data.first()[PREFER_REMOTE_AUDIO_KEY] ?: false
 
-    val preferJioSaavnAudioFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PREFER_JIOSAAVN_AUDIO_KEY] ?: false
+    val preferRemoteAudioFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PREFER_REMOTE_AUDIO_KEY] ?: false
     }
 
-    suspend fun setPreferJioSaavnAudio(enabled: Boolean) {
+    suspend fun setPreferRemoteAudio(enabled: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PREFER_JIOSAAVN_AUDIO_KEY] = enabled
+            preferences[PREFER_REMOTE_AUDIO_KEY] = enabled
         }
     }
     
@@ -2755,18 +2755,18 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun saveJioSaavnHomeCache(sections: List<HomeSection>) {
+    suspend fun saveRemoteAudioHomeCache(sections: List<HomeSection>) {
         val json = withContext(Dispatchers.Default) {
             serializeHomeSections(sections)
         }
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().putString("jiosaavn_home_cache", json).apply()
+            encryptedPrefs.edit().putString("remote_home_cache", json).apply()
         }
-        context.dataStore.edit { it.remove(JIOSAAVN_HOME_CACHE_KEY) }
+        context.dataStore.edit { it.remove(REMOTE_HOME_CACHE_KEY) }
     }
 
-    fun getCachedJioSaavnHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
-        .map { encryptedPrefs.getString("jiosaavn_home_cache", null) }
+    fun getCachedRemoteAudioHomeSections(): Flow<List<HomeSection>> = context.dataStore.data
+        .map { encryptedPrefs.getString("remote_home_cache", null) }
         .flowOn(Dispatchers.IO)
         .map { json ->
             withContext(Dispatchers.Default) {
@@ -2774,8 +2774,8 @@ class SessionManager @Inject constructor(
             }
         }
 
-    suspend fun getCachedJioSaavnHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
-        val json = encryptedPrefs.getString("jiosaavn_home_cache", null)
+    suspend fun getCachedRemoteAudioHomeSectionsSync(): List<HomeSection> = withContext(Dispatchers.IO) {
+        val json = encryptedPrefs.getString("remote_home_cache", null)
         withContext(Dispatchers.Default) {
             parseHomeSections(json)
         }
@@ -2825,12 +2825,12 @@ class SessionManager @Inject constructor(
     }
 
     suspend fun getLastHomeFetchTime(source: MusicSource): Long {
-        val key = if (source == MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+        val key = if (source == MusicSource.REMOTE) LAST_FETCH_TIME_REMOTE_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
         return context.dataStore.data.first()[key] ?: 0L
     }
 
     suspend fun updateLastHomeFetchTime(source: MusicSource) {
-        val key = if (source == MusicSource.JIOSAAVN) LAST_FETCH_TIME_JIOSAAVN_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
+        val key = if (source == MusicSource.REMOTE) LAST_FETCH_TIME_REMOTE_KEY else LAST_FETCH_TIME_YOUTUBE_KEY
         context.dataStore.edit { preferences ->
             preferences[key] = System.currentTimeMillis()
         }

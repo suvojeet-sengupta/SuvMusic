@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Domain interface for music search operations.
- * Implemented by app-layer repositories (YouTube, JioSaavn, Local).
+ * Implemented by app-layer repositories (YouTube, RemoteAudio, Local).
  */
 interface SearchRepository {
     fun searchSongs(query: String): Flow<List<Song>>

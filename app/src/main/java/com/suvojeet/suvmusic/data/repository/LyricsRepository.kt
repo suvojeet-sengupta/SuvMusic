@@ -31,7 +31,7 @@ class LyricsRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val betterLyricsProvider: BetterLyricsProvider,
     private val simpMusicLyricsProvider: SimpMusicLyricsProvider,
     private val kuGouLyricsProvider: KuGouLyricsProvider,
@@ -235,7 +235,7 @@ class LyricsRepository @Inject constructor(
             return@withContext lrcLibLyrics
         }
 
-        // 3. Fallback: Get lyrics from the original source (JioSaavn/YouTube)
+        // 3. Fallback: Get lyrics from the original source (RemoteAudio/YouTube)
         val sourceLyrics = fetchFromSource(song)
         if (sourceLyrics != null) {
             cacheBoth(song.id, sourceLyrics.provider, sourceLyrics)
@@ -315,10 +315,10 @@ class LyricsRepository @Inject constructor(
                     }.getOrNull()
                 }
             }
-            LyricsProviderType.JIOSAAVN -> {
-                jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
+            LyricsProviderType.REMOTE -> {
+                remoteAudioRepository.getLyricsFromRemote(song.id)?.let { text ->
                     val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from JioSaavn", isSynced = false, provider = LyricsProviderType.JIOSAAVN)
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from RemoteAudio", isSynced = false, provider = LyricsProviderType.REMOTE)
                 }
             }
             LyricsProviderType.YOUTUBE -> {
@@ -371,10 +371,10 @@ class LyricsRepository @Inject constructor(
 
     private suspend fun fetchFromSource(song: Song): Lyrics? {
         return when (song.source) {
-            SongSource.JIOSAAVN -> {
-                jioSaavnRepository.getLyricsFromJioSaavn(song.id)?.let { text ->
+            SongSource.REMOTE -> {
+                remoteAudioRepository.getLyricsFromRemote(song.id)?.let { text ->
                     val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from JioSaavn", isSynced = false, provider = LyricsProviderType.JIOSAAVN)
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from RemoteAudio", isSynced = false, provider = LyricsProviderType.REMOTE)
                 }
             }
             SongSource.YOUTUBE, SongSource.DOWNLOADED, SongSource.LOCAL -> {

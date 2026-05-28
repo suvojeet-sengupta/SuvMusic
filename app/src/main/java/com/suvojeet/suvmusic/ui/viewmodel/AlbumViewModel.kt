@@ -8,7 +8,7 @@ import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +29,7 @@ data class AlbumUiState(
 
 class AlbumViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: SessionManager,
     private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
@@ -94,7 +94,7 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Try local first (numeric ID + present in MediaStore). JioSaavn album
+                // Try local first (numeric ID + present in MediaStore). RemoteAudio album
                 // IDs are also numeric, so a numeric ID that isn't a real local album
                 // falls through to the cloud source below.
                 val isLocal = albumId.toLongOrNull() != null
@@ -107,9 +107,9 @@ class AlbumViewModel @Inject constructor(
                 } else null
 
                 val album = localAlbum ?: run {
-                    if (sessionManager.getMusicSource() == MusicSource.JIOSAAVN) {
-                        // JioSaavn returns an album as a Playlist; map it to the Album model.
-                        jioSaavnRepository.getAlbum(albumId)?.let { pl ->
+                    if (sessionManager.getMusicSource() == MusicSource.REMOTE) {
+                        // RemoteAudio returns an album as a Playlist; map it to the Album model.
+                        remoteAudioRepository.getAlbum(albumId)?.let { pl ->
                             Album(
                                 id = albumId,
                                 title = pl.title,

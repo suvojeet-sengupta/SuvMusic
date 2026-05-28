@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
  *   - String.format("%.1fx", x) — JVM-only — replaced with a manual
  *     one-decimal rounding helper that works on every platform.
  *   - Developer-mode music-source toggle: the host decides whether to
- *     show the JioSaavn option by passing [PlaybackSettingsState.allowJioSaavnSource].
+ *     show the RemoteAudio option by passing [PlaybackSettingsState.allowRemoteAudioSource].
  *   - Language picker dialog: Android original declares state but never
  *     renders a dialog (dead code). We expose [PlaybackSettingsCallbacks.onLanguagesClick]
  *     so the host can open whatever picker it has.
@@ -124,7 +124,7 @@ fun PlaybackSettingsScreen(
                     title = "Primary Source",
                     subtitle = when (state.musicSource) {
                         MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
-                        MusicSource.JIOSAAVN -> "HQ Audio (320 kbps)"
+                        MusicSource.REMOTE -> "HQ Audio (320 kbps)"
                     },
                     onClick = { showMusicSourceSheet = true },
                 )
@@ -465,7 +465,7 @@ fun PlaybackSettingsScreen(
     if (showMusicSourceSheet) {
         QualityBottomSheet(
             title = "Primary Music Source",
-            subtitle = if (state.allowJioSaavnSource) {
+            subtitle = if (state.allowRemoteAudioSource) {
                 "HQ Audio offers higher quality (320 kbps) audio"
             } else {
                 "Select your preferred music source"
@@ -475,8 +475,8 @@ fun PlaybackSettingsScreen(
         ) {
             val sourceOptions = buildList {
                 add(MusicSource.YOUTUBE to "YouTube Music (256 kbps max)")
-                if (state.allowJioSaavnSource) {
-                    add(MusicSource.JIOSAAVN to "HQ Audio (320 kbps)")
+                if (state.allowRemoteAudioSource) {
+                    add(MusicSource.REMOTE to "HQ Audio (320 kbps)")
                 }
             }
             sourceOptions.forEach { (source, label) ->
@@ -575,7 +575,7 @@ fun PlaybackSettingsScreen(
 /* ----- helpers ---------------------------------------------------------- */
 
 private fun audioQualityLabel(quality: AudioQuality, source: MusicSource): String =
-    if (source == MusicSource.JIOSAAVN) {
+    if (source == MusicSource.REMOTE) {
         when (quality) {
             AudioQuality.LOW -> "Low (96 kbps)"
             AudioQuality.MEDIUM -> "Standard (160 kbps)"
@@ -592,7 +592,7 @@ private fun audioQualityLabel(quality: AudioQuality, source: MusicSource): Strin
     }
 
 private fun downloadQualityLabel(quality: DownloadQuality, source: MusicSource): String =
-    if (source == MusicSource.JIOSAAVN) {
+    if (source == MusicSource.REMOTE) {
         when (quality) {
             DownloadQuality.LOW -> "Low (96 kbps)"
             DownloadQuality.MEDIUM -> "Standard (160 kbps)"
@@ -877,7 +877,7 @@ data class PlaybackSettingsState(
     val musicHapticsEnabled: Boolean = false,
     val hapticsMode: HapticsMode = HapticsMode.OFF,
     val hapticsIntensity: HapticsIntensity,
-    val allowJioSaavnSource: Boolean = false,
+    val allowRemoteAudioSource: Boolean = false,
 )
 
 /**

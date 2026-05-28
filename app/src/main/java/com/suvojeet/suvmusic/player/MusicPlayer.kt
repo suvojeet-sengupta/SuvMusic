@@ -19,7 +19,7 @@ import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import com.suvojeet.suvmusic.core.model.VideoQuality
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.service.MusicPlayerService
@@ -65,7 +65,7 @@ import javax.inject.Singleton
 class MusicPlayer @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: SessionManager,
     private val sleepTimerManager: SleepTimerManager,
     private val listeningHistoryRepository: ListeningHistoryRepository,
@@ -127,10 +127,10 @@ class MusicPlayer @Inject constructor(
     // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
     private val resolvedVideoIds = android.util.LruCache<String, String>(100)
 
-    // Hybrid playback cache: YouTube songId -> matched JioSaavn songId.
+    // Hybrid playback cache: YouTube songId -> matched RemoteAudio songId.
     // A blank value ("") is a negative cache marker meaning "searched, no
-    // confident JioSaavn match" so we don't repeat the search every play.
-    private val hybridJioSaavnIds = android.util.LruCache<String, String>(200)
+    // confident RemoteAudio match" so we don't repeat the search every play.
+    private val hybridRemoteIds = android.util.LruCache<String, String>(200)
     
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
@@ -920,7 +920,7 @@ class MusicPlayer @Inject constructor(
                     // Check if URI needs resolution:
                     // - YouTube placeholders: "https://youtube.com/watch?v=..."
                     // - General placeholders: "https://placeholder.invalid/..."
-                    // - JioSaavn/empty: null, empty, or doesn't look like a valid stream URL
+                    // - RemoteAudio/empty: null, empty, or doesn't look like a valid stream URL
                     val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
                     val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
                     val isEmptyOrInvalid = currentUri.isNullOrBlank()
@@ -1069,7 +1069,7 @@ class MusicPlayer @Inject constructor(
             val isNetworkError = cause is java.net.UnknownHostException || cause is java.net.SocketTimeoutException
             
             if (isHttpError) {
-                android.util.Log.e("SuvMusicJioSaavn", "HTTP Error detected during playback! Code: $responseCode, Song: ${_playerState.value.currentSong?.title}")
+                android.util.Log.e("SuvMusicRemote", "HTTP Error detected during playback! Code: $responseCode, Song: ${_playerState.value.currentSong?.title}")
             }
             
             // Critical: Audio Sink or Decoder errors often cause the "No Sound" issue
@@ -1247,46 +1247,46 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
-     * Hybrid playback: try to stream a YouTube-sourced [song] from JioSaavn's
-     * HQ catalogue (320 kbps) instead. Returns a JioSaavn stream URL when a
+     * Hybrid playback: try to stream a YouTube-sourced [song] from RemoteAudio's
+     * HQ catalogue (320 kbps) instead. Returns a RemoteAudio stream URL when a
      * confident title+artist (and, when known, duration) match is found, else
      * null so the caller falls back to the normal YouTube stream.
      */
-    private suspend fun resolveHybridJioSaavnStream(song: Song): String? {
+    private suspend fun resolveHybridRemoteStream(song: Song): String? {
         // Positive/negative cache so we don't repeat the search on every play.
-        hybridJioSaavnIds[song.id]?.let { cached ->
+        hybridRemoteIds[song.id]?.let { cached ->
             if (cached.isBlank()) return null
             return kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                jioSaavnRepository.getStreamUrl(cached)
+                remoteAudioRepository.getStreamUrl(cached)
             }
         }
         return try {
             val query = "${song.title} ${song.artist}".trim()
             val candidates = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                jioSaavnRepository.search(query)
+                remoteAudioRepository.search(query)
             } ?: emptyList()
-            val match = pickBestJioSaavnMatch(song, candidates)
+            val match = pickBestRemoteMatch(song, candidates)
             if (match == null) {
-                hybridJioSaavnIds.put(song.id, "") // negative-cache the miss
+                hybridRemoteIds.put(song.id, "") // negative-cache the miss
                 null
             } else {
-                hybridJioSaavnIds.put(song.id, match.id)
+                hybridRemoteIds.put(song.id, match.id)
                 kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                    jioSaavnRepository.getStreamUrl(match.id)
+                    remoteAudioRepository.getStreamUrl(match.id)
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("MusicPlayer", "Hybrid JioSaavn resolve failed: ${e.message}")
+            android.util.Log.w("MusicPlayer", "Hybrid RemoteAudio resolve failed: ${e.message}")
             null
         }
     }
 
     /**
-     * Picks the most likely JioSaavn equivalent of a YouTube [song]. Requires a
+     * Picks the most likely RemoteAudio equivalent of a YouTube [song]. Requires a
      * strong title-token overlap and, when both durations are known, a duration
      * within ±7 s — this rejects remixes / live / sped-up versions.
      */
-    private fun pickBestJioSaavnMatch(song: Song, candidates: List<Song>): Song? {
+    private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? {
         if (candidates.isEmpty()) return null
         fun normalize(s: String): Set<String> =
             s.lowercase()
@@ -1338,18 +1338,18 @@ class MusicPlayer @Inject constructor(
                 var streamUrl: String? = null
                 var audioStreamUrl: String? = null // For dual-stream video (720p/1080p)
 
-                // --- HYBRID AUDIO (YouTube metadata, JioSaavn audio) ---
+                // --- HYBRID AUDIO (YouTube metadata, RemoteAudio audio) ---
                 // When the user opts in, stream YouTube-sourced songs from
-                // JioSaavn HQ if a confident match exists. Browsing/metadata is
+                // RemoteAudio HQ if a confident match exists. Browsing/metadata is
                 // untouched; only the audio stream is swapped. Falls through to
                 // the normal YouTube path below when no match is found.
                 if ((song.source == SongSource.YOUTUBE || song.source == SongSource.YOUTUBE_MUSIC) &&
                     !_playerState.value.isVideoMode &&
-                    sessionManager.isPreferJioSaavnAudio()
+                    sessionManager.isPreferRemoteAudio()
                 ) {
-                    streamUrl = resolveHybridJioSaavnStream(song)
+                    streamUrl = resolveHybridRemoteStream(song)
                     if (streamUrl != null) {
-                        android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from JioSaavn HQ")
+                        android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from RemoteAudio HQ")
                     }
                 }
 
@@ -1358,7 +1358,7 @@ class MusicPlayer @Inject constructor(
                     val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) {
                         when (song.source) {
                             SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.orEmpty(), null)
-                            SongSource.JIOSAAVN -> Pair(jioSaavnRepository.getStreamUrl(song.id), null)
+                            SongSource.REMOTE -> Pair(remoteAudioRepository.getStreamUrl(song.id), null)
                             else -> {
                                 if (_playerState.value.isVideoMode) {
                                     val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also {
@@ -1412,17 +1412,17 @@ class MusicPlayer @Inject constructor(
                     }
                 }
 
-                // --- CROSS-SOURCE FALLBACK (YouTube <-> JioSaavn) ---
+                // --- CROSS-SOURCE FALLBACK (YouTube <-> RemoteAudio) ---
                 // If the song's native source can't produce a stream, try the other
                 // provider by matching on title + artist. Audio-only (video mode has
-                // its own YouTube fallback above, and JioSaavn has no video streams).
+                // its own YouTube fallback above, and RemoteAudio has no video streams).
                 if (streamUrl == null && !_playerState.value.isVideoMode) {
                     val matchQuery = "${song.title} ${song.artist}".trim()
                     android.util.Log.w("MusicPlayer", "Primary stream failed for ${song.source} '${song.title}' — attempting cross-source fallback")
                     try {
                         when (song.source) {
-                            SongSource.JIOSAAVN -> {
-                                // JioSaavn failed -> resolve via YouTube
+                            SongSource.REMOTE -> {
+                                // RemoteAudio failed -> resolve via YouTube
                                 val ytId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
                                     youTubeRepository.search(matchQuery, YouTubeRepository.FILTER_SONGS).firstOrNull()?.id
                                 }
@@ -1431,19 +1431,19 @@ class MusicPlayer @Inject constructor(
                                         youTubeRepository.getStreamUrl(ytId)
                                     }
                                 }
-                                android.util.Log.w("MusicPlayer", "JioSaavn->YouTube fallback: ytId=$ytId, resolved=${streamUrl != null}")
+                                android.util.Log.w("MusicPlayer", "RemoteAudio->YouTube fallback: ytId=$ytId, resolved=${streamUrl != null}")
                             }
                             SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> {
-                                // YouTube failed -> resolve via JioSaavn
+                                // YouTube failed -> resolve via RemoteAudio
                                 val jsId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                                    jioSaavnRepository.search(matchQuery).firstOrNull()?.id
+                                    remoteAudioRepository.search(matchQuery).firstOrNull()?.id
                                 }
                                 if (!jsId.isNullOrBlank()) {
                                     streamUrl = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                                        jioSaavnRepository.getStreamUrl(jsId)
+                                        remoteAudioRepository.getStreamUrl(jsId)
                                     }
                                 }
-                                android.util.Log.w("MusicPlayer", "YouTube->JioSaavn fallback: jsId=$jsId, resolved=${streamUrl != null}")
+                                android.util.Log.w("MusicPlayer", "YouTube->RemoteAudio fallback: jsId=$jsId, resolved=${streamUrl != null}")
                             }
                             else -> {}
                         }
@@ -1486,13 +1486,13 @@ class MusicPlayer @Inject constructor(
                             .build()
                     )
 
-                // JioSaavn Mandatory Headers Fix:
-                // JioSaavn CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
-                // We detect JioSaavn source by URI host or by song source.
-                val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (streamUrl != null && streamUrl.contains("saavncdn.com"))
+                // RemoteAudio Mandatory Headers Fix:
+                // RemoteAudio CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
+                // We detect RemoteAudio source by URI host or by song source.
+                val isRemoteAudioSource = song.source == SongSource.REMOTE || (streamUrl != null && streamUrl.contains("saavncdn.com"))
                 
-                if (isJioSaavnSource) {
-                    android.util.Log.i("SuvMusicJioSaavn", "Applying mandatory playback headers for: ${song.title}")
+                if (isRemoteAudioSource) {
+                    android.util.Log.i("SuvMusicRemote", "Applying mandatory playback headers for: ${song.title}")
                     mediaItemBuilder.setRequestMetadata(
                         MediaItem.RequestMetadata.Builder()
                             .setExtras(android.os.Bundle().apply {
@@ -1861,7 +1861,7 @@ class MusicPlayer @Inject constructor(
             try {
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
-                    SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
+                    SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(nextSong.id)
                     else -> {
                         if (isVideoMode) {
                             // Smart Video Matching for Preload — use getVideoStreamResult to respect quality settings
@@ -2014,13 +2014,13 @@ class MusicPlayer @Inject constructor(
 
         val uri = when (song.source) {
             SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
-            SongSource.JIOSAAVN -> {
+            SongSource.REMOTE -> {
                 if (resolveStream) {
                     // Retry once if first attempt fails
-                    jioSaavnRepository.getStreamUrl(song.id)
+                    remoteAudioRepository.getStreamUrl(song.id)
                         ?: run {
                             kotlinx.coroutines.delay(500)
-                            jioSaavnRepository.getStreamUrl(song.id)
+                            remoteAudioRepository.getStreamUrl(song.id)
                         }
                         ?: "https://placeholder.invalid/${song.id}"
                 } else {
@@ -2052,10 +2052,10 @@ class MusicPlayer @Inject constructor(
                             "https://placeholder.invalid/${song.id}"
                         }
                     } else {
-                        // Hybrid: prefer JioSaavn HQ audio for YouTube songs when
+                        // Hybrid: prefer RemoteAudio HQ audio for YouTube songs when
                         // the user opted in and a confident match exists.
-                        val hybrid = if (sessionManager.isPreferJioSaavnAudio())
-                            resolveHybridJioSaavnStream(song) else null
+                        val hybrid = if (sessionManager.isPreferRemoteAudio())
+                            resolveHybridRemoteStream(song) else null
                         // Retry once if first attempt fails
                         hybrid
                             ?: youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
@@ -2094,13 +2094,13 @@ class MusicPlayer @Inject constructor(
                     .build()
             )
 
-        // JioSaavn Mandatory Headers Fix:
-        // JioSaavn CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
-        // We detect JioSaavn source by URI host or by song source (including hybrid resolution).
-        val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (uri != null && uri.contains("saavncdn.com"))
+        // RemoteAudio Mandatory Headers Fix:
+        // RemoteAudio CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
+        // We detect RemoteAudio source by URI host or by song source (including hybrid resolution).
+        val isRemoteAudioSource = song.source == SongSource.REMOTE || (uri != null && uri.contains("saavncdn.com"))
         
-        if (isJioSaavnSource) {
-            android.util.Log.i("SuvMusicJioSaavn", "Applying mandatory headers (Queue pre-resolve) for: ${song.title}")
+        if (isRemoteAudioSource) {
+            android.util.Log.i("SuvMusicRemote", "Applying mandatory headers (Queue pre-resolve) for: ${song.title}")
             builder.setRequestMetadata(
                 MediaItem.RequestMetadata.Builder()
                     .setExtras(android.os.Bundle().apply {
@@ -2188,7 +2188,7 @@ class MusicPlayer @Inject constructor(
                         try {
                             val streamUrl = when (nextSong.source) {
                                 SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
-                                SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(nextSong.id)
+                                SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(nextSong.id)
                                 else -> {
                                     if (_playerState.value.isVideoMode) {
                                         val videoId = resolvedVideoIds[nextSong.id]
@@ -2460,7 +2460,7 @@ class MusicPlayer @Inject constructor(
                 }
             }
             
-            // For JioSaavn or others where Bitrate is often in the streaming URL
+            // For RemoteAudio or others where Bitrate is often in the streaming URL
             if (bitrateKbps == null && (uriString.contains("jiosaavn.com") || uriString.contains("saavn.com"))) {
                 bitrateKbps = when {
                     uriString.contains("320") -> 320
@@ -2769,7 +2769,7 @@ class MusicPlayer @Inject constructor(
                     // Switch back to audio stream - use original source logic
                     streamUrl = when (song.source) {
                         SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
-                        SongSource.JIOSAAVN -> jioSaavnRepository.getStreamUrl(song.id)
+                        SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(song.id)
                         else -> youTubeRepository.getStreamUrl(song.id)
                     }
                 }

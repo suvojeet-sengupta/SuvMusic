@@ -13,7 +13,7 @@ import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
@@ -80,7 +80,7 @@ interface HiltKoinBridgeEntryPoint {
     fun localAudioRepository(): LocalAudioRepository
     fun okHttpClient(): OkHttpClient
     fun gson(): Gson
-    fun jioSaavnRepository(): JioSaavnRepository
+    fun remoteAudioRepository(): RemoteAudioRepository
     fun musicHapticsManager(): MusicHapticsManager
     fun musicPlayer(): MusicPlayer
     fun lyricsRepository(): LyricsRepository

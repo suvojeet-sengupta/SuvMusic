@@ -1,9 +1,9 @@
 package com.suvojeet.suvmusic.core.model
 
 /**
- * Detailed metadata for JioSaavn songs.
+ * Detailed metadata for RemoteAudio songs.
  */
-data class JioSaavnMetadata(
+data class RemoteAudioMetadata(
     val label: String? = null,
     val playCount: Long? = null,
     val language: String? = null,

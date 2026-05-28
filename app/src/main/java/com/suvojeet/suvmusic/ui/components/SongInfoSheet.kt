@@ -55,7 +55,7 @@ fun SongInfoSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
-    val jioSaavnMetadata by viewModel.jioSaavnMetadata.collectAsState()
+    val remoteAudioMetadata by viewModel.remoteAudioMetadata.collectAsState()
     
     // Get high resolution thumbnail URL
     val highResThumbnail = remember(song.thumbnailUrl, song.id) {
@@ -176,7 +176,7 @@ fun SongInfoSheet(
                         border = BorderStroke(1.dp, (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            val stats = remember(song.id, song.source, audioCodec, audioBitrate, song.duration, jioSaavnMetadata) {
+                            val stats = remember(song.id, song.source, audioCodec, audioBitrate, song.duration, remoteAudioMetadata) {
                                 val list = mutableListOf(
                                     "Content ID" to song.id,
                                     "Source" to song.source.name,
@@ -185,7 +185,7 @@ fun SongInfoSheet(
                                     "Duration" to formatDurationForCredits(song.duration)
                                 )
                                 
-                                jioSaavnMetadata?.let { meta ->
+                                remoteAudioMetadata?.let { meta ->
                                     meta.playCount?.let { list.add("Play Count" to String.format("%,d", it)) }
                                     meta.language?.let { list.add("Language" to it.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }) }
                                     meta.label?.let { list.add("Label" to it) }
@@ -253,7 +253,7 @@ fun SongInfoSheet(
                         Column(modifier = Modifier.padding(16.dp)) {
                             InfoRow(Icons.Default.CalendarMonth, "Released", song.releaseDate ?: releaseDate ?: "Unknown", isDarkTheme)
                             
-                            jioSaavnMetadata?.explicitContent?.let { isExplicit ->
+                            remoteAudioMetadata?.explicitContent?.let { isExplicit ->
                                 if (isExplicit) {
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                                     InfoRow(Icons.Default.Album, "Content", "Explicit Content", isDarkTheme)
@@ -265,7 +265,7 @@ fun SongInfoSheet(
                                 InfoRow(Icons.Default.Album, "Album", song.album!!, isDarkTheme)
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
-                            InfoRow(Icons.Default.Copyright, "Copyright", jioSaavnMetadata?.copyright ?: "© ${song.artist}", isDarkTheme)
+                            InfoRow(Icons.Default.Copyright, "Copyright", remoteAudioMetadata?.copyright ?: "© ${song.artist}", isDarkTheme)
                         }
                     }
 

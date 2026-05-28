@@ -32,7 +32,7 @@ data class Song(
     val isMembersOnly: Boolean = false, // Whether this song is exclusive to channel members
     val releaseDate: String? = null, // Release date of the song
     val addedAt: Long = 0L, // Timestamp when added to playlist/library
-    val jioSaavnMetadata: JioSaavnMetadata? = null // Detailed metadata for JioSaavn songs
+    val remoteAudioMetadata: RemoteAudioMetadata? = null // Detailed metadata for RemoteAudio songs
 ) {
     companion object {
         /**
@@ -69,9 +69,9 @@ data class Song(
         }
 
         /**
-         * Create a Song from JioSaavn data.
+         * Create a Song from RemoteAudio data.
          */
-        fun fromJioSaavn(
+        fun fromRemoteAudio(
             songId: String,
             title: String,
             artist: String,
@@ -80,7 +80,7 @@ data class Song(
             thumbnailUrl: String?,
             streamUrl: String? = null,
             releaseDate: String? = null,
-            jioSaavnMetadata: JioSaavnMetadata? = null
+            remoteAudioMetadata: RemoteAudioMetadata? = null
         ): Song? {
             if (songId.isBlank()) return null
             return Song(
@@ -90,10 +90,10 @@ data class Song(
                 album = album,
                 duration = duration,
                 thumbnailUrl = thumbnailUrl,
-                source = SongSource.JIOSAAVN,
+                source = SongSource.REMOTE,
                 streamUrl = streamUrl,
                 releaseDate = releaseDate,
-                jioSaavnMetadata = jioSaavnMetadata
+                remoteAudioMetadata = remoteAudioMetadata
             )
         }
     }
@@ -107,5 +107,5 @@ enum class SongSource {
     YOUTUBE_MUSIC,
     LOCAL,
     DOWNLOADED,
-    JIOSAAVN
+    REMOTE
 }
