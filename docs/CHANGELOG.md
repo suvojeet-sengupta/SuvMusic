@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.5.1.0] - 2026-05-28
+
+### Fixed
+- General bug fixes and performance improvements.
+
+## [2.5.0.0] - 2026-05-17
+
+### Fixed
+- General bug fixes and performance improvements.
+
+## [2.4.1.0] - 2026-05-09
+
+### Added
+- **Spotify-Style Volume Normalization**: New `LoudnessAnalyzer` measures the running RMS of each song from the native engine, persists the per-track value, and applies a per-track gain offset on playback so back-to-back tracks land at the same perceived loudness instead of jumping.
+- **Spatial Intensity Slider**: New independent control for the spatial sweep + crossfeed strength, so users on speakers or wired headphones (where head-tracking doesn't apply) finally have a knob.
+- **Announce Songs Volume Controls**: Three new settings — TTS volume %, music duck volume %, and a Bluetooth-only switch — plus sliders in Settings.
+- **Music Languages Dialog**: Wired up the previously orphaned `LanguageSelectionDialog`; expanded the supported language list to 23 with proper YouTube hl-code mapping.
+
+### Improved
+- **Volume Boost**: Capped the slider's max contribution at +12 dB (was +15) and clamped combined limiter makeup gain to [-8, +14] dB. Softer limiter params (threshold -0.3 dB, ratio 12, attack 1ms, release 80ms) so the limiter colours the signal less while still preventing clipping.
+- **Music Haptics**: Driven by the native engine's real-time RMS instead of a synthetic 500ms sawtooth — beats now line up with the music. Adaptive threshold (max of absolute floor and 60% of running peak) so haptics fire on quiet tracks without spamming on loud ones. Toggle / mode / intensity now apply live without an app restart.
+- **Swipe-Down-To-Dismiss**: Lower threshold (-5% of drag range, was -10%), 1:1 finger tracking with fade as you pull down, and the player animates offscreen before stopping playback so the dismiss reads as motion. Toggle now takes effect live.
+- **Queue Reorder**: Threshold bumped 56dp → 64dp so the row that snaps under the finger lines up cleanly after each swap. `if`-step replaced with a `while` loop tracking the working index locally, so fast flicks walk through multiple rows instead of stalling on a stale captured index. Same fast-flick fix applied to the Playlist screen.
+- **Robust Announce Songs**: Rewrote `TTSManager` around `UtteranceProgressListener` with media `AudioAttributes` and per-utterance audio focus so announcements actually route through Bluetooth/BLE headsets. Player volume reliably restores in onDone/onError; try/finally fallback ensures the player isn't stranded ducked if cancellation happens.
+- **Bluetooth Autoplay**: Debounce duplicate connect events between `AudioDeviceCallback` and `ACL_CONNECTED`, then verify `play()` actually started — some BT stacks miss the first call while the route is still settling, so we retry up to three times with backoff.
+- **High-Resolution Artwork on Home**: Threaded covers, song rows, and playlist headers through `ImageUtils.getHighResThumbnailUrl` with explicit Coil request sizes; previously several `AsyncImage` calls passed raw w120/w160 URLs that pixellated on mid/large surfaces.
+- **Instant Settings Account Header**: Mirrored userName + avatar into encrypted prefs for synchronous read on entry; renders immediately instead of flashing blank while DataStore reads complete.
+
+### Fixed
+- **Audio Offload Toggle**: Now actually honoured. Previously the service auto-enabled offload regardless of the user's preference whenever no software effect was active.
+- **AI Equalizer — OpenAI Client**: Was building a `JSONObject` and discarding it before sending a hand-templated string. Replaced with proper `JSONObject`/`JSONArray` construction.
+- **AI Equalizer — Restored State**: Saved AI state was set on `_lastResult` but never pushed to the audio engine on app restart. Now applies on init and snapshots the pre-AI engine state so A/B Compare works after restart.
+- **AI Equalizer — checkAndAutoApplyAIForSong**: Was taking the "before AI" snapshot AFTER `applySettings`, so Original and AI were identical. Snapshot is now captured first.
+- **AI Equalizer — Auto Mode**: Was hardcoded to ChatProxy with empty key, ignoring the user's configured provider/model. Now resolves provider+key+model from settings with a graceful fallback to ChatProxy when no key is configured.
+- **AI Equalizer — JSON Extraction**: Added an `extractJsonObject()` helper that strips ```` ```json ```` fences across all four AI clients so providers that ignore "no markdown" instructions still parse cleanly.
+
 ## [2.2.1.0] - 2026-04-05
 
 ### Added
