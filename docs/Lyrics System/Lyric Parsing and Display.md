@@ -85,7 +85,7 @@ U2 --> U5
 - Lyrics: Root model containing a list of lines, optional source credit, synchronization flag, and provider type.
 - LyricsLine: Represents a single lyric line with start/end timestamps, optional word-level timings, and a header flag.
 - LyricsWord: Represents a word with precise start/end timestamps for word-level animations.
-- LyricsProviderType: Enumerates available providers (auto, LRCLIB, JioSaavn, YouTube captions, Better Lyrics, SimpMusic, Kugou, Local).
+- LyricsProviderType: Enumerates available providers (auto, LRCLIB, Remote Audio, YouTube captions, Better Lyrics, SimpMusic, Kugou, Local).
 - LyricsAnimationType: Rendering modes (line-by-line vs word-by-word).
 - LyricsTextPosition: Horizontal alignment options (center, left, right).
 

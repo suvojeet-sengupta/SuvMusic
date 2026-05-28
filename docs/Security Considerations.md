@@ -157,8 +157,8 @@ RepoHist --> App
 ```mermaid
 classDiagram
 class SecureConfig {
-+getJioSaavnBaseUrl() String
-+getJioSaavnDesKey() String
++getRemote AudioBaseUrl() String
++getRemote AudioDesKey() String
 +checkDeveloperPassword(input) Boolean
 -nDeriveKey() String
 -nDeriveDesKey() String

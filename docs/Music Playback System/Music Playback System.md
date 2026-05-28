@@ -351,7 +351,7 @@ SpatialAudioProcessor --> NativeSpatialAudio : "JNI calls"
 - [NativeSpatialAudio.kt:28-142](file://app/src/main/java/com/suvojeet/suvmusic/player/NativeSpatialAudio.kt#L28-L142)
 
 ## Dependency Analysis
-- MusicPlayer depends on repositories (YouTube/JioSaavn), SessionManager, SleepTimerManager, and spatial/audio processors
+- MusicPlayer depends on repositories (YouTube/Remote Audio), SessionManager, SleepTimerManager, and spatial/audio processors
 - MusicPlayerService depends on repositories, DownloadRepository, LocalAudioRepository, and exposes MediaLibrarySession
 - PlayerViewModel depends on MusicPlayer, repositories, and recommendation engines
 - PlayerScreen depends on PlayerViewModel and UI components
@@ -359,7 +359,7 @@ SpatialAudioProcessor --> NativeSpatialAudio : "JNI calls"
 ```mermaid
 graph LR
 MP["MusicPlayer"] --> Repo1["YouTubeRepository"]
-MP --> Repo2["JioSaavnRepository"]
+MP --> Repo2["Remote AudioRepository"]
 MP --> SM["SessionManager"]
 MP --> SAP["SpatialAudioProcessor"]
 MPS["MusicPlayerService"] --> Repo1

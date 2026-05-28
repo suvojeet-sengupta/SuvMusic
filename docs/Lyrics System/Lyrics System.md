@@ -196,7 +196,7 @@ CacheExt --> ReturnExt["Return Lyrics"]
 TryProviders --> |Fail| LRCLIBSync["Try LRCLIB synced"]
 LRCLIBSync --> |Found| CacheLRCLIB["Cache AUTO + LRCLIB"]
 CacheLRCLIB --> ReturnLRCLIB["Return Lyrics"]
-LRCLIBSync --> |Fail| Source["Fetch from source (JioSaavn/YouTube)"]
+LRCLIBSync --> |Fail| Source["Fetch from source (Remote Audio/YouTube)"]
 Source --> CacheSource["Cache AUTO + source type"]
 CacheSource --> ReturnSource["Return Lyrics"]
 Source --> |Fail| LRCLIBPlain["Try LRCLIB plain"]
@@ -374,7 +374,7 @@ FOOTER --> SAVEPDF["savePdfToDocuments()"]
 ## Dependency Analysis
 - Repository depends on:
   - SessionManager for provider enablement and preference
-  - External repositories for source lyrics (YouTube/JioSaavn)
+  - External repositories for source lyrics (YouTube/Remote Audio)
   - OkHttp client for network calls (LRCLIB)
   - Provider implementations for fetching lyrics
 - Providers depend on:

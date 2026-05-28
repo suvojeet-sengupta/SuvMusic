@@ -130,7 +130,7 @@ Repo->>Repo : "Fetch synced/plain"
 Repo-->>UI : "Lyrics (LRCLIB)"
 end
 opt "Fallback to source"
-Repo->>Repo : "Fetch from YouTube/JioSaavn"
+Repo->>Repo : "Fetch from YouTube/Remote Audio"
 Repo-->>UI : "Lyrics (SOURCE)"
 end
 end
@@ -151,7 +151,7 @@ end
   - Local lyrics take highest priority.
   - Enabled providers are reordered so the preferred provider appears first.
   - LRCLIB is attempted for synced lyrics, then plain lyrics if synced fails.
-  - Source lyrics (YouTube/JioSaavn) serve as a final fallback.
+  - Source lyrics (YouTube/Remote Audio) serve as a final fallback.
 
 ```mermaid
 flowchart TD
@@ -169,7 +169,7 @@ LRCLIBSynced --> |Yes| ReturnLRCLIB["Return LRCLIB Synced"]
 LRCLIBSynced --> |No| TryLRCLIBPlain["Try LRCLIB Plain"]
 TryLRCLIBPlain --> LRCLIBPlain{"Plain Found?"}
 LRCLIBPlain --> |Yes| ReturnLRCLIBPlain["Return LRCLIB Plain"]
-LRCLIBPlain --> |No| TrySource["Try Source (YouTube/JioSaavn)"]
+LRCLIBPlain --> |No| TrySource["Try Source (YouTube/Remote Audio)"]
 TrySource --> SourceFound{"Source Found?"}
 SourceFound --> |Yes| ReturnSource["Return Source Lyrics"]
 SourceFound --> |No| NoLyrics["No Lyrics Available"]

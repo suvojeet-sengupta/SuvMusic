@@ -347,15 +347,15 @@ VM --> UI
 [No sources needed since this diagram shows conceptual workflow, not actual code structure]
 
 ## Dependency Analysis
-- HomeViewModel depends on YouTube/JioSaavn repositories, session manager, recommendation engine, Last.fm, and download repository.
-- SearchViewModel depends on YouTube/JioSaavn, local audio repository, session manager, and download repository.
+- HomeViewModel depends on YouTube/Remote Audio repositories, session manager, recommendation engine, Last.fm, and download repository.
+- SearchViewModel depends on YouTube/Remote Audio, local audio repository, session manager, and download repository.
 - PlayerViewModel depends on MusicPlayer, repositories, session manager, recommendation engine, smart queue manager, and Discord manager.
 - MusicPlayer exposes a StateFlow<PlayerState> that ViewModels observe and transform.
 
 ```mermaid
 graph TB
 HVM["HomeViewModel"] --> YTR["YouTubeRepository"]
-HVM --> JSR["JioSaavnRepository"]
+HVM --> JSR["Remote AudioRepository"]
 HVM --> SM["SessionManager"]
 HVM --> RE["RecommendationEngine"]
 HVM --> LFR["LastFmRepository"]

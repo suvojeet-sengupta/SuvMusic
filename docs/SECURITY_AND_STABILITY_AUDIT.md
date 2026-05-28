@@ -76,7 +76,7 @@
 **After fix:** Restrict with `android.permission.MEDIA_CONTENT_CONTROL` or make binding go through MediaSession (which already handles app identity).
 
 ### 12. HIGH — DES-ECB decryption of media URLs
-**File:** [JioSaavnRepository.kt:914](app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt:914)
+**File:** [Remote AudioRepository.kt:914](app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt:914)
 **Why:** DES (56-bit) is brute-forceable in hours; ECB leaks block patterns. On exception the function silently returns the *encrypted* string, which downstream code may treat as a valid URL.
 **After fix:** Match upstream's scheme if unavoidable, but replace fallback with an explicit failure and log. No forged URLs; no silent corruption.
 

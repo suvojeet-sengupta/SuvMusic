@@ -341,7 +341,7 @@ AppDir --> |Not Found| Null["Return null"]
   1) Local lyrics (highest priority).
   2) External providers in configured order.
   3) LRCLIB synced lyrics.
-  4) Source-provided lyrics (JioSaavn/YouTube).
+  4) Source-provided lyrics (Remote Audio/YouTube).
   5) LRCLIB plain lyrics fallback.
 - Caching: LruCache keyed by songId and provider type.
 

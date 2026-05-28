@@ -29,7 +29,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the Core Model module that defines the fundamental data structures and entities used across SuvMusic. It focuses on the Song data class and its factory methods for YouTube, JioSaavn, and local files, along with related entities such as Album, Artist, Playlist, and LibraryItem. It also covers validation rules, immutability guarantees via Kotlin data classes, serialization considerations, and usage patterns that maintain type safety across the application.
+This document describes the Core Model module that defines the fundamental data structures and entities used across SuvMusic. It focuses on the Song data class and its factory methods for YouTube, Remote Audio, and local files, along with related entities such as Album, Artist, Playlist, and LibraryItem. It also covers validation rules, immutability guarantees via Kotlin data classes, serialization considerations, and usage patterns that maintain type safety across the application.
 
 ## Project Structure
 The Core Model resides in the core module under core/model. It is complemented by:
@@ -88,7 +88,7 @@ LI --> AR
 ## Core Components
 This section documents the primary entities and their roles.
 
-- Song: A unified representation of a track supporting YouTube, YouTube Music, JioSaavn, and local files. Factory methods ensure validated construction and consistent defaults.
+- Song: A unified representation of a track supporting YouTube, YouTube Music, Remote Audio, and local files. Factory methods ensure validated construction and consistent defaults.
 - Album: Represents a music album with optional metadata and a list of associated songs.
 - Artist: Represents an artist with optional metadata, lists of songs, albums, and related entities.
 - Playlist: Represents a curated list of songs with optional metadata.
@@ -200,7 +200,7 @@ Playlist --> Song : "curates"
 ### Song: Unified Track Representation
 Song is a data class that encapsulates a playable track across multiple sources. It includes:
 - Identity and metadata: id, title, artist, album, duration, thumbnailUrl.
-- Source-specific fields: streamUrl (YouTube/JioSaavn), localUri (Android Uri for local files), setVideoId (playlist instance identifier), artistId (navigation).
+- Source-specific fields: streamUrl (YouTube/Remote Audio), localUri (Android Uri for local files), setVideoId (playlist instance identifier), artistId (navigation).
 - Quality and access flags: isVideo, isMembersOnly.
 - Collections and provenance: collectionId, collectionName, originalSource.
 - Timestamps and release info: releaseDate, addedAt.
@@ -208,10 +208,10 @@ Song is a data class that encapsulates a playable track across multiple sources.
 Factory methods:
 - fromYouTube: Validates videoId and sets default thumbnail if missing.
 - fromLocal: Converts Android MediaStore fields into a Song with localUri and optional album art.
-- fromJioSaavn: Validates songId and sets source to JIOOSAAVN.
+- fromRemote Audio: Validates songId and sets source to JIOOSAAVN.
 
 Validation and defaults:
-- Blank identifiers return null for YouTube/JioSaavn factories.
+- Blank identifiers return null for YouTube/Remote Audio factories.
 - Default thumbnail for YouTube uses a standard URL pattern when none provided.
 - Defaults for booleans and nullable fields ensure safe rendering.
 
@@ -228,7 +228,7 @@ Usage patterns:
 Examples (described):
 - Creating a YouTube-backed Song: call the YouTube factory with a non-blank videoId and basic metadata; receive a validated Song or null.
 - Creating a local Song: call the local factory with MediaStore-provided id, title, artist, album, duration, albumArtUri, and contentUri; Song is guaranteed non-null.
-- Creating a JioSaavn Song: call the JioSaavn factory with a non-blank songId; receive a validated Song or null.
+- Creating a Remote Audio Song: call the Remote Audio factory with a non-blank songId; receive a validated Song or null.
 
 Comparison operations:
 - Structural equality via data class equals/hashCode.
@@ -278,7 +278,7 @@ Repo-->>Caller : "Enhanced Song"
 
 ### SongSource Enumeration
 SongSource enumerates supported origins:
-- YOUTUBE, YOUTUBE_MUSIC, LOCAL, DOWNLOADED, JIOSAAVN.
+- YOUTUBE, YOUTUBE_MUSIC, LOCAL, DOWNLOADED, REMOTE.
 
 Usage:
 - Discriminator field in Song determines runtime behavior (streaming vs local playback).
@@ -316,7 +316,7 @@ Defines lyrics structures and provider types:
 - Lyrics: container for lines, sync flag, provider type, and optional credit.
 - LyricsLine: text with timing and optional word-level breakdown.
 - LyricsWord: individual word timing.
-- LyricsProviderType: enumeration of providers including Auto, LRCLIB, JioSaavn, YouTube captions, Better Lyrics, SimpMusic, Kugou, and Local.
+- LyricsProviderType: enumeration of providers including Auto, LRCLIB, Remote Audio, YouTube captions, Better Lyrics, SimpMusic, Kugou, and Local.
 
 **Section sources**
 - [Lyrics.kt:1-34](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Lyrics.kt#L1-L34)
@@ -374,7 +374,7 @@ P -. "ordered mapping" .-> PSE["PlaylistSongEntity"]
 
 ## Troubleshooting Guide
 Common issues and resolutions:
-- Null returned from YouTube/JioSaavn factories: occurs when identifiers are blank. Validate inputs before calling factories.
+- Null returned from YouTube/Remote Audio factories: occurs when identifiers are blank. Validate inputs before calling factories.
 - Local playback failures: confirm localUri is a valid MediaStore content URI and accessible to the app.
 - Thumbnail resolution: YouTube thumbnails are defaulted when absent; ensure network availability for dynamic URLs.
 - Sorting inconsistencies: align UI sort selections with SortOptions enumerations to avoid unexpected ordering.
@@ -390,7 +390,7 @@ The Core Model establishes a robust, type-safe foundation for SuvMusic by unifyi
 ## Appendices
 
 ### Data Validation Rules
-- YouTube/JioSaavn factories reject blank identifiers and return null.
+- YouTube/Remote Audio factories reject blank identifiers and return null.
 - Default thumbnail URL generation for YouTube when none provided.
 - Local Song construction requires a valid content URI and album art URI.
 

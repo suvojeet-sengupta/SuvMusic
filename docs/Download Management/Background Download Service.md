@@ -310,7 +310,7 @@ SVC->>SVC : updateForegroundNotification(...)
 ### Configuration Options for Service Behavior
 - Foreground service type: dataSync
 - Notification channel: low importance, no sound, no vibration, no badge
-- Download source selection: YouTube/JioSaavn based on SongSource
+- Download source selection: YouTube/Remote Audio based on SongSource
 - Custom download location: SAF tree URI persisted via SessionManager
 - Cache behavior: CacheDataSource.Factory with flag to ignore cache errors
 

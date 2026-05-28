@@ -3,7 +3,7 @@
 <cite>
 **Referenced Files in This Document**
 - [YouTubeRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt)
-- [JioSaavnRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt)
+- [Remote AudioRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt)
 - [LocalAudioRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/LocalAudioRepository.kt)
 - [YouTubeApiClient.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeApiClient.kt)
 - [YouTubeSearchService.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/search/YouTubeSearchService.kt)
@@ -28,12 +28,12 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains SuvMusic’s multi-source streaming architecture, focusing on the unified interface across YouTube Music, JioSaavn, and local audio sources. It covers repository patterns, authentication and API integration, content discovery, metadata extraction, stream quality selection, NewPipe Extractor integration, fallback mechanisms, local file system access, media store integration, cross-source playlist management, seamless switching, and performance optimizations.
+This document explains SuvMusic’s multi-source streaming architecture, focusing on the unified interface across YouTube Music, Remote Audio, and local audio sources. It covers repository patterns, authentication and API integration, content discovery, metadata extraction, stream quality selection, NewPipe Extractor integration, fallback mechanisms, local file system access, media store integration, cross-source playlist management, seamless switching, and performance optimizations.
 
 ## Project Structure
 SuvMusic organizes streaming logic by source:
 - YouTube Music: Internal API client, search, streaming, and JSON parsing utilities
-- JioSaavn: Unofficial API integration with caching and decryption
+- Remote Audio: Unofficial API integration with caching and decryption
 - Local audio: Android MediaStore access for device libraries
 - Shared infrastructure: Session management, network monitoring, and NewPipe integration
 
@@ -41,7 +41,7 @@ SuvMusic organizes streaming logic by source:
 graph TB
 subgraph "Repositories"
 YTRepo["YouTubeRepository"]
-JSRepo["JioSaavnRepository"]
+JSRepo["Remote AudioRepository"]
 LARepo["LocalAudioRepository"]
 end
 subgraph "YouTube Internals"
@@ -76,7 +76,7 @@ YTStream --> NPImpl
 
 **Diagram sources**
 - [YouTubeRepository.kt:1-3254](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L1-L3254)
-- [JioSaavnRepository.kt:1-1010](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L1-L1010)
+- [Remote AudioRepository.kt:1-1010](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L1-L1010)
 - [LocalAudioRepository.kt:1-432](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/LocalAudioRepository.kt#L1-L432)
 - [YouTubeApiClient.kt:1-415](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeApiClient.kt#L1-L415)
 - [YouTubeSearchService.kt:1-371](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/search/YouTubeSearchService.kt#L1-L371)
@@ -90,13 +90,13 @@ YTStream --> NPImpl
 
 **Section sources**
 - [YouTubeRepository.kt:1-3254](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L1-L3254)
-- [JioSaavnRepository.kt:1-1010](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L1-L1010)
+- [Remote AudioRepository.kt:1-1010](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L1-L1010)
 - [LocalAudioRepository.kt:1-432](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/LocalAudioRepository.kt#L1-L432)
 
 ## Core Components
 - Unified repository interfaces per source:
   - YouTubeRepository: orchestrates internal API browsing, search, streaming, and account management
-  - JioSaavnRepository: unofficial API client with caching and decryption for stream URLs
+  - Remote AudioRepository: unofficial API client with caching and decryption for stream URLs
   - LocalAudioRepository: MediaStore-based access to device audio
 - Shared services:
   - YouTubeApiClient: builds and executes authenticated YouTube Music API requests
@@ -126,7 +126,7 @@ SuvMusic implements a layered repository pattern:
 - Presentation/UI consumes unified models (Song, Album, Playlist, Artist)
 - Repositories abstract platform differences
 - YouTube uses a hybrid approach: NewPipe Extractor for search/suggestions and internal API for browsing/library
-- JioSaavn uses unofficial endpoints with caching and decryption
+- Remote Audio uses unofficial endpoints with caching and decryption
 - Local audio uses MediaStore for discovery and playback
 - SessionManager and NetworkMonitor provide shared cross-cutting concerns
 
@@ -359,16 +359,16 @@ Client-->>Repo : String JSON
 - [YouTubeJsonParser.kt:25-40](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeJsonParser.kt#L25-L40)
 - [YouTubeJsonParser.kt:254-407](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeJsonParser.kt#L254-L407)
 
-### JioSaavnRepository: Unofficial API, Caching, and Decryption
+### Remote AudioRepository: Unofficial API, Caching, and Decryption
 - Implements search, artist details, albums, playlists, and lyrics retrieval via unofficial endpoints
 - Decrypts stream URLs using a symmetric cipher and replaces quality suffixes
 - Caches search results, song details, stream URLs, and playlists to reduce server load
 
 **Section sources**
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
-- [JioSaavnRepository.kt:245-276](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L245-L276)
-- [JioSaavnRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L335-L479)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:245-276](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L245-L276)
+- [Remote AudioRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L335-L479)
 
 ### LocalAudioRepository: MediaStore Access and Queries
 - Discovers local songs, albums, and artists via MediaStore
@@ -409,7 +409,7 @@ YTRepo --> YTStream["YouTubeStreamingService"]
 YTRepo --> YTJSON["YouTubeJsonParser"]
 YTRepo --> YTAuth["YouTubeAuthUtils"]
 YTRepo --> YTConf["YouTubeConfig"]
-JSRepo["JioSaavnRepository"] --> Session["SessionManager"]
+JSRepo["Remote AudioRepository"] --> Session["SessionManager"]
 LARepo["LocalAudioRepository"] --> Session
 YTRepo --> Session
 YTRepo --> NetMon["NetworkMonitor"]
@@ -419,7 +419,7 @@ LARepo --> NetMon
 
 **Diagram sources**
 - [YouTubeRepository.kt:1-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L1-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [LocalAudioRepository.kt:21-23](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/LocalAudioRepository.kt#L21-L23)
 - [NewPipeDownloaderImpl.kt:16-19](file://extractor/src/main/java/com/suvojeet/suvmusic/newpipe/NewPipeDownloaderImpl.kt#L16-L19)
 - [YouTubeApiClient.kt:17-20](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeApiClient.kt#L17-L20)
@@ -433,14 +433,14 @@ LARepo --> NetMon
 
 **Section sources**
 - [YouTubeRepository.kt:1-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L1-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [LocalAudioRepository.kt:21-23](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/LocalAudioRepository.kt#L21-L23)
 
 ## Performance Considerations
 - Caching:
   - YouTubeStreamingService caches resolved stream URLs with LRU and TTL
   - YouTubeRepository caches parsed home sections and continuation tokens
-  - JioSaavnRepository caches search results, song details, stream URLs, and playlists
+  - Remote AudioRepository caches search results, song details, stream URLs, and playlists
 - Adaptive quality:
   - YouTubeStreamingService selects audio/video quality based on user preference and network state (Wi-Fi vs cellular)
 - Backoff and retries:
@@ -472,4 +472,4 @@ LARepo --> NetMon
 - [YouTubeApiClient.kt:77-110](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/internal/YouTubeApiClient.kt#L77-L110)
 
 ## Conclusion
-SuvMusic’s multi-source streaming architecture cleanly abstracts platform differences through repository patterns. YouTube integration leverages both NewPipe Extractor and YouTube’s internal API, ensuring rich discovery and reliable streaming. JioSaavn adds a high-quality regional music source with caching and decryption. Local audio access through MediaStore completes the ecosystem. Shared services like SessionManager and NetworkMonitor provide robust cross-cutting capabilities. Together, these components deliver a unified, performant, and resilient multi-source streaming experience.
+SuvMusic’s multi-source streaming architecture cleanly abstracts platform differences through repository patterns. YouTube integration leverages both NewPipe Extractor and YouTube’s internal API, ensuring rich discovery and reliable streaming. Remote Audio adds a high-quality regional music source with caching and decryption. Local audio access through MediaStore completes the ecosystem. Shared services like SessionManager and NetworkMonitor provide robust cross-cutting capabilities. Together, these components deliver a unified, performant, and resilient multi-source streaming experience.

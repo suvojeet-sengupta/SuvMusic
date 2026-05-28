@@ -1,8 +1,8 @@
-# JioSaavn Integration
+# Remote Audio Integration
 
 <cite>
 **Referenced Files in This Document**
-- [JioSaavnRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt)
+- [Remote AudioRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt)
 - [SecureConfig.kt](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt)
 - [AESUtil.kt](file://app/src/main/java/com/suvojeet/suvmusic/util/AESUtil.kt)
 - [secure_config.cpp](file://app/src/main/cpp/secure_config.cpp)
@@ -25,21 +25,21 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the JioSaavn integration within the SuvMusic application. It covers how the app accesses JioSaavn’s unofficial internal API to discover content, retrieve metadata, resolve streaming URLs, and surface content in the UI. It also documents the security model for API base URL and decryption keys, caching strategies, search capabilities, and integration with the local audio repository for unified content management.
+This document explains the Remote Audio integration within the SuvMusic application. It covers how the app accesses Remote Audio’s unofficial internal API to discover content, retrieve metadata, resolve streaming URLs, and surface content in the UI. It also documents the security model for API base URL and decryption keys, caching strategies, search capabilities, and integration with the local audio repository for unified content management.
 
 ## Project Structure
-The JioSaavn integration is implemented primarily in the data layer and utilities:
-- Repository layer: JioSaavnRepository orchestrates API calls, parsing, and caching.
+The Remote Audio integration is implemented primarily in the data layer and utilities:
+- Repository layer: Remote AudioRepository orchestrates API calls, parsing, and caching.
 - Security utilities: SecureConfig and AESUtil manage encrypted configuration and key derivation.
 - Native layer: secure_config.cpp provides secure key derivation resistant to reverse engineering.
 - Domain models: Song, Album, and Playlist define the content structures used across the app.
-- UI integration: SearchViewModel wires JioSaavn results into the search experience.
+- UI integration: SearchViewModel wires Remote Audio results into the search experience.
 
 ```mermaid
 graph TB
 subgraph "App Layer"
 VM["SearchViewModel"]
-Repo["JioSaavnRepository"]
+Repo["Remote AudioRepository"]
 SecCfg["SecureConfig"]
 AES["AESUtil"]
 Native["secure_config.cpp"]
@@ -59,7 +59,7 @@ Repo --> PlaylistModel
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:31-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L54)
+- [Remote AudioRepository.kt:31-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L54)
 - [SecureConfig.kt:10-47](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L10-L47)
 - [AESUtil.kt:12-60](file://app/src/main/java/com/suvojeet/suvmusic/util/AESUtil.kt#L12-L60)
 - [secure_config.cpp:17-46](file://app/src/main/cpp/secure_config.cpp#L17-L46)
@@ -68,7 +68,7 @@ Repo --> PlaylistModel
 - [Playlist.kt:3-10](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Playlist.kt#L3-L10)
 
 **Section sources**
-- [JioSaavnRepository.kt:23-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L23-L54)
+- [Remote AudioRepository.kt:23-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L23-L54)
 - [SecureConfig.kt:10-47](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L10-L47)
 - [AESUtil.kt:12-60](file://app/src/main/java/com/suvojeet/suvmusic/util/AESUtil.kt#L12-L60)
 - [secure_config.cpp:17-46](file://app/src/main/cpp/secure_config.cpp#L17-L46)
@@ -77,7 +77,7 @@ Repo --> PlaylistModel
 - [Playlist.kt:3-10](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Playlist.kt#L3-L10)
 
 ## Core Components
-- JioSaavnRepository: Implements search, artist lookup, album/playlist details, lyrics retrieval, and streaming URL resolution. It caches results in memory and uses SecureConfig for API base URL and DES key derivation.
+- Remote AudioRepository: Implements search, artist lookup, album/playlist details, lyrics retrieval, and streaming URL resolution. It caches results in memory and uses SecureConfig for API base URL and DES key derivation.
 - SecureConfig: Provides runtime decryption of the API base URL and derives the DES key via native code.
 - AESUtil: Handles AES decryption of pre-encrypted strings using a derived key.
 - secure_config.cpp: Native implementation for key derivation to harden against reverse engineering.
@@ -91,7 +91,7 @@ Key responsibilities:
 - Caching: In-memory caches for search, song details, stream URLs, and playlists.
 
 **Section sources**
-- [JioSaavnRepository.kt:31-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L54)
+- [Remote AudioRepository.kt:31-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L54)
 - [SecureConfig.kt:30-47](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L30-L47)
 - [AESUtil.kt:41-55](file://app/src/main/java/com/suvojeet/suvmusic/util/AESUtil.kt#L41-L55)
 - [secure_config.cpp:36-46](file://app/src/main/cpp/secure_config.cpp#L36-L46)
@@ -100,19 +100,19 @@ Key responsibilities:
 ## Architecture Overview
 The integration follows a layered architecture:
 - UI layer (SearchViewModel) triggers queries and displays results.
-- Repository layer (JioSaavnRepository) handles HTTP requests, JSON parsing, and caching.
+- Repository layer (Remote AudioRepository) handles HTTP requests, JSON parsing, and caching.
 - Security layer (SecureConfig + AESUtil + native) manages encrypted configuration and key derivation.
 - Domain models encapsulate content semantics.
 
 ```mermaid
 sequenceDiagram
 participant UI as "SearchViewModel"
-participant Repo as "JioSaavnRepository"
+participant Repo as "Remote AudioRepository"
 participant Sec as "SecureConfig"
 participant Net as "OkHttp Client"
 participant JSon as "JSON Parser"
 UI->>Repo : search(query)
-Repo->>Sec : getJioSaavnBaseUrl()
+Repo->>Sec : getRemote AudioBaseUrl()
 Sec-->>Repo : base URL (decrypted)
 Repo->>Net : GET base URL + query params
 Net-->>Repo : JSON response
@@ -122,12 +122,12 @@ Repo-->>UI : List<Song>
 
 **Diagram sources**
 - [SearchViewModel.kt:404-416](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L404-L416)
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
 - [SecureConfig.kt:30-36](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L30-L36)
 
 ## Detailed Component Analysis
 
-### JioSaavnRepository
+### Remote AudioRepository
 Responsibilities:
 - Search songs, artists, albums, playlists.
 - Retrieve song details and album/playlist metadata.
@@ -155,13 +155,13 @@ ReturnSongs --> End
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
 
 **Section sources**
-- [JioSaavnRepository.kt:35-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L35-L54)
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
-- [JioSaavnRepository.kt:314-329](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L314-L329)
+- [Remote AudioRepository.kt:35-54](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L35-L54)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:314-329](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L314-L329)
 
 ### SecureConfig and Key Derivation
 - AESUtil decrypts the pre-encrypted base URL using a derived key.
@@ -171,8 +171,8 @@ ReturnSongs --> End
 ```mermaid
 classDiagram
 class SecureConfig {
-+getJioSaavnBaseUrl() String
-+getJioSaavnDesKey() String
++getRemote AudioBaseUrl() String
++getRemote AudioDesKey() String
 +checkDeveloperPassword(input) Boolean
 -nDeriveKey() String
 -nDeriveDesKey() String
@@ -207,11 +207,11 @@ SecureConfig --> SecureConfigCpp : "calls native"
 
 ```mermaid
 sequenceDiagram
-participant Repo as "JioSaavnRepository"
+participant Repo as "Remote AudioRepository"
 participant Sec as "SecureConfig"
 participant Net as "OkHttp Client"
 participant Crypto as "DES Decryptor"
-Repo->>Sec : getJioSaavnDesKey()
+Repo->>Sec : getRemote AudioDesKey()
 Sec-->>Repo : DES key
 Repo->>Net : GET song.getDetails
 Net-->>Repo : JSON with encrypted_media_url
@@ -222,13 +222,13 @@ Repo-->>Caller : stream URL
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
-- [JioSaavnRepository.kt:914-925](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L914-L925)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:914-925](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L914-L925)
 - [SecureConfig.kt:41-47](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L41-L47)
 
 **Section sources**
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
-- [JioSaavnRepository.kt:914-925](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L914-L925)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:914-925](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L914-L925)
 
 ### Content Categories and Home Sections
 - Songs, albums, playlists, and artists are supported across search and detail endpoints.
@@ -258,22 +258,22 @@ Merge --> ReturnStatic["Return static sections"]
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L335-L479)
-- [JioSaavnRepository.kt:484-752](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L484-L752)
+- [Remote AudioRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L335-L479)
+- [Remote AudioRepository.kt:484-752](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L484-L752)
 
 **Section sources**
-- [JioSaavnRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L335-L479)
-- [JioSaavnRepository.kt:484-752](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L484-L752)
+- [Remote AudioRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L335-L479)
+- [Remote AudioRepository.kt:484-752](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L484-L752)
 
 ### Search and Autocomplete Integration
-- SearchViewModel integrates JioSaavn results into the unified search UI.
+- SearchViewModel integrates Remote Audio results into the unified search UI.
 - Debounced query handling triggers suggestions and auto-search.
 - Results are categorized into songs, albums, artists, and playlists.
 
 ```mermaid
 sequenceDiagram
 participant UI as "SearchViewModel"
-participant Repo as "JioSaavnRepository"
+participant Repo as "Remote AudioRepository"
 UI->>UI : debounce(query)
 UI->>Repo : searchAll(query)
 Repo-->>UI : SearchResults(songs, albums, artists, playlists)
@@ -283,29 +283,29 @@ UI-->>UI : update UI state
 **Diagram sources**
 - [SearchViewModel.kt:124-134](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L124-L134)
 - [SearchViewModel.kt:404-416](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L404-L416)
-- [JioSaavnRepository.kt:933-1001](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L933-L1001)
+- [Remote AudioRepository.kt:933-1001](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L933-L1001)
 
 **Section sources**
 - [SearchViewModel.kt:124-134](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L124-L134)
 - [SearchViewModel.kt:404-416](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L404-L416)
-- [JioSaavnRepository.kt:933-1001](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L933-L1001)
+- [Remote AudioRepository.kt:933-1001](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L933-L1001)
 
 ### Local Audio Repository Integration
 - The UI supports unified search across local audio and online sources.
 - LocalAudioRepository provides local search for songs, albums, and artists.
-- This enables a single interface for discovering both local and JioSaavn content.
+- This enables a single interface for discovering both local and Remote Audio content.
 
 **Section sources**
 - [SearchViewModel.kt:417-421](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L417-L421)
 
 ## Dependency Analysis
-- JioSaavnRepository depends on OkHttp for networking and Gson for JSON parsing.
+- Remote AudioRepository depends on OkHttp for networking and Gson for JSON parsing.
 - SecureConfig depends on AESUtil and native code for key derivation.
 - Domain models (Song, Album, Playlist) are used across repositories and UI.
 
 ```mermaid
 graph LR
-Repo["JioSaavnRepository"] --> OkHttp["OkHttpClient"]
+Repo["Remote AudioRepository"] --> OkHttp["OkHttpClient"]
 Repo --> Gson["Gson"]
 Repo --> ModelSong["Song"]
 Repo --> ModelAlbum["Album"]
@@ -315,14 +315,14 @@ Sec --> Native["secure_config.cpp"]
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:32-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L32-L34)
+- [Remote AudioRepository.kt:32-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L32-L34)
 - [SecureConfig.kt:10-18](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L10-L18)
 - [Song.kt:9-29](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Song.kt#L9-L29)
 - [Album.kt:3-11](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Album.kt#L3-L11)
 - [Playlist.kt:3-10](file://core/model/src/main/java/com/suvojeet/suvmusic/core/model/Playlist.kt#L3-L10)
 
 **Section sources**
-- [JioSaavnRepository.kt:32-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L32-L34)
+- [Remote AudioRepository.kt:32-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L32-L34)
 - [SecureConfig.kt:10-18](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L10-L18)
 
 ## Performance Considerations
@@ -338,8 +338,8 @@ Recommendations:
 - Consider prefetching popular categories to improve perceived performance.
 
 **Section sources**
-- [JioSaavnRepository.kt:35-39](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L35-L39)
-- [JioSaavnRepository.kt:197-201](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L201)
+- [Remote AudioRepository.kt:35-39](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L35-L39)
+- [Remote AudioRepository.kt:197-201](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L201)
 - [SearchViewModel.kt:124-134](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/SearchViewModel.kt#L124-L134)
 - [SessionManager.kt:2103-2127](file://app/src/main/java/com/suvojeet/suvmusic/data/SessionManager.kt#L2103-L2127)
 
@@ -354,7 +354,7 @@ Common issues and resolutions:
 - Home sections not loading:
   - Fallback to static sections is automatic; inspect logs for errors.
 - Developer-only feature visibility:
-  - JioSaavn tab is gated behind developer mode; enable via developer password check.
+  - Remote Audio tab is gated behind developer mode; enable via developer password check.
 
 Operational checks:
 - Validate AESUtil decryption and native key derivation.
@@ -364,8 +364,8 @@ Operational checks:
 **Section sources**
 - [SecureConfig.kt:30-47](file://app/src/main/java/com/suvojeet/suvmusic/util/SecureConfig.kt#L30-L47)
 - [AESUtil.kt:41-55](file://app/src/main/java/com/suvojeet/suvmusic/util/AESUtil.kt#L41-L55)
-- [JioSaavnRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L335-L479)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:335-479](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L335-L479)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
 
 ## Conclusion
-The JioSaavn integration in SuvMusic leverages an unofficial internal API with strong runtime security for base URL and decryption keys. The repository layer provides comprehensive content discovery, metadata retrieval, and streaming URL resolution with caching and quality selection. The UI integrates JioSaavn results alongside local audio for a unified experience. Robust fallbacks and performance optimizations ensure reliability and responsiveness.
+The Remote Audio integration in SuvMusic leverages an unofficial internal API with strong runtime security for base URL and decryption keys. The repository layer provides comprehensive content discovery, metadata retrieval, and streaming URL resolution with caching and quality selection. The UI integrates Remote Audio results alongside local audio for a unified experience. Robust fallbacks and performance optimizations ensure reliability and responsiveness.
