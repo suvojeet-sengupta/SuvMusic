@@ -318,7 +318,7 @@ class LyricsRepository @Inject constructor(
             LyricsProviderType.REMOTE -> {
                 remoteAudioRepository.getLyricsFromRemote(song.id)?.let { text ->
                     val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from RemoteAudio", isSynced = false, provider = LyricsProviderType.REMOTE)
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from HQ Audio Source", isSynced = false, provider = LyricsProviderType.REMOTE)
                 }
             }
             LyricsProviderType.YOUTUBE -> {
@@ -374,7 +374,7 @@ class LyricsRepository @Inject constructor(
             SongSource.REMOTE -> {
                 remoteAudioRepository.getLyricsFromRemote(song.id)?.let { text ->
                     val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from RemoteAudio", isSynced = false, provider = LyricsProviderType.REMOTE)
+                    Lyrics(lines = lines, sourceCredit = "Lyrics from HQ Audio Source", isSynced = false, provider = LyricsProviderType.REMOTE)
                 }
             }
             SongSource.YOUTUBE, SongSource.DOWNLOADED, SongSource.LOCAL -> {

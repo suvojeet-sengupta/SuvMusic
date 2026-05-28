@@ -10,7 +10,7 @@ data class Lyrics(
 enum class LyricsProviderType(val displayName: String) {
     AUTO("Auto (Best Match)"),
     LRCLIB("LRCLIB (Synced)"),
-    REMOTE("RemoteAudio"),
+    REMOTE("HQ Audio Source"),
     YOUTUBE("YouTube (Captions)"),
     BETTER_LYRICS("Better Lyrics (Apple Music)"),
     SIMP_MUSIC("SimpMusic"),

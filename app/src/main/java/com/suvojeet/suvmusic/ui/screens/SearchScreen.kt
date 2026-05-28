@@ -336,7 +336,7 @@ fun SearchScreen(
                         Tab(
                             selected = uiState.selectedTab == SearchTab.REMOTE,
                             onClick = { viewModel.onTabChange(SearchTab.REMOTE) },
-                            text = { Text("RemoteAudio", style = MaterialTheme.typography.titleSmall) }
+                            text = { Text("HQ Audio", style = MaterialTheme.typography.titleSmall) }
                         )
                         Tab(
                             selected = uiState.selectedTab == SearchTab.YOUR_LIBRARY,
@@ -526,7 +526,7 @@ fun SearchScreen(
                         }
 
                         if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No RemoteAudio results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No HQ Audio results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
                         }
                     }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
