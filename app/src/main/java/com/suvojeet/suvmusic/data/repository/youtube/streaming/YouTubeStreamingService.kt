@@ -52,26 +52,47 @@ class YouTubeStreamingService @Inject constructor(
         initialDelay: Long = 500, // 0.5 sec
         maxDelay: Long = 2000,    // 2 sec
         factor: Double = 2.0,
+        opTag: String = "op",
         block: suspend () -> T?
     ): T? {
         var currentDelay = initialDelay
-        repeat(times - 1) {
+        repeat(times - 1) { attempt ->
             try {
                 val result = block()
                 if (result != null) return result
+                android.util.Log.w(
+                    "YouTubeStreaming",
+                    "$opTag attempt ${attempt + 1}/$times returned null (no exception); retrying in ${currentDelay}ms",
+                )
             } catch (e: Exception) {
-                android.util.Log.w("YouTubeStreaming", "Operation failed, retrying in ${currentDelay}ms", e)
+                android.util.Log.w(
+                    "YouTubeStreaming",
+                    "$opTag attempt ${attempt + 1}/$times threw ${e.javaClass.simpleName}: ${e.message}; retrying in ${currentDelay}ms",
+                    e,
+                )
                 if (e is org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
-                    return null // Don't retry for "not available"
+                    android.util.Log.e(
+                        "YouTubeStreaming",
+                        "$opTag aborted — ContentNotAvailableException is permanent (no retry)",
+                    )
+                    return null
                 }
             }
             kotlinx.coroutines.delay(currentDelay)
             currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
         }
         return try {
-            block() // Final attempt
+            val finalResult = block()
+            if (finalResult == null) {
+                android.util.Log.e("YouTubeStreaming", "$opTag exhausted all $times attempts — returning null")
+            }
+            finalResult
         } catch (e: Exception) {
-            android.util.Log.e("YouTubeStreaming", "Operation failed after multiple retries", e)
+            android.util.Log.e(
+                "YouTubeStreaming",
+                "$opTag final attempt threw ${e.javaClass.simpleName}: ${e.message}",
+                e,
+            )
             null
         }
     }
@@ -84,11 +105,15 @@ class YouTubeStreamingService @Inject constructor(
         val cacheKey = "audio_$videoId"
         if (!forceLow) {
             streamCache.get(cacheKey)?.let { cached ->
-                if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+                val ageMs = System.currentTimeMillis() - cached.timestamp
+                if (ageMs < CACHE_EXPIRY_MS) {
+                    android.util.Log.d("YouTubeStreaming", "CACHE_HIT audio $videoId (age=${ageMs}ms)")
                     return@withContext cached.url
                 }
-            }
+                android.util.Log.d("YouTubeStreaming", "CACHE_STALE audio $videoId (age=${ageMs}ms > ${CACHE_EXPIRY_MS}ms)")
+            } ?: android.util.Log.d("YouTubeStreaming", "CACHE_MISS audio $videoId")
         } else {
+            android.util.Log.d("YouTubeStreaming", "CACHE_BYPASS audio $videoId (forceLow=true)")
             streamCache.remove(cacheKey)
         }
 
@@ -96,33 +121,46 @@ class YouTubeStreamingService @Inject constructor(
         // Key is videoId+forceLow so a high-quality fetch doesn't deliver a low-quality URL.
         // computeIfAbsent is atomic — closes the check-then-put race window.
         val inflightKey = "$videoId|$forceLow"
+        var piggybacked = true
         val deferred = inFlightAudio.computeIfAbsent(inflightKey) {
+            piggybacked = false
             dedupScope.async {
                 try {
+                    android.util.Log.d("YouTubeStreaming", "RESOLVE audio $videoId primary=www.youtube.com forceLow=$forceLow")
                     val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, forceLow)
                     if (primaryResult != null) {
                         return@async primaryResult
                     }
-                    android.util.Log.d("YouTubeStreaming", "Primary resolution failed for $videoId, trying music fallback")
-                    resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
+                    android.util.Log.w("YouTubeStreaming", "RESOLVE audio $videoId primary returned null; falling back to music.youtube.com")
+                    val fallback = resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
+                    if (fallback == null) {
+                        android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId BOTH primary and music fallback failed")
+                    } else {
+                        android.util.Log.d("YouTubeStreaming", "RESOLVE audio $videoId music fallback succeeded")
+                    }
+                    fallback
                 } finally {
                     inFlightAudio.remove(inflightKey)
                 }
             }
+        }
+        if (piggybacked) {
+            android.util.Log.d("YouTubeStreaming", "INFLIGHT_PIGGYBACK audio $videoId")
         }
         deferred.await()
     }
 
     private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String, forceLow: Boolean = false): String? {
         val cacheKey = "audio_$videoId"
-        return retryWithBackoff {
+        val host = streamUrl.substringAfter("//").substringBefore("/")
+        return retryWithBackoff(opTag = "audio[$videoId@$host]") {
             val startTime = System.currentTimeMillis()
             var audioQuality = if (forceLow) {
                 com.suvojeet.suvmusic.core.model.AudioQuality.LOW
             } else {
                 sessionManager.getAudioQuality()
             }
-            
+
             // Adaptive logic for AUTO quality
             if (audioQuality == com.suvojeet.suvmusic.core.model.AudioQuality.AUTO) {
                 audioQuality = if (networkMonitor.isOnWifi()) {
@@ -130,13 +168,42 @@ class YouTubeStreamingService @Inject constructor(
                 } else {
                     com.suvojeet.suvmusic.core.model.AudioQuality.LOW
                 }
+                android.util.Log.d("YouTubeStreaming", "audio[$videoId@$host] AUTO resolved to $audioQuality (wifi=${networkMonitor.isOnWifi()})")
             }
-            
+
+            android.util.Log.d("YouTubeStreaming", "audio[$videoId@$host] getStreamExtractor()")
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
-            streamExtractor.fetchPage()
-            
-            val audioStreams = streamExtractor.audioStreams
-            if (audioStreams.isEmpty()) return@retryWithBackoff null
+            val fetchStart = System.currentTimeMillis()
+            try {
+                streamExtractor.fetchPage()
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "YouTubeStreaming",
+                    "audio[$videoId@$host] fetchPage() threw ${e.javaClass.simpleName} after ${System.currentTimeMillis() - fetchStart}ms: ${e.message}",
+                    e,
+                )
+                throw e
+            }
+            android.util.Log.d("YouTubeStreaming", "audio[$videoId@$host] fetchPage() ok in ${System.currentTimeMillis() - fetchStart}ms")
+
+            val audioStreams = try {
+                streamExtractor.audioStreams
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "YouTubeStreaming",
+                    "audio[$videoId@$host] audioStreams accessor threw ${e.javaClass.simpleName}: ${e.message}",
+                    e,
+                )
+                throw e
+            }
+            if (audioStreams.isEmpty()) {
+                android.util.Log.w("YouTubeStreaming", "audio[$videoId@$host] audioStreams EMPTY — NewPipe parsed page but found no streams (likely extractor break)")
+                return@retryWithBackoff null
+            }
+            android.util.Log.d(
+                "YouTubeStreaming",
+                "audio[$videoId@$host] found ${audioStreams.size} streams: ${audioStreams.joinToString { "${it.averageBitrate}kbps/${it.format?.name}" }}",
+            )
 
             val targetBitrate = when (audioQuality) {
                 com.suvojeet.suvmusic.core.model.AudioQuality.LOW -> 70
@@ -144,21 +211,32 @@ class YouTubeStreamingService @Inject constructor(
                 com.suvojeet.suvmusic.core.model.AudioQuality.HIGH -> 512
                 com.suvojeet.suvmusic.core.model.AudioQuality.AUTO -> 160
             }
-            
+
             val bestAudioStream = audioStreams
                 .filter { it.averageBitrate <= targetBitrate }
                 .maxByOrNull { it.averageBitrate }
                 ?: audioStreams.maxByOrNull { it.averageBitrate }
-            
+
             val latency = System.currentTimeMillis() - startTime
             val extension = when (bestAudioStream?.format?.name?.uppercase()) {
                 "M4A", "AAC" -> "m4a"
                 "WEBM", "OPUS" -> "opus"
                 else -> "m4a"
             }
-            android.util.Log.d("YouTubeStreaming", "Audio fetched in ${latency}ms for $videoId. Bitrate: ${bestAudioStream?.averageBitrate}kbps")
+            if (bestAudioStream == null) {
+                android.util.Log.w("YouTubeStreaming", "audio[$videoId@$host] no bestStream picked from ${audioStreams.size} candidates (target=${targetBitrate}kbps)")
+                return@retryWithBackoff null
+            }
+            if (bestAudioStream.content.isNullOrBlank()) {
+                android.util.Log.w("YouTubeStreaming", "audio[$videoId@$host] bestStream picked (${bestAudioStream.averageBitrate}kbps) but content URL is blank")
+                return@retryWithBackoff null
+            }
+            android.util.Log.d(
+                "YouTubeStreaming",
+                "audio[$videoId@$host] picked ${bestAudioStream.averageBitrate}kbps/$extension in ${latency}ms (target=${targetBitrate}kbps, quality=$audioQuality)",
+            )
 
-            bestAudioStream?.content?.also { url ->
+            bestAudioStream.content.also { url ->
                 streamCache.put(cacheKey, CachedStream(url, extension, System.currentTimeMillis()))
             }
         }
@@ -188,6 +266,7 @@ class YouTubeStreamingService @Inject constructor(
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
 
         if (forceLow) {
+            android.util.Log.d("YouTubeStreaming", "CACHE_BYPASS video $videoId/$targetQuality (forceLow=true)")
             streamCache.remove(videoCacheKey)
             streamCache.remove(audioCacheKey)
         } else {
@@ -195,27 +274,41 @@ class YouTubeStreamingService @Inject constructor(
             val cachedAudio = streamCache.get(audioCacheKey)
 
             if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
+                android.util.Log.d("YouTubeStreaming", "CACHE_HIT video $videoId/$targetQuality (age=${System.currentTimeMillis() - cachedVideo.timestamp}ms)")
                 return@withContext VideoStreamResult(
                     videoUrl = cachedVideo.url,
                     audioUrl = cachedAudio?.url
                 )
             }
+            android.util.Log.d("YouTubeStreaming", "CACHE_MISS video $videoId/$targetQuality")
         }
 
         val inflightKey = "$videoId|${targetQuality.name}|$forceLow"
+        var piggybacked = true
         val deferred = inFlightVideo.computeIfAbsent(inflightKey) {
+            piggybacked = false
             dedupScope.async {
                 try {
+                    android.util.Log.d("YouTubeStreaming", "RESOLVE video $videoId primary=www.youtube.com quality=$targetQuality forceLow=$forceLow")
                     val primaryResult = resolveVideoWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, targetQuality)
                     if (primaryResult != null) {
                         return@async primaryResult
                     }
-                    android.util.Log.d("YouTubeStreaming", "Primary video resolution failed for $videoId, trying music fallback")
-                    resolveVideoWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, targetQuality)
+                    android.util.Log.w("YouTubeStreaming", "RESOLVE video $videoId primary returned null; falling back to music.youtube.com")
+                    val fallback = resolveVideoWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, targetQuality)
+                    if (fallback == null) {
+                        android.util.Log.e("YouTubeStreaming", "RESOLVE video $videoId BOTH primary and music fallback failed")
+                    } else {
+                        android.util.Log.d("YouTubeStreaming", "RESOLVE video $videoId music fallback succeeded")
+                    }
+                    fallback
                 } finally {
                     inFlightVideo.remove(inflightKey)
                 }
             }
+        }
+        if (piggybacked) {
+            android.util.Log.d("YouTubeStreaming", "INFLIGHT_PIGGYBACK video $videoId/$targetQuality")
         }
         deferred.await()
     }
@@ -227,10 +320,11 @@ class YouTubeStreamingService @Inject constructor(
     ): VideoStreamResult? {
         val videoCacheKey = "video_${videoId}_${targetQuality.name}"
         val audioCacheKey = "video_audio_${videoId}_${targetQuality.name}"
+        val host = streamUrl.substringAfter("//").substringBefore("/")
 
-        return retryWithBackoff {
+        return retryWithBackoff(opTag = "video[$videoId@$host/$targetQuality]") {
             var quality = targetQuality
-            
+
             // Adaptive logic for AUTO quality
             if (quality == com.suvojeet.suvmusic.core.model.VideoQuality.AUTO) {
                 quality = if (networkMonitor.isOnWifi()) {
@@ -238,10 +332,23 @@ class YouTubeStreamingService @Inject constructor(
                 } else {
                     com.suvojeet.suvmusic.core.model.VideoQuality.LOW
                 }
+                android.util.Log.d("YouTubeStreaming", "video[$videoId@$host] AUTO resolved to $quality (wifi=${networkMonitor.isOnWifi()})")
             }
-            
+
+            android.util.Log.d("YouTubeStreaming", "video[$videoId@$host] getStreamExtractor()")
             val streamExtractor = ytService.getStreamExtractor(streamUrl)
-            streamExtractor.fetchPage()
+            val fetchStart = System.currentTimeMillis()
+            try {
+                streamExtractor.fetchPage()
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "YouTubeStreaming",
+                    "video[$videoId@$host] fetchPage() threw ${e.javaClass.simpleName} after ${System.currentTimeMillis() - fetchStart}ms: ${e.message}",
+                    e,
+                )
+                throw e
+            }
+            android.util.Log.d("YouTubeStreaming", "video[$videoId@$host] fetchPage() ok in ${System.currentTimeMillis() - fetchStart}ms")
             
             val targetResolution = quality.maxResolution
             var result: VideoStreamResult? = null

@@ -66,11 +66,21 @@ class NewPipeDownloaderImpl(
             requestBuilder.addHeader("Accept-Language", "en-US,en;q=0.9")
         }
 
+        val reqStart = System.currentTimeMillis()
+        val shortUrl = url.take(120)
+        android.util.Log.d("NewPipeDL", "$httpMethod $shortUrl")
         try {
         val response = client.newCall(requestBuilder.build()).execute()
         response.use {
+            val latency = System.currentTimeMillis() - reqStart
             if (response.code == 429) {
+                android.util.Log.w("NewPipeDL", "429 ratelimit after ${latency}ms: $shortUrl")
                 throw ReCaptchaException("Rate limited", url)
+            }
+            if (response.code >= 400) {
+                android.util.Log.w("NewPipeDL", "HTTP ${response.code} ${response.message} after ${latency}ms: $shortUrl")
+            } else {
+                android.util.Log.d("NewPipeDL", "HTTP ${response.code} in ${latency}ms: $shortUrl")
             }
 
             // Prevent OOM by limiting response size (e.g., 10MB limit for metadata)
@@ -79,14 +89,19 @@ class NewPipeDownloaderImpl(
                 val limit = 10 * 1024 * 1024L // 10MB
                 val contentLength = body.contentLength()
                 if (contentLength > limit) {
+                    android.util.Log.w("NewPipeDL", "body too large (${contentLength} > $limit), returning empty: $shortUrl")
                     "" // Return empty for too large files (likely streams not metadata)
                 } else {
                     try {
                         // Peek or read conservatively
                         val source = body.source()
                         source.request(limit) // Request up to limit
-                        if (source.buffer.size > limit) "" else body.string()
+                        if (source.buffer.size > limit) {
+                            android.util.Log.w("NewPipeDL", "body exceeded limit during read, returning empty: $shortUrl")
+                            ""
+                        } else body.string()
                     } catch (e: Exception) {
+                        android.util.Log.w("NewPipeDL", "body read threw ${e.javaClass.simpleName}: ${e.message}; $shortUrl")
                         ""
                     }
                 }
@@ -106,6 +121,7 @@ class NewPipeDownloaderImpl(
             )
         }
         } catch (e: IOException) {
+            android.util.Log.e("NewPipeDL", "IOException after ${System.currentTimeMillis() - reqStart}ms on $shortUrl: ${e.javaClass.simpleName}: ${e.message}")
             throw e
         }
     }
