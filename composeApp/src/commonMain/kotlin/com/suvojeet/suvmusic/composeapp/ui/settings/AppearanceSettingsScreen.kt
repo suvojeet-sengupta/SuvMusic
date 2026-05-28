@@ -111,6 +111,7 @@ fun AppearanceSettingsScreen(
     playerAnimatedBackgroundEnabled: Boolean,
     albumArtDynamicColorsEnabled: Boolean,
     rotatingVinylAnimationEnabled: Boolean,
+    albumArtColorFlashingEnabled: Boolean,
     playerStyle: PlayerStyle,
     forceMaxRefreshRateEnabled: Boolean,
     lyricsTextPosition: LyricsTextPosition,
@@ -123,6 +124,7 @@ fun AppearanceSettingsScreen(
     onPlayerAnimatedBackgroundChange: (Boolean) -> Unit,
     onAlbumArtDynamicColorsChange: (Boolean) -> Unit,
     onRotatingVinylAnimationChange: (Boolean) -> Unit,
+    onAlbumArtColorFlashingChange: (Boolean) -> Unit,
     onPlayerStyleChange: (PlayerStyle) -> Unit,
     onForceMaxRefreshRateChange: (Boolean) -> Unit,
     onLyricsTextPositionChange: (LyricsTextPosition) -> Unit,
@@ -261,6 +263,14 @@ fun AppearanceSettingsScreen(
                     subtitle = "Rotate artwork in vinyl mode",
                     checked = rotatingVinylAnimationEnabled,
                     onCheckedChange = onRotatingVinylAnimationChange,
+                )
+                ThinDivider()
+                SwitchRow(
+                    icon = Icons.Default.Animation,
+                    title = "Album Art Color Pulse",
+                    subtitle = "Soft color flashes around artwork for a peaceful feel",
+                    checked = albumArtColorFlashingEnabled,
+                    onCheckedChange = onAlbumArtColorFlashingChange,
                 )
                 ThinDivider()
                 NavRow(

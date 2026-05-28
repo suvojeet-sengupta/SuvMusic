@@ -75,6 +75,7 @@ data class SettingsUiState(
     val playerAnimatedBackgroundEnabled: Boolean = true,
     val albumArtDynamicColorsEnabled: Boolean = true,
     val rotatingVinylAnimationEnabled: Boolean = true,
+    val albumArtColorFlashingEnabled: Boolean = false,
     // Lyrics
     val preferredLyricsProvider: String = "BetterLyrics",
     val lyricsTextPosition: LyricsTextPosition = LyricsTextPosition.CENTER,
@@ -390,6 +391,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.rotatingVinylAnimationEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(rotatingVinylAnimationEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.albumArtColorFlashingEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(albumArtColorFlashingEnabled = enabled) }
             }
         }
 
@@ -1450,6 +1457,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setRotatingVinylAnimationEnabled(enabled)
             _uiState.update { it.copy(rotatingVinylAnimationEnabled = enabled) }
+        }
+    }
+
+    fun setAlbumArtColorFlashingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setAlbumArtColorFlashingEnabled(enabled)
+            _uiState.update { it.copy(albumArtColorFlashingEnabled = enabled) }
         }
     }
 

@@ -108,19 +108,6 @@ fun PlaybackSettingsScreen(
                         },
                         onClick = { showMusicSourceSheet = true }
                     )
-
-                    // Hybrid audio only makes sense when browsing from YouTube.
-                    if (uiState.musicSource == MusicSource.YOUTUBE) {
-                        HorizontalDivider()
-
-                        PlaybackSwitchItem(
-                            icon = Icons.Default.GraphicEq,
-                            title = "Stream HQ Audio",
-                            subtitle = "Browse on YouTube but play in HQ (320 kbps) when a match is found",
-                            checked = uiState.preferRemoteAudio,
-                            onCheckedChange = { viewModel.setPreferRemoteAudio(it) }
-                        )
-                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }

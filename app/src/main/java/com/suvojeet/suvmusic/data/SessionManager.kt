@@ -249,6 +249,7 @@ class SessionManager @Inject constructor(
         
         private val ALBUM_ART_DYNAMIC_COLORS_KEY = booleanPreferencesKey("album_art_dynamic_colors")
         private val ROTATING_VINYL_ANIMATION_KEY = booleanPreferencesKey("rotating_vinyl_animation")
+        private val ALBUM_ART_COLOR_FLASHING_KEY = booleanPreferencesKey("album_art_color_flashing")
         
         private val PLAYLIST_SORT_TYPE_KEY = stringPreferencesKey("playlist_sort_type")
         private val PLAYLIST_SORT_ORDER_KEY = booleanPreferencesKey("playlist_sort_order")
@@ -410,6 +411,16 @@ class SessionManager @Inject constructor(
     suspend fun setRotatingVinylAnimationEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ROTATING_VINYL_ANIMATION_KEY] = enabled
+        }
+    }
+
+    val albumArtColorFlashingEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[ALBUM_ART_COLOR_FLASHING_KEY] ?: false
+    }
+
+    suspend fun setAlbumArtColorFlashingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ALBUM_ART_COLOR_FLASHING_KEY] = enabled
         }
     }
 

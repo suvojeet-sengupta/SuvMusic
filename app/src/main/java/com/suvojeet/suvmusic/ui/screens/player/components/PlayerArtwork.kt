@@ -71,14 +71,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.suvojeet.suvmusic.core.model.ArtworkShape
 import com.suvojeet.suvmusic.core.model.ArtworkSize
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.getHighResThumbnail
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
+import org.koin.compose.koinInject
 
 @Composable
 fun AlbumArtwork(
@@ -99,6 +102,40 @@ fun AlbumArtwork(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val sessionManager: SessionManager = koinInject()
+    val colorFlashingEnabled by sessionManager.albumArtColorFlashingEnabledFlow
+        .collectAsStateWithLifecycle(initialValue = false)
+
+    // Slow, breathing color pulse — peaceful, not strobing.
+    // Cycles through primary → accent → secondary so the glow shifts hue gently.
+    val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse_alpha",
+    )
+    val hueShift by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse_hue",
+    )
+    val glowColor = if (colorFlashingEnabled && isPlaying) {
+        androidx.compose.ui.graphics.lerp(
+            dominantColors.primary,
+            dominantColors.accent,
+            hueShift,
+        ).copy(alpha = pulseAlpha)
+    } else {
+        dominantColors.primary.copy(alpha = 0.5f)
+    }
 
     // Shape state - uses initial shape from settings
     var currentShape by remember { mutableStateOf(initialShape) }
@@ -241,9 +278,10 @@ fun AlbumArtwork(
                         rotationZ = rotation + currentRotation
                     }
                     .shadow(
-                        elevation = 16.dp,
+                        elevation = if (colorFlashingEnabled && isPlaying) 28.dp else 16.dp,
                         shape = RoundedCornerShape(safeCornerRadius),
-                        spotColor = dominantColors.primary.copy(alpha = 0.5f)
+                        spotColor = glowColor,
+                        ambientColor = glowColor
                     )
                     .clip(RoundedCornerShape(safeCornerRadius))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
