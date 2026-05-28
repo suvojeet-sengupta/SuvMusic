@@ -106,22 +106,8 @@ class AlbumViewModel @Inject constructor(
                     }
                 } else null
 
-                val album = localAlbum ?: run {
-                    if (sessionManager.getMusicSource() == MusicSource.REMOTE) {
-                        // RemoteAudio returns an album as a Playlist; map it to the Album model.
-                        remoteAudioRepository.getAlbum(albumId)?.let { pl ->
-                            Album(
-                                id = albumId,
-                                title = pl.title,
-                                artist = pl.author,
-                                thumbnailUrl = pl.thumbnailUrl,
-                                songs = pl.songs
-                            )
-                        }
-                    } else {
-                        youTubeRepository.getAlbum(albumId)
-                    }
-                }
+                // Albums always come from YouTube — HQ Audio source only affects playback.
+                val album = localAlbum ?: youTubeRepository.getAlbum(albumId)
                 
                 // Merge with initial data if fetch failed partially or returns default
                 val finalAlbum = if (album != null) {

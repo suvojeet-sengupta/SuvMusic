@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.DownloadState
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.core.model.Song
@@ -1345,7 +1346,7 @@ class MusicPlayer @Inject constructor(
                 // the normal YouTube path below when no match is found.
                 if ((song.source == SongSource.YOUTUBE || song.source == SongSource.YOUTUBE_MUSIC) &&
                     !_playerState.value.isVideoMode &&
-                    sessionManager.isPreferRemoteAudio()
+                    sessionManager.getMusicSource() == MusicSource.REMOTE
                 ) {
                     streamUrl = resolveHybridRemoteStream(song)
                     if (streamUrl != null) {
@@ -2051,8 +2052,8 @@ class MusicPlayer @Inject constructor(
                         }
                     } else {
                         // Hybrid: prefer RemoteAudio HQ audio for YouTube songs when
-                        // the user opted in and a confident match exists.
-                        val hybrid = if (sessionManager.isPreferRemoteAudio())
+                        // the user has selected HQ Audio as their primary source.
+                        val hybrid = if (sessionManager.getMusicSource() == MusicSource.REMOTE)
                             resolveHybridRemoteStream(song) else null
                         // Retry once if first attempt fails
                         hybrid

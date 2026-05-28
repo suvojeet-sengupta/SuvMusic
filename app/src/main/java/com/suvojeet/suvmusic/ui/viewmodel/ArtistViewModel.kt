@@ -194,19 +194,7 @@ class ArtistViewModel @Inject constructor(
             }
             
             try {
-                // RemoteAudio source: build artist radio natively from the artist's top
-                // songs + RemoteAudio related-song recommendations.
-                if (sessionManager.getMusicSource() == MusicSource.REMOTE) {
-                    val jioSongs = mutableListOf<Song>()
-                    jioSongs.addAll(currentArtist.songs)
-                    currentArtist.songs.firstOrNull()?.id?.let { seedId ->
-                        _uiState.update { it.copy(radioStatus = "Building ${currentArtist.name} radio...") }
-                        val related = remoteAudioRepository.getRelatedSongs(seedId)
-                        jioSongs.addAll(related.filter { s -> jioSongs.none { it.id == s.id } })
-                    }
-                    onPlaylistReady(if (jioSongs.isNotEmpty()) jioSongs.distinctBy { it.id } else currentArtist.songs)
-                    return@launch
-                }
+                // Artist radio always uses YouTube — HQ Audio source only swaps playback.
 
                 // 1. Get radio ID
                 val radioId = currentArtist.channelId?.let { youTubeRepository.getArtistRadioId(it) }

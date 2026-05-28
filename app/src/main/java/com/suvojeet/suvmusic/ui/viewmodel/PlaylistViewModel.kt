@@ -264,17 +264,9 @@ class PlaylistViewModel @Inject constructor(
                     thumbnailUrl = null,
                     songs = songs
                 )
-            } else if (currentSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE) {
-                // In HQ Audio mode, prioritize RemoteAudio
-                val jioPlaylist = remoteAudioRepository.getPlaylist(playlistId)
-                if (jioPlaylist != null) {
-                    jioPlaylist
-                } else {
-                    // Fallback to YouTube if not found in RemoteAudio (e.g. user clicked a YT playlist)
-                    youTubeRepository.getPlaylist(playlistId)
-                }
             } else {
-                // In YouTube mode, use getPlaylistFlow for staged loading
+                // Playlists always load from YouTube — HQ Audio source only swaps playback.
+                // Use getPlaylistFlow for staged loading.
                 try {
                     var emitted = false
                     youTubeRepository.getPlaylistFlow(playlistId, autoSave = true).collect { stagedPlaylist ->

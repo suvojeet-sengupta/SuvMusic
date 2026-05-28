@@ -135,19 +135,14 @@ class SearchViewModel @Inject constructor(
     private fun observeMusicSource() {
         viewModelScope.launch {
             sessionManager.musicSourceFlow.collect { source ->
-                val defaultTab = when (source) {
-                    MusicSource.REMOTE -> SearchTab.REMOTE
-                    else -> SearchTab.YOUTUBE_MUSIC
-                }
+                // Browsing is always YouTube — the source choice only affects
+                // playback. Default tab and categories don't depend on it.
                 _uiState.update {
                     it.copy(
                         currentSource = source,
-                        selectedTab = defaultTab
+                        selectedTab = SearchTab.YOUTUBE_MUSIC
                     )
                 }
-                // Browse categories are source-specific (YT moods/genres vs
-                // a curated RemoteAudio list), so refresh them whenever the
-                // user switches their primary source.
                 loadBrowseCategories()
             }
         }
@@ -162,12 +157,8 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isCategoriesLoading = true) }
             try {
-                val source = sessionManager.getMusicSource()
-                val categories = if (source == MusicSource.REMOTE) {
-                    remoteAudioBrowseCategories()
-                } else {
-                    youTubeRepository.getMoodsAndGenres()
-                }
+                // Always load YouTube moods/genres — browsing ignores source.
+                val categories = youTubeRepository.getMoodsAndGenres()
                 _uiState.update {
                     it.copy(
                         browseCategories = categories,
@@ -298,22 +289,8 @@ class SearchViewModel @Inject constructor(
         suggestionJob = viewModelScope.launch {
             _uiState.update { it.copy(isSuggestionsLoading = true) }
             try {
-                val source = sessionManager.getMusicSource()
-                val suggestions = if (source == MusicSource.REMOTE) {
-                    // RemoteAudio has no dedicated suggest endpoint, but its
-                    // autocomplete-backed `searchAll` returns the same song
-                    // titles a user would expect in the suggestion list.
-                    remoteAudioRepository.searchAll(query)
-                        .songs
-                        .asSequence()
-                        .map { it.title }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .take(8)
-                        .toList()
-                } else {
-                    youTubeRepository.getSearchSuggestions(query)
-                }
+                // Suggestions always come from YouTube — browsing ignores source.
+                val suggestions = youTubeRepository.getSearchSuggestions(query)
                 _uiState.update {
                     it.copy(
                         suggestions = suggestions,

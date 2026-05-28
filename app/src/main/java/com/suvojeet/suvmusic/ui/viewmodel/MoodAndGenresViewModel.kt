@@ -60,11 +60,8 @@ class MoodAndGenresViewModel @Inject constructor(
                 ) 
             }
             
-            val songs = if (sessionManager.getMusicSource() == MusicSource.REMOTE) {
-                remoteAudioRepository.search(title)
-            } else {
-                repository.getCategoryContent(browseId, params, title)
-            }
+            // Browsing always goes through YouTube — HQ Audio source only changes playback.
+            val songs = repository.getCategoryContent(browseId, params, title)
 
             _uiState.update {
                 it.copy(

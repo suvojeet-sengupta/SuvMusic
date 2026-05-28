@@ -300,15 +300,11 @@ fun SearchScreen(
                         }
                     }
 
-                    // Tab Selection (YouTube / RemoteAudio / Local). YouTube tab is
-                    // hidden when the active music source is RemoteAudio so the user
-                    // gets a RemoteAudio-only experience.
-                    val visibleTabs = remember(uiState.currentSource) {
-                        buildList {
-                            if (uiState.currentSource != MusicSource.REMOTE) add(SearchTab.YOUTUBE_MUSIC)
-                            add(SearchTab.REMOTE)
-                            add(SearchTab.YOUR_LIBRARY)
-                        }
+                    // Tab Selection (YouTube / HQ Audio / Local). Browsing is always
+                    // YouTube-first regardless of the selected primary music source —
+                    // the HQ Audio tab stays available as an explicit alternative search.
+                    val visibleTabs = remember {
+                        listOf(SearchTab.YOUTUBE_MUSIC, SearchTab.REMOTE, SearchTab.YOUR_LIBRARY)
                     }
                     val visibleSelectedIdx = visibleTabs.indexOf(uiState.selectedTab).coerceAtLeast(0)
                     TabRow(
@@ -326,13 +322,11 @@ fun SearchScreen(
                         },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        if (uiState.currentSource != MusicSource.REMOTE) {
-                            Tab(
-                                selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
-                                onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
-                                text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
-                            )
-                        }
+                        Tab(
+                            selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
+                            onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
+                            text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
+                        )
                         Tab(
                             selected = uiState.selectedTab == SearchTab.REMOTE,
                             onClick = { viewModel.onTabChange(SearchTab.REMOTE) },
