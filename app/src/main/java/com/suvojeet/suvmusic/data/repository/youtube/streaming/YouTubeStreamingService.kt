@@ -102,18 +102,19 @@ class YouTubeStreamingService @Inject constructor(
      * Uses user's audio quality preference and caches the result.
      */
     suspend fun getStreamUrl(videoId: String, forceLow: Boolean = false): String? = withContext(Dispatchers.IO) {
+        android.util.Log.i("YouTubeStreaming", ">> getStreamUrl ENTER vid=$videoId forceLow=$forceLow")
         val cacheKey = "audio_$videoId"
         if (!forceLow) {
             streamCache.get(cacheKey)?.let { cached ->
                 val ageMs = System.currentTimeMillis() - cached.timestamp
                 if (ageMs < CACHE_EXPIRY_MS) {
-                    android.util.Log.d("YouTubeStreaming", "CACHE_HIT audio $videoId (age=${ageMs}ms)")
+                    android.util.Log.i("YouTubeStreaming", "CACHE_HIT audio $videoId (age=${ageMs}ms)")
                     return@withContext cached.url
                 }
-                android.util.Log.d("YouTubeStreaming", "CACHE_STALE audio $videoId (age=${ageMs}ms > ${CACHE_EXPIRY_MS}ms)")
-            } ?: android.util.Log.d("YouTubeStreaming", "CACHE_MISS audio $videoId")
+                android.util.Log.i("YouTubeStreaming", "CACHE_STALE audio $videoId (age=${ageMs}ms > ${CACHE_EXPIRY_MS}ms)")
+            } ?: android.util.Log.i("YouTubeStreaming", "CACHE_MISS audio $videoId")
         } else {
-            android.util.Log.d("YouTubeStreaming", "CACHE_BYPASS audio $videoId (forceLow=true)")
+            android.util.Log.i("YouTubeStreaming", "CACHE_BYPASS audio $videoId (forceLow=true)")
             streamCache.remove(cacheKey)
         }
 
@@ -126,9 +127,10 @@ class YouTubeStreamingService @Inject constructor(
             piggybacked = false
             dedupScope.async {
                 try {
-                    android.util.Log.d("YouTubeStreaming", "RESOLVE audio $videoId primary=www.youtube.com forceLow=$forceLow")
+                    android.util.Log.i("YouTubeStreaming", "RESOLVE audio $videoId primary=www.youtube.com forceLow=$forceLow")
                     val primaryResult = resolveStreamWithUrl("https://www.youtube.com/watch?v=$videoId", videoId, forceLow)
                     if (primaryResult != null) {
+                        android.util.Log.i("YouTubeStreaming", "RESOLVE audio $videoId primary OK")
                         return@async primaryResult
                     }
                     android.util.Log.w("YouTubeStreaming", "RESOLVE audio $videoId primary returned null; falling back to music.youtube.com")
@@ -136,18 +138,28 @@ class YouTubeStreamingService @Inject constructor(
                     if (fallback == null) {
                         android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId BOTH primary and music fallback failed")
                     } else {
-                        android.util.Log.d("YouTubeStreaming", "RESOLVE audio $videoId music fallback succeeded")
+                        android.util.Log.i("YouTubeStreaming", "RESOLVE audio $videoId music fallback succeeded")
                     }
                     fallback
+                } catch (t: Throwable) {
+                    android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId async threw ${t.javaClass.simpleName}: ${t.message}", t)
+                    throw t
                 } finally {
                     inFlightAudio.remove(inflightKey)
                 }
             }
         }
         if (piggybacked) {
-            android.util.Log.d("YouTubeStreaming", "INFLIGHT_PIGGYBACK audio $videoId")
+            android.util.Log.i("YouTubeStreaming", "INFLIGHT_PIGGYBACK audio $videoId — waiting on existing resolve")
         }
-        deferred.await()
+        val result = try {
+            deferred.await()
+        } catch (t: Throwable) {
+            android.util.Log.w("YouTubeStreaming", "<< getStreamUrl AWAIT_FAIL vid=$videoId ${t.javaClass.simpleName}: ${t.message}")
+            throw t
+        }
+        android.util.Log.i("YouTubeStreaming", "<< getStreamUrl EXIT vid=$videoId result=${if (result == null) "NULL" else "ok(${result.take(60)})"}")
+        result
     }
 
     private suspend fun resolveStreamWithUrl(streamUrl: String, videoId: String, forceLow: Boolean = false): String? {
