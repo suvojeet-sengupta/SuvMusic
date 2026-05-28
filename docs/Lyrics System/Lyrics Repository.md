@@ -179,7 +179,7 @@ end
   - getLyricsProviders(): builds ordered provider list from preferences.
   - fetchFromProvider(song, providerType): executes a specific provider or falls back to AUTO.
   - fetchExternalLyrics(provider, song, type): shared logic for external provider calls.
-  - fetchFromSource(song): retrieves lyrics from source repositories (JioSaavn/YouTube).
+  - fetchFromSource(song): retrieves lyrics from source repositories (Remote Audio/YouTube).
   - parseLrcLyrics(lrcContent): delegates to LyricsUtils.
 - Cache keys:
   - Composite key: "${songId}_${providerType.name}".
@@ -292,7 +292,7 @@ G --> H
 - Local lyrics (highest priority).
 - External providers in order: BetterLyrics, SimpMusic, KuGou (only if enabled).
 - LRCLIB synced lyrics.
-- Source-specific lyrics (JioSaavn/YouTube).
+- Source-specific lyrics (Remote Audio/YouTube).
 - Plain LRCLIB lyrics.
 - Null if none succeed.
 

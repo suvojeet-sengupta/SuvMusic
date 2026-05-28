@@ -140,7 +140,7 @@ VM-->>Act : Expose state and events
 - Purpose: Centralizes provisioning of repositories, clients, managers, and shared services
 - Key bindings:
   - SessionManager, YouTubeRepository, LocalAudioRepository, OkHttpClient, Gson
-  - JioSaavnRepository, MusicHapticsManager, MusicPlayer, LyricsRepository
+  - Remote AudioRepository, MusicHapticsManager, MusicPlayer, LyricsRepository
   - ListenTogetherClient, ListenTogetherManager, WorkManager
 - Injection pattern: Constructor injection via @Provides methods with @Singleton scope
 
@@ -152,7 +152,7 @@ class AppModule {
 +provideLocalAudioRepository(context)
 +provideOkHttpClient()
 +provideGson()
-+provideJioSaavnRepository(okHttpClient, gson)
++provideRemote AudioRepository(okHttpClient, gson)
 +provideMusicHapticsManager(context, sessionManager)
 +provideMusicPlayer(...)
 +provideLyricsRepository(...)

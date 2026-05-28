@@ -342,8 +342,8 @@ ParseSUV --> Tracks
 ```mermaid
 classDiagram
 class SecureConfig {
-+getJioSaavnBaseUrl() String
-+getJioSaavnDesKey() String
++getRemote AudioBaseUrl() String
++getRemote AudioDesKey() String
 +checkDeveloperPassword(input) Boolean
 }
 class AESUtil {

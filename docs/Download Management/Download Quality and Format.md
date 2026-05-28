@@ -7,7 +7,7 @@
 - [VideoQuality.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/model/VideoQuality.kt)
 - [YouTubeStreamingService.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt)
 - [YouTubeRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt)
-- [JioSaavnRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt)
+- [Remote AudioRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt)
 - [DownloadRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt)
 - [DownloadService.kt](file://app/src/main/java/com/suvojeet/suvmusic/service/DownloadService.kt)
 - [SessionManager.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/SessionManager.kt)
@@ -29,7 +29,7 @@
 
 ## Introduction
 This document explains how the application selects download quality and handles audio formats across sources. It covers:
-- Quality tiers for YouTube and JioSaavn
+- Quality tiers for YouTube and Remote Audio
 - Bitrate selection algorithms
 - Format detection and extension mapping
 - Automatic fallbacks and validation
@@ -39,7 +39,7 @@ This document explains how the application selects download quality and handles 
 ## Project Structure
 The download and quality system spans several modules:
 - Data models define quality tiers and preferences
-- Repositories fetch streams from YouTube and JioSaavn
+- Repositories fetch streams from YouTube and Remote Audio
 - Streaming service resolves optimal streams and formats
 - Download pipeline persists files with metadata
 - UI exposes user controls for quality and source selection
@@ -57,7 +57,7 @@ VQ["VideoQuality.kt"]
 end
 subgraph "Repositories"
 YTRepo["YouTubeRepository.kt"]
-JSRepo["JioSaavnRepository.kt"]
+JSRepo["Remote AudioRepository.kt"]
 end
 subgraph "Streaming"
 YTSvc["YouTubeStreamingService.kt"]
@@ -93,7 +93,7 @@ MP --> FM
 - [VideoQuality.kt:1-17](file://app/src/main/java/com/suvojeet/suvmusic/data/model/VideoQuality.kt#L1-L17)
 - [YouTubeRepository.kt:264-281](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L264-L281)
 - [YouTubeStreamingService.kt:272-301](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L272-L301)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
 - [DownloadRepository.kt:785-798](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L785-L798)
 - [DownloadService.kt:164-211](file://app/src/main/java/com/suvojeet/suvmusic/service/DownloadService.kt#L164-L211)
 - [MusicPlayer.kt:1979-2036](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L1979-L2036)
@@ -110,7 +110,7 @@ MP --> FM
   - VideoQuality: maximum resolution for video
 - Repositories:
   - YouTubeRepository: orchestrates YouTube streaming and video downloads
-  - JioSaavnRepository: provides high-quality streams (320 kbps) via internal API
+  - Remote AudioRepository: provides high-quality streams (320 kbps) via internal API
 - Streaming service:
   - YouTubeStreamingService: resolves audio/video streams, applies quality filters, and caches results
 - Download pipeline:
@@ -125,7 +125,7 @@ MP --> FM
 - [DownloadQuality.kt:1-21](file://app/src/main/java/com/suvojeet/suvmusic/data/model/DownloadQuality.kt#L1-L21)
 - [VideoQuality.kt:1-17](file://app/src/main/java/com/suvojeet/suvmusic/data/model/VideoQuality.kt#L1-L17)
 - [YouTubeRepository.kt:264-281](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L264-L281)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
 - [YouTubeStreamingService.kt:272-301](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L272-L301)
 - [DownloadRepository.kt:785-798](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L785-L798)
 - [DownloadService.kt:164-211](file://app/src/main/java/com/suvojeet/suvmusic/service/DownloadService.kt#L164-L211)
@@ -172,7 +172,7 @@ DS->>DR : "persist and tag metadata"
   - Target bitrate applied when selecting audio streams
 - YouTube downloads:
   - DownloadQuality maps to a maximum bitrate cap for audio
-- JioSaavn:
+- Remote Audio:
   - Provides 320 kbps high-quality streams via internal API
   - Quality suffix replacement in URLs to enforce desired bitrate
 - Video:
@@ -183,7 +183,7 @@ flowchart TD
 Start(["User selects quality"]) --> ReadPref["Read SessionManager preference"]
 ReadPref --> Source{"Source?"}
 Source --> |YouTube| YTLogic["Apply AudioQuality/VideoQuality<br/>Filter by bitrate/resolution"]
-Source --> |JioSaavn| JSLogic["Use 320 kbps URL<br/>Replace quality suffix"]
+Source --> |Remote Audio| JSLogic["Use 320 kbps URL<br/>Replace quality suffix"]
 YTLogic --> ExtSel["Select extension by format"]
 JSLogic --> ExtSel
 ExtSel --> Save["Cache URL + extension"]
@@ -197,7 +197,7 @@ Save --> End(["Return Pair(url, extension)"])
 - [VideoQuality.kt:1-17](file://app/src/main/java/com/suvojeet/suvmusic/data/model/VideoQuality.kt#L1-L17)
 - [YouTubeStreamingService.kt:116-133](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L116-L133)
 - [YouTubeStreamingService.kt:287-294](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L287-L294)
-- [JioSaavnRepository.kt:226-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L226-L230)
+- [Remote AudioRepository.kt:226-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L226-L230)
 
 **Section sources**
 - [AudioQuality.kt:6-17](file://app/src/main/java/com/suvojeet/suvmusic/data/model/AudioQuality.kt#L6-L17)
@@ -205,7 +205,7 @@ Save --> End(["Return Pair(url, extension)"])
 - [VideoQuality.kt:6-10](file://app/src/main/java/com/suvojeet/suvmusic/data/model/VideoQuality.kt#L6-L10)
 - [YouTubeStreamingService.kt:116-133](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L116-L133)
 - [YouTubeStreamingService.kt:287-294](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L287-L294)
-- [JioSaavnRepository.kt:226-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L226-L230)
+- [Remote AudioRepository.kt:226-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L226-L230)
 
 ### Bitrate Selection Algorithms
 - YouTube audio:
@@ -214,7 +214,7 @@ Save --> End(["Return Pair(url, extension)"])
 - YouTube video:
   - For high resolutions, pairs best video-only stream with best audio stream
   - Otherwise selects the best muxed stream under the resolution cap
-- JioSaavn:
+- Remote Audio:
   - Decrypts and adjusts stream URL to match requested quality (96/160/320 kbps)
 
 ```mermaid
@@ -231,18 +231,18 @@ F --> G["Cache and return URL + extension"]
 **Diagram sources**
 - [YouTubeStreamingService.kt:123-126](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L123-L126)
 - [YouTubeStreamingService.kt:289-292](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L289-L292)
-- [JioSaavnRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L224-L230)
+- [Remote AudioRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L224-L230)
 
 **Section sources**
 - [YouTubeStreamingService.kt:123-126](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L123-L126)
 - [YouTubeStreamingService.kt:289-292](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L289-L292)
-- [JioSaavnRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L224-L230)
+- [Remote AudioRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L224-L230)
 
 ### Format Detection and Extension Mapping
 - YouTube:
   - Audio extension derived from stream format name ("M4A"/"AAC" → "m4a", "WEBM"/"OPUS" → "opus")
   - Video extension chosen from best video-only stream format ("WEBM" → "webm", else "mp4")
-- JioSaavn:
+- Remote Audio:
   - Returns encrypted URLs; quality suffix replaced to enforce 96/160/320 kbps
 - Download persistence:
   - Files saved with appropriate MIME type and extension ("audio/opus" or "audio/m4a")
@@ -255,35 +255,35 @@ class YouTubeStreamingService {
 -resolveAudioExtension(formatName)
 -resolveVideoExtension(formatName)
 }
-class JioSaavnRepository {
+class Remote AudioRepository {
 +getStreamUrl(songId, quality)
 -decryptUrl(encrypted)
 -replaceQualitySuffix(url, quality)
 }
 YouTubeStreamingService --> YouTubeStreamingService : "selects extension"
-JioSaavnRepository --> JioSaavnRepository : "adjusts quality suffix"
+Remote AudioRepository --> Remote AudioRepository : "adjusts quality suffix"
 ```
 
 **Diagram sources**
 - [YouTubeStreamingService.kt:129-133](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L129-L133)
 - [YouTubeStreamingService.kt:234-235](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L234-L235)
 - [YouTubeStreamingService.kt:294](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L294)
-- [JioSaavnRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L224-L230)
+- [Remote AudioRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L224-L230)
 
 **Section sources**
 - [YouTubeStreamingService.kt:129-133](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L129-L133)
 - [YouTubeStreamingService.kt:234-235](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L234-L235)
 - [YouTubeStreamingService.kt:294](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L294)
-- [JioSaavnRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L224-L230)
+- [Remote AudioRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L224-L230)
 
 ### Automatic Fallback Mechanisms
 - YouTube:
   - If primary watch URL fails, tries music.youtube.com fallback
   - For video, falls back from video-only+audio pairing to muxed streams
-- JioSaavn:
+- Remote Audio:
   - Uses encrypted URL decryption and replaces quality suffix to match requested bitrate
 - Player:
-  - Infers codec and bitrate from ExoPlayer format or URL tags; includes YouTube itag and JioSaavn bitrate hints
+  - Infers codec and bitrate from ExoPlayer format or URL tags; includes YouTube itag and Remote Audio bitrate hints
 
 ```mermaid
 sequenceDiagram
@@ -310,14 +310,14 @@ end
 **Section sources**
 - [YouTubeStreamingService.kt:83-88](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L83-L88)
 - [YouTubeStreamingService.kt:213-266](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/youtube/streaming/YouTubeStreamingService.kt#L213-L266)
-- [JioSaavnRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L224-L230)
+- [Remote AudioRepository.kt:224-230](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L224-L230)
 - [MusicPlayer.kt:1998-2026](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L1998-L2026)
 
 ### Integration with Source-Specific Endpoints
 - YouTube:
   - Uses NewPipe extractor to fetch streams and related items
   - Provides both audio-only and video-only streams for adaptive pairing
-- JioSaavn:
+- Remote Audio:
   - Internal API endpoint for song details and encrypted stream URLs
   - Quality suffix replacement ensures requested bitrate
 
@@ -325,16 +325,16 @@ end
 graph LR
 YTRepo["YouTubeRepository"] --> YTSvc["YouTubeStreamingService"]
 YTRepo --> NP["NewPipe Extractor"]
-JSRepo["JioSaavnRepository"] --> API["JioSaavn Internal API"]
+JSRepo["Remote AudioRepository"] --> API["Remote Audio Internal API"]
 ```
 
 **Diagram sources**
 - [YouTubeRepository.kt:264-281](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L264-L281)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
 
 **Section sources**
 - [YouTubeRepository.kt:264-281](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L264-L281)
-- [JioSaavnRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L197-L240)
+- [Remote AudioRepository.kt:197-240](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L197-L240)
 
 ### Format Validation and Compatibility
 - File header checks detect compressed formats (ID3, fLaC, MP4/AAC, Ogg) to ensure waveform extraction compatibility
@@ -412,7 +412,7 @@ SM --> AQ["AudioQuality"]
 SM --> DQ["DownloadQuality"]
 SM --> VQ["VideoQuality"]
 YTRepo["YouTubeRepository"] --> YTSvc["YouTubeStreamingService"]
-JSRepo["JioSaavnRepository"] --> JSRepo
+JSRepo["Remote AudioRepository"] --> JSRepo
 DR["DownloadRepository"] --> YTRepo
 DR --> JSRepo
 DR --> SM
@@ -449,13 +449,13 @@ MP --> FM["file_mapper.cpp"]
 
 ## Troubleshooting Guide
 - No sound or decoder errors:
-  - Check codec inference from URL tags for YouTube (itag) and JioSaavn (bitrate indicators)
+  - Check codec inference from URL tags for YouTube (itag) and Remote Audio (bitrate indicators)
   - Verify format compatibility; compressed headers are validated before waveform extraction
 - Download failures:
   - Inspect cache clearing and retry logic in YouTubeStreamingService
   - Confirm download queue processing and foreground service lifecycle
 - Quality mismatch:
-  - Verify DownloadQuality vs source capabilities (YouTube max 256 kbps, JioSaavn up to 320 kbps)
+  - Verify DownloadQuality vs source capabilities (YouTube max 256 kbps, Remote Audio up to 320 kbps)
 
 **Section sources**
 - [MusicPlayer.kt:1998-2026](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L1998-L2026)
@@ -464,4 +464,4 @@ MP --> FM["file_mapper.cpp"]
 - [DownloadService.kt:164-211](file://app/src/main/java/com/suvojeet/suvmusic/service/DownloadService.kt#L164-L211)
 
 ## Conclusion
-The system provides a robust, configurable pipeline for selecting and persisting high-quality audio across YouTube and JioSaavn. Users can balance quality and storage using explicit quality tiers and source selection. The architecture leverages source-specific endpoints, adaptive bitrate selection, and reliable caching to deliver efficient downloads and playback.
+The system provides a robust, configurable pipeline for selecting and persisting high-quality audio across YouTube and Remote Audio. Users can balance quality and storage using explicit quality tiers and source selection. The architecture leverages source-specific endpoints, adaptive bitrate selection, and reliable caching to deliver efficient downloads and playback.

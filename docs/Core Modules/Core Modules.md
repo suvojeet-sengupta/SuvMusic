@@ -162,7 +162,7 @@ DOMAIN --> MODEL
 - Song
   - Purpose: Unified representation of playable items from multiple sources.
   - Key attributes: identifiers, metadata, source, and optional local URI.
-  - Factories: fromYouTube, fromLocal, fromJioSaavn encapsulate creation logic and validation.
+  - Factories: fromYouTube, fromLocal, fromRemote Audio encapsulate creation logic and validation.
 - Album and Playlist
   - Purpose: Aggregate entities for library management and UI presentation.
 - Implications:
@@ -183,7 +183,7 @@ class Song {
 +Uri localUri
 +fromYouTube(...)
 +fromLocal(...)
-+fromJioSaavn(...)
++fromRemote Audio(...)
 }
 class Album {
 +String id

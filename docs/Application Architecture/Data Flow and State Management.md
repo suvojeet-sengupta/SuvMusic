@@ -8,7 +8,7 @@
 - [PlayerViewModel.kt](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt)
 - [PlayerState.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/model/PlayerState.kt)
 - [YouTubeRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt)
-- [JioSaavnRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt)
+- [Remote AudioRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt)
 - [DownloadRepository.kt](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt)
 - [RecommendationEngine.kt](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt)
 - [SmartQueueManager.kt](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt)
@@ -31,7 +31,7 @@ This document explains the unidirectional data flow and reactive state managemen
 ## Project Structure
 SuvMusic follows a layered architecture:
 - UI layer: Jetpack Compose screens and ViewModel classes
-- Domain layer: Repositories encapsulating data sources (YouTube, JioSaavn, local)
+- Domain layer: Repositories encapsulating data sources (YouTube, Remote Audio, local)
 - Player subsystem: MusicPlayer orchestrating playback and state
 - Recommendation subsystem: RecommendationEngine and SmartQueueManager
 - Session management: SessionManager coordinating persistent settings and state
@@ -48,7 +48,7 @@ PS["PlayerState"]
 end
 subgraph "Domain Layer"
 YTR["YouTubeRepository"]
-JSR["JioSaavnRepository"]
+JSR["Remote AudioRepository"]
 DR["DownloadRepository"]
 end
 subgraph "Recommendation"
@@ -75,7 +75,7 @@ SQM --> RE
 - [PlayerViewModel.kt:57-75](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L57-L75)
 - [MusicPlayer.kt:58-72](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L58-L72)
 - [YouTubeRepository.kt:52-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L52-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [DownloadRepository.kt:40-46](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L40-L46)
 - [RecommendationEngine.kt:41-49](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt#L41-L49)
 - [SmartQueueManager.kt:23-25](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt#L23-L25)
@@ -86,7 +86,7 @@ SQM --> RE
 - [PlayerViewModel.kt:57-75](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L57-L75)
 - [MusicPlayer.kt:58-72](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L58-L72)
 - [YouTubeRepository.kt:52-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L52-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [DownloadRepository.kt:40-46](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L40-L46)
 - [RecommendationEngine.kt:41-49](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt#L41-L49)
 - [SmartQueueManager.kt:23-25](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt#L23-L25)
@@ -96,7 +96,7 @@ SQM --> RE
 - SessionManager: Central coordinator for persistent settings and reactive state (DataStore-backed). Exposes Flows for UI to observe and react to changes.
 - MusicPlayer: Reactive playback state container using StateFlow. Bridges UI and the media session service.
 - PlayerViewModel: Orchestrates UI actions, observes MusicPlayer state, and coordinates repositories for lyrics, comments, related songs, downloads, and recommendations.
-- YouTubeRepository and JioSaavnRepository: Encapsulate remote data sources with caching and pagination.
+- YouTubeRepository and Remote AudioRepository: Encapsulate remote data sources with caching and pagination.
 - DownloadRepository: Tracks download progress and state using StateFlow and mutex-controlled concurrency.
 - RecommendationEngine and SmartQueueManager: Provide intelligent queue management and recommendation updates.
 
@@ -105,7 +105,7 @@ SQM --> RE
 - [MusicPlayer.kt:83-84](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L83-L84)
 - [PlayerViewModel.kt:77-83](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L77-L83)
 - [YouTubeRepository.kt:239-242](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L239-L242)
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
 - [DownloadRepository.kt:60-68](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L60-L68)
 - [RecommendationEngine.kt:509-581](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt#L509-L581)
 - [SmartQueueManager.kt:54-105](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt#L54-L105)
@@ -271,10 +271,10 @@ PV->>MP : addToQueue(newSongs)
 - [PlayerViewModel.kt:330-375](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L330-L375)
 - [PlayerViewModel.kt:767-782](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L767-L782)
 
-### YouTubeRepository and JioSaavnRepository: Data Sources
+### YouTubeRepository and Remote AudioRepository: Data Sources
 Repositories encapsulate remote APIs and caching:
 - YouTubeRepository: Uses NewPipe for extraction and internal API for browsing/home sections. Implements pagination and deduplication.
-- JioSaavnRepository: Provides caching for search, details, stream URLs, and playlists.
+- Remote AudioRepository: Provides caching for search, details, stream URLs, and playlists.
 
 ```mermaid
 flowchart TD
@@ -292,12 +292,12 @@ ReturnResult --> End
 
 **Diagram sources**
 - [YouTubeRepository.kt:284-309](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L284-L309)
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
 
 **Section sources**
 - [YouTubeRepository.kt:239-242](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L239-L242)
 - [YouTubeRepository.kt:284-309](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L284-L309)
-- [JioSaavnRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L59-L87)
+- [Remote AudioRepository.kt:59-87](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L59-L87)
 
 ### DownloadRepository: Download Progress and State
 DownloadRepository manages download queues, progress tracking, and file persistence. It uses StateFlow for:
@@ -358,7 +358,7 @@ The following diagram shows key dependencies among major components:
 graph LR
 SM["SessionManager"] --> MP["MusicPlayer"]
 MP --> YTR["YouTubeRepository"]
-MP --> JSR["JioSaavnRepository"]
+MP --> JSR["Remote AudioRepository"]
 PV["PlayerViewModel"] --> MP
 PV --> YTR
 PV --> JSR
@@ -372,7 +372,7 @@ SQM["SmartQueueManager"] --> RE
 - [MusicPlayer.kt:58-72](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L58-L72)
 - [PlayerViewModel.kt:58-74](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L58-L74)
 - [YouTubeRepository.kt:52-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L52-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [DownloadRepository.kt:40-46](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L40-L46)
 - [RecommendationEngine.kt:41-49](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt#L41-L49)
 - [SmartQueueManager.kt:23-25](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt#L23-L25)
@@ -381,7 +381,7 @@ SQM["SmartQueueManager"] --> RE
 - [MusicPlayer.kt:58-72](file://app/src/main/java/com/suvojeet/suvmusic/player/MusicPlayer.kt#L58-L72)
 - [PlayerViewModel.kt:58-74](file://app/src/main/java/com/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel.kt#L58-L74)
 - [YouTubeRepository.kt:52-62](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/YouTubeRepository.kt#L52-L62)
-- [JioSaavnRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L31-L34)
+- [Remote AudioRepository.kt:31-34](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L31-L34)
 - [DownloadRepository.kt:40-46](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/DownloadRepository.kt#L40-L46)
 - [RecommendationEngine.kt:41-49](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/RecommendationEngine.kt#L41-L49)
 - [SmartQueueManager.kt:23-25](file://app/src/main/java/com/suvojeet/suvmusic/recommendation/SmartQueueManager.kt#L23-L25)
@@ -389,7 +389,7 @@ SQM["SmartQueueManager"] --> RE
 ## Performance Considerations
 - Reactive UI updates: PlayerViewModel uses StateFlow and map/distinctUntilChanged to minimize recompositions and avoid unnecessary UI churn.
 - Queue lookahead: SmartQueueManager keeps a minimum lookahead to prevent stalls in autoplay/radio modes.
-- Caching: YouTubeRepository and JioSaavnRepository implement in-memory caches to reduce network requests and parsing overhead.
+- Caching: YouTubeRepository and Remote AudioRepository implement in-memory caches to reduce network requests and parsing overhead.
 - Concurrency control: DownloadRepository uses a Mutex and active job tracking to avoid duplicate downloads and resource contention.
 - DataStore and EncryptedSharedPreferences: Efficient, type-safe persistence with minimal serialization overhead.
 - Widget updates: MusicPlayer filters frequent progress updates to reduce widget update frequency.

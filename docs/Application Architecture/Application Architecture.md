@@ -227,7 +227,7 @@ class AppModule {
 +provideLocalAudioRepository()
 +provideOkHttpClient()
 +provideGson()
-+provideJioSaavnRepository(...)
++provideRemote AudioRepository(...)
 +provideMusicPlayer(...)
 +provideLyricsRepository(...)
 +provideListenTogetherClient()
@@ -251,7 +251,7 @@ RepositoryModule --> LibraryRepository : "binds"
 - [RepositoryModule.kt:10-18](file://core/data/src/main/java/com/suvojeet/suvmusic/core/data/di/RepositoryModule.kt#L10-L18)
 
 ### Data Access and Domain Models
-- Domain model Song encapsulates fields for YouTube, local, and JioSaavn sources.
+- Domain model Song encapsulates fields for YouTube, local, and Remote Audio sources.
 - YouTubeRepository orchestrates search, streaming, and browsing using NewPipe and internal APIs.
 - AppDatabase defines Room entities and DAOs for library, history, genres, and dislikes.
 

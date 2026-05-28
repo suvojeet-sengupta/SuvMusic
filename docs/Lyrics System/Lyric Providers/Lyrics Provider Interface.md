@@ -194,7 +194,7 @@ The model captures parsed lyrics and metadata:
   - startTimeMs/endTimeMs: Word-level timing in milliseconds.
 
 Provider types:
-- AUTO, LRCLIB, JIOSAAVN, YOUTUBE, BETTER_LYRICS, SIMP_MUSIC, KUGOU, LOCAL.
+- AUTO, LRCLIB, REMOTE, YOUTUBE, BETTER_LYRICS, SIMP_MUSIC, KUGOU, LOCAL.
 
 **Section sources**
 - [Lyrics.kt:1-34](file://media-source/src/main/java/com/luvojeet/suvmusic/providers/lyrics/Lyrics.kt#L1-L34)
@@ -210,7 +210,7 @@ LyricsRepository implements a robust selection and fallback strategy:
   1) Local lyrics provider (highest priority).
   2) External providers (BetterLyrics, SimpMusic, KuGou) in preferred order.
   3) LRCLIB synced lyrics.
-  4) Source lyrics (JioSaavn/YouTube).
+  4) Source lyrics (Remote Audio/YouTube).
   5) LRCLIB plain lyrics fallback.
 
 - Explicit provider mode:
@@ -242,7 +242,7 @@ ExtSuccess --> |No| ExtLoop
 ExtLoop --> LRCLibSync["Try LRCLIB synced"]
 LRCLibSync --> LRCLibSyncOK{"Non-empty?"}
 LRCLibSyncOK --> |Yes| CacheLRCLibSync["Cache and return"]
-LRCLibSyncOK --> |No| Source["Try source lyrics (JioSaavn/YouTube)"]
+LRCLibSyncOK --> |No| Source["Try source lyrics (Remote Audio/YouTube)"]
 Source --> SourceOK{"Non-empty?"}
 SourceOK --> |Yes| CacheSource["Cache and return"]
 SourceOK --> |No| LRCLibPlain["Try LRCLIB plain lyrics"]

@@ -158,7 +158,7 @@ TasteProfileBuilder aggregates listening history into:
 - Frequently skipped songs and disliked artists (via thresholds).
 - Liked songs/artists sets.
 - Recent/top song IDs.
-- Source distribution (YOUTUBE/JIOSAAVN/LOCAL).
+- Source distribution (YOUTUBE/REMOTE/LOCAL).
 - Genre vectors:
   - Full affinity vector (weighted by play counts).
   - Recent session vector (last N plays).

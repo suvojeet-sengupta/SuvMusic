@@ -255,18 +255,18 @@
 ### New Features
 
 ### Dual Music Source & High-Fidelity Audio
-- **JioSaavn Integration**: Added full support for JioSaavn as a music source, enabling 320kbps MP3 streaming capabilities.
-- **Source Selection**: Implemented a new "Default Music Source" selection during onboarding (Welcome Screen) and in Settings, allowing users to prioritize between YouTube Music and JioSaavn.
-- **Dynamic Content**: Search tabs and Home content now dynamically adapt based on the selected primary music source (e.g., JioSaavn tabs appear first if selected).
+- **Remote Audio Integration**: Added full support for Remote Audio as a music source, enabling 320kbps MP3 streaming capabilities.
+- **Source Selection**: Implemented a new "Default Music Source" selection during onboarding (Welcome Screen) and in Settings, allowing users to prioritize between YouTube Music and Remote Audio.
+- **Dynamic Content**: Search tabs and Home content now dynamically adapt based on the selected primary music source (e.g., Remote Audio tabs appear first if selected).
 - **Audio Quality Indicators**: Added explicit quality badges in the player (e.g., "320kbps") and dynamic labels in Settings to reflect the active source's bitrate capabilities.
-- **Smart Sharing**: Enhanced the sharing functionality to generate native JioSaavn links when sharing songs sourced from JioSaavn.
+- **Smart Sharing**: Enhanced the sharing functionality to generate native Remote Audio links when sharing songs sourced from Remote Audio.
 
 ### OTA & Updates
 - **In-App Updates (OTA)**: Integrated support for Over-The-Air updates, featuring a new scrollable update dialog to view release notes comfortably within the app.
 
 ### Artist & Credits Experience
 - **Artist Screen Redesign**: Completely overhauled the Artist Screen with an Apple Music-inspired UI, featuring high-resolution imagery and improved navigation.
-- **Enhanced Song Credits**: Redesigned the "View Credits" sheet to display detailed artist information, including profile photos sourced from YouTube Music/JioSaavn.
+- **Enhanced Song Credits**: Redesigned the "View Credits" sheet to display detailed artist information, including profile photos sourced from YouTube Music/Remote Audio.
 
 ### Ringtone Management
 - **Set as Ringtone**: Added native support to set the currently playing song as the device ringtone directly from the player menu.
@@ -295,4 +295,4 @@
 ## Technical Updates
 
 - **Architecture**: Refactored `AppModule` and Repositories to support dependency injection for the dual-source architecture.
-- **Caching**: Implemented intelligent caching for JioSaavn home content to improve offline resilience and load times.
+- **Caching**: Implemented intelligent caching for Remote Audio home content to improve offline resilience and load times.

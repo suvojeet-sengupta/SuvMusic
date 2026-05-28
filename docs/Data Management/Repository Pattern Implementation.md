@@ -35,7 +35,7 @@ This document explains the repository pattern implementation in SuvMusic with a 
 The repository pattern spans three layers:
 - Domain: Defines the LibraryRepository interface and domain models.
 - Data: Implements the repository using Room DAOs and entities.
-- App: Integrates network repositories (YouTube, JioSaavn) and provides DI bindings.
+- App: Integrates network repositories (YouTube, Remote Audio) and provides DI bindings.
 
 ```mermaid
 graph TB
@@ -113,7 +113,7 @@ Key responsibilities:
 The repository pattern enforces separation of concerns:
 - Domain: Pure Kotlin interfaces and models.
 - Data: Room-backed implementation plus DI wiring.
-- App: Network repositories (YouTube, JioSaavn) consume the library repository for persistence and expose higher-level features.
+- App: Network repositories (YouTube, Remote Audio) consume the library repository for persistence and expose higher-level features.
 
 ```mermaid
 classDiagram
@@ -282,13 +282,13 @@ LIBRARY_ITEMS ||--o{ PLAYLIST_SONGS : "contains"
 
 ### Data Source Integration
 - Local storage: Room persists library items and playlist songs.
-- Network repositories: YouTubeRepository and JioSaavnRepository fetch remote data and can persist results via LibraryRepository for offline-first experiences.
+- Network repositories: YouTubeRepository and Remote AudioRepository fetch remote data and can persist results via LibraryRepository for offline-first experiences.
 - Local audio: LocalAudioRepository reads from MediaStore and converts to domain models for UI consumption.
 
 ```mermaid
 graph LR
 YT["YouTubeRepository.kt"] --> LIB["LibraryRepository.kt"]
-JS["JioSaavnRepository.kt"] --> LIB
+JS["Remote AudioRepository.kt"] --> LIB
 LA["LocalAudioRepository.kt"] -. "reads" .- LIB
 LIB --> IMPL["LibraryRepositoryImpl.kt"]
 IMPL --> DAO["LibraryDao.kt"]
@@ -309,7 +309,7 @@ DAO --> DB["AppDatabase.kt"]
 - [LibraryRepositoryImpl.kt:19-252](file://core/data/src/main/java/com/suvojeet/suvmusic/core/data/repository/LibraryRepositoryImpl.kt#L19-L252)
 
 ### Data Caching Strategies
-- In-memory caches: JioSaavnRepository maintains in-memory caches for search results, song details, stream URLs, and playlists to reduce network load.
+- In-memory caches: Remote AudioRepository maintains in-memory caches for search results, song details, stream URLs, and playlists to reduce network load.
 - Database caching: Room stores library items and playlist songs; Flow-based APIs propagate changes reactively to UI.
 - Network caching: CacheModule configures OkHttp/ExoPlayer cache for downloads and streaming to improve reliability and performance.
 
@@ -326,11 +326,11 @@ ReturnMem --> EmitFlow
 ```
 
 **Diagram sources**
-- [JioSaavnRepository.kt:35-40](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L35-L40)
+- [Remote AudioRepository.kt:35-40](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L35-L40)
 - [CacheModule.kt:70-94](file://app/src/main/java/com/suvojeet/suvmusic/di/CacheModule.kt#L70-L94)
 
 **Section sources**
-- [JioSaavnRepository.kt:35-40](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/JioSaavnRepository.kt#L35-L40)
+- [Remote AudioRepository.kt:35-40](file://app/src/main/java/com/suvojeet/suvmusic/data/repository/Remote AudioRepository.kt#L35-L40)
 - [CacheModule.kt:70-94](file://app/src/main/java/com/suvojeet/suvmusic/di/CacheModule.kt#L70-L94)
 
 ### Error Handling Patterns
@@ -392,7 +392,7 @@ Dao --> DB["AppDatabase.kt"]
 Impl --> Ent1["LibraryEntity.kt"]
 Impl --> Ent2["PlaylistSongEntity.kt"]
 NetYT["YouTubeRepository.kt"] --> RepoIF
-NetJS["JioSaavnRepository.kt"] --> RepoIF
+NetJS["Remote AudioRepository.kt"] --> RepoIF
 Local["LocalAudioRepository.kt"] -. "uses" .- RepoIF
 ```
 
@@ -412,7 +412,7 @@ Local["LocalAudioRepository.kt"] -. "uses" .- RepoIF
 ## Performance Considerations
 - Prefer Flow-based reactive streams for UI to minimize redundant recompositions.
 - Use Room transactions (@Transaction) to batch writes and avoid intermediate UI flicker.
-- Cache frequently accessed data in-memory (e.g., JioSaavnRepository caches) to reduce network latency.
+- Cache frequently accessed data in-memory (e.g., Remote AudioRepository caches) to reduce network latency.
 - Offload IO-bound operations to Dispatchers.IO and avoid blocking the main thread.
 
 ## Troubleshooting Guide

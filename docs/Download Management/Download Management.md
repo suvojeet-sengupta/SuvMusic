@@ -379,7 +379,7 @@ Embed --> Done["Add to downloadedSongs"]
 ## Dependency Analysis
 - DownloadService depends on DownloadRepository for queue operations and progress observation.
 - DownloadRepository depends on:
-  - YouTube/JioSaavn repositories for stream URLs
+  - YouTube/Remote Audio repositories for stream URLs
   - OkHttp client for network I/O
   - MediaStore/DataStore for storage persistence
   - TaggingUtils for metadata embedding
@@ -392,7 +392,7 @@ DLS["DownloadService"] --> DR["DownloadRepository"]
 DVM["DownloadsViewModel"] --> DR
 DS["DownloadsScreen"] --> DVM
 DR --> YT["YouTubeRepository"]
-DR --> JS["JioSaavnRepository"]
+DR --> JS["Remote AudioRepository"]
 DR --> OK["OkHttpClient"]
 DR --> MS["MediaStore / Public Folder"]
 DR --> TU["TaggingUtils"]

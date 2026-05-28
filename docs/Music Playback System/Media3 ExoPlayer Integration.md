@@ -366,7 +366,7 @@ CustomNotificationProvider --> MediaNotification : "creates"
   - Repositories for stream URL resolution and metadata.
   - Exposed services for spatial audio and TTS.
 - MusicPlayerService depends on:
-  - Repositories for YouTube/JioSaavn data.
+  - Repositories for YouTube/Remote Audio data.
   - ExoPlayer for playback and DataSource factories.
   - AudioARManager and SpatialAudioProcessor for effects.
   - SessionManager for settings and sleep timer.

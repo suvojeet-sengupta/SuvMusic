@@ -293,7 +293,7 @@ LibraryDao --> PlaylistSongEntity : "persists"
 
 ### Domain Models
 Immutable models define the business entities:
-- Song: supports multiple sources (YouTube, YouTube Music, Local, JioSaavn) and optional local URIs.
+- Song: supports multiple sources (YouTube, YouTube Music, Local, Remote Audio) and optional local URIs.
 - Album and Artist: aggregates and metadata for discovery and navigation.
 - Playlist and PlaylistDisplayItem: playlist content and UI-friendly display representation.
 - LibraryItem: generic library item with type discriminator.

@@ -392,7 +392,7 @@ ReplaceSongs --> End
 - [LibraryRepository.kt:11-36](file://core/domain/src/main/java/com/suvojeet/suvmusic/core/domain/repository/LibraryRepository.kt#L11-L36)
 
 ### Domain Models and Mappings
-- Song: Encapsulates playback metadata and source (YouTube, YouTube Music, JioSaavn, Local, Downloaded).
+- Song: Encapsulates playback metadata and source (YouTube, YouTube Music, Remote Audio, Local, Downloaded).
 - Playlist: Contains a list of songs and metadata.
 - LibraryItem: Lightweight representation of saved items (PLAYLIST, ALBUM, ARTIST).
 

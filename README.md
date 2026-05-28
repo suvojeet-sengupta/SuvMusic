@@ -99,7 +99,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 |----------|-------------|
 | [Music Playback System](docs/Music%20Playback%20System/Music%20Playback%20System.md) | Media3 ExoPlayer integration and playback architecture |
 | [Audio Processing Engine](docs/Audio%20Processing%20Engine/Audio%20Processing%20Engine.md) | Native C++ audio engine and DSP features |
-| [Multi-Source Streaming](docs/Multi-Source%20Streaming/Multi-Source%20Streaming.md) | YouTube, JioSaavn, and local audio integration |
+| [Multi-Source Streaming](docs/Multi-Source%20Streaming/Multi-Source%20Streaming.md) | YouTube, Remote Audio, and local audio integration |
 | [Lyrics System](docs/Lyrics%20System/Lyrics%20System.md) | Multi-provider lyrics fetching and display |
 | [Download Management](docs/Download%20Management/Download%20Management.md) | Background downloads and file management |
 

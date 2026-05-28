@@ -191,7 +191,7 @@ YOUTUBE
 YOUTUBE_MUSIC
 LOCAL
 DOWNLOADED
-JIOSAAVN
+REMOTE
 }
 Song --> SongSource : "uses"
 ```

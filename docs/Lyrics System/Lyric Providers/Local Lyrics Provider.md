@@ -160,7 +160,7 @@ AUTO mode flow highlights:
 - Attempt LocalLyricsProvider first.
 - If not found, iterate enabled external providers (BetterLyrics, SimpMusic, KuGou).
 - Try LRCLIB for synced lyrics, then fallback to plain lyrics.
-- As a last resort, fetch from the original source (JioSaavn/YouTube) when applicable.
+- As a last resort, fetch from the original source (Remote Audio/YouTube) when applicable.
 
 Caching:
 - Stores results under both AUTO and the specific provider key to avoid recomputation.
