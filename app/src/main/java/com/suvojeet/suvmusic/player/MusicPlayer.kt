@@ -1068,6 +1068,10 @@ class MusicPlayer @Inject constructor(
             val isExpiredUrl = (isHttpError && (responseCode == 403 || responseCode == 410))
             val isNetworkError = cause is java.net.UnknownHostException || cause is java.net.SocketTimeoutException
             
+            if (isHttpError) {
+                android.util.Log.e("SuvMusicJioSaavn", "HTTP Error detected during playback! Code: $responseCode, Song: ${_playerState.value.currentSong?.title}")
+            }
+            
             // Critical: Audio Sink or Decoder errors often cause the "No Sound" issue
             val isAudioSinkError = error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
                                  error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
@@ -1488,6 +1492,7 @@ class MusicPlayer @Inject constructor(
                 val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (streamUrl != null && streamUrl.contains("saavncdn.com"))
                 
                 if (isJioSaavnSource) {
+                    android.util.Log.i("SuvMusicJioSaavn", "Applying mandatory playback headers for: ${song.title}")
                     mediaItemBuilder.setRequestMetadata(
                         MediaItem.RequestMetadata.Builder()
                             .setExtras(android.os.Bundle().apply {
@@ -2095,6 +2100,7 @@ class MusicPlayer @Inject constructor(
         val isJioSaavnSource = song.source == SongSource.JIOSAAVN || (uri != null && uri.contains("saavncdn.com"))
         
         if (isJioSaavnSource) {
+            android.util.Log.i("SuvMusicJioSaavn", "Applying mandatory headers (Queue pre-resolve) for: ${song.title}")
             builder.setRequestMetadata(
                 MediaItem.RequestMetadata.Builder()
                     .setExtras(android.os.Bundle().apply {
