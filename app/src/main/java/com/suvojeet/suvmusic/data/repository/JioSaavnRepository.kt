@@ -157,10 +157,10 @@ class JioSaavnRepository @Inject constructor(
         try {
             android.util.Log.i("SuvMusicJioSaavn", "Fetching details for song: $songId")
             val response = apiService.getSongDetails(songId)
-            val result = response.data.firstOrNull()?.let { parseSongDto(it) }
+            val result = response.data?.firstOrNull()?.let { parseSongDto(it) }
             
             if (result == null) {
-                android.util.Log.e("SuvMusicJioSaavn", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data.size}")
+                android.util.Log.e("SuvMusicJioSaavn", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data?.size ?: "null"}")
             } else {
                 android.util.Log.i("SuvMusicJioSaavn", "Successfully fetched details for: ${result.title}")
             }
@@ -902,9 +902,10 @@ class JioSaavnRepository @Inject constructor(
     
     private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnSongDto): Song? {
         return try {
-            val streamUrl = dto.downloadUrl
+            val downloadUrls = dto.downloadUrl ?: emptyList()
+            val streamUrl = downloadUrls
                 .firstOrNull { it.quality == "320kbps" }?.url
-                ?: dto.downloadUrl.lastOrNull()?.url
+                ?: downloadUrls.lastOrNull()?.url
 
             val metadata = com.suvojeet.suvmusic.core.model.JioSaavnMetadata(
                 label = dto.label?.decodeHtml(),
@@ -915,23 +916,24 @@ class JioSaavnRepository @Inject constructor(
                 hasLyrics = dto.hasLyrics,
                 year = dto.year,
                 releaseDate = dto.releaseDate,
-                artists = dto.artists?.all?.map { artist ->
+                artists = dto.artists?.all?.mapNotNull { artist ->
+                    val name = artist.name ?: return@mapNotNull null
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
-                        name = artist.name.decodeHtml(),
+                        name = name.decodeHtml(),
                         role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
-                        thumbnailUrl = artist.image.lastOrNull()?.url,
+                        thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
                     )
                 } ?: emptyList()
             )
 
             Song.fromJioSaavn(
-                songId = dto.id,
-                title = dto.name.decodeHtml(),
-                artist = dto.artists?.primary?.joinToString { it.name }?.decodeHtml() ?: "Unknown Artist",
+                songId = dto.id ?: return null,
+                title = (dto.name ?: "Unknown").decodeHtml(),
+                artist = dto.artists?.primary?.joinToString { it.name ?: "" }?.decodeHtml() ?: "Unknown Artist",
                 album = dto.album?.name?.decodeHtml() ?: "",
                 duration = (dto.duration ?: 0L) * 1000,
-                thumbnailUrl = dto.image.lastOrNull()?.url,
+                thumbnailUrl = dto.image?.lastOrNull()?.url,
                 streamUrl = streamUrl,
                 releaseDate = dto.releaseDate,
                 jioSaavnMetadata = metadata
