@@ -62,7 +62,7 @@ class JioSaavnRepository @Inject constructor(
 
         try {
             val response = apiService.searchSongs(query)
-            val songs = response.data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+            val songs = response.data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
             
             if (songs.isNotEmpty()) {
                 searchCache[cacheKey] = songs
@@ -214,7 +214,7 @@ class JioSaavnRepository @Inject constructor(
 
         try {
             val response = apiService.getSongSuggestions(songId)
-            val songs = response.data.mapNotNull { parseSongDto(it) }
+            val songs = response.data?.mapNotNull { parseSongDto(it) } ?: emptyList()
             
             if (songs.isNotEmpty()) {
                 relatedCache[songId] = songs
@@ -284,11 +284,11 @@ class JioSaavnRepository @Inject constructor(
             val data = response.data
 
             // In some wrapper versions, playlist info might be in 'playlists' or direct 'name/id' fields
-            val playlistObj = data.playlists?.results?.firstOrNull()
+            val playlistObj = data?.playlists?.results?.firstOrNull()
             val title = playlistObj?.name ?: "" 
             val image = playlistObj?.image?.lastOrNull()?.url
             
-            val songs = data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+            val songs = data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
 
             if (songs.isEmpty()) return@withContext null
 
@@ -314,14 +314,14 @@ class JioSaavnRepository @Inject constructor(
     suspend fun getAlbum(albumId: String): Playlist? = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getAlbumDetails(albumId)
-            val songs = response.data.mapNotNull { parseSongDto(it) }
+            val songs = response.data?.mapNotNull { parseSongDto(it) } ?: emptyList()
             
             if (songs.isEmpty()) return@withContext null
             
-            val firstSong = response.data.first()
+            val firstSong = response.data?.firstOrNull() ?: return@withContext null
             val albumName = firstSong.album?.name ?: "Album"
-            val image = firstSong.image.lastOrNull()?.url
-            val artist = firstSong.artists?.primary?.joinToString { it.name } ?: ""
+            val image = firstSong.image?.lastOrNull()?.url
+            val artist = firstSong.artists?.primary?.joinToString { it.name ?: "" } ?: ""
 
             Playlist(
                 id = albumId,
@@ -1112,39 +1112,41 @@ class JioSaavnRepository @Inject constructor(
             val data = response.data
 
             // Parse Songs
-            var songs = data.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+            var songs = data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
             if (songs.isEmpty()) {
                 android.util.Log.w("JioSaavn", "searchAll('$query'): autocomplete returned no songs, falling back to search.getResults")
                 songs = search(query)
             }
 
             // Parse Albums
-            val albums = data.albums?.results?.mapNotNull { dto ->
+            val albums = data?.albums?.results?.mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
                 com.suvojeet.suvmusic.core.model.Album(
-                    id = dto.id,
-                    title = dto.name.decodeHtml(),
+                    id = id,
+                    title = (dto.name ?: "Album").decodeHtml(),
                     artist = "", // Album DTO in new API might not have direct artist string
-                    thumbnailUrl = dto.image.lastOrNull()?.url,
+                    thumbnailUrl = dto.image?.lastOrNull()?.url,
                     year = dto.year
                 )
             } ?: emptyList()
             
             // Parse Artists
-            val artists = data.artists?.results?.mapNotNull { dto ->
+            val artists = data?.artists?.results?.mapNotNull { dto ->
                 com.suvojeet.suvmusic.core.model.Artist(
                     id = dto.id ?: "",
-                    name = dto.name.decodeHtml(),
-                    thumbnailUrl = dto.image.lastOrNull()?.url
+                    name = (dto.name ?: "Artist").decodeHtml(),
+                    thumbnailUrl = dto.image?.lastOrNull()?.url
                 )
             } ?: emptyList()
 
             // Parse Playlists
-            val playlists = data.playlists?.results?.mapNotNull { dto ->
+            val playlists = data?.playlists?.results?.mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
                 Playlist(
-                    id = dto.id,
-                    title = dto.name.decodeHtml(),
+                    id = id,
+                    title = (dto.name ?: "Playlist").decodeHtml(),
                     author = "JioSaavn",
-                    thumbnailUrl = dto.image.lastOrNull()?.url,
+                    thumbnailUrl = dto.image?.lastOrNull()?.url,
                     songs = emptyList()
                 )
             } ?: emptyList()
