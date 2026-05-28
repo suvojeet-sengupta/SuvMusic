@@ -44,15 +44,15 @@
     <fields>;
 }
 
-# Strip android.util.Log calls in the release build. Log tags are
-# otherwise visible in DEX strings and leak code-path names.
+# Strip only verbose / debug Log calls in release. Info / warn / error
+# survive so diagnostic logs (stream resolution traces, NewPipe failures,
+# cross-source fallback paths) can be captured from a shipping APK via
+# logcat. The DEX-string leak risk is concentrated in the chattier
+# d()/v() callsites — i/w/e tend to be human-readable status lines we
+# actively want when triaging.
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
-    public static *** i(...);
-    public static *** w(...);
-    public static *** e(...);
-    public static *** wtf(...);
 }
 
 # Flatten the obfuscated package hierarchy and let R8 widen accessors
