@@ -12,7 +12,12 @@ composeBom = "2026.03.01"
 material3 = "1.5.0-alpha16"
 media3 = "1.10.1"
 mediarouter = "1.8.1"
-newpipeExtractor = "v0.26.2"
+# Pinned to MonseyNY's fork at commit 7ccf36f4 (PR TeamNewPipe/NewPipeExtractor#1498).
+# Upstream v0.26.2 returns empty audioStreams because YouTube now enforces the SABR
+# protocol on standard WEB/ANDROID clients (no traditional stream URLs in adaptive
+# formats). The fork adds an ANDROID_VR client fallback that still receives playable
+# URLs. Revert to "v0.26.2" with group teamnewpipe once upstream merges #1498.
+newpipeExtractor = "7ccf36f47329b76e275e19c460b464454a1f81fa"
 okhttp = "5.3.0"
 coil = "3.4.0"
 hilt = "2.59.1"
@@ -121,7 +126,7 @@ androidx-media3-datasource-cronet = { group = "androidx.media3", name = "media3-
 androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
 
 # NewPipe Extractor
-newpipe-extractor = { group = "com.github.teamnewpipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
+newpipe-extractor = { group = "com.github.MonseyNY", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
 
 # Networking
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
