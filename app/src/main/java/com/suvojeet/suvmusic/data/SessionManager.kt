@@ -2498,16 +2498,20 @@ class SessionManager @Inject constructor(
     }
 
     /**
-     * When enabled, YouTube/YouTube Music songs are streamed from RemoteAudio's
+     * When enabled, YouTube/YouTube Music songs are streamed from the remote
      * HQ catalogue (320 kbps) when a confident title+artist match is found.
      * Browsing/metadata stays on YouTube; only the audio stream is swapped.
      * Falls back to the original YouTube stream when no match exists.
+     *
+     * Default: ON. Home + recommendations stay on YouTube while playback
+     * upgrades to HQ audio whenever a match exists — this is the intended
+     * out-of-the-box experience.
      */
     suspend fun isPreferRemoteAudio(): Boolean =
-        context.dataStore.data.first()[PREFER_REMOTE_AUDIO_KEY] ?: false
+        context.dataStore.data.first()[PREFER_REMOTE_AUDIO_KEY] ?: true
 
     val preferRemoteAudioFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PREFER_REMOTE_AUDIO_KEY] ?: false
+        preferences[PREFER_REMOTE_AUDIO_KEY] ?: true
     }
 
     suspend fun setPreferRemoteAudio(enabled: Boolean) {

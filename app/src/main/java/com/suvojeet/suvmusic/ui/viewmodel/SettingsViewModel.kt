@@ -53,7 +53,7 @@ data class SettingsUiState(
     val automixEnabled: Boolean = true,
     val volumeSliderEnabled: Boolean = true,
     val musicSource: MusicSource = MusicSource.YOUTUBE,
-    val preferRemoteAudio: Boolean = false,
+    val preferRemoteAudio: Boolean = true,
     val doubleTapSeekSeconds: Int = 10,
     val volumeNormalizationEnabled: Boolean = true,
     val betterLyricsEnabled: Boolean = true,
