@@ -1,124 +1,124 @@
 package com.suvojeet.suvmusic.data.repository.jiosaavn
 
-import kotlinx.serialization.SerialName
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class JioSaavnSearchResponse(
-    val success: Boolean,
-    val data: JioSaavnSearchData
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: JioSaavnSearchData? = null
 )
 
 @Serializable
 data class JioSaavnSearchData(
-    val topQuery: JioSaavnTopQuery? = null,
-    val songs: JioSaavnSongsCategory? = null,
-    val albums: JioSaavnAlbumsCategory? = null,
-    val artists: JioSaavnArtistsCategory? = null,
-    val playlists: JioSaavnPlaylistsCategory? = null
+    @SerializedName("topQuery") val topQuery: JioSaavnTopQuery? = null,
+    @SerializedName("songs") val songs: JioSaavnSongsCategory? = null,
+    @SerializedName("albums") val albums: JioSaavnAlbumsCategory? = null,
+    @SerializedName("artists") val artists: JioSaavnArtistsCategory? = null,
+    @SerializedName("playlists") val playlists: JioSaavnPlaylistsCategory? = null
 )
 
 @Serializable
 data class JioSaavnTopQuery(
-    val results: List<JioSaavnSongDto> = emptyList()
+    @SerializedName("results") val results: List<JioSaavnSongDto>? = null
 )
 
 @Serializable
 data class JioSaavnSongsCategory(
-    val results: List<JioSaavnSongDto> = emptyList()
+    @SerializedName("results") val results: List<JioSaavnSongDto>? = null
 )
 
 @Serializable
 data class JioSaavnAlbumsCategory(
-    val results: List<JioSaavnAlbumDto> = emptyList()
+    @SerializedName("results") val results: List<JioSaavnAlbumDto>? = null
 )
 
 @Serializable
 data class JioSaavnArtistsCategory(
-    val results: List<JioSaavnArtistDto> = emptyList()
+    @SerializedName("results") val results: List<JioSaavnArtistDto>? = null
 )
 
 @Serializable
 data class JioSaavnPlaylistsCategory(
-    val results: List<JioSaavnPlaylistDto> = emptyList()
+    @SerializedName("results") val results: List<JioSaavnPlaylistDto>? = null
 )
 
 @Serializable
 data class JioSaavnSongDetailsResponse(
-    val success: Boolean,
-    val data: List<JioSaavnSongDto>
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: List<JioSaavnSongDto>? = null
 )
 
 @Serializable
 data class JioSaavnSongDto(
-    val id: String,
-    val name: String,
-    val type: String? = null,
-    val year: String? = null,
-    val releaseDate: String? = null,
-    val duration: Long? = null,
-    val label: String? = null,
-    val explicitContent: Boolean? = null,
-    val playCount: Long? = null,
-    val language: String? = null,
-    val hasLyrics: Boolean? = null,
-    val url: String? = null,
-    val copyright: String? = null,
-    val album: JioSaavnAlbumInfoDto? = null,
-    val artists: JioSaavnArtistsDto? = null,
-    val image: List<JioSaavnImageDto> = emptyList(),
-    val downloadUrl: List<JioSaavnDownloadUrlDto> = emptyList()
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("year") val year: String? = null,
+    @SerializedName("releaseDate") val releaseDate: String? = null,
+    @SerializedName("duration") val duration: Long? = null,
+    @SerializedName("label") val label: String? = null,
+    @SerializedName("explicitContent") val explicitContent: Boolean? = null,
+    @SerializedName("playCount") val playCount: Long? = null,
+    @SerializedName("language") val language: String? = null,
+    @SerializedName("hasLyrics") val hasLyrics: Boolean? = null,
+    @SerializedName("url") val url: String? = null,
+    @SerializedName("copyright") val copyright: String? = null,
+    @SerializedName("album") val album: JioSaavnAlbumInfoDto? = null,
+    @SerializedName("artists") val artists: JioSaavnArtistsDto? = null,
+    @SerializedName("image") val image: List<JioSaavnImageDto>? = null,
+    @SerializedName("downloadUrl") val downloadUrl: List<JioSaavnDownloadUrlDto>? = null
 )
 
 @Serializable
 data class JioSaavnAlbumInfoDto(
-    val id: String? = null,
-    val name: String? = null,
-    val url: String? = null
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("url") val url: String? = null
 )
 
 @Serializable
 data class JioSaavnArtistsDto(
-    val primary: List<JioSaavnArtistDto> = emptyList(),
-    val featured: List<JioSaavnArtistDto> = emptyList(),
-    val all: List<JioSaavnArtistDto> = emptyList()
+    @SerializedName("primary") val primary: List<JioSaavnArtistDto>? = null,
+    @SerializedName("featured") val featured: List<JioSaavnArtistDto>? = null,
+    @SerializedName("all") val all: List<JioSaavnArtistDto>? = null
 )
 
 @Serializable
 data class JioSaavnArtistDto(
-    val id: String? = null,
-    val name: String,
-    val role: String? = null,
-    val type: String? = null,
-    val url: String? = null,
-    val image: List<JioSaavnImageDto> = emptyList()
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("role") val role: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("url") val url: String? = null,
+    @SerializedName("image") val image: List<JioSaavnImageDto>? = null
 )
 
 @Serializable
 data class JioSaavnAlbumDto(
-    val id: String,
-    val name: String,
-    val year: String? = null,
-    val url: String? = null,
-    val image: List<JioSaavnImageDto> = emptyList()
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("year") val year: String? = null,
+    @SerializedName("url") val url: String? = null,
+    @SerializedName("image") val image: List<JioSaavnImageDto>? = null
 )
 
 @Serializable
 data class JioSaavnPlaylistDto(
-    val id: String,
-    val name: String,
-    val url: String? = null,
-    val image: List<JioSaavnImageDto> = emptyList()
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("url") val url: String? = null,
+    @SerializedName("image") val image: List<JioSaavnImageDto>? = null
 )
 
 @Serializable
 data class JioSaavnImageDto(
-    val quality: String,
-    val url: String
+    @SerializedName("quality") val quality: String? = null,
+    @SerializedName("url") val url: String? = null
 )
 
 @Serializable
 data class JioSaavnDownloadUrlDto(
-    val quality: String,
-    val url: String
+    @SerializedName("quality") val quality: String? = null,
+    @SerializedName("url") val url: String? = null
 )
