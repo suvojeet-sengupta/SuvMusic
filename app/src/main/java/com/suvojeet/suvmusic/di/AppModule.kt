@@ -78,7 +78,7 @@ object AppModule {
     @Singleton
     fun provideRemoteAudioApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService {
         return retrofit2.Retrofit.Builder()
-            .baseUrl("https://saavn.sumit.co/api/")
+            .baseUrl(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.API_BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
             .build()

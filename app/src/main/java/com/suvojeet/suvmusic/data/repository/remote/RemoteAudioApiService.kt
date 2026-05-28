@@ -4,9 +4,7 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/**
- * Retrofit interface for the saavn.sumit.co RemoteAudio API wrapper.
- */
+/** Retrofit interface for the remote HQ audio backend. */
 interface RemoteAudioApiService {
 
     @GET("search")

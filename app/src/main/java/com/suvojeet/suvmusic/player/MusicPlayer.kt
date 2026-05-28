@@ -1486,18 +1486,16 @@ class MusicPlayer @Inject constructor(
                             .build()
                     )
 
-                // RemoteAudio Mandatory Headers Fix:
-                // RemoteAudio CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
-                // We detect RemoteAudio source by URI host or by song source.
-                val isRemoteAudioSource = song.source == SongSource.REMOTE || (streamUrl != null && streamUrl.contains("saavncdn.com"))
-                
+                // Remote HQ CDN requires Referer + User-Agent to avoid 403.
+                val isRemoteAudioSource = song.source == SongSource.REMOTE || (streamUrl != null && streamUrl.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST))
+
                 if (isRemoteAudioSource) {
                     android.util.Log.i("SuvMusicRemote", "Applying mandatory playback headers for: ${song.title}")
                     mediaItemBuilder.setRequestMetadata(
                         MediaItem.RequestMetadata.Builder()
                             .setExtras(android.os.Bundle().apply {
                                 val headers = android.os.Bundle().apply {
-                                    putString("Referer", "https://www.jiosaavn.com/")
+                                    putString("Referer", com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.REFERER)
                                     putString("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
                                 }
                                 putBundle("headers", headers)
@@ -2094,18 +2092,16 @@ class MusicPlayer @Inject constructor(
                     .build()
             )
 
-        // RemoteAudio Mandatory Headers Fix:
-        // RemoteAudio CDN (aac.saavncdn.com) requires a Referer and User-Agent to avoid 403 Forbidden.
-        // We detect RemoteAudio source by URI host or by song source (including hybrid resolution).
-        val isRemoteAudioSource = song.source == SongSource.REMOTE || (uri != null && uri.contains("saavncdn.com"))
-        
+        // Remote HQ CDN requires Referer + User-Agent to avoid 403 (queue pre-resolve path).
+        val isRemoteAudioSource = song.source == SongSource.REMOTE || (uri != null && uri.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST))
+
         if (isRemoteAudioSource) {
             android.util.Log.i("SuvMusicRemote", "Applying mandatory headers (Queue pre-resolve) for: ${song.title}")
             builder.setRequestMetadata(
                 MediaItem.RequestMetadata.Builder()
                     .setExtras(android.os.Bundle().apply {
                         val headers = android.os.Bundle().apply {
-                            putString("Referer", "https://www.jiosaavn.com/")
+                            putString("Referer", com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.REFERER)
                             putString("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
                         }
                         putBundle("headers", headers)
@@ -2460,8 +2456,8 @@ class MusicPlayer @Inject constructor(
                 }
             }
             
-            // For RemoteAudio or others where Bitrate is often in the streaming URL
-            if (bitrateKbps == null && (uriString.contains("jiosaavn.com") || uriString.contains("saavn.com"))) {
+            // Remote-source URIs encode bitrate in the path.
+            if (bitrateKbps == null && (uriString.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.LEGACY_HOST_A) || uriString.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.LEGACY_HOST_B))) {
                 bitrateKbps = when {
                     uriString.contains("320") -> 320
                     uriString.contains("160") -> 160
