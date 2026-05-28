@@ -49,13 +49,24 @@ class RemoteAudioRepository @Inject constructor(
     suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
         val cacheKey = query.trim().lowercase()
         if (searchCache.containsKey(cacheKey)) {
-            return@withContext searchCache[cacheKey] ?: emptyList()
+            val cached = searchCache[cacheKey] ?: emptyList()
+            android.util.Log.i("RemoteAudio", "search('$query') CACHE_HIT n=${cached.size}")
+            return@withContext cached
         }
 
+        val started = System.currentTimeMillis()
         try {
+            android.util.Log.i("RemoteAudio", "search('$query') api=searchSongs start")
             val response = apiService.searchSongs(query)
+            val rawCount = response.data?.songs?.results?.size ?: 0
             val songs = response.data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
-            
+            val ms = System.currentTimeMillis() - started
+
+            android.util.Log.i("RemoteAudio", "search('$query') OK in ${ms}ms raw=$rawCount parsed=${songs.size}")
+            if (rawCount > 0 && songs.isEmpty()) {
+                android.util.Log.w("RemoteAudio", "search('$query') had $rawCount raw results but all failed parseSongDto — backend schema may have shifted")
+            }
+
             if (songs.isNotEmpty()) {
                 searchCache[cacheKey] = songs
                 // Also cache individual song details
@@ -63,7 +74,8 @@ class RemoteAudioRepository @Inject constructor(
             }
             songs
         } catch (e: Exception) {
-            android.util.Log.e("RemoteAudio", "search('$query') failed: ${e.message}")
+            val ms = System.currentTimeMillis() - started
+            android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
             emptyList()
         }
     }
@@ -143,24 +155,37 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun getSongDetails(songId: String): Song? = withContext(Dispatchers.IO) {
         if (songDetailsCache.containsKey(songId)) {
+            android.util.Log.i("RemoteAudio", "getSongDetails($songId) CACHE_HIT")
             return@withContext songDetailsCache[songId]
         }
 
+        val started = System.currentTimeMillis()
         try {
-            android.util.Log.i("SuvMusicRemote", "Fetching details for song: $songId")
+            android.util.Log.i("RemoteAudio", "getSongDetails($songId) api=getSongDetails start")
             val response = apiService.getSongDetails(songId)
-            val result = response.data?.firstOrNull()?.let { parseSongDto(it) }
-            
+            val rawCount = response.data?.size ?: 0
+            val dto = response.data?.firstOrNull()
+            val downloadCount = dto?.downloadUrl?.size ?: 0
+            val result = dto?.let { parseSongDto(it) }
+            val ms = System.currentTimeMillis() - started
+
             if (result == null) {
-                android.util.Log.e("SuvMusicRemote", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data?.size ?: "null"}")
+                android.util.Log.e(
+                    "RemoteAudio",
+                    "getSongDetails($songId) FAIL_PARSE in ${ms}ms success=${response.success} raw=$rawCount downloadUrls=$downloadCount",
+                )
             } else {
-                android.util.Log.i("SuvMusicRemote", "Successfully fetched details for: ${result.title}")
+                android.util.Log.i(
+                    "RemoteAudio",
+                    "getSongDetails($songId) OK in ${ms}ms title='${result.title}' downloadUrls=$downloadCount streamUrl=${if (result.streamUrl.isNullOrBlank()) "BLANK" else "ok"}",
+                )
             }
 
             result?.let { songDetailsCache[songId] = it }
             result
         } catch (e: Exception) {
-            android.util.Log.e("SuvMusicRemote", "getSongDetails($songId) failed", e)
+            val ms = System.currentTimeMillis() - started
+            android.util.Log.e("RemoteAudio", "getSongDetails($songId) FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
             null
         }
     }
@@ -171,24 +196,27 @@ class RemoteAudioRepository @Inject constructor(
     suspend fun getStreamUrl(songId: String, quality: Int = 320): String? = withContext(Dispatchers.IO) {
         val cacheKey = "${songId}_$quality"
         if (streamUrlCache.containsKey(cacheKey)) {
+            android.util.Log.i("RemoteAudio", ">> getStreamUrl ENTER vid=$songId q=$quality CACHE_HIT")
             return@withContext streamUrlCache[cacheKey]
         }
 
+        android.util.Log.i("RemoteAudio", ">> getStreamUrl ENTER vid=$songId q=$quality")
+        val started = System.currentTimeMillis()
         try {
-            android.util.Log.i("SuvMusicRemote", "Resolving stream URL for $songId (Requested quality: $quality)")
             val song = getSongDetails(songId)
             val streamUrl = song?.streamUrl
-            
-            if (streamUrl == null) {
-                android.util.Log.e("SuvMusicRemote", "Could not resolve stream URL for $songId. Details might be missing downloadUrl.")
-            } else {
-                android.util.Log.i("SuvMusicRemote", "Resolved stream URL: $streamUrl")
-            }
+            val ms = System.currentTimeMillis() - started
 
-            streamUrl?.let { streamUrlCache[cacheKey] = it }
+            if (streamUrl.isNullOrBlank()) {
+                android.util.Log.e("RemoteAudio", "<< getStreamUrl EXIT vid=$songId NULL (details=${if (song == null) "null" else "ok but no streamUrl"}) in ${ms}ms")
+            } else {
+                android.util.Log.i("RemoteAudio", "<< getStreamUrl EXIT vid=$songId ok(${streamUrl.take(80)}) in ${ms}ms")
+                streamUrlCache[cacheKey] = streamUrl
+            }
             streamUrl
         } catch (e: Exception) {
-            android.util.Log.e("SuvMusicRemote", "getStreamUrl($songId) failed", e)
+            val ms = System.currentTimeMillis() - started
+            android.util.Log.e("RemoteAudio", "<< getStreamUrl EXIT vid=$songId FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
             null
         }
     }

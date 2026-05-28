@@ -135,12 +135,14 @@ class SearchViewModel @Inject constructor(
     private fun observeMusicSource() {
         viewModelScope.launch {
             sessionManager.musicSourceFlow.collect { source ->
-                // Browsing is always YouTube — the source choice only affects
-                // playback. Default tab and categories don't depend on it.
+                val defaultTab = when (source) {
+                    MusicSource.REMOTE -> SearchTab.REMOTE
+                    else -> SearchTab.YOUTUBE_MUSIC
+                }
                 _uiState.update {
                     it.copy(
                         currentSource = source,
-                        selectedTab = SearchTab.YOUTUBE_MUSIC
+                        selectedTab = defaultTab
                     )
                 }
                 loadBrowseCategories()

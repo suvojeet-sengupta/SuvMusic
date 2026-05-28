@@ -59,12 +59,36 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
+        // Lightweight HTTP-level tracer for RemoteAudio + NewPipe calls. Logs
+        // method, URL host/path, response code, and latency at INFO so it
+        // survives release builds (Log.d is stripped by proguard).
+        val tracer = okhttp3.Interceptor { chain ->
+            val req = chain.request()
+            val host = req.url.host
+            val path = req.url.encodedPath
+            val started = System.currentTimeMillis()
+            try {
+                val resp = chain.proceed(req)
+                val ms = System.currentTimeMillis() - started
+                if (resp.code >= 400) {
+                    android.util.Log.w("HttpTrace", "${req.method} ${host}${path} -> ${resp.code} in ${ms}ms")
+                } else {
+                    android.util.Log.i("HttpTrace", "${req.method} ${host}${path} -> ${resp.code} in ${ms}ms")
+                }
+                resp
+            } catch (e: java.io.IOException) {
+                val ms = System.currentTimeMillis() - started
+                android.util.Log.e("HttpTrace", "${req.method} ${host}${path} threw ${e.javaClass.simpleName} after ${ms}ms: ${e.message}")
+                throw e
+            }
+        }
         return OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .connectionPool(okhttp3.ConnectionPool(5, 5, java.util.concurrent.TimeUnit.MINUTES))
             .protocols(listOf(okhttp3.Protocol.HTTP_3, okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            .addInterceptor(tracer)
             .build()
     }
     
