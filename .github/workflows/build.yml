@@ -67,6 +67,35 @@ jobs:
         LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
         GRADLE_OPTS: -Dorg.gradle.workers.max=2
 
+    # Guard against accidental upstream-service fingerprints landing
+    # in source or the shipped APK. .md files are excluded — docs are
+    # treated separately and don't end up in the binary.
+    - name: Static fingerprint scan
+      run: |
+        set -e
+        PATTERN='jiosaavn|saavn\.sumit|saavncdn|38346591'
+
+        echo "== source tree =="
+        if git grep -i -n -E "$PATTERN" -- ':!*.md' ':!docs/'; then
+          echo "::error::Plaintext upstream fingerprint in source code"
+          exit 1
+        fi
+        echo "  clean"
+
+        echo "== release APK strings =="
+        APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+        if [ -z "$APK" ]; then
+          echo "::error::No release APK found at app/build/outputs/apk/release/"
+          exit 1
+        fi
+        hits=$(strings "$APK" 2>/dev/null | grep -i -c -E "$PATTERN" || true)
+        if [ "$hits" -ne 0 ]; then
+          echo "::error::Fingerprint leak in APK ($hits hits):"
+          strings "$APK" | grep -i -E "$PATTERN" | head -20 || true
+          exit 1
+        fi
+        echo "  clean"
+
     - name: Extract version name
       id: version
       run: |

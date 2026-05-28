@@ -31,9 +31,34 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-# Keep data models
--keep class com.suvojeet.suvmusic.data.model.** { *; }
--keep class com.suvojeet.suvmusic.core.model.** { *; }
+# Keep field names on data models so Gson reflection works, but allow
+# R8 to obfuscate the class names themselves (less surface for static
+# analysis to identify the upstream payload shape).
+-keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.data.model.** {
+    <fields>;
+}
+-keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.core.model.** {
+    <fields>;
+}
+-keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.data.repository.remote.** {
+    <fields>;
+}
+
+# Strip android.util.Log calls in the release build. Log tags are
+# otherwise visible in DEX strings and leak code-path names.
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+    public static *** wtf(...);
+}
+
+# Flatten the obfuscated package hierarchy and let R8 widen accessors
+# where it helps shrinking. Strips package-name hints from the DEX.
+-repackageclasses ''
+-allowaccessmodification
 
 # Keep Hilt
 -keep class dagger.hilt.** { *; }
