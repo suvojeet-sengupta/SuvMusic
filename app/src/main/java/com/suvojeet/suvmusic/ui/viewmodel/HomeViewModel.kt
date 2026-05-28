@@ -6,7 +6,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeItem
 import com.suvojeet.suvmusic.core.model.HomeSectionType
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
@@ -71,7 +71,7 @@ data class HomeUiState(
 
 class HomeViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
     private val lastFmRepository: LastFmRepository,
@@ -110,7 +110,7 @@ class HomeViewModel @Inject constructor(
      */
     private fun loadHomeContent(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            // 1. Prioritize base data (HomeSections from YouTube/JioSaavn)
+            // 1. Prioritize base data (HomeSections from YouTube/RemoteAudio)
             loadData(forceRefresh)
             
             // 2. Stagger background taste-profile-driven content with larger delays to prevent memory spikes
@@ -195,10 +195,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                // Determine source (JioSaavn usually doesn't have this granular mood flow implemented yet, but fallback to search works)
-                val sections = if (_uiState.value.currentSource == MusicSource.JIOSAAVN) {
-                     // Simple fallback for JioSaavn
-                     val songs = jioSaavnRepository.search(mood)
+                // Determine source (RemoteAudio usually doesn't have this granular mood flow implemented yet, but fallback to search works)
+                val sections = if (_uiState.value.currentSource == MusicSource.REMOTE) {
+                     // Simple fallback for RemoteAudio
+                     val songs = remoteAudioRepository.search(mood)
                      listOf(
                          HomeSection(
                              title = "$mood Music",
@@ -238,8 +238,8 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(currentSource = source) }
             
             // 1. Load Cache Synchronously (from DataStore first emission)
-            val cachedSections = if (source == MusicSource.JIOSAAVN) {
-                sessionManager.getCachedJioSaavnHomeSections().first()
+            val cachedSections = if (source == MusicSource.REMOTE) {
+                sessionManager.getCachedRemoteAudioHomeSections().first()
             } else {
                 sessionManager.getCachedHomeSections().first()
             }
@@ -278,7 +278,7 @@ class HomeViewModel @Inject constructor(
         try {
             _uiState.update { it.copy(isRefreshing = true) }
             val sections = when (source) {
-                MusicSource.JIOSAAVN -> jioSaavnRepository.getHomeSections()
+                MusicSource.REMOTE -> remoteAudioRepository.getHomeSections()
                 else -> youTubeRepository.getHomeSections()
             }
             
@@ -295,8 +295,8 @@ class HomeViewModel @Inject constructor(
                 sessionManager.updateLastHomeFetchTime(source)
                 
                 // Save to cache asynchronously
-                if (source == MusicSource.JIOSAAVN) {
-                    sessionManager.saveJioSaavnHomeCache(sections)
+                if (source == MusicSource.REMOTE) {
+                    sessionManager.saveRemoteAudioHomeCache(sections)
                 } else {
                     sessionManager.saveHomeCache(sections)
                 }

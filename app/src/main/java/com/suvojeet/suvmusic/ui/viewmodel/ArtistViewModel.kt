@@ -7,7 +7,7 @@ import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
@@ -38,7 +38,7 @@ data class ArtistUiState(
 
 class ArtistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle
@@ -76,8 +76,8 @@ class ArtistViewModel @Inject constructor(
                 // Fetch thumbnails in background
                 val updatedCredits = names.map { name ->
                     try {
-                        val results = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
-                            jioSaavnRepository.searchArtists(name)
+                        val results = if (source == com.suvojeet.suvmusic.core.model.SongSource.REMOTE) {
+                            remoteAudioRepository.searchArtists(name)
                         } else {
                             youTubeRepository.searchArtists(name)
                         }
@@ -121,7 +121,7 @@ class ArtistViewModel @Inject constructor(
                         artistBase.copy(songs = songs, albums = albums)
                     } else null
                 } else {
-                    jioSaavnRepository.getArtist(artistId)
+                    remoteAudioRepository.getArtist(artistId)
                 }
 
                 if (artist != null) {
@@ -194,14 +194,14 @@ class ArtistViewModel @Inject constructor(
             }
             
             try {
-                // JioSaavn source: build artist radio natively from the artist's top
-                // songs + JioSaavn related-song recommendations.
-                if (sessionManager.getMusicSource() == MusicSource.JIOSAAVN) {
+                // RemoteAudio source: build artist radio natively from the artist's top
+                // songs + RemoteAudio related-song recommendations.
+                if (sessionManager.getMusicSource() == MusicSource.REMOTE) {
                     val jioSongs = mutableListOf<Song>()
                     jioSongs.addAll(currentArtist.songs)
                     currentArtist.songs.firstOrNull()?.id?.let { seedId ->
                         _uiState.update { it.copy(radioStatus = "Building ${currentArtist.name} radio...") }
-                        val related = jioSaavnRepository.getRelatedSongs(seedId)
+                        val related = remoteAudioRepository.getRelatedSongs(seedId)
                         jioSongs.addAll(related.filter { s -> jioSongs.none { it.id == s.id } })
                     }
                     onPlaylistReady(if (jioSongs.isNotEmpty()) jioSongs.distinctBy { it.id } else currentArtist.songs)

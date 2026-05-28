@@ -19,7 +19,7 @@ import com.suvojeet.suvmusic.core.model.fromLocal
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import com.suvojeet.suvmusic.data.repository.LyricsRepository
@@ -59,7 +59,7 @@ class PlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val libraryRepository: LibraryRepository,
     private val lyricsRepository: LyricsRepository,
     private val sleepTimerManager: SleepTimerManager,
@@ -132,7 +132,7 @@ class PlayerViewModel @Inject constructor(
             LyricsProviderType.BETTER_LYRICS to true,
             LyricsProviderType.SIMP_MUSIC to true,
             LyricsProviderType.LRCLIB to true,
-            LyricsProviderType.JIOSAAVN to true,
+            LyricsProviderType.REMOTE to true,
             LyricsProviderType.YOUTUBE to true,
             LyricsProviderType.LOCAL to true
         )
@@ -356,7 +356,7 @@ class PlayerViewModel @Inject constructor(
                     LyricsProviderType.BETTER_LYRICS to betterLyricsEnabled,
                     LyricsProviderType.SIMP_MUSIC to simpMusicEnabled,
                     LyricsProviderType.LRCLIB to true,
-                    LyricsProviderType.JIOSAAVN to devMode,
+                    LyricsProviderType.REMOTE to devMode,
                     LyricsProviderType.YOUTUBE to true,
                     LyricsProviderType.LOCAL to true
                 )
@@ -435,8 +435,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _isFetchingRelated.value = true
             try {
-                val songs = if (playerState.value.currentSong?.source == SongSource.JIOSAAVN) {
-                    jioSaavnRepository.getRelatedSongs(videoId)
+                val songs = if (playerState.value.currentSong?.source == SongSource.REMOTE) {
+                    remoteAudioRepository.getRelatedSongs(videoId)
                 } else {
                     youTubeRepository.getRelatedSongs(videoId)
                 }
@@ -1506,8 +1506,8 @@ class PlayerViewModel @Inject constructor(
             // Fetch thumbnails and better IDs
             val updatedCredits = artistNames.map { name ->
                 try {
-                    val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
-                        jioSaavnRepository.searchArtists(name)
+                    val searchResults = if (source == com.suvojeet.suvmusic.core.model.SongSource.REMOTE) {
+                        remoteAudioRepository.searchArtists(name)
                     } else {
                         youTubeRepository.searchArtists(name)
                     }

@@ -58,7 +58,7 @@ private val hiltBridgedModule: Module = module {
     single { bridge(androidContext()).sessionManager() }
     single { bridge(androidContext()).okHttpClient() }
     single { bridge(androidContext()).gson() }
-    single { bridge(androidContext()).jioSaavnRepository() }
+    single { bridge(androidContext()).remoteAudioRepository() }
     single { bridge(androidContext()).youTubeRepository() }
     single { bridge(androidContext()).localAudioRepository() }
     single { bridge(androidContext()).musicHapticsManager() }

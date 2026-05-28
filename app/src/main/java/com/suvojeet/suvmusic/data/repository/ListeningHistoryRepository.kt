@@ -80,7 +80,7 @@ class ListeningHistoryRepository @Inject constructor(
                 source = when (song.source) {
                     com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
                     com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE_MUSIC -> "YOUTUBE"
-                    com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                    com.suvojeet.suvmusic.core.model.SongSource.REMOTE -> "REMOTE"
                     com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
                     com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "DOWNLOADED"
                 },
@@ -130,7 +130,7 @@ class ListeningHistoryRepository @Inject constructor(
             source = when (song.source) {
                 com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE -> "YOUTUBE"
                 com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE_MUSIC -> "YOUTUBE"
-                com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN -> "JIOSAAVN"
+                com.suvojeet.suvmusic.core.model.SongSource.REMOTE -> "REMOTE"
                 com.suvojeet.suvmusic.core.model.SongSource.LOCAL -> "LOCAL"
                 com.suvojeet.suvmusic.core.model.SongSource.DOWNLOADED -> "DOWNLOADED"
             },

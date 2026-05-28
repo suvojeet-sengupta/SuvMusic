@@ -54,7 +54,7 @@ data class PlaylistUiState(
 
 class PlaylistViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: com.suvojeet.suvmusic.data.repository.JioSaavnRepository,
+    private val remoteAudioRepository: com.suvojeet.suvmusic.data.repository.RemoteAudioRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
@@ -264,13 +264,13 @@ class PlaylistViewModel @Inject constructor(
                     thumbnailUrl = null,
                     songs = songs
                 )
-            } else if (currentSource == com.suvojeet.suvmusic.core.model.MusicSource.JIOSAAVN) {
-                // In HQ Audio mode, prioritize JioSaavn
-                val jioPlaylist = jioSaavnRepository.getPlaylist(playlistId)
+            } else if (currentSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE) {
+                // In HQ Audio mode, prioritize RemoteAudio
+                val jioPlaylist = remoteAudioRepository.getPlaylist(playlistId)
                 if (jioPlaylist != null) {
                     jioPlaylist
                 } else {
-                    // Fallback to YouTube if not found in JioSaavn (e.g. user clicked a YT playlist)
+                    // Fallback to YouTube if not found in RemoteAudio (e.g. user clicked a YT playlist)
                     youTubeRepository.getPlaylist(playlistId)
                 }
             } else {
@@ -305,12 +305,12 @@ class PlaylistViewModel @Inject constructor(
                     checkEditable()
                     return // Collected all, exit method
                 } catch (e: Exception) {
-                    // Fallback to JioSaavn if YouTube fails
-                    jioSaavnRepository.getPlaylist(playlistId) ?: throw e
+                    // Fallback to RemoteAudio if YouTube fails
+                    remoteAudioRepository.getPlaylist(playlistId) ?: throw e
                 }
             }
             
-            // Merge with initial data (for one-shot loads like JioSaavn or Local)
+            // Merge with initial data (for one-shot loads like RemoteAudio or Local)
             val finalPlaylist = playlist.copy(
                 title = if (playlist.title == "Unknown Playlist" && initialName != null) initialName else playlist.title,
                 thumbnailUrl = initialThumbnail ?: playlist.thumbnailUrl,

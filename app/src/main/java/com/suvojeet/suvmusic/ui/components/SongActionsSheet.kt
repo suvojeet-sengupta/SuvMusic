@@ -91,7 +91,7 @@ fun SongActionsSheet(
                     append("💿 ${song.album}\n")
                 }
                 append("\n")
-                if (song.source == com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                if (song.source == com.suvojeet.suvmusic.core.model.SongSource.REMOTE) {
                     val query = "${song.title} ${song.artist}".replace(" ", "+")
                     append("https://www.google.com/search?q=$query")
                 } else {
@@ -263,8 +263,8 @@ fun SongActionsSheet(
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     ModernActionItem(Icons.Default.Info, "Song Details", contentColor, { handleAction(onViewInfo) })
-                    // Comments are a YouTube-only feature; JioSaavn has no comments API.
-                    if (song.source != com.suvojeet.suvmusic.core.model.SongSource.JIOSAAVN) {
+                    // Comments are a YouTube-only feature; RemoteAudio has no comments API.
+                    if (song.source != com.suvojeet.suvmusic.core.model.SongSource.REMOTE) {
                         ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
                     }
 

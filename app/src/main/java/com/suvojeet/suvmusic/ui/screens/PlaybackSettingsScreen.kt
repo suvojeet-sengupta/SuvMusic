@@ -104,7 +104,7 @@ fun PlaybackSettingsScreen(
                         title = "Primary Source",
                         subtitle = when (uiState.musicSource) {
                             MusicSource.YOUTUBE -> "YouTube Music (256 kbps)"
-                            MusicSource.JIOSAAVN -> "HQ Audio (320 kbps)"
+                            MusicSource.REMOTE -> "HQ Audio (320 kbps)"
                         },
                         onClick = { showMusicSourceSheet = true }
                     )
@@ -115,10 +115,10 @@ fun PlaybackSettingsScreen(
 
                         PlaybackSwitchItem(
                             icon = Icons.Default.GraphicEq,
-                            title = "Stream audio from JioSaavn",
-                            subtitle = "Browse on YouTube but play in HQ (320 kbps) from JioSaavn when a match is found",
-                            checked = uiState.preferJioSaavnAudio,
-                            onCheckedChange = { viewModel.setPreferJioSaavnAudio(it) }
+                            title = "Stream audio from RemoteAudio",
+                            subtitle = "Browse on YouTube but play in HQ (320 kbps) from RemoteAudio when a match is found",
+                            checked = uiState.preferRemoteAudio,
+                            onCheckedChange = { viewModel.setPreferRemoteAudio(it) }
                         )
                     }
                 }
@@ -723,7 +723,7 @@ fun PlaybackSettingsScreen(
 
                 val sourceOptions = buildList {
                     add(MusicSource.YOUTUBE to "YouTube Music (256 kbps max)")
-                    add(MusicSource.JIOSAAVN to "HQ Audio (320 kbps)")
+                    add(MusicSource.REMOTE to "HQ Audio (320 kbps)")
                 }
                 
                 sourceOptions.forEach { (source, label) ->
@@ -1059,7 +1059,7 @@ private fun PlaybackSwitchItem(
 }
 
 private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): String {
-    return if (source == MusicSource.JIOSAAVN) {
+    return if (source == MusicSource.REMOTE) {
         when (quality) {
             AudioQuality.LOW -> "Low (96 kbps)"
             AudioQuality.MEDIUM -> "Standard (160 kbps)"
@@ -1077,7 +1077,7 @@ private fun getAudioQualityLabel(quality: AudioQuality, source: MusicSource): St
 }
 
 private fun getDownloadQualityLabel(quality: DownloadQuality, source: MusicSource): String {
-    return if (source == MusicSource.JIOSAAVN) {
+    return if (source == MusicSource.REMOTE) {
         when (quality) {
             DownloadQuality.LOW -> "Low (96 kbps)"
             DownloadQuality.MEDIUM -> "Standard (160 kbps)"

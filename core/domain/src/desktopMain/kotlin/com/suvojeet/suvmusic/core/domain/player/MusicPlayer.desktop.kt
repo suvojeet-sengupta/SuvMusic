@@ -15,7 +15,7 @@ import kotlin.random.Random
  * Desktop MusicPlayer — VLCJ-backed (Phase 4.1).
  *
  * Audio backend: LibVLC via VLCJ. Plays whatever URL is in
- * [Song.streamUrl] (for already-resolved YouTube/JioSaavn streams) or
+ * [Song.streamUrl] (for already-resolved YouTube/RemoteAudio streams) or
  * [Song.localUri] (for local/downloaded files). YouTube extraction itself
  * is NOT done here — that's the job of upstream code preparing the Song
  * (the existing :extractor module does this on Android; equivalent for

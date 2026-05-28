@@ -12,7 +12,7 @@ import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -94,7 +94,7 @@ sealed class ImportState {
 class LibraryViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val localAudioRepository: LocalAudioRepository,
     private val downloadRepository: DownloadRepository,
     private val sessionManager: SessionManager,

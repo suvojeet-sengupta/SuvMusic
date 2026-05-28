@@ -3,10 +3,10 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
-import com.suvojeet.suvmusic.core.model.JioSaavnMetadata
+import com.suvojeet.suvmusic.core.model.RemoteAudioMetadata
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -17,11 +17,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for fetching artist credits with thumbnails from YouTube Music or JioSaavn
+ * ViewModel for fetching artist credits with thumbnails from YouTube Music or RemoteAudio
  */
 class SongInfoViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository
+    private val remoteAudioRepository: RemoteAudioRepository
 ) : ViewModel() {
     
     private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
@@ -30,8 +30,8 @@ class SongInfoViewModel @Inject constructor(
     private val _releaseDate = MutableStateFlow<String?>(null)
     val releaseDate: StateFlow<String?> = _releaseDate.asStateFlow()
 
-    private val _jioSaavnMetadata = MutableStateFlow<JioSaavnMetadata?>(null)
-    val jioSaavnMetadata: StateFlow<JioSaavnMetadata?> = _jioSaavnMetadata.asStateFlow()
+    private val _remoteAudioMetadata = MutableStateFlow<RemoteAudioMetadata?>(null)
+    val remoteAudioMetadata: StateFlow<RemoteAudioMetadata?> = _remoteAudioMetadata.asStateFlow()
     
     private var lastArtistString: String? = null
     private var lastSongId: String? = null
@@ -40,7 +40,7 @@ class SongInfoViewModel @Inject constructor(
         if (songId == lastSongId) return
         lastSongId = songId
         _releaseDate.value = null
-        _jioSaavnMetadata.value = null
+        _remoteAudioMetadata.value = null
         
         viewModelScope.launch {
             try {
@@ -53,8 +53,8 @@ class SongInfoViewModel @Inject constructor(
 
                 val song = if (effectiveSource == SongSource.YOUTUBE) {
                     youTubeRepository.getSongDetails(songId)
-                } else if (effectiveSource == SongSource.JIOSAAVN) {
-                    jioSaavnRepository.getSongDetails(songId)
+                } else if (effectiveSource == SongSource.REMOTE) {
+                    remoteAudioRepository.getSongDetails(songId)
                 } else {
                     null
                 }
@@ -69,9 +69,9 @@ class SongInfoViewModel @Inject constructor(
                         }
                     }
                     
-                    val metadata = song.jioSaavnMetadata
+                    val metadata = song.remoteAudioMetadata
                     if (metadata != null) {
-                        _jioSaavnMetadata.value = metadata
+                        _remoteAudioMetadata.value = metadata
                         if (metadata.artists.isNotEmpty()) {
                             _artistCredits.value = metadata.artists
                         }
@@ -141,8 +141,8 @@ class SongInfoViewModel @Inject constructor(
             val updatedCredits = artistNames.map { name ->
                 async {
                     try {
-                        val searchResults = if (source == SongSource.JIOSAAVN) {
-                            jioSaavnRepository.searchArtists(name)
+                        val searchResults = if (source == SongSource.REMOTE) {
+                            remoteAudioRepository.searchArtists(name)
                         } else {
                             youTubeRepository.searchArtists(name)
                         }

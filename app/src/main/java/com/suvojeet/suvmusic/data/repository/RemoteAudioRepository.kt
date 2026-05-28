@@ -20,15 +20,15 @@ import com.suvojeet.suvmusic.util.decodeHtml
 import com.suvojeet.suvmusic.util.toHighResImage
 
 /**
- * Repository for fetching music from JioSaavn.
- * Uses JioSaavn's public (unofficial) internal API endpoints.
+ * Repository for fetching music from RemoteAudio.
+ * Uses RemoteAudio's public (unofficial) internal API endpoints.
  * Supports 320kbps high-quality audio.
  */
 @Singleton
-class JioSaavnRepository @Inject constructor(
+class RemoteAudioRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson,
-    private val apiService: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnApiService
+    private val apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService
 ) {
     // In-memory caches to reduce server load and improve performance
     private val searchCache = mutableMapOf<String, List<Song>>()
@@ -37,12 +37,12 @@ class JioSaavnRepository @Inject constructor(
     private val playlistCache = mutableMapOf<String, Playlist>()
 
     companion object {
-        // New JioSaavn API wrapper endpoint
+        // New RemoteAudio API wrapper endpoint
         private const val API_BASE_URL = "https://saavn.sumit.co/api"
         // Legacy internal API endpoint
         private const val BASE_URL = "https://www.jiosaavn.com/api.php"
 
-        // Public DES key used by JioSaavn to encrypt media URLs (DES/ECB/PKCS5).
+        // Public DES key used by RemoteAudio to encrypt media URLs (DES/ECB/PKCS5).
         private const val DES_KEY = "38346591"
 
         // Quality suffixes for stream URLs
@@ -52,7 +52,7 @@ class JioSaavnRepository @Inject constructor(
     }
     
     /**
-     * Search for songs on JioSaavn.
+     * Search for songs on RemoteAudio.
      */
     suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
         val cacheKey = query.trim().lowercase()
@@ -71,13 +71,13 @@ class JioSaavnRepository @Inject constructor(
             }
             songs
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "search('$query') failed: ${e.message}")
+            android.util.Log.e("RemoteAudio", "search('$query') failed: ${e.message}")
             emptyList()
         }
     }
     
     /**
-     * Search for artists on JioSaavn (Legacy fallback for rich profiles).
+     * Search for artists on RemoteAudio (Legacy fallback for rich profiles).
      */
     suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
         try {
@@ -155,20 +155,20 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            android.util.Log.i("SuvMusicJioSaavn", "Fetching details for song: $songId")
+            android.util.Log.i("SuvMusicRemote", "Fetching details for song: $songId")
             val response = apiService.getSongDetails(songId)
             val result = response.data?.firstOrNull()?.let { parseSongDto(it) }
             
             if (result == null) {
-                android.util.Log.e("SuvMusicJioSaavn", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data?.size ?: "null"}")
+                android.util.Log.e("SuvMusicRemote", "Failed to parse details for $songId. Success: ${response.success}, Data size: ${response.data?.size ?: "null"}")
             } else {
-                android.util.Log.i("SuvMusicJioSaavn", "Successfully fetched details for: ${result.title}")
+                android.util.Log.i("SuvMusicRemote", "Successfully fetched details for: ${result.title}")
             }
 
             result?.let { songDetailsCache[songId] = it }
             result
         } catch (e: Exception) {
-            android.util.Log.e("SuvMusicJioSaavn", "getSongDetails($songId) failed", e)
+            android.util.Log.e("SuvMusicRemote", "getSongDetails($songId) failed", e)
             null
         }
     }
@@ -183,20 +183,20 @@ class JioSaavnRepository @Inject constructor(
         }
 
         try {
-            android.util.Log.i("SuvMusicJioSaavn", "Resolving stream URL for $songId (Requested quality: $quality)")
+            android.util.Log.i("SuvMusicRemote", "Resolving stream URL for $songId (Requested quality: $quality)")
             val song = getSongDetails(songId)
             val streamUrl = song?.streamUrl
             
             if (streamUrl == null) {
-                android.util.Log.e("SuvMusicJioSaavn", "Could not resolve stream URL for $songId. Details might be missing downloadUrl.")
+                android.util.Log.e("SuvMusicRemote", "Could not resolve stream URL for $songId. Details might be missing downloadUrl.")
             } else {
-                android.util.Log.i("SuvMusicJioSaavn", "Resolved stream URL: $streamUrl")
+                android.util.Log.i("SuvMusicRemote", "Resolved stream URL: $streamUrl")
             }
 
             streamUrl?.let { streamUrlCache[cacheKey] = it }
             streamUrl
         } catch (e: Exception) {
-            android.util.Log.e("SuvMusicJioSaavn", "getStreamUrl($songId) failed", e)
+            android.util.Log.e("SuvMusicRemote", "getStreamUrl($songId) failed", e)
             null
         }
     }
@@ -206,8 +206,8 @@ class JioSaavnRepository @Inject constructor(
     private val relatedCache = mutableMapOf<String, List<Song>>()
 
     /**
-     * Get songs related to [songId] using JioSaavn's recommendation endpoint.
-     * This powers native autoplay/radio when JioSaavn is the active source.
+     * Get songs related to [songId] using RemoteAudio's recommendation endpoint.
+     * This powers native autoplay/radio when RemoteAudio is the active source.
      */
     suspend fun getRelatedSongs(songId: String): List<Song> = withContext(Dispatchers.IO) {
         relatedCache[songId]?.let { return@withContext it }
@@ -222,15 +222,15 @@ class JioSaavnRepository @Inject constructor(
             }
             songs
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getRelatedSongs($songId) failed: ${e.message}")
+            android.util.Log.e("RemoteAudio", "getRelatedSongs($songId) failed: ${e.message}")
             emptyList()
         }
     }
 
     /**
-     * Build a pool of recommended songs seeded from the user's recent JioSaavn plays.
+     * Build a pool of recommended songs seeded from the user's recent RemoteAudio plays.
      * Falls back to trending/home content when no seeds are available, so the
-     * home screen and queue always have JioSaavn material to work with.
+     * home screen and queue always have RemoteAudio material to work with.
      */
     suspend fun getRecommendations(seedSongIds: List<String>): List<Song> = withContext(Dispatchers.IO) {
         val pool = mutableListOf<Song>()
@@ -240,7 +240,7 @@ class JioSaavnRepository @Inject constructor(
                 if (pool.size >= 40) break
             }
         } catch (e: Exception) {
-            android.util.Log.w("JioSaavn", "getRecommendations seed pass failed: ${e.message}")
+            android.util.Log.w("RemoteAudio", "getRecommendations seed pass failed: ${e.message}")
         }
 
         // Fallback: pull songs out of the home/discover sections if seeds were dry.
@@ -252,7 +252,7 @@ class JioSaavnRepository @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.w("JioSaavn", "getRecommendations home fallback failed: ${e.message}")
+                android.util.Log.w("RemoteAudio", "getRecommendations home fallback failed: ${e.message}")
             }
         }
 
@@ -260,13 +260,13 @@ class JioSaavnRepository @Inject constructor(
     }
 
     /**
-     * Get top songs for an artist (used for artist radio on JioSaavn).
+     * Get top songs for an artist (used for artist radio on RemoteAudio).
      */
     suspend fun getArtistTopSongs(artistId: String): List<Song> = withContext(Dispatchers.IO) {
         try {
             getArtist(artistId)?.songs ?: emptyList()
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getArtistTopSongs($artistId) failed: ${e.message}")
+            android.util.Log.e("RemoteAudio", "getArtistTopSongs($artistId) failed: ${e.message}")
             emptyList()
         }
     }
@@ -295,7 +295,7 @@ class JioSaavnRepository @Inject constructor(
             val playlist = Playlist(
                 id = playlistId,
                 title = title.decodeHtml().ifBlank { "Playlist" },
-                author = "JioSaavn",
+                author = "RemoteAudio",
                 thumbnailUrl = image,
                 songs = songs
             )
@@ -303,7 +303,7 @@ class JioSaavnRepository @Inject constructor(
             playlistCache[playlistId] = playlist
             playlist
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getPlaylist($playlistId) failed: ${e.message}")
+            android.util.Log.e("RemoteAudio", "getPlaylist($playlistId) failed: ${e.message}")
             null
         }
     }
@@ -331,17 +331,17 @@ class JioSaavnRepository @Inject constructor(
                 songs = songs
             )
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "getAlbum($albumId) failed: ${e.message}")
+            android.util.Log.e("RemoteAudio", "getAlbum($albumId) failed: ${e.message}")
             null
         }
     }
     /**
-     * Get plain lyrics from JioSaavn (internal fallback).
+     * Get plain lyrics from RemoteAudio (internal fallback).
      */
     /**
-     * Get plain lyrics from JioSaavn (internal fallback).
+     * Get plain lyrics from RemoteAudio (internal fallback).
      */
-    suspend fun getLyricsFromJioSaavn(songId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getLyricsFromRemote(songId: String): String? = withContext(Dispatchers.IO) {
         try {
             val url = "$BASE_URL?__call=lyrics.getLyrics&_format=json&lyrics_id=$songId"
             val response = makeRequest(url)
@@ -356,10 +356,10 @@ class JioSaavnRepository @Inject constructor(
     /**
      * Get lyrics for a song (legacy function - now returns plain text).
      */
-    suspend fun getLyrics(songId: String): String? = getLyricsFromJioSaavn(songId)
+    suspend fun getLyrics(songId: String): String? = getLyricsFromRemote(songId)
     
     /**
-     * Get home sections with dynamic content from JioSaavn Launch Data.
+     * Get home sections with dynamic content from RemoteAudio Launch Data.
      * This provides a "For You" experience with Trending, Charts, New Releases, and customized modules.
      */
     suspend fun getHomeSections(): List<com.suvojeet.suvmusic.core.model.HomeSection> = withContext(Dispatchers.IO) {
@@ -399,7 +399,7 @@ class JioSaavnRepository @Inject constructor(
                             val count = obj.get("song_count")?.asInt ?: obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "RemoteAudio", image, count)
                             )
                         }
                         "chart" -> {
@@ -409,7 +409,7 @@ class JioSaavnRepository @Inject constructor(
                             val count = obj.get("count")?.asInt ?: 0
                             
                             com.suvojeet.suvmusic.core.model.HomeItem.PlaylistItem(
-                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "JioSaavn Chart", image, count)
+                                com.suvojeet.suvmusic.core.model.PlaylistDisplayItem(id, title.decodeHtml(), "", "RemoteAudio Chart", image, count)
                             )
                         }
                         "radio_station" -> {
@@ -497,7 +497,7 @@ class JioSaavnRepository @Inject constructor(
             }
 
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "Error fetching dynamic home sections", e)
+            android.util.Log.e("RemoteAudio", "Error fetching dynamic home sections", e)
         }
 
         // Always merge the static catalogue on top of whatever dynamic gave us.
@@ -513,7 +513,7 @@ class JioSaavnRepository @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("JioSaavn", "Static home merge failed: ${e.message}")
+            android.util.Log.w("RemoteAudio", "Static home merge failed: ${e.message}")
         }
 
         sections
@@ -547,7 +547,7 @@ class JioSaavnRepository @Inject constructor(
                                 id = chartId,
                                 name = title.decodeHtml(),
                                 url = "",
-                                uploaderName = "JioSaavn Charts",
+                                uploaderName = "RemoteAudio Charts",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -557,7 +557,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Top Charts 📊", chartItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Charts fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Charts fetch error", e) }
             
             // 2. New Releases - Using content.getAlbums with filter
             try {
@@ -599,7 +599,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("New Releases 🆕", albumItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "New releases fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "New releases fetch error", e) }
             
             // 3. Trending Songs - Using content.getTrending
             try {
@@ -624,7 +624,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Trending Now 🔥", songItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Trending songs fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Trending songs fetch error", e) }
             
             // 4. Top Playlists - Using content.getFeaturedPlaylists
             try {
@@ -657,7 +657,7 @@ class JioSaavnRepository @Inject constructor(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "JioSaavn",
+                                uploaderName = "RemoteAudio",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -667,7 +667,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Featured Playlists 🎧", playlistItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Featured playlists fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Featured playlists fetch error", e) }
             
             // 5. Top Artists - Using content.getArtists (trending artists)
             try {
@@ -701,7 +701,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Top Artists 🎤", artistItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Artists fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Artists fetch error", e) }
             
             // 6. Trending Albums - Using content.getTrending with type=album
             try {
@@ -743,7 +743,7 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Popular Albums 💿", albumItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Trending albums fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Trending albums fetch error", e) }
             
             // 7. Editorial Picks / Radio Stations - Using content.getRadioStations
             try {
@@ -773,7 +773,7 @@ class JioSaavnRepository @Inject constructor(
                                 id = "radio_$radioId",
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "JioSaavn Radio",
+                                uploaderName = "RemoteAudio Radio",
                                 thumbnailUrl = image,
                                 songCount = 0
                             )
@@ -783,17 +783,17 @@ class JioSaavnRepository @Inject constructor(
                         sections.add(com.suvojeet.suvmusic.core.model.HomeSection("Radio Stations 📻", radioItems))
                     }
                 }
-            } catch (e: Exception) { android.util.Log.e("JioSaavn", "Radio stations fetch error", e) }
+            } catch (e: Exception) { android.util.Log.e("RemoteAudio", "Radio stations fetch error", e) }
             
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "Home sections error", e)
+            android.util.Log.e("RemoteAudio", "Home sections error", e)
         }
         
         sections
     }
     
     /**
-     * Get featured/trending playlists from JioSaavn for the library.
+     * Get featured/trending playlists from RemoteAudio for the library.
      */
     suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem>()
@@ -828,7 +828,7 @@ class JioSaavnRepository @Inject constructor(
                             id = plId,
                             name = name.decodeHtml(),
                             url = "",
-                            uploaderName = "JioSaavn",
+                            uploaderName = "RemoteAudio",
                             thumbnailUrl = image,
                             songCount = songCount
                         )
@@ -857,7 +857,7 @@ class JioSaavnRepository @Inject constructor(
                                 id = plId,
                                 name = name.decodeHtml(),
                                 url = "",
-                                uploaderName = "JioSaavn",
+                                uploaderName = "RemoteAudio",
                                 thumbnailUrl = image,
                                 songCount = songCount
                             )
@@ -892,22 +892,22 @@ class JioSaavnRepository @Inject constructor(
         return okHttpClient.newCall(request).execute().use { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
-                android.util.Log.e("JioSaavn", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
+                android.util.Log.e("RemoteAudio", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
             } else {
-                android.util.Log.d("JioSaavn", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
+                android.util.Log.d("RemoteAudio", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
             }
             body
         }
     }
     
-    private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.jiosaavn.JioSaavnSongDto): Song? {
+    private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioSongDto): Song? {
         return try {
             val downloadUrls = dto.downloadUrl ?: emptyList()
             val streamUrl = downloadUrls
                 .firstOrNull { it.quality == "320kbps" }?.url
                 ?: downloadUrls.lastOrNull()?.url
 
-            val metadata = com.suvojeet.suvmusic.core.model.JioSaavnMetadata(
+            val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = dto.label?.decodeHtml(),
                 playCount = dto.playCount,
                 language = dto.language,
@@ -927,7 +927,7 @@ class JioSaavnRepository @Inject constructor(
                 } ?: emptyList()
             )
 
-            Song.fromJioSaavn(
+            Song.fromRemoteAudio(
                 songId = dto.id ?: return null,
                 title = (dto.name ?: "Unknown").decodeHtml(),
                 artist = dto.artists?.primary?.joinToString { it.name ?: "" }?.decodeHtml() ?: "Unknown Artist",
@@ -936,7 +936,7 @@ class JioSaavnRepository @Inject constructor(
                 thumbnailUrl = dto.image?.lastOrNull()?.url,
                 streamUrl = streamUrl,
                 releaseDate = dto.releaseDate,
-                jioSaavnMetadata = metadata
+                remoteAudioMetadata = metadata
             )
         } catch (e: Exception) {
             null
@@ -1011,7 +1011,7 @@ class JioSaavnRepository @Inject constructor(
                 it.asJsonObject.get("quality")?.asString == "320kbps" 
             }?.asJsonObject?.get("url")?.asString ?: json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
 
-            val metadata = com.suvojeet.suvmusic.core.model.JioSaavnMetadata(
+            val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = json.get("label")?.asString?.decodeHtml(),
                 playCount = json.get("playCount")?.asLong,
                 language = json.get("language")?.asString,
@@ -1023,7 +1023,7 @@ class JioSaavnRepository @Inject constructor(
                 artists = allArtists
             )
 
-            Song.fromJioSaavn(
+            Song.fromRemoteAudio(
                 songId = id,
                 title = title.decodeHtml(),
                 artist = artistName.decodeHtml(),
@@ -1032,7 +1032,7 @@ class JioSaavnRepository @Inject constructor(
                 thumbnailUrl = thumbnailUrl,
                 streamUrl = streamUrl,
                 releaseDate = releaseDate,
-                jioSaavnMetadata = metadata
+                remoteAudioMetadata = metadata
             )
         } catch (e: Exception) {
             null
@@ -1057,7 +1057,7 @@ class JioSaavnRepository @Inject constructor(
             val image = json.get("image")?.asString?.toHighResImage()
             val releaseDate = json.get("release_date")?.asString ?: moreInfo?.get("release_date")?.asString ?: json.get("year")?.asString
 
-            Song.fromJioSaavn(
+            Song.fromRemoteAudio(
                 songId = id,
                 title = title.decodeHtml(),
                 artist = artistsJson.decodeHtml(),
@@ -1074,9 +1074,9 @@ class JioSaavnRepository @Inject constructor(
     private fun String.capitalize(): String = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
     
     /**
-     * Decrypt JioSaavn's encrypted media URL.
+     * Decrypt RemoteAudio's encrypted media URL.
      *
-     * Note: the algorithm (DES-ECB) is dictated by JioSaavn's server format and
+     * Note: the algorithm (DES-ECB) is dictated by RemoteAudio's server format and
      * is not something we control. The defensive posture here is to fail hard
      * on decrypt errors and return null, rather than silently returning the
      * encrypted blob which the caller would then attempt to use as a URL.
@@ -1095,7 +1095,7 @@ class JioSaavnRepository @Inject constructor(
 
             String(decrypted)
         } catch (e: Exception) {
-            android.util.Log.w("JioSaavnRepository", "decryptUrl failed: ${e.javaClass.simpleName}")
+            android.util.Log.w("RemoteAudioRepository", "decryptUrl failed: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1114,7 +1114,7 @@ class JioSaavnRepository @Inject constructor(
             // Parse Songs
             var songs = data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
             if (songs.isEmpty()) {
-                android.util.Log.w("JioSaavn", "searchAll('$query'): autocomplete returned no songs, falling back to search.getResults")
+                android.util.Log.w("RemoteAudio", "searchAll('$query'): autocomplete returned no songs, falling back to search.getResults")
                 songs = search(query)
             }
 
@@ -1145,7 +1145,7 @@ class JioSaavnRepository @Inject constructor(
                 Playlist(
                     id = id,
                     title = (dto.name ?: "Playlist").decodeHtml(),
-                    author = "JioSaavn",
+                    author = "RemoteAudio",
                     thumbnailUrl = dto.image?.lastOrNull()?.url,
                     songs = emptyList()
                 )
@@ -1154,7 +1154,7 @@ class JioSaavnRepository @Inject constructor(
             return@withContext SearchResults(songs, albums, artists, playlists)
 
         } catch (e: Exception) {
-            android.util.Log.e("JioSaavn", "searchAll('$query') failed: ${e.message} — falling back to search.getResults")
+            android.util.Log.e("RemoteAudio", "searchAll('$query') failed: ${e.message} — falling back to search.getResults")
             // Even if autocomplete fails entirely, still try to return songs so the tab isn't empty.
             return@withContext SearchResults(songs = search(query))
         }

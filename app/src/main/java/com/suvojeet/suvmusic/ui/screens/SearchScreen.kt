@@ -300,13 +300,13 @@ fun SearchScreen(
                         }
                     }
 
-                    // Tab Selection (YouTube / JioSaavn / Local). YouTube tab is
-                    // hidden when the active music source is JioSaavn so the user
-                    // gets a JioSaavn-only experience.
+                    // Tab Selection (YouTube / RemoteAudio / Local). YouTube tab is
+                    // hidden when the active music source is RemoteAudio so the user
+                    // gets a RemoteAudio-only experience.
                     val visibleTabs = remember(uiState.currentSource) {
                         buildList {
-                            if (uiState.currentSource != MusicSource.JIOSAAVN) add(SearchTab.YOUTUBE_MUSIC)
-                            add(SearchTab.JIOSAAVN)
+                            if (uiState.currentSource != MusicSource.REMOTE) add(SearchTab.YOUTUBE_MUSIC)
+                            add(SearchTab.REMOTE)
                             add(SearchTab.YOUR_LIBRARY)
                         }
                     }
@@ -326,7 +326,7 @@ fun SearchScreen(
                         },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        if (uiState.currentSource != MusicSource.JIOSAAVN) {
+                        if (uiState.currentSource != MusicSource.REMOTE) {
                             Tab(
                                 selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
                                 onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
@@ -334,9 +334,9 @@ fun SearchScreen(
                             )
                         }
                         Tab(
-                            selected = uiState.selectedTab == SearchTab.JIOSAAVN,
-                            onClick = { viewModel.onTabChange(SearchTab.JIOSAAVN) },
-                            text = { Text("JioSaavn", style = MaterialTheme.typography.titleSmall) }
+                            selected = uiState.selectedTab == SearchTab.REMOTE,
+                            onClick = { viewModel.onTabChange(SearchTab.REMOTE) },
+                            text = { Text("RemoteAudio", style = MaterialTheme.typography.titleSmall) }
                         )
                         Tab(
                             selected = uiState.selectedTab == SearchTab.YOUR_LIBRARY,
@@ -482,8 +482,8 @@ fun SearchScreen(
                             }
                         }
                     }
-                } else if (uiState.selectedTab == SearchTab.JIOSAAVN) {
-                    // JioSaavn results (320 kbps HQ audio)
+                } else if (uiState.selectedTab == SearchTab.REMOTE) {
+                    // RemoteAudio results (320 kbps HQ audio)
                     if (!uiState.isLoading && uiState.query.isNotBlank()) {
                         if (uiState.artistResults.isNotEmpty()) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -520,13 +520,13 @@ fun SearchScreen(
                         }
                         if (uiState.results.isNotEmpty()) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { index, song -> "jiosaavn_${song.id}_$index" }) { index, song ->
+                            itemsIndexed(uiState.results, key = { index, song -> "remote_${song.id}_$index" }) { index, song ->
                                 SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                             }
                         }
 
                         if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No JioSaavn results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No RemoteAudio results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
                         }
                     }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {

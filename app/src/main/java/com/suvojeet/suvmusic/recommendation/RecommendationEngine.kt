@@ -9,7 +9,7 @@ import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.repository.JioSaavnRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -45,7 +45,7 @@ class RecommendationEngine @Inject constructor(
     private val listeningHistoryDao: ListeningHistoryDao,
     private val dislikedItemDao: DislikedItemDao,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: SessionManager,
     private val tasteProfileBuilder: TasteProfileBuilder,
     private val cache: RecommendationCache,
@@ -134,17 +134,17 @@ class RecommendationEngine @Inject constructor(
     }
 
     // ============================================================================================
-    // SOURCE AWARENESS — JioSaavn vs YouTube dispatch
+    // SOURCE AWARENESS — RemoteAudio vs YouTube dispatch
     // ============================================================================================
 
-    /** True when the user's selected music source is JioSaavn. */
-    private suspend fun isJioSaavnSource(): Boolean =
-        try { sessionManager.getMusicSource() == MusicSource.JIOSAAVN } catch (e: Exception) { false }
+    /** True when the user's selected music source is RemoteAudio. */
+    private suspend fun isRemoteAudioSource(): Boolean =
+        try { sessionManager.getMusicSource() == MusicSource.REMOTE } catch (e: Exception) { false }
 
-    /** Most recent JioSaavn-source song IDs from listening history, for seeding recommendations. */
-    private suspend fun recentJioSaavnSeedIds(limit: Int = 5): List<String> = try {
+    /** Most recent RemoteAudio-source song IDs from listening history, for seeding recommendations. */
+    private suspend fun recentRemoteAudioSeedIds(limit: Int = 5): List<String> = try {
         listeningHistoryDao.getAllHistory()
-            .filter { it.source == "JIOSAAVN" }
+            .filter { it.source == "REMOTE" }
             .sortedByDescending { it.lastPlayed }
             .take(limit)
             .map { it.songId }
@@ -154,10 +154,10 @@ class RecommendationEngine @Inject constructor(
 
     /**
      * Source-aware song search used by all discovery/section generators so the
-     * home screen stays consistent with the active source (JioSaavn vs YouTube).
+     * home screen stays consistent with the active source (RemoteAudio vs YouTube).
      */
     private suspend fun searchSongs(query: String): List<Song> = try {
-        if (isJioSaavnSource()) jioSaavnRepository.search(query)
+        if (isRemoteAudioSource()) remoteAudioRepository.search(query)
         else youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
     } catch (e: Exception) {
         emptyList()
@@ -185,14 +185,14 @@ class RecommendationEngine @Inject constructor(
         val sections = mutableListOf<HomeSection>()
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
-        val useJioSaavn = isJioSaavnSource()
+        val useRemoteAudio = isRemoteAudioSource()
 
         val deferredSections = topGenres.map { (genreName, _) ->
             async(Dispatchers.IO) {
                 apiSemaphore.withPermit {
                     try {
-                        val songs = if (useJioSaavn) {
-                            jioSaavnRepository.search("$genreName songs")
+                        val songs = if (useRemoteAudio) {
+                            remoteAudioRepository.search("$genreName songs")
                         } else {
                             youTubeRepository.search(
                                 "$genreName music mix",
@@ -471,17 +471,17 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS)
         if (cached != null) return@coroutineScope cached
 
-        // JioSaavn source: assemble a personalized layer on top of the JioSaavn
+        // RemoteAudio source: assemble a personalized layer on top of the RemoteAudio
         // discover sections that HomeViewModel loads separately. Mirrors the
         // YouTube branch's variety (quick picks + artist mixes + genre + recent)
         // so HQ home doesn't feel half-empty once the user has any history.
-        if (isJioSaavnSource()) {
+        if (isRemoteAudioSource()) {
             val jioProfile = tasteProfileBuilder.getProfile()
             val jioSections = mutableListOf<HomeSection>()
             val jioSeenIds = mutableSetOf<String>()
             val jioSeenFingerprints = mutableSetOf<String>()
 
-            // 1) Quick picks — JioSaavn-seeded recommendations
+            // 1) Quick picks — RemoteAudio-seeded recommendations
             try {
                 val quickPicks = getPersonalizedRecommendations(20)
                 val unique = deduplicate(quickPicks, jioSeenIds, jioSeenFingerprints)
@@ -492,13 +492,13 @@ class RecommendationEngine @Inject constructor(
                         type = HomeSectionType.QuickPicks
                     ))
                 }
-            } catch (e: Exception) { Log.w(TAG, "JioSaavn quick picks failed", e) }
+            } catch (e: Exception) { Log.w(TAG, "RemoteAudio quick picks failed", e) }
 
-            // 2) Based on recent listening — seeded from the latest JioSaavn play
+            // 2) Based on recent listening — seeded from the latest RemoteAudio play
             try {
-                val seed = recentJioSaavnSeedIds(1).firstOrNull()
+                val seed = recentRemoteAudioSeedIds(1).firstOrNull()
                 if (seed != null) {
-                    val related = jioSaavnRepository.getRelatedSongs(seed)
+                    val related = remoteAudioRepository.getRelatedSongs(seed)
                     val scored = scoreAndRank(related, jioProfile)
                     val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
                     if (unique.isNotEmpty()) {
@@ -509,14 +509,14 @@ class RecommendationEngine @Inject constructor(
                         ))
                     }
                 }
-            } catch (e: Exception) { Log.w(TAG, "JioSaavn recent-based failed", e) }
+            } catch (e: Exception) { Log.w(TAG, "RemoteAudio recent-based failed", e) }
 
             // 3) Top-artist mixes — only when the profile has enough data
             if (jioProfile.hasEnoughData) {
                 val topArtists = jioProfile.artistAffinities.keys.take(2)
                 for (artist in topArtists) {
                     try {
-                        val songs = jioSaavnRepository.search("$artist top songs")
+                        val songs = remoteAudioRepository.search("$artist top songs")
                         val scored = scoreAndRank(songs, jioProfile)
                         val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
                         if (unique.isNotEmpty()) {
@@ -527,7 +527,7 @@ class RecommendationEngine @Inject constructor(
                                 type = HomeSectionType.HorizontalCarousel
                             ))
                         }
-                    } catch (e: Exception) { Log.w(TAG, "JioSaavn artist mix failed for $artist", e) }
+                    } catch (e: Exception) { Log.w(TAG, "RemoteAudio artist mix failed for $artist", e) }
                 }
             }
 
@@ -536,7 +536,7 @@ class RecommendationEngine @Inject constructor(
                 val topGenres = GenreTaxonomy.topGenres(jioProfile.genreAffinityVector, n = 2)
                 for ((genreName, _) in topGenres) {
                     try {
-                        val songs = jioSaavnRepository.search("$genreName songs")
+                        val songs = remoteAudioRepository.search("$genreName songs")
                         val scored = scoreAndRank(songs, jioProfile)
                         val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(12)
                         if (unique.isNotEmpty()) {
@@ -546,7 +546,7 @@ class RecommendationEngine @Inject constructor(
                                 type = HomeSectionType.HorizontalCarousel
                             ))
                         }
-                    } catch (e: Exception) { Log.w(TAG, "JioSaavn genre row failed for $genreName", e) }
+                    } catch (e: Exception) { Log.w(TAG, "RemoteAudio genre row failed for $genreName", e) }
                 }
             }
 
@@ -666,11 +666,11 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSongs(RecommendationCache.Keys.QUICK_PICKS)
         if (cached != null) return cached.take(limit)
 
-        // JioSaavn source: build recommendations natively from JioSaavn reco + home content.
-        if (isJioSaavnSource()) {
+        // RemoteAudio source: build recommendations natively from RemoteAudio reco + home content.
+        if (isRemoteAudioSource()) {
             val profile = tasteProfileBuilder.getProfile()
-            val seeds = recentJioSaavnSeedIds(5)
-            val candidates = jioSaavnRepository.getRecommendations(seeds)
+            val seeds = recentRemoteAudioSeedIds(5)
+            val candidates = remoteAudioRepository.getRecommendations(seeds)
             val seenIds = mutableSetOf<String>()
             val seenFingerprints = mutableSetOf<String>()
             val unique = deduplicate(candidates, seenIds, seenFingerprints)
@@ -767,12 +767,12 @@ class RecommendationEngine @Inject constructor(
         val seenFingerprints = currentQueue.map { getSongFingerprint(it) }.toMutableSet()
         seenFingerprints.add(getSongFingerprint(currentSong))
 
-        // JioSaavn source: continue the queue natively with JioSaavn related/reco songs.
-        if (isJioSaavnSource()) {
+        // RemoteAudio source: continue the queue natively with RemoteAudio related/reco songs.
+        if (isRemoteAudioSource()) {
             val jioCandidates = mutableListOf<Song>()
-            jioCandidates.addAll(jioSaavnRepository.getRelatedSongs(currentSong.id))
+            jioCandidates.addAll(remoteAudioRepository.getRelatedSongs(currentSong.id))
             if (jioCandidates.size < count) {
-                jioCandidates.addAll(jioSaavnRepository.getRecommendations(recentJioSaavnSeedIds(5)))
+                jioCandidates.addAll(remoteAudioRepository.getRecommendations(recentRemoteAudioSeedIds(5)))
             }
             val unique = deduplicate(jioCandidates, seenIds, seenFingerprints)
             return@withContext scoreAndRank(unique, profile).take(count)
@@ -837,11 +837,11 @@ class RecommendationEngine @Inject constructor(
         val seenIds = excludeIds.toMutableSet()
         val seenFingerprints = mutableSetOf<String>()
 
-        // JioSaavn source: keep the radio going natively with JioSaavn related/reco songs.
-        if (isJioSaavnSource()) {
-            candidates.addAll(deduplicate(jioSaavnRepository.getRelatedSongs(seedSongId), seenIds, seenFingerprints))
+        // RemoteAudio source: keep the radio going natively with RemoteAudio related/reco songs.
+        if (isRemoteAudioSource()) {
+            candidates.addAll(deduplicate(remoteAudioRepository.getRelatedSongs(seedSongId), seenIds, seenFingerprints))
             if (candidates.size < count * 2) {
-                candidates.addAll(deduplicate(jioSaavnRepository.getRecommendations(recentJioSaavnSeedIds(5)), seenIds, seenFingerprints))
+                candidates.addAll(deduplicate(remoteAudioRepository.getRecommendations(recentRemoteAudioSeedIds(5)), seenIds, seenFingerprints))
             }
             return@withContext scoreAndRank(candidates, profile).take(count)
         }

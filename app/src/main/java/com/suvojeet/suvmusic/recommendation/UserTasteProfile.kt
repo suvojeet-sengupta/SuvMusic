@@ -35,7 +35,7 @@ data class UserTasteProfile(
     /** Top played song IDs for familiarity scoring */
     val topPlayedSongIds: Set<String> = emptySet(),
     
-    /** Preferred source (YOUTUBE, JIOSAAVN, LOCAL) distribution */
+    /** Preferred source (YOUTUBE, REMOTE, LOCAL) distribution */
     val sourceDistribution: Map<String, Float> = emptyMap(),
     
     /** Total songs in history — indicates how much data we have */

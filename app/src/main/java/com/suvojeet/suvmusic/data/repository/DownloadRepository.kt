@@ -41,7 +41,7 @@ import javax.inject.Singleton
 class DownloadRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val youTubeRepository: YouTubeRepository,
-    private val jioSaavnRepository: JioSaavnRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
     @param:com.suvojeet.suvmusic.di.DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
@@ -851,8 +851,8 @@ class DownloadRepository @Inject constructor(
                     "[STREAM_URL] fetch start id=${song.id} src=${song.source}",
                 )
                 val streamResult = when (song.source) {
-                    SongSource.JIOSAAVN -> {
-                        val url = jioSaavnRepository.getStreamUrl(song.id, 320)
+                    SongSource.REMOTE -> {
+                        val url = remoteAudioRepository.getStreamUrl(song.id, 320)
                         if (url != null) url to "m4a" else null
                     }
                     else -> youTubeRepository.getStreamUrlForDownload(song.id)

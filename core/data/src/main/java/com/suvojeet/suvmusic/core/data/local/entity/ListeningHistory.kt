@@ -34,6 +34,6 @@ data class ListeningHistory(
     
     // Metadata for recommendations
     val artistId: String? = null,
-    val source: String = "YOUTUBE", // YOUTUBE, JIOSAAVN, LOCAL
+    val source: String = "YOUTUBE", // YOUTUBE, REMOTE, LOCAL
     val releaseDate: String? = null
 )
