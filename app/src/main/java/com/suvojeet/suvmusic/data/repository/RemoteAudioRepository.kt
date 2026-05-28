@@ -18,12 +18,9 @@ import android.util.Base64
 import com.suvojeet.suvmusic.util.encodeUrl
 import com.suvojeet.suvmusic.util.decodeHtml
 import com.suvojeet.suvmusic.util.toHighResImage
+import com.suvojeet.suvmusic.data.repository.remote.RemoteConstants
 
-/**
- * Repository for fetching music from RemoteAudio.
- * Uses RemoteAudio's public (unofficial) internal API endpoints.
- * Supports 320kbps high-quality audio.
- */
+/** Repository for fetching tracks from the remote HQ audio backend. */
 @Singleton
 class RemoteAudioRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
@@ -37,15 +34,10 @@ class RemoteAudioRepository @Inject constructor(
     private val playlistCache = mutableMapOf<String, Playlist>()
 
     companion object {
-        // New RemoteAudio API wrapper endpoint
-        private const val API_BASE_URL = "https://saavn.sumit.co/api"
-        // Legacy internal API endpoint
-        private const val BASE_URL = "https://www.jiosaavn.com/api.php"
+        private val API_BASE_URL get() = RemoteConstants.API_BASE_URL
+        private val BASE_URL get() = RemoteConstants.LEGACY_BASE_URL
+        private val DES_KEY get() = RemoteConstants.DES_KEY
 
-        // Public DES key used by RemoteAudio to encrypt media URLs (DES/ECB/PKCS5).
-        private const val DES_KEY = "38346591"
-
-        // Quality suffixes for stream URLs
         private const val QUALITY_96 = "_96.mp4"
         private const val QUALITY_160 = "_160.mp4"
         private const val QUALITY_320 = "_320.mp4"
@@ -81,7 +73,7 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
         try {
-            val url = "$BASE_URL?__call=search.getArtistResults&_format=json&n=5&q=${query.encodeUrl()}"
+            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_SEARCH_ARTIST}&_format=json&n=5&q=${query.encodeUrl()}"
             val response = makeRequest(url)
             
             val json = JsonParser.parseString(response).asJsonObject
@@ -109,7 +101,7 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {
         try {
-            val url = "$BASE_URL?__call=webapi.get&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
+            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_WEBAPI_GET}&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
             val response = makeRequest(url)
             val json = JsonParser.parseString(response).asJsonObject
             
@@ -343,7 +335,7 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun getLyricsFromRemote(songId: String): String? = withContext(Dispatchers.IO) {
         try {
-            val url = "$BASE_URL?__call=lyrics.getLyrics&_format=json&lyrics_id=$songId"
+            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_LYRICS}&_format=json&lyrics_id=$songId"
             val response = makeRequest(url)
             
             val json = JsonParser.parseString(response).asJsonObject
@@ -367,7 +359,7 @@ class RemoteAudioRepository @Inject constructor(
         
         try {
             // Use the main launch data endpoint for dynamic homepage structure
-            val launchUrl = "$BASE_URL?__call=webapi.getLaunchData&api_version=4&_format=json&_marker=0"
+            val launchUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_LAUNCH_DATA}&api_version=4&_format=json&_marker=0"
             val response = makeRequest(launchUrl)
             val json = JsonParser.parseString(response).asJsonObject
             
@@ -528,7 +520,7 @@ class RemoteAudioRepository @Inject constructor(
         try {
             // 1. Top Charts / Trending - Using content.getCharts
             try {
-                val chartsUrl = "$BASE_URL?__call=content.getCharts&_format=json"
+                val chartsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_CHARTS}&_format=json"
                 val chartsResponse = makeRequest(chartsUrl)
                 val chartsJson = JsonParser.parseString(chartsResponse)
                 
@@ -561,7 +553,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 2. New Releases - Using content.getAlbums with filter
             try {
-                val newReleasesUrl = "$BASE_URL?__call=content.getAlbums&_format=json&n=20&p=1&type=latest"
+                val newReleasesUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_ALBUMS}&_format=json&n=20&p=1&type=latest"
                 val releaseResponse = makeRequest(newReleasesUrl)
                 val releaseJson = JsonParser.parseString(releaseResponse)
                 
@@ -603,7 +595,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 3. Trending Songs - Using content.getTrending
             try {
-                val trendingUrl = "$BASE_URL?__call=content.getTrending&type=song&_format=json&n=20"
+                val trendingUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_TRENDING}&type=song&_format=json&n=20"
                 val trendingResponse = makeRequest(trendingUrl)
                 val trendingJson = JsonParser.parseString(trendingResponse)
                 
@@ -628,7 +620,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 4. Top Playlists - Using content.getFeaturedPlaylists
             try {
-                val playlistsUrl = "$BASE_URL?__call=content.getFeaturedPlaylists&_format=json&n=20&p=1"
+                val playlistsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_FEATURED_PL}&_format=json&n=20&p=1"
                 val playlistsResponse = makeRequest(playlistsUrl)
                 val playlistsJson = JsonParser.parseString(playlistsResponse)
                 
@@ -671,7 +663,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 5. Top Artists - Using content.getArtists (trending artists)
             try {
-                val artistsUrl = "$BASE_URL?__call=search.getArtistResults&_format=json&q=top+indian+artists&n=15"
+                val artistsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_SEARCH_ARTIST}&_format=json&q=top+indian+artists&n=15"
                 val artistsResponse = makeRequest(artistsUrl)
                 val artistsJson = JsonParser.parseString(artistsResponse)
                 
@@ -705,7 +697,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 6. Trending Albums - Using content.getTrending with type=album
             try {
-                val trendingAlbumsUrl = "$BASE_URL?__call=content.getTrending&type=album&_format=json&n=15"
+                val trendingAlbumsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_TRENDING}&type=album&_format=json&n=15"
                 val albumsResponse = makeRequest(trendingAlbumsUrl)
                 val albumsJson = JsonParser.parseString(albumsResponse)
                 
@@ -747,7 +739,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // 7. Editorial Picks / Radio Stations - Using content.getRadioStations
             try {
-                val radioUrl = "$BASE_URL?__call=webradio.getFeaturedStations&_format=json&n=15"
+                val radioUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_RADIO_STATIONS}&_format=json&n=15"
                 val radioResponse = makeRequest(radioUrl)
                 val radioJson = JsonParser.parseString(radioResponse)
                 
@@ -800,7 +792,7 @@ class RemoteAudioRepository @Inject constructor(
         
         try {
             // Fetch top charts/featured playlists
-            val playlistsUrl = "$BASE_URL?__call=content.getCharts&_format=json&n=20"
+            val playlistsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_CHARTS}&_format=json&n=20"
             val response = makeRequest(playlistsUrl)
             
             // Note: getCharts returns an array directly or inside "results" depending on endpoint version
@@ -838,7 +830,7 @@ class RemoteAudioRepository @Inject constructor(
             
             // Also add some specific search results if charts are empty or few
             if (playlists.size < 5) {
-                val searchUrl = "$BASE_URL?__call=search.getPlaylistResults&_format=json&q=top+hits&n=10"
+                val searchUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_SEARCH_PL}&_format=json&q=top+hits&n=10"
                 val searchResponse = makeRequest(searchUrl)
                 val searchJson = JsonParser.parseString(searchResponse).asJsonObject
                 val searchResults = searchJson.getAsJsonArray("results")
@@ -876,15 +868,11 @@ class RemoteAudioRepository @Inject constructor(
     // ==================== Private Helpers ====================
     
     private fun makeRequest(url: String): String {
-        // Derive referer dynamically
-        val referer = BASE_URL.substringBefore("/api")  + "/"
-        val origin = referer.dropLast(1)
-
         val request = Request.Builder()
             .url(url)
             .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36")
-            .addHeader("Referer", referer)
-            .addHeader("Origin", origin)
+            .addHeader("Referer", RemoteConstants.REFERER)
+            .addHeader("Origin", RemoteConstants.ORIGIN)
             .addHeader("Accept", "application/json, text/plain, */*")
             .addHeader("Accept-Language", "en-US,en;q=0.9")
             .build()

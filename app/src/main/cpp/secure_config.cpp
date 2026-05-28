@@ -33,7 +33,7 @@ static std::string deriveKeyNative() {
     return result;
 }
 
-// JioSaavn DES key derivation
+// Remote backend DES key derivation
 static const uint8_t kDesBase[] = {66, 71, 66, 67, 69, 68, 72, 64};
 
 static std::string deriveDesKeyNative() {
