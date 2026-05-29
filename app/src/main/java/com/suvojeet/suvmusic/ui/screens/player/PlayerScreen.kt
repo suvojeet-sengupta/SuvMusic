@@ -391,6 +391,7 @@ fun PlayerScreen(
                                 onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
                                 onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
                                 onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
+                                onShowComments = { activeOverlay = PlayerOverlay.Comments },
                                 handleDoubleTapSeek = handleDoubleTapSeek,
                                 onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                                 onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
