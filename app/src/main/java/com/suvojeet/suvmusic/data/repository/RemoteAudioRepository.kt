@@ -97,17 +97,20 @@ class RemoteAudioRepository @Inject constructor(
             AppResult.Success(songs)
         } catch (e: Exception) {
             val ms = System.currentTimeMillis() - started
-            android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
             val error = e.toAppError()
+            // Name the classified error (RateLimited/Timeout/NoNetwork/…) so a 429 storm
+            // is obvious in logcat and distinguishable from a parse or network failure.
+            android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message} classified=${error::class.simpleName}", e)
             Telemetry.report("search", "remoteaudio", error, mapOf("qlen" to query.length.toString()))
             // Offline-first fallback: serve last-known results from disk rather than a
             // blank screen. The failure is still recorded above for telemetry.
             val stale = OfflineCache.getSearch("ra:$cacheKey")
             if (stale != null) {
-                android.util.Log.i("RemoteAudio", "search('$query') serving ${stale.size} STALE cached results after failure")
+                android.util.Log.i("RemoteAudio", "search('$query') FALLBACK serving ${stale.size} STALE cached results (after ${error::class.simpleName})")
                 searchCache[cacheKey] = stale
                 AppResult.Success(stale)
             } else {
+                android.util.Log.w("RemoteAudio", "search('$query') FALLBACK no cached results -> returning Failure(${error::class.simpleName})")
                 AppResult.Failure(error)
             }
         }

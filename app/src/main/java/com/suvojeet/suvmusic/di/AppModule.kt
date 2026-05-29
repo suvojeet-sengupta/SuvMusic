@@ -66,19 +66,28 @@ object AppModule {
             val req = chain.request()
             val host = req.url.host
             val path = req.url.encodedPath
+            // Include the query so we can correlate a failure with the exact search term
+            // / song id that triggered it (the bare path is identical for every search).
+            val query = req.url.encodedQuery?.let { "?$it" } ?: ""
             val started = System.currentTimeMillis()
             try {
                 val resp = chain.proceed(req)
                 val ms = System.currentTimeMillis() - started
-                if (resp.code >= 400) {
-                    android.util.Log.w("HttpTrace", "${req.method} ${host}${path} -> ${resp.code} in ${ms}ms")
-                } else {
-                    android.util.Log.i("HttpTrace", "${req.method} ${host}${path} -> ${resp.code} in ${ms}ms")
+                when {
+                    // 429 is the saavn/sumit.co rate-limit signal behind the v2.5.1.0
+                    // offline-fallback crash. Call it out explicitly with Retry-After so
+                    // we can see how hard we're being throttled.
+                    resp.code == 429 -> {
+                        val retryAfter = resp.header("Retry-After") ?: "n/a"
+                        android.util.Log.w("HttpTrace", "RATE_LIMITED 429 ${req.method} ${host}${path}${query} retryAfter=${retryAfter}s in ${ms}ms")
+                    }
+                    resp.code >= 400 -> android.util.Log.w("HttpTrace", "${req.method} ${host}${path}${query} -> ${resp.code} in ${ms}ms")
+                    else -> android.util.Log.i("HttpTrace", "${req.method} ${host}${path}${query} -> ${resp.code} in ${ms}ms")
                 }
                 resp
             } catch (e: java.io.IOException) {
                 val ms = System.currentTimeMillis() - started
-                android.util.Log.e("HttpTrace", "${req.method} ${host}${path} threw ${e.javaClass.simpleName} after ${ms}ms: ${e.message}")
+                android.util.Log.e("HttpTrace", "${req.method} ${host}${path}${query} threw ${e.javaClass.simpleName} after ${ms}ms: ${e.message}")
                 throw e
             }
         }

@@ -69,14 +69,22 @@ object OfflineCache {
 
     /** Persist a non-empty result set for [query]. No-op before [init] or for empty lists. */
     fun putSearch(query: String, songs: List<Song>, now: Long = System.currentTimeMillis()) {
-        if (songs.isEmpty()) return
-        val dir = searchDir ?: return
+        if (songs.isEmpty()) {
+            android.util.Log.i(TAG, "putSearch('$query') SKIP empty list")
+            return
+        }
+        val dir = searchDir ?: run {
+            android.util.Log.w(TAG, "putSearch('$query') SKIP cache not initialized")
+            return
+        }
         try {
             val file = fileFor(dir, query)
-            file.writeText(gson.toJson(Envelope(now, songs)))
+            val json = gson.toJson(Envelope(now, songs))
+            file.writeText(json)
+            android.util.Log.i(TAG, "putSearch('$query') WROTE n=${songs.size} bytes=${json.length} -> ${file.name}")
             pruneIfNeeded(dir)
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "putSearch('$query') failed: ${e.message}")
+            android.util.Log.w(TAG, "putSearch('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
@@ -85,27 +93,51 @@ object OfflineCache {
      * When [allowStale] is false, entries older than [FRESH_TTL_MS] are treated as absent.
      */
     fun getSearch(query: String, allowStale: Boolean = true, now: Long = System.currentTimeMillis()): List<Song>? {
-        val dir = searchDir ?: return null
+        val dir = searchDir ?: run {
+            android.util.Log.w(TAG, "getSearch('$query') MISS cache not initialized")
+            return null
+        }
         return try {
             val file = fileFor(dir, query)
-            if (!file.exists()) return null
-            val envelope = gson.fromJson(file.readText(), Envelope::class.java) ?: return null
+            if (!file.exists()) {
+                android.util.Log.i(TAG, "getSearch('$query') MISS no file (${file.name})")
+                return null
+            }
+            val envelope = gson.fromJson(file.readText(), Envelope::class.java) ?: run {
+                android.util.Log.w(TAG, "getSearch('$query') MISS null envelope (empty/corrupt file) -> deleting")
+                runCatching { file.delete() }
+                return null
+            }
             val ageMs = now - envelope.savedAt
-            if (!allowStale && ageMs > FRESH_TTL_MS) return null
+            val ageMin = ageMs / 60_000
+            if (!allowStale && ageMs > FRESH_TTL_MS) {
+                android.util.Log.i(TAG, "getSearch('$query') MISS stale-disallowed age=${ageMin}min (ttl=${FRESH_TTL_MS / 60_000}min)")
+                return null
+            }
             // Gson can populate a declared-non-null field with null (it bypasses Kotlin
             // null checks), and an entry written by an older build may not map cleanly.
             // Inspect as List<*> so the validation itself doesn't trip the per-element
             // checkcast, then treat anything that isn't a real, non-empty Song list as a
             // cache miss so a malformed payload can never reach the UI.
             val raw: List<*>? = envelope.songs
+            // Diagnostic: surface the actual runtime element type. If R8 ever strips the
+            // List<Song> generic again, this prints the LinkedTreeMap that caused the
+            // v2.5.1.0 ClassCastException — without it ever reaching the grid.
+            val firstType = raw?.firstOrNull()?.javaClass?.name ?: "none"
             if (raw.isNullOrEmpty() || raw.any { it !is Song }) {
+                android.util.Log.e(
+                    TAG,
+                    "getSearch('$query') CORRUPT payload dropped: n=${raw?.size ?: 0} firstElementType=$firstType " +
+                        "age=${ageMin}min (expected com.suvojeet...Song; non-Song means Gson lost the generic) -> deleting"
+                )
                 runCatching { file.delete() }
                 return null
             }
+            android.util.Log.i(TAG, "getSearch('$query') HIT n=${raw.size} age=${ageMin}min stale=${ageMs > FRESH_TTL_MS}")
             @Suppress("UNCHECKED_CAST")
             (raw as List<Song>)
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "getSearch('$query') failed: ${e.message}")
+            android.util.Log.w(TAG, "getSearch('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
