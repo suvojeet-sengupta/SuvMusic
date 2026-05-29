@@ -320,19 +320,22 @@ fun HomeScreen(
                         // Quick Picks Section
                         if (uiState.recommendations.isNotEmpty() && uiState.homeSectionsVisibility.contains("quick_picks")) {
                             item(key = "quick_picks", contentType = "section_quick_picks") {
-                                com.suvojeet.suvmusic.ui.components.QuickPicksSection(
-                                    section = HomeSection(
+                                // Build the section once per recommendations change instead of
+                                // allocating a new HomeSection + mapped list on every recomposition
+                                // (which busts QuickPicksSection's internal remember caches).
+                                val quickPicksSection = remember(uiState.recommendations) {
+                                    HomeSection(
                                         title = "Quick picks",
                                         items = uiState.recommendations.map { HomeItem.SongItem(it) },
                                         type = HomeSectionType.QuickPicks
-                                    ),
+                                    )
+                                }
+                                com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                                    section = quickPicksSection,
                                     onSongClick = onSongClick,
                                     onPlaylistClick = onPlaylistClick,
                                     onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = { song ->
-                                        selectedSong = song
-                                        showSongMenu = true
-                                    },
+                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
                             }

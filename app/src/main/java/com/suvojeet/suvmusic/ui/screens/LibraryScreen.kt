@@ -552,7 +552,7 @@ fun LibraryFilterChips(
         contentPadding = PaddingValues(horizontal = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(LibraryFilter.values()) { filter ->
+        items(LibraryFilter.entries, key = { it }) { filter ->
             FilterChip(
                 selected = selectedFilter == filter,
                 onClick = { onFilterSelected(filter) },

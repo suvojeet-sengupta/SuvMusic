@@ -601,9 +601,11 @@ fun QuickPicksSection(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            chunkedItems.forEach { columnItems ->
+            chunkedItems.forEachIndexed { columnIndex, columnItems ->
                 item(
-                    key = columnItems.firstOrNull()?.id ?: java.util.UUID.randomUUID().toString(),
+                    // Deterministic fallback key — a random UUID here would change on every
+                    // recomposition, forcing Compose to discard and rebuild the whole column.
+                    key = columnItems.firstOrNull()?.id ?: "quick_pick_col_$columnIndex",
                     contentType = "column"
                 ) {
                     Column(

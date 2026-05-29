@@ -86,6 +86,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -221,7 +223,14 @@ class MainActivity : ComponentActivity() {
             val appTheme by sessionManager.appThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.DEFAULT)
             val pureBlackEnabled by sessionManager.pureBlackEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
             val albumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
-            val playerState by musicPlayer.playerState.collectAsStateWithLifecycle()
+            // Only the current song's thumbnail URL is needed here (to drive the album-art
+            // theme colors). Collecting the whole PlayerState would recompose this top-level
+            // theme scope — and therefore the entire app — on every ~400ms playback tick.
+            val currentThumbnailUrl by remember {
+                musicPlayer.playerState
+                    .map { it.currentSong?.thumbnailUrl }
+                    .distinctUntilChanged()
+            }.collectAsStateWithLifecycle(initialValue = musicPlayer.playerState.value.currentSong?.thumbnailUrl)
             val forceMaxRefreshRate by sessionManager.forceMaxRefreshRateFlow.collectAsStateWithLifecycle(initialValue = true)
             val systemDarkTheme = isSystemInDarkTheme()
             LaunchedEffect(forceMaxRefreshRate) {
@@ -252,16 +261,16 @@ class MainActivity : ComponentActivity() {
             }
             
             val albumArtColors = rememberDominantColors(
-                imageUrl = playerState.currentSong?.thumbnailUrl,
+                imageUrl = currentThumbnailUrl,
                 isDarkTheme = darkTheme
             )
-            
+
             SuvMusicTheme(
-                darkTheme = darkTheme, 
+                darkTheme = darkTheme,
                 dynamicColor = dynamicColor,
                 appTheme = appTheme,
                 pureBlack = pureBlackEnabled,
-                albumArtColors = if (albumArtDynamicColorsEnabled && playerState.currentSong != null) albumArtColors else null
+                albumArtColors = if (albumArtDynamicColorsEnabled && currentThumbnailUrl != null) albumArtColors else null
             ) {
                 val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
                 val foldingFeature by produceState<FoldingFeature?>(null) {
@@ -710,14 +719,21 @@ fun SuvMusicApp(
     // Don't show global volume indicator on PlayerScreen (it has its own)
     val showGlobalVolumeIndicator = hasSong && !isPlayerExpanded
     
-    // Use MaterialTheme colors as current dominant colors for components
-    // These automatically adapt to album art if SuvMusicTheme is updated
-    val currentDominantColors = DominantColors(
-        primary = androidx.compose.material3.MaterialTheme.colorScheme.background,
-        secondary = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
-        accent = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-        onBackground = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-    )
+    // Use MaterialTheme colors as current dominant colors for components.
+    // Remembered against the actual color inputs so we don't allocate a fresh
+    // DominantColors (and re-trigger downstream recomposition) on every tick.
+    val bg = androidx.compose.material3.MaterialTheme.colorScheme.background
+    val surfaceVariant = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+    val onBg = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
+    val currentDominantColors = remember(bg, surfaceVariant, primaryColor, onBg) {
+        DominantColors(
+            primary = bg,
+            secondary = surfaceVariant,
+            accent = primaryColor,
+            onBackground = onBg
+        )
+    }
     
     // Welcome Dialog State
     val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
