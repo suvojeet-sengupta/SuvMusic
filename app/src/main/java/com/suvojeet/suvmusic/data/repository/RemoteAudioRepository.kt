@@ -19,6 +19,10 @@ import com.suvojeet.suvmusic.util.encodeUrl
 import com.suvojeet.suvmusic.util.decodeHtml
 import com.suvojeet.suvmusic.util.toHighResImage
 import com.suvojeet.suvmusic.data.repository.remote.RemoteConstants
+import com.suvojeet.suvmusic.core.model.AppResult
+import com.suvojeet.suvmusic.core.model.getOrDefault
+import com.suvojeet.suvmusic.data.error.toAppError
+import com.suvojeet.suvmusic.telemetry.Telemetry
 
 /** Repository for fetching tracks from the remote HQ audio backend. */
 @Singleton
@@ -45,13 +49,23 @@ class RemoteAudioRepository @Inject constructor(
     
     /**
      * Search for songs on RemoteAudio.
+     *
+     * Legacy nullable-free entry point kept for existing callers; it collapses a typed
+     * failure back to an empty list. Prefer [searchResult] in new code so the UI can tell
+     * "no results" apart from "offline"/"upstream error".
      */
-    suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String): List<Song> = searchResult(query).getOrDefault(emptyList())
+
+    /**
+     * Typed variant of [search]: returns [AppResult.Success] (possibly with an empty list
+     * when the backend genuinely had nothing) or [AppResult.Failure] with a classified
+     * [com.suvojeet.suvmusic.core.model.AppError]. Failures are also reported to telemetry.
+     */
+    suspend fun searchResult(query: String): AppResult<List<Song>> = withContext(Dispatchers.IO) {
         val cacheKey = query.trim().lowercase()
-        if (searchCache.containsKey(cacheKey)) {
-            val cached = searchCache[cacheKey] ?: emptyList()
+        searchCache[cacheKey]?.let { cached ->
             android.util.Log.i("RemoteAudio", "search('$query') CACHE_HIT n=${cached.size}")
-            return@withContext cached
+            return@withContext AppResult.Success(cached)
         }
 
         val started = System.currentTimeMillis()
@@ -68,6 +82,8 @@ class RemoteAudioRepository @Inject constructor(
             android.util.Log.i("RemoteAudio", "search('$query') OK in ${ms}ms raw=$rawCount parsed=${songs.size}")
             if (rawCount > 0 && songs.isEmpty()) {
                 android.util.Log.w("RemoteAudio", "search('$query') had $rawCount raw results but all failed parseSongDto — backend schema may have shifted")
+                // Raw rows arrived but none parsed → the backend schema likely shifted.
+                Telemetry.report("search", "remoteaudio", com.suvojeet.suvmusic.core.model.AppError.Parse("$rawCount raw, 0 parsed"))
             }
 
             if (songs.isNotEmpty()) {
@@ -75,11 +91,13 @@ class RemoteAudioRepository @Inject constructor(
                 // Also cache individual song details
                 songs.forEach { song: Song -> songDetailsCache[song.id] = song }
             }
-            songs
+            AppResult.Success(songs)
         } catch (e: Exception) {
             val ms = System.currentTimeMillis() - started
             android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
-            emptyList()
+            val error = e.toAppError()
+            Telemetry.report("search", "remoteaudio", error, mapOf("qlen" to query.length.toString()))
+            AppResult.Failure(error)
         }
     }
     
@@ -189,6 +207,7 @@ class RemoteAudioRepository @Inject constructor(
         } catch (e: Exception) {
             val ms = System.currentTimeMillis() - started
             android.util.Log.e("RemoteAudio", "getSongDetails($songId) FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
+            Telemetry.report("song.details", "remoteaudio", e.toAppError(), mapOf("id" to songId))
             null
         }
     }
@@ -220,6 +239,7 @@ class RemoteAudioRepository @Inject constructor(
         } catch (e: Exception) {
             val ms = System.currentTimeMillis() - started
             android.util.Log.e("RemoteAudio", "<< getStreamUrl EXIT vid=$songId FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
+            Telemetry.report("stream.resolve", "remoteaudio", e.toAppError(), mapOf("id" to songId))
             null
         }
     }

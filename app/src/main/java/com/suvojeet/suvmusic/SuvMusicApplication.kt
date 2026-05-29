@@ -80,6 +80,15 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun onCreate() {
         super.onCreate()
 
+        // Install the telemetry sink for swallowed (non-crash) failures as early as
+        // possible so any failure during startup is counted. ACRA handles crashes;
+        // this counts the quiet failures (resolution/search/lyrics) that used to
+        // vanish into an empty list. The structured "SuvTelemetry FAIL …" log line
+        // also rides along in ACRA's logcat capture.
+        com.suvojeet.suvmusic.telemetry.Telemetry.install(
+            com.suvojeet.suvmusic.telemetry.LogFailureReporter()
+        )
+
         // Seed the synchronous logo-variant mirror BEFORE MainActivity reads it.
         // SessionManager also seeds it from its init block, but that path runs
         // inside a coroutine on a background dispatcher and is not guaranteed

@@ -3,6 +3,9 @@ package com.suvojeet.suvmusic.data.repository.youtube.streaming
 import android.util.LruCache
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.core.model.AppError
+import com.suvojeet.suvmusic.data.error.toAppError
+import com.suvojeet.suvmusic.telemetry.Telemetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -155,10 +158,14 @@ class YouTubeStreamingService @Inject constructor(
                         streamCache.put(cacheKey, CachedStream(innerTubeUrl, "m4a", System.currentTimeMillis()))
                     } else {
                         android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId ALL methods failed (NewPipe + InnerTube)")
+                        // Definitive resolution failure with no exception — NewPipe parsed
+                        // the page but found no usable stream (classic extractor break).
+                        Telemetry.report("stream.resolve", "youtube", AppError.Upstream("newpipe+innertube returned null"), mapOf("id" to videoId))
                     }
                     innerTubeUrl
                 } catch (t: Throwable) {
                     android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId async threw ${t.javaClass.simpleName}: ${t.message}", t)
+                    Telemetry.report("stream.resolve", "youtube", t.toAppError(), mapOf("id" to videoId))
                     throw t
                 } finally {
                     inFlightAudio.remove(inflightKey)
