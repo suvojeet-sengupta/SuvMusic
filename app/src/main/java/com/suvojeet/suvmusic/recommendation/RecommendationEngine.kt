@@ -157,8 +157,11 @@ class RecommendationEngine @Inject constructor(
      * home screen stays consistent with the active source (RemoteAudio vs YouTube).
      */
     private suspend fun searchSongs(query: String): List<Song> = try {
-        if (isRemoteAudioSource()) remoteAudioRepository.search(query)
-        else youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+        // Home/recommendation content ALWAYS comes from YouTube. The RemoteAudio (HQ)
+        // backend is reserved for playback stream resolution + the explicit Search tab;
+        // the home screen must never call it, since firing one search per genre row /
+        // artist mix / context section is exactly what triggers its 429 rate-limiting.
+        youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
     } catch (e: Exception) {
         emptyList()
     }
@@ -185,20 +188,16 @@ class RecommendationEngine @Inject constructor(
         val sections = mutableListOf<HomeSection>()
         val seenIds = mutableSetOf<String>()
         val seenFingerprints = mutableSetOf<String>()
-        val useRemoteAudio = isRemoteAudioSource()
 
         val deferredSections = topGenres.map { (genreName, _) ->
             async(Dispatchers.IO) {
                 apiSemaphore.withPermit {
                     try {
-                        val songs = if (useRemoteAudio) {
-                            remoteAudioRepository.search("$genreName songs")
-                        } else {
-                            youTubeRepository.search(
-                                "$genreName music mix",
-                                YouTubeRepository.FILTER_SONGS
-                            )
-                        }
+                        // Always YouTube — home content never touches the RemoteAudio backend.
+                        val songs = youTubeRepository.search(
+                            "$genreName music mix",
+                            YouTubeRepository.FILTER_SONGS
+                        )
                         val scored = scoreAndRank(songs, profile)
                         val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                         if (unique.isNotEmpty()) {
@@ -471,89 +470,10 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS)
         if (cached != null) return@coroutineScope cached
 
-        // RemoteAudio source: assemble a personalized layer on top of the RemoteAudio
-        // discover sections that HomeViewModel loads separately. Mirrors the
-        // YouTube branch's variety (quick picks + artist mixes + genre + recent)
-        // so HQ home doesn't feel half-empty once the user has any history.
-        if (isRemoteAudioSource()) {
-            val jioProfile = tasteProfileBuilder.getProfile()
-            val jioSections = mutableListOf<HomeSection>()
-            val jioSeenIds = mutableSetOf<String>()
-            val jioSeenFingerprints = mutableSetOf<String>()
-
-            // 1) Quick picks — RemoteAudio-seeded recommendations
-            try {
-                val quickPicks = getPersonalizedRecommendations(20)
-                val unique = deduplicate(quickPicks, jioSeenIds, jioSeenFingerprints)
-                if (unique.isNotEmpty()) {
-                    jioSections.add(HomeSection(
-                        title = "Quick picks",
-                        items = unique.map { HomeItem.SongItem(it) },
-                        type = HomeSectionType.QuickPicks
-                    ))
-                }
-            } catch (e: Exception) { Log.w(TAG, "RemoteAudio quick picks failed", e) }
-
-            // 2) Based on recent listening — seeded from the latest RemoteAudio play
-            try {
-                val seed = recentRemoteAudioSeedIds(1).firstOrNull()
-                if (seed != null) {
-                    val related = remoteAudioRepository.getRelatedSongs(seed)
-                    val scored = scoreAndRank(related, jioProfile)
-                    val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
-                    if (unique.isNotEmpty()) {
-                        jioSections.add(HomeSection(
-                            title = "Based on recent listening",
-                            items = unique.map { HomeItem.SongItem(it) },
-                            type = HomeSectionType.HorizontalCarousel
-                        ))
-                    }
-                }
-            } catch (e: Exception) { Log.w(TAG, "RemoteAudio recent-based failed", e) }
-
-            // 3) Top-artist mixes — only when the profile has enough data
-            if (jioProfile.hasEnoughData) {
-                val topArtists = jioProfile.artistAffinities.keys.take(2)
-                for (artist in topArtists) {
-                    try {
-                        val songs = remoteAudioRepository.search("$artist top songs")
-                        val scored = scoreAndRank(songs, jioProfile)
-                        val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(15)
-                        if (unique.isNotEmpty()) {
-                            val displayName = artist.replaceFirstChar { it.titlecase() }
-                            jioSections.add(HomeSection(
-                                title = "Your $displayName Mix",
-                                items = unique.map { HomeItem.SongItem(it) },
-                                type = HomeSectionType.HorizontalCarousel
-                            ))
-                        }
-                    } catch (e: Exception) { Log.w(TAG, "RemoteAudio artist mix failed for $artist", e) }
-                }
-            }
-
-            // 4) Top-genre "Because you like X" rows
-            if (jioProfile.hasEnoughData) {
-                val topGenres = GenreTaxonomy.topGenres(jioProfile.genreAffinityVector, n = 2)
-                for ((genreName, _) in topGenres) {
-                    try {
-                        val songs = remoteAudioRepository.search("$genreName songs")
-                        val scored = scoreAndRank(songs, jioProfile)
-                        val unique = deduplicate(scored, jioSeenIds, jioSeenFingerprints).take(12)
-                        if (unique.isNotEmpty()) {
-                            jioSections.add(HomeSection(
-                                title = "Because you like $genreName",
-                                items = unique.map { HomeItem.SongItem(it) },
-                                type = HomeSectionType.HorizontalCarousel
-                            ))
-                        }
-                    } catch (e: Exception) { Log.w(TAG, "RemoteAudio genre row failed for $genreName", e) }
-                }
-            }
-
-            if (jioSections.isNotEmpty()) cache.putSections(RecommendationCache.Keys.HOME_SECTIONS, jioSections)
-            return@coroutineScope jioSections
-        }
-
+        // NOTE: Home content is YouTube-only regardless of the selected playback source.
+        // The RemoteAudio (HQ) backend is used solely for stream resolution + the Search
+        // tab; building home rows from it fired one search per artist/genre/context and
+        // triggered 429 rate-limiting, so that branch was removed.
         val profile = tasteProfileBuilder.getProfile()
         val sections = mutableListOf<HomeSection>()
         val seenSongIds = mutableSetOf<String>()
@@ -666,19 +586,8 @@ class RecommendationEngine @Inject constructor(
         val cached = cache.getSongs(RecommendationCache.Keys.QUICK_PICKS)
         if (cached != null) return cached.take(limit)
 
-        // RemoteAudio source: build recommendations natively from RemoteAudio reco + home content.
-        if (isRemoteAudioSource()) {
-            val profile = tasteProfileBuilder.getProfile()
-            val seeds = recentRemoteAudioSeedIds(5)
-            val candidates = remoteAudioRepository.getRecommendations(seeds)
-            val seenIds = mutableSetOf<String>()
-            val seenFingerprints = mutableSetOf<String>()
-            val unique = deduplicate(candidates, seenIds, seenFingerprints)
-            val scored = scoreAndRank(unique, profile)
-            if (scored.isNotEmpty()) cache.putSongs(RecommendationCache.Keys.QUICK_PICKS, scored)
-            return scored.take(limit)
-        }
-
+        // Quick picks come from YouTube only — see getPersonalizedHomeSections note.
+        // RemoteAudio is never used to build home/recommendation content.
         val profile = tasteProfileBuilder.getProfile()
         val candidates = mutableListOf<Song>()
         val seenIds = mutableSetOf<String>()
