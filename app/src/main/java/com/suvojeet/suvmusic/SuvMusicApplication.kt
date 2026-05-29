@@ -89,6 +89,11 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             com.suvojeet.suvmusic.telemetry.LogFailureReporter()
         )
 
+        // Point the disk-backed offline cache at app storage so search results survive a
+        // cold start / offline launch (home feed + quick picks are already persisted by
+        // SessionManager; this closes the search-results gap).
+        com.suvojeet.suvmusic.cache.OfflineCache.init(this)
+
         // Seed the synchronous logo-variant mirror BEFORE MainActivity reads it.
         // SessionManager also seeds it from its init block, but that path runs
         // inside a coroutine on a background dispatcher and is not guaranteed

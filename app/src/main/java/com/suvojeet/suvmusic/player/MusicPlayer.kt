@@ -1909,8 +1909,14 @@ class MusicPlayer @Inject constructor(
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Expected: user pressed Next / new song chosen mid-preload. Re-throw to honor cancellation.
                 throw e
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Preload failure is non-fatal — playback falls back to on-demand resolve.
+                // Count it so we can see how often gapless prefetch silently misses.
+                com.suvojeet.suvmusic.telemetry.Telemetry.report(
+                    "stream.preload", "player",
+                    com.suvojeet.suvmusic.core.model.AppError.Unknown(e.message),
+                    mapOf("id" to nextSong.id)
+                )
             } finally {
                 isPreloading = false
             }

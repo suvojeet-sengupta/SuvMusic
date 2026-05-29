@@ -5,6 +5,9 @@ import com.suvojeet.suvmusic.data.YouTubeAuthUtils
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.cache.OfflineCache
+import com.suvojeet.suvmusic.data.error.toAppError
+import com.suvojeet.suvmusic.telemetry.Telemetry
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeConfig
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import kotlinx.coroutines.Dispatchers
@@ -42,14 +45,17 @@ class YouTubeSearchService @Inject constructor(
      * Search for songs/videos on YouTube Music.
      */
     suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> = withContext(Dispatchers.IO) {
+        // Namespaced per source+filter so YouTube song/video results never collide with
+        // each other or with RemoteAudio's entries in the shared disk cache.
+        val cacheKey = "yt:$filter:${query.trim().lowercase()}"
         try {
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val searchExtractor = ytService.getSearchExtractor(query, listOf(filter), "")
             searchExtractor.fetchPage()
-            
-            searchExtractor.initialPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
+
+            val songs = searchExtractor.initialPage.items.filterIsInstance<StreamInfoItem>().mapNotNull { item ->
                 try {
                     // Extract artist ID from uploader URL (format: youtube.com/channel/UC...)
                     val artistId = item.uploaderUrl?.let { url ->
@@ -75,9 +81,14 @@ class YouTubeSearchService @Inject constructor(
                     null
                 }
             }
+            // Persist non-empty results so a cold start / offline launch can still show them.
+            if (songs.isNotEmpty()) OfflineCache.putSearch(cacheKey, songs)
+            songs
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            Telemetry.report("search", "youtube", e.toAppError(), mapOf("qlen" to query.length.toString()))
+            // Offline-first fallback: last-known results beat a blank screen.
+            OfflineCache.getSearch(cacheKey) ?: emptyList()
         }
     }
 

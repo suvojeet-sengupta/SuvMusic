@@ -23,6 +23,7 @@ import com.suvojeet.suvmusic.core.model.AppResult
 import com.suvojeet.suvmusic.core.model.getOrDefault
 import com.suvojeet.suvmusic.data.error.toAppError
 import com.suvojeet.suvmusic.telemetry.Telemetry
+import com.suvojeet.suvmusic.cache.OfflineCache
 
 /** Repository for fetching tracks from the remote HQ audio backend. */
 @Singleton
@@ -90,6 +91,8 @@ class RemoteAudioRepository @Inject constructor(
                 searchCache[cacheKey] = songs
                 // Also cache individual song details
                 songs.forEach { song: Song -> songDetailsCache[song.id] = song }
+                // Persist to disk so a cold start / offline launch can still show results.
+                OfflineCache.putSearch("ra:$cacheKey", songs)
             }
             AppResult.Success(songs)
         } catch (e: Exception) {
@@ -97,7 +100,16 @@ class RemoteAudioRepository @Inject constructor(
             android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
             val error = e.toAppError()
             Telemetry.report("search", "remoteaudio", error, mapOf("qlen" to query.length.toString()))
-            AppResult.Failure(error)
+            // Offline-first fallback: serve last-known results from disk rather than a
+            // blank screen. The failure is still recorded above for telemetry.
+            val stale = OfflineCache.getSearch("ra:$cacheKey")
+            if (stale != null) {
+                android.util.Log.i("RemoteAudio", "search('$query') serving ${stale.size} STALE cached results after failure")
+                searchCache[cacheKey] = stale
+                AppResult.Success(stale)
+            } else {
+                AppResult.Failure(error)
+            }
         }
     }
     
