@@ -58,8 +58,11 @@ class RemoteAudioRepository @Inject constructor(
         try {
             android.util.Log.i("RemoteAudio", "search('$query') api=searchSongs start")
             val response = apiService.searchSongs(query)
-            val rawCount = response.data?.songs?.results?.size ?: 0
-            val songs = response.data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+            // `/search/songs` returns a flat `data.results`; the global `/search`
+            // endpoint nests them under `data.songs.results`. Accept either shape.
+            val rawResults = response.data?.results ?: response.data?.songs?.results
+            val rawCount = rawResults?.size ?: 0
+            val songs = rawResults?.mapNotNull { parseSongDto(it) } ?: emptyList()
             val ms = System.currentTimeMillis() - started
 
             android.util.Log.i("RemoteAudio", "search('$query') OK in ${ms}ms raw=$rawCount parsed=${songs.size}")
