@@ -81,6 +81,9 @@ val SurfaceContainer = Color(0xFF211E26)
 val SurfaceContainerHigh = Color(0xFF2C2930)
 val SurfaceContainerHighest = Color(0xFF37343B)
 
+// Flat YouTube-Music-style player base (near-black, slightly lifted off pure #000)
+val YtFlatBackground = Color(0xFF0F0F0F)
+
 // Glassmorphism
 val GlassWhite = Color(0x1AFFFFFF)
 val GlassBlack = Color(0x33000000)

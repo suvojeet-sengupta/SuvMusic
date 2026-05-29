@@ -88,7 +88,7 @@ fun PlaybackControls(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(dominantColors.onBackground.copy(alpha = 0.1f), CircleShape),
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 AnimatedContent(

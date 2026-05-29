@@ -194,7 +194,7 @@ private fun BottomTabButton(
             style = MaterialTheme.typography.labelLarge,
             color = if (enabled) dominantColors.onBackground.copy(alpha = 0.8f) else dominantColors.onBackground.copy(alpha = 0.3f),
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            letterSpacing = 0.5.sp
         )
     }
 }
