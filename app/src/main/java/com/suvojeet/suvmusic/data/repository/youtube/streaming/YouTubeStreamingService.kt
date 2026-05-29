@@ -24,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeStreamingService @Inject constructor(
     private val sessionManager: SessionManager,
-    private val networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor
+    private val networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
+    private val innerTubeClient: InnerTubeClient
 ) {
     private val ytService: org.schabi.newpipe.extractor.StreamingService by lazy {
         ServiceList.all().find { it.serviceInfo.name == "YouTube" }
@@ -135,12 +136,27 @@ class YouTubeStreamingService @Inject constructor(
                     }
                     android.util.Log.w("YouTubeStreaming", "RESOLVE audio $videoId primary returned null; falling back to music.youtube.com")
                     val fallback = resolveStreamWithUrl("https://music.youtube.com/watch?v=$videoId", videoId, forceLow)
-                    if (fallback == null) {
-                        android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId BOTH primary and music fallback failed")
-                    } else {
+                    if (fallback != null) {
                         android.util.Log.i("YouTubeStreaming", "RESOLVE audio $videoId music fallback succeeded")
+                        return@async fallback
                     }
-                    fallback
+
+                    // Final fallback: NewPipe failed to extract on both hosts (YouTube
+                    // likely changed its web player). Try the InnerTube player API directly.
+                    android.util.Log.w("YouTubeStreaming", "RESOLVE audio $videoId NewPipe failed on both hosts; trying InnerTube")
+                    val itQuality = if (forceLow) {
+                        com.suvojeet.suvmusic.core.model.AudioQuality.LOW
+                    } else {
+                        sessionManager.getAudioQuality()
+                    }
+                    val innerTubeUrl = innerTubeClient.resolveAudioUrl(videoId, itQuality)
+                    if (innerTubeUrl != null) {
+                        android.util.Log.i("YouTubeStreaming", "RESOLVE audio $videoId InnerTube OK")
+                        streamCache.put(cacheKey, CachedStream(innerTubeUrl, "m4a", System.currentTimeMillis()))
+                    } else {
+                        android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId ALL methods failed (NewPipe + InnerTube)")
+                    }
+                    innerTubeUrl
                 } catch (t: Throwable) {
                     android.util.Log.e("YouTubeStreaming", "RESOLVE audio $videoId async threw ${t.javaClass.simpleName}: ${t.message}", t)
                     throw t
