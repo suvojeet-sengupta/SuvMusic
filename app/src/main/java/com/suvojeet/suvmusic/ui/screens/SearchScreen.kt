@@ -420,7 +420,7 @@ fun SearchScreen(
                     if (uiState.resultFilter != ResultFilter.ALL && !uiState.isLoading) {
                         when (uiState.resultFilter) {
                             ResultFilter.SONGS, ResultFilter.VIDEOS -> {
-                                itemsIndexed(uiState.results, key = { index, song -> "song_${song.id}_$index" }) { index, song ->
+                                itemsIndexed(uiState.results, key = { _, song -> "song_${song.id}" }) { index, song ->
                                     SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                                 }
                             }
@@ -477,7 +477,7 @@ fun SearchScreen(
                         }
                         if (uiState.results.isNotEmpty()) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { index, song -> "main_song_${song.id}_$index" }) { index, song ->
+                            itemsIndexed(uiState.results, key = { _, song -> "main_song_${song.id}" }) { index, song ->
                                 SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                             }
                         }
@@ -520,7 +520,7 @@ fun SearchScreen(
                         }
                         if (uiState.results.isNotEmpty()) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { index, song -> "remote_${song.id}_$index" }) { index, song ->
+                            itemsIndexed(uiState.results, key = { _, song -> "remote_${song.id}" }) { index, song ->
                                 SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                             }
                         }
@@ -556,7 +556,7 @@ fun SearchScreen(
                         }
                         if (uiState.results.isNotEmpty()) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { index, song -> "local_${song.id}_$index" }) { index, song ->
+                            itemsIndexed(uiState.results, key = { _, song -> "local_${song.id}" }) { index, song ->
                                 SearchResultItem(song = song, onClick = { onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                             }
                         }

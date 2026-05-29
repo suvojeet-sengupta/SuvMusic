@@ -989,13 +989,13 @@ fun OtherContentList(
 
         when (filter) {
             LibraryFilter.SONGS -> {
-                items(songs.size) { index ->
+                items(songs.size, key = { index -> songs[index].id }) { index ->
                     val song = songs[index]
                     MusicCard(song = song, onClick = { onSongClick(songs, index) })
                 }
             }
             LibraryFilter.ALBUMS -> {
-                items(albums) { album ->
+                items(albums, key = { it.id }) { album ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1023,7 +1023,7 @@ fun OtherContentList(
                 }
             }
             LibraryFilter.ARTISTS -> {
-                items(artists) { artist ->
+                items(artists, key = { it.id }) { artist ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1048,7 +1048,7 @@ fun OtherContentList(
                 }
             }
             LibraryFilter.FOLDERS -> {
-                items(uiState.localFolders.keys.toList()) { folderPath ->
+                items(uiState.localFolders.keys.toList(), key = { it }) { folderPath ->
                     val folderName = folderPath.substringAfterLast("/")
                     val songs = uiState.localFolders[folderPath] ?: emptyList()
                     val songCount = songs.size

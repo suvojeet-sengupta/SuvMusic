@@ -118,17 +118,23 @@ class SearchViewModel @Inject constructor(
         // Observe music source
         observeMusicSource()
         
-        // Observe query changes for debounced suggestions and search
+        // Suggestions: quick + cheap, so keep them responsive.
         viewModelScope.launch {
             _searchQuery
-                .debounce(300) // 300ms debounce
+                .debounce(250)
                 .distinctUntilChanged()
                 .filter { it.isNotBlank() }
-                .collect { query ->
-                    fetchSuggestions(query)
-                    // Auto-search while typing
-                    searchInternal(query)
-                }
+                .collect { query -> fetchSuggestions(query) }
+        }
+        // Full auto-search: heavier (parallel network calls + full result-list
+        // replacement that recomposes the grid). Debounce it longer and gate on a
+        // minimum length so we don't fire a complete search on every keystroke.
+        viewModelScope.launch {
+            _searchQuery
+                .debounce(650)
+                .distinctUntilChanged()
+                .filter { it.trim().length >= 2 }
+                .collect { query -> searchInternal(query) }
         }
     }
     
