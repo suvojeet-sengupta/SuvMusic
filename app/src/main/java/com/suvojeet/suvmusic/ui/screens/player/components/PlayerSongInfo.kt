@@ -58,7 +58,12 @@ fun SongInfoSection(
     showMoreButton: Boolean = true,
     isClassic: Boolean = false,
     isAIEnabled: Boolean = false,
-    aiStatus: String? = null
+    aiStatus: String? = null,
+    // YT-Music exact layout: the like/dislike capsule moves out of the title row
+    // into the action-chip row below the artist, and the title gains a ">" hint.
+    showInlineLikeCapsule: Boolean = true,
+    showTitleArrow: Boolean = false,
+    onTitleArrowClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -157,7 +162,7 @@ fun SongInfoSection(
                     }
                 }
 
-                if (!isClassic) {
+                if (!isClassic && showInlineLikeCapsule) {
                     Spacer(modifier = Modifier.width(12.dp))
 
                     // Like/Dislike Capsule (Visible only in YT Music style here)
@@ -202,6 +207,17 @@ fun SongInfoSection(
                             )
                         }
                     }
+                } else if (showTitleArrow) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // YT-Music-style ">" hint next to the title (taps to next song).
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = "Next song",
+                        tint = dominantColors.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(onClick = onTitleArrowClick)
+                    )
                 }
             }
 

@@ -79,6 +79,7 @@ fun YTMusicPlayerStyle(
     onShowPlaybackSpeed: () -> Unit,
     onShowEqualizer: () -> Unit,
     onShowListenTogether: () -> Unit,
+    onShowComments: () -> Unit,
     handleDoubleTapSeek: (Boolean) -> Unit,
     onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
@@ -99,7 +100,7 @@ fun YTMusicPlayerStyle(
             song, playerState, playbackInfo, dominantColors, currentArtworkShape, currentArtworkSize,
             currentSeekbarStyle, sponsorSegments, audioArEnabled, isRotatingEnabled, actions,
             onShowActions, onShowLyrics, onShowQueue, onShowRelated, onShowDevices, onShowSleepTimer,
-            onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, playerState.isVideoMode,
+            onShowPlaybackSpeed, onShowEqualizer, onShowListenTogether, onShowComments, playerState.isVideoMode,
             actions.onToggleVideoMode, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, player, isFullScreen, onSetFullScreen, isSwitchingMode,
             sleepTimerOption, sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider,
@@ -112,7 +113,7 @@ fun YTMusicPlayerStyle(
             isFullScreen, isCompactHeight, actions, onShowActions, onShowQueue, onShowLyrics,
             onShowRelated,
             onShowDevices, onShowSleepTimer, onShowPlaybackSpeed, onShowEqualizer,
-            onShowListenTogether, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
+            onShowListenTogether, onShowComments, handleDoubleTapSeek, onShapeChange, onSeekbarStyleChange,
             onRecenterAr, onSetFullScreen, isSwitchingMode, sleepTimerOption,
             sleepTimerRemainingMs, progressProvider, positionProvider, durationProvider,
             isAIEnabled, aiStatus, windowSizeClass
@@ -145,6 +146,7 @@ private fun YTMusicPortraitContent(
     onShowPlaybackSpeed: () -> Unit,
     onShowEqualizer: () -> Unit,
     onShowListenTogether: () -> Unit,
+    onShowComments: () -> Unit,
     handleDoubleTapSeek: (Boolean) -> Unit,
     onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
@@ -287,7 +289,26 @@ private fun YTMusicPortraitContent(
                 sleepTimerOption = sleepTimerOption,
                 showMoreButton = false,
                 isAIEnabled = isAIEnabled,
-                aiStatus = aiStatus
+                aiStatus = aiStatus,
+                showInlineLikeCapsule = false,
+                showTitleArrow = true,
+                onTitleArrowClick = actions.onNext
+            )
+
+            Spacer(modifier = Modifier.height(if (isVeryShort) 8.dp else 12.dp))
+
+            // YT-Music chip row directly under the song info (like/dislike/lyrics/comments).
+            PlayerActionChips(
+                isFavorite = playerState.isLiked,
+                isDisliked = playerState.isDisliked,
+                onToggleLike = actions.onToggleLike,
+                onToggleDislike = actions.onToggleDislike,
+                onLyricsClick = onShowLyrics,
+                onCommentsClick = onShowComments,
+                onRelatedClick = onShowRelated,
+                onDownloadClick = actions.onDownload,
+                downloadState = playerState.downloadState,
+                dominantColors = dominantColors
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
@@ -308,12 +329,11 @@ private fun YTMusicPortraitContent(
 
             Spacer(modifier = Modifier.height(if (isVeryShort) 8.dp else 16.dp))
 
-            BottomActions(
-                onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onRelatedClick = onShowRelated, onDownloadClick = actions.onDownload,
-                downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-                isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isShort
+            QueueHandle(
+                onClick = onShowQueue,
+                dominantColors = dominantColors
             )
-            
+
             Spacer(modifier = Modifier.height(if (isVeryShort) 12.dp else 24.dp))
         }
     }
@@ -325,7 +345,7 @@ private fun YTMusicLandscapeContent(
     currentArtworkShape: ArtworkShape, currentArtworkSize: ArtworkSize, currentSeekbarStyle: SeekbarStyle, sponsorSegments: List<SponsorSegment>,
     audioArEnabled: Boolean, isRotatingEnabled: Boolean, actions: PlayerScreenActions, onShowActions: () -> Unit, onShowLyrics: () -> Unit, onShowQueue: () -> Unit,
     onShowRelated: () -> Unit,
-    onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit,
+    onShowDevices: () -> Unit, onShowSleepTimer: () -> Unit, onShowPlaybackSpeed: () -> Unit, onShowEqualizer: () -> Unit, onShowListenTogether: () -> Unit, onShowComments: () -> Unit,
     isVideoMode: Boolean, onToggleVideoMode: () -> Unit, handleDoubleTapSeek: (Boolean) -> Unit, onShapeChange: (ArtworkShape) -> Unit,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit, onRecenterAr: () -> Unit,
     player: Player?, isFullScreen: Boolean, onSetFullScreen: (Boolean) -> Unit,
@@ -425,10 +445,26 @@ private fun YTMusicLandscapeContent(
                 sleepTimerOption = sleepTimerOption,
                 showMoreButton = false,
                 isAIEnabled = isAIEnabled,
-                aiStatus = aiStatus
+                aiStatus = aiStatus,
+                showInlineLikeCapsule = false,
+                showTitleArrow = true,
+                onTitleArrowClick = actions.onNext
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            PlayerActionChips(
+                isFavorite = playerState.isLiked,
+                isDisliked = playerState.isDisliked,
+                onToggleLike = actions.onToggleLike,
+                onToggleDislike = actions.onToggleDislike,
+                onLyricsClick = onShowLyrics,
+                onCommentsClick = onShowComments,
+                onRelatedClick = onShowRelated,
+                onDownloadClick = actions.onDownload,
+                downloadState = playerState.downloadState,
+                dominantColors = dominantColors
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
             
             TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
@@ -439,17 +475,9 @@ private fun YTMusicLandscapeContent(
             }
             
             Spacer(modifier = Modifier.height(12.dp))
-            BottomActions(
-                onLyricsClick = onShowLyrics,
-                onCastClick = onShowDevices,
-                onQueueClick = onShowQueue,
-                onRelatedClick = onShowRelated,
-                onDownloadClick = actions.onDownload,
-                downloadState = playerState.downloadState,
-                dominantColors = dominantColors,
-                isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
-                isVideoMode = isVideoMode,
-                onVideoToggle = onToggleVideoMode
+            QueueHandle(
+                onClick = onShowQueue,
+                dominantColors = dominantColors
             )
         }
     }
