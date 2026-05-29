@@ -128,9 +128,9 @@ class MusicPlayer @Inject constructor(
     // Fix: Unbounded Memory Leak -> Use LruCache with max size 100
     private val resolvedVideoIds = android.util.LruCache<String, String>(100)
 
-    // Hybrid playback cache: YouTube songId -> matched RemoteAudio songId.
-    // A blank value ("") is a negative cache marker meaning "searched, no
-    // confident RemoteAudio match" so we don't repeat the search every play.
+    // Hybrid playback cache: YouTube songId -> resolved RemoteAudio HQ stream URL.
+    // A blank value ("") is a negative cache marker meaning "searched, no confident
+    // RemoteAudio match" so we don't repeat the search every play.
     private val hybridRemoteIds = android.util.LruCache<String, String>(200)
     
     // Listening history tracking
@@ -1263,33 +1263,35 @@ class MusicPlayer @Inject constructor(
      * null so the caller falls back to the normal YouTube stream.
      */
     private suspend fun resolveHybridRemoteStream(song: Song): String? {
-        // Positive/negative cache so we don't repeat the search on every play.
-        hybridRemoteIds[song.id]?.let { cached ->
-            if (cached.isBlank()) return null
-            return kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                remoteAudioRepository.getStreamUrl(cached)
-            }
-        }
+        // Positive/negative cache of the resolved HQ stream URL so we don't re-search on
+        // every play. A blank value is the negative-cache marker ("searched, no match").
+        hybridRemoteIds[song.id]?.let { cached -> return cached.ifBlank { null } }
         return try {
             val query = "${song.title} ${song.artist}".trim()
             val candidates = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
                 remoteAudioRepository.search(query)
             } ?: emptyList()
             val match = pickBestRemoteMatch(song, candidates)
-            if (match == null) {
-                hybridRemoteIds.put(song.id, "") // negative-cache the miss
-                null
-            } else {
-                hybridRemoteIds.put(song.id, match.id)
-                kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                    remoteAudioRepository.getStreamUrl(match.id)
-                }
-            }
+            // Use the 320 kbps stream URL the search result already carries; only fall
+            // back to the /songs/{id} detail endpoint if it's somehow missing (that
+            // endpoint rate-limits hardest, so we keep it off the hot play path).
+            val url = match?.let { remoteStreamUrlFor(it) }
+            hybridRemoteIds.put(song.id, url ?: "")
+            url
         } catch (e: Exception) {
             android.util.Log.w("MusicPlayer", "Hybrid RemoteAudio resolve failed: ${e.message}")
             null
         }
     }
+
+    /**
+     * HQ stream URL for a RemoteAudio song. Prefers the 320 kbps URL the [song] already
+     * carries (populated from search results) so playback resolves by song name via the
+     * search API and avoids the rate-limited `/songs/{id}` detail endpoint. Only when no
+     * embedded URL is present does it fall back to the id-based lookup.
+     */
+    private suspend fun remoteStreamUrlFor(song: Song): String? =
+        song.streamUrl?.takeIf { it.isNotBlank() } ?: remoteAudioRepository.getStreamUrl(song.id)
 
     /**
      * Picks the most likely RemoteAudio equivalent of a YouTube [song]. Requires a
@@ -1374,7 +1376,7 @@ class MusicPlayer @Inject constructor(
                     val result = kotlinx.coroutines.withTimeoutOrNull(20_000L) {
                         when (song.source) {
                             SongSource.LOCAL, SongSource.DOWNLOADED -> Pair(song.localUri.orEmpty(), null)
-                            SongSource.REMOTE -> Pair(remoteAudioRepository.getStreamUrl(song.id), null)
+                            SongSource.REMOTE -> Pair(remoteStreamUrlFor(song), null)
                             else -> {
                                 if (_playerState.value.isVideoMode) {
                                     val videoId = resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also {
@@ -1450,16 +1452,13 @@ class MusicPlayer @Inject constructor(
                                 android.util.Log.w("MusicPlayer", "RemoteAudio->YouTube fallback: ytId=$ytId, resolved=${streamUrl != null}")
                             }
                             SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> {
-                                // YouTube failed -> resolve via RemoteAudio
-                                val jsId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                                    remoteAudioRepository.search(matchQuery).firstOrNull()?.id
+                                // YouTube failed -> resolve via RemoteAudio by name,
+                                // using the stream URL embedded in the search result.
+                                val match = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                                    remoteAudioRepository.search(matchQuery).firstOrNull()
                                 }
-                                if (!jsId.isNullOrBlank()) {
-                                    streamUrl = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                                        remoteAudioRepository.getStreamUrl(jsId)
-                                    }
-                                }
-                                android.util.Log.w("MusicPlayer", "YouTube->RemoteAudio fallback: jsId=$jsId, resolved=${streamUrl != null}")
+                                streamUrl = match?.let { remoteStreamUrlFor(it) }
+                                android.util.Log.w("MusicPlayer", "YouTube->RemoteAudio fallback: jsId=${match?.id}, resolved=${streamUrl != null}")
                             }
                             else -> {}
                         }
@@ -1875,7 +1874,7 @@ class MusicPlayer @Inject constructor(
             try {
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
-                    SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(nextSong.id)
+                    SongSource.REMOTE -> remoteStreamUrlFor(nextSong)
                     else -> {
                         if (isVideoMode) {
                             // Smart Video Matching for Preload — use getVideoStreamResult to respect quality settings
@@ -2036,11 +2035,11 @@ class MusicPlayer @Inject constructor(
             SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
             SongSource.REMOTE -> {
                 if (resolveStream) {
-                    // Retry once if first attempt fails
-                    remoteAudioRepository.getStreamUrl(song.id)
+                    // Prefer the embedded HQ URL (search result); retry once if missing.
+                    remoteStreamUrlFor(song)
                         ?: run {
                             kotlinx.coroutines.delay(500)
-                            remoteAudioRepository.getStreamUrl(song.id)
+                            remoteStreamUrlFor(song)
                         }
                         ?: "https://placeholder.invalid/${song.id}"
                 } else {
@@ -2206,7 +2205,7 @@ class MusicPlayer @Inject constructor(
                         try {
                             val streamUrl = when (nextSong.source) {
                                 SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
-                                SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(nextSong.id)
+                                SongSource.REMOTE -> remoteStreamUrlFor(nextSong)
                                 else -> {
                                     if (_playerState.value.isVideoMode) {
                                         val videoId = resolvedVideoIds[nextSong.id]
@@ -2787,7 +2786,7 @@ class MusicPlayer @Inject constructor(
                     // Switch back to audio stream - use original source logic
                     streamUrl = when (song.source) {
                         SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
-                        SongSource.REMOTE -> remoteAudioRepository.getStreamUrl(song.id)
+                        SongSource.REMOTE -> remoteStreamUrlFor(song)
                         else -> youTubeRepository.getStreamUrl(song.id)
                     }
                 }
