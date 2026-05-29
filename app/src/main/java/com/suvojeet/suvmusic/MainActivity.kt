@@ -515,11 +515,13 @@ fun SuvMusicApp(
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
-    // Stable progress provider for the mini player: reads the latest progress without
-    // forcing the mini player to recompose on every ~400ms position tick. The lambda
-    // identity stays constant; LinearProgressIndicator reads it inside its own draw scope.
-    val latestPlayerState = androidx.compose.runtime.rememberUpdatedState(playerState)
-    val miniPlayerProgressProvider = remember { { latestPlayerState.value.progress } }
+    // Stable progress provider for the mini player. Derived from a distinct progress
+    // flow and read only inside the progress bar's draw scope, so neither this scope
+    // nor the mini player recomposes on the ~400ms position tick.
+    val miniPlayerProgressState = remember {
+        playerViewModel.playerState.map { it.progress }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = 0f)
+    val miniPlayerProgressProvider = remember { { miniPlayerProgressState.value } }
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
     val keepScreenOnEnabled by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()
@@ -895,7 +897,10 @@ fun SuvMusicApp(
                         NavGraph(
                             navController = navController,
                             playbackInfo = playbackInfo,
-                            playerState = playerState,
+                            // NavGraph doesn't read this param; pass the distinct playbackInfo
+                            // (not the per-tick playerState) so this call site doesn't recompose
+                            // the whole app shell on every position update.
+                            playerState = playbackInfo,
                             sessionManager = sessionManager,
                             youTubeRepository = youTubeRepository,
                             onPlaySong = { songs, index ->
@@ -969,8 +974,8 @@ fun SuvMusicApp(
         val bottomPaddingPx = with(density) { navBarPadding.toPx() + navBarHeight.toPx() }
 
         ExpandablePlayerSheet(
-            currentSong = playerState.currentSong,
-            isPlaying = playerState.isPlaying,
+            currentSong = playbackInfo.currentSong,
+            isPlaying = playbackInfo.isPlaying,
             progressProvider = miniPlayerProgressProvider,
             dominantColors = currentDominantColors,
             onPlayPause = { playerViewModel.togglePlayPause() },
