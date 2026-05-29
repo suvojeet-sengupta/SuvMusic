@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.glass.LiquidGlassSurface
 
@@ -66,9 +65,9 @@ import com.suvojeet.suvmusic.ui.components.glass.LiquidGlassSurface
 @Composable
 fun LiquidGlassMiniPlayer(
     song: Song,
-    playerState: PlayerState,
+    isPlaying: Boolean,
     dominantColors: DominantColors,
-    progress: Float,
+    progressProvider: () -> Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
@@ -198,7 +197,7 @@ fun LiquidGlassMiniPlayer(
 
                 GlassButton(onClick = onPlayPause) {
                     AnimatedContent(
-                        targetState = playerState.isPlaying,
+                        targetState = isPlaying,
                         transitionSpec = {
                             (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
                                 (scaleOut() + fadeOut())
@@ -223,7 +222,7 @@ fun LiquidGlassMiniPlayer(
                     )
                 }
 
-                if (!playerState.isPlaying) {
+                if (!isPlaying) {
                     GlassButton(onClick = onClose) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -245,7 +244,7 @@ fun LiquidGlassMiniPlayer(
                     .align(Alignment.BottomCenter)
             ) {
                 LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
+                    progress = { progressProvider().coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.dp)

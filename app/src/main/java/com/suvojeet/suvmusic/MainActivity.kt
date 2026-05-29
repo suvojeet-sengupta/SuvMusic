@@ -515,6 +515,11 @@ fun SuvMusicApp(
     // Optimized states to reduce recompositions
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
     val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
+    // Stable progress provider for the mini player: reads the latest progress without
+    // forcing the mini player to recompose on every ~400ms position tick. The lambda
+    // identity stays constant; LinearProgressIndicator reads it inside its own draw scope.
+    val latestPlayerState = androidx.compose.runtime.rememberUpdatedState(playerState)
+    val miniPlayerProgressProvider = remember { { latestPlayerState.value.progress } }
     val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle(initialValue = false)
     val keepScreenOnEnabled by sessionManager.keepScreenOnEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val artworkShape by playerViewModel.artworkShape.collectAsStateWithLifecycle()
@@ -964,8 +969,10 @@ fun SuvMusicApp(
         val bottomPaddingPx = with(density) { navBarPadding.toPx() + navBarHeight.toPx() }
 
         ExpandablePlayerSheet(
-            playerState = playerState,
-            dominantColors = currentDominantColors, 
+            currentSong = playerState.currentSong,
+            isPlaying = playerState.isPlaying,
+            progressProvider = miniPlayerProgressProvider,
+            dominantColors = currentDominantColors,
             onPlayPause = { playerViewModel.togglePlayPause() },
             onNext = { playerViewModel.seekToNext() },
             onPrevious = { playerViewModel.seekToPrevious() },

@@ -54,15 +54,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @Composable
 fun PillMiniPlayer(
     song: Song,
-    playerState: PlayerState,
+    isPlaying: Boolean,
     dominantColors: DominantColors,
-    progress: Float,
+    progressProvider: () -> Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
@@ -180,7 +179,7 @@ fun PillMiniPlayer(
                         drawArc(
                             color = activeColor,
                             startAngle = -90f,
-                            sweepAngle = progress * 360f,
+                            sweepAngle = progressProvider() * 360f,
                             useCenter = false,
                             style = Stroke(
                                 width = strokeWidth,
@@ -240,7 +239,7 @@ fun PillMiniPlayer(
 
                 MiniPlayerButton(onClick = onPlayPause) {
                     AnimatedContent(
-                        targetState = playerState.isPlaying,
+                        targetState = isPlaying,
                         transitionSpec = {
                             (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
                             (scaleOut() + fadeOut())
@@ -265,7 +264,7 @@ fun PillMiniPlayer(
                     )
                 }
 
-                if (!playerState.isPlaying) {
+                if (!isPlaying) {
                     MiniPlayerButton(onClick = onClose) {
                         Icon(
                             imageVector = Icons.Default.Close,

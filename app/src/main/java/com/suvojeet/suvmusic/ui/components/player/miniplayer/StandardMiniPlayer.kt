@@ -38,15 +38,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @Composable
 fun StandardMiniPlayer(
     song: Song,
-    playerState: PlayerState,
+    isPlaying: Boolean,
     dominantColors: DominantColors,
-    progress: Float,
+    progressProvider: () -> Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
@@ -148,8 +147,8 @@ fun StandardMiniPlayer(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playerState.isPlaying) "Pause" else "Play",
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
                             tint = dominantColors.onBackground,
                             modifier = Modifier.size(24.dp)
                         )
@@ -169,7 +168,7 @@ fun StandardMiniPlayer(
                         )
                     }
 
-                    if (!playerState.isPlaying) {
+                    if (!isPlaying) {
                         Spacer(modifier = Modifier.width(4.dp))
 
                         IconButton(
@@ -187,7 +186,7 @@ fun StandardMiniPlayer(
                 }
 
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = progressProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp),

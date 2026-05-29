@@ -41,15 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
-import com.suvojeet.suvmusic.core.model.PlayerState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 @Composable
 fun YTMusicMiniPlayer(
     song: Song,
-    playerState: PlayerState,
+    isPlaying: Boolean,
     dominantColors: DominantColors,
-    progress: Float,
+    progressProvider: () -> Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
@@ -159,8 +158,8 @@ fun YTMusicMiniPlayer(
                         modifier = Modifier.size(44.dp)
                     ) {
                         Icon(
-                            imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playerState.isPlaying) "Pause" else "Play",
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
                             tint = dominantColors.onBackground,
                             modifier = Modifier.size(30.dp)
                         )
@@ -178,7 +177,7 @@ fun YTMusicMiniPlayer(
                         )
                     }
                     
-                    if (!playerState.isPlaying) {
+                    if (!isPlaying) {
                         IconButton(
                             onClick = onClose,
                             modifier = Modifier.size(36.dp)
@@ -195,7 +194,7 @@ fun YTMusicMiniPlayer(
                 
                 // Progress bar at the bottom of the mini player
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = progressProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.dp),

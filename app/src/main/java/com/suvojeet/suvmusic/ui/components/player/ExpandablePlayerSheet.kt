@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import com.suvojeet.suvmusic.core.model.PlayerState
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import kotlinx.coroutines.launch
@@ -90,7 +90,9 @@ private val MiniPlayerHeight = 64.dp
 
 @Composable
 fun ExpandablePlayerSheet(
-    playerState: PlayerState,
+    currentSong: Song?,
+    isPlaying: Boolean,
+    progressProvider: () -> Float,
     dominantColors: DominantColors,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
@@ -107,7 +109,7 @@ fun ExpandablePlayerSheet(
     glassBlurAmount: Float = 50f,
     expandedContent: @Composable (onCollapse: () -> Unit) -> Unit
 ) {
-    val song = playerState.currentSong ?: return
+    val song = currentSong ?: return
     val coroutineScope = rememberCoroutineScope()
 
     // Animation State
@@ -178,9 +180,9 @@ fun ExpandablePlayerSheet(
             
             CollapsedMiniPlayer(
                 song = song,
-                playerState = playerState,
+                isPlaying = isPlaying,
                 dominantColors = dominantColors,
-                progress = playerState.progress,
+                progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
@@ -362,10 +364,10 @@ fun ExpandablePlayerSheet(
  */
 @Composable
 private fun CollapsedMiniPlayer(
-    song: com.suvojeet.suvmusic.core.model.Song,
-    playerState: PlayerState,
+    song: Song,
+    isPlaying: Boolean,
     dominantColors: DominantColors,
-    progress: Float,
+    progressProvider: () -> Float,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClose: () -> Unit,
@@ -380,9 +382,9 @@ private fun CollapsedMiniPlayer(
         MiniPlayerStyle.LIQUID_GLASS -> {
             LiquidGlassMiniPlayer(
                 song = song,
-                playerState = playerState,
+                isPlaying = isPlaying,
                 dominantColors = dominantColors,
-                progress = progress,
+                progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
@@ -396,9 +398,9 @@ private fun CollapsedMiniPlayer(
         MiniPlayerStyle.FLOATING_PILL -> {
             PillMiniPlayer(
                 song = song,
-                playerState = playerState,
+                isPlaying = isPlaying,
                 dominantColors = dominantColors,
-                progress = progress,
+                progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
@@ -411,9 +413,9 @@ private fun CollapsedMiniPlayer(
         MiniPlayerStyle.YT_MUSIC -> {
             YTMusicMiniPlayer(
                 song = song,
-                playerState = playerState,
+                isPlaying = isPlaying,
                 dominantColors = dominantColors,
-                progress = progress,
+                progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
@@ -426,9 +428,9 @@ private fun CollapsedMiniPlayer(
         else -> {
             StandardMiniPlayer(
                 song = song,
-                playerState = playerState,
+                isPlaying = isPlaying,
                 dominantColors = dominantColors,
-                progress = progress,
+                progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onClose = onClose,
