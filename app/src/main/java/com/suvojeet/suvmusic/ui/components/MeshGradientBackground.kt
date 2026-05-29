@@ -92,42 +92,39 @@ fun MeshGradientBackground(
         label = "y3"
     )
 
-    val x4State = infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "x4"
-    )
-    val y4State = infiniteTransition.animateFloat(
-        initialValue = 0.9f, targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(19000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "y4"
-    )
-
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(backgroundColor)
             .graphicsLayer() // Use graphics layer for hardware acceleration
             .drawWithCache {
+                // The bottom fade is static (depends only on backgroundColor + size), so
+                // build it once per size/color change instead of re-allocating the brush
+                // every frame inside the animated draw loop.
+                val scrimBrush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        backgroundColor.copy(alpha = 0.5f),
+                        backgroundColor
+                    ),
+                    startY = 0f,
+                    endY = size.height
+                )
                 onDrawBehind {
                     val width = size.width
                     val height = size.height
-                    
+
                     val primary = animatedPrimaryState.value
                     val secondary = animatedSecondaryState.value
                     val accent = animatedAccentState.value
-                    
+
                     val x1 = x1State.value
                     val y1 = y1State.value
                     val x2 = x2State.value
                     val y2 = y2State.value
                     val x3 = x3State.value
                     val y3 = y3State.value
-                    val x4 = x4State.value
-                    val y4 = y4State.value
 
-                    // Drawing directly to canvas using the animated values
-                    
                     // Blob 1: Primary
                     drawCircle(
                         brush = Brush.radialGradient(
@@ -138,7 +135,7 @@ fun MeshGradientBackground(
                         radius = width * 1.2f,
                         center = Offset(width * x1, height * y1)
                     )
-                    
+
                     // Blob 2: Secondary
                     drawCircle(
                         brush = Brush.radialGradient(
@@ -149,7 +146,7 @@ fun MeshGradientBackground(
                         radius = width * 1.1f,
                         center = Offset(width * x2, height * y2)
                     )
-                    
+
                     // Blob 3: Accent
                     drawCircle(
                         brush = Brush.radialGradient(
@@ -161,29 +158,8 @@ fun MeshGradientBackground(
                         center = Offset(width * x3, height * y3)
                     )
 
-                    // Blob 4: Primary Variation
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(primary.copy(alpha = 0.3f), Color.Transparent),
-                            center = Offset(width * x4, height * y4),
-                            radius = width * 1.3f
-                        ),
-                        radius = width * 1.3f,
-                        center = Offset(width * x4, height * y4)
-                    )
-                    
-                    // Overlay the bottom fade gradient directly in draw context
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                backgroundColor.copy(alpha = 0.5f),
-                                backgroundColor
-                            ),
-                            startY = 0f,
-                            endY = height
-                        )
-                    )
+                    // Static bottom fade (cached brush)
+                    drawRect(brush = scrimBrush)
                 }
             }
     )
