@@ -11,11 +11,14 @@ data class RemoteAudioSearchResponse(
 
 @Serializable
 data class RemoteAudioSearchData(
+    // `/api/search` (global) nests results under category objects…
     @SerializedName("topQuery") val topQuery: RemoteAudioTopQuery? = null,
     @SerializedName("songs") val songs: RemoteAudioSongsCategory? = null,
     @SerializedName("albums") val albums: RemoteAudioAlbumsCategory? = null,
     @SerializedName("artists") val artists: RemoteAudioArtistsCategory? = null,
-    @SerializedName("playlists") val playlists: RemoteAudioPlaylistsCategory? = null
+    @SerializedName("playlists") val playlists: RemoteAudioPlaylistsCategory? = null,
+    // …while category endpoints like `/api/search/songs` return a flat results list.
+    @SerializedName("results") val results: List<RemoteAudioSongDto>? = null
 )
 
 @Serializable
