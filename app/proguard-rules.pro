@@ -43,6 +43,13 @@
 -keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.data.repository.remote.** {
     <fields>;
 }
+# Disk-cache wrappers (e.g. OfflineCache.Envelope) are Gson-serialized too. Under
+# R8 full mode a wrapper whose fields aren't kept loses its generic Signature, so
+# Gson deserializes List<Song> elements as raw LinkedTreeMap — the v2.5.1.0
+# ClassCastException. Keep their fields so the <Song> type argument survives.
+-keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.cache.** {
+    <fields>;
+}
 
 # Strip only verbose / debug Log calls in release. Info / warn / error
 # survive so diagnostic logs (stream resolution traces, NewPipe failures,

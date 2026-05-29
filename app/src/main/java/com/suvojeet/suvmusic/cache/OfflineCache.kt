@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.cache
 
 import android.content.Context
 import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import com.suvojeet.suvmusic.core.model.Song
 import java.io.File
 
@@ -34,8 +35,23 @@ object OfflineCache {
     @Volatile
     private var searchDir: File? = null
 
-    /** Wrapper carrying the save time so freshness can be judged on read. */
-    private data class Envelope(val savedAt: Long, val songs: List<Song>)
+    /**
+     * Wrapper carrying the save time so freshness can be judged on read.
+     *
+     * The `@SerializedName` annotations are load-bearing, not cosmetic: this app builds
+     * with `android.enableR8.fullMode=true`, where `-keepattributes Signature` only
+     * retains generic signatures for *kept* members. Gson's bundled consumer ProGuard
+     * rules keep `@SerializedName`-annotated fields together with their `Signature`, so
+     * without these annotations R8 strips the `List<Song>` type argument from [songs],
+     * and Gson then deserializes each element as a raw `LinkedTreeMap` instead of a
+     * [Song]. That malformed list flows through the offline fallback into the search
+     * grid, whose `key = { song.id }` does a `checkcast Song` → `ClassCastException:
+     * LinkedTreeMap cannot be cast to Song` (the v2.5.1.0 crash under saavn 429s).
+     */
+    private data class Envelope(
+        @SerializedName("savedAt") val savedAt: Long,
+        @SerializedName("songs") val songs: List<Song>
+    )
 
     fun init(context: Context) {
         searchDir = File(context.filesDir, "offline_search").apply {
@@ -76,7 +92,18 @@ object OfflineCache {
             val envelope = gson.fromJson(file.readText(), Envelope::class.java) ?: return null
             val ageMs = now - envelope.savedAt
             if (!allowStale && ageMs > FRESH_TTL_MS) return null
-            envelope.songs.takeIf { it.isNotEmpty() }
+            // Gson can populate a declared-non-null field with null (it bypasses Kotlin
+            // null checks), and an entry written by an older build may not map cleanly.
+            // Inspect as List<*> so the validation itself doesn't trip the per-element
+            // checkcast, then treat anything that isn't a real, non-empty Song list as a
+            // cache miss so a malformed payload can never reach the UI.
+            val raw: List<*>? = envelope.songs
+            if (raw.isNullOrEmpty() || raw.any { it !is Song }) {
+                runCatching { file.delete() }
+                return null
+            }
+            @Suppress("UNCHECKED_CAST")
+            (raw as List<Song>)
         } catch (e: Exception) {
             android.util.Log.w(TAG, "getSearch('$query') failed: ${e.message}")
             null
