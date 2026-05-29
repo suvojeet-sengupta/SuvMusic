@@ -201,12 +201,12 @@ fun PlayerScreen(
     val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
     val currentArtworkShapeName by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = ArtworkShape.ROUNDED_SQUARE.name)
     val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)
-    val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.WAVEFORM.name)
+    val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.MATERIAL.name)
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerGlassBlur by sessionManager.playerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 60f)
     val playerGlassIntensity by sessionManager.playerGlassIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
-    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
     val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
     val isAppInDarkTheme = when (themeMode) {
@@ -235,7 +235,7 @@ fun PlayerScreen(
 
     val currentArtworkShape = try { ArtworkShape.valueOf(currentArtworkShapeName) } catch (e: Exception) { ArtworkShape.ROUNDED_SQUARE }
     val currentArtworkSize = try { ArtworkSize.valueOf(currentArtworkSizeName) } catch (e: Exception) { ArtworkSize.LARGE }
-    val currentSeekbarStyle = try { SeekbarStyle.valueOf(currentSeekbarStyleName) } catch (e: Exception) { SeekbarStyle.WAVEFORM }
+    val currentSeekbarStyle = try { SeekbarStyle.valueOf(currentSeekbarStyleName) } catch (e: Exception) { SeekbarStyle.MATERIAL }
 
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
@@ -346,13 +346,29 @@ fun PlayerScreen(
         com.suvojeet.suvmusic.ui.screens.player.components.LocalCurrentDownloadProgress provides currentDownloadProgress
       ) {
         Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
-            // Background — skip the mesh gradient for Liquid Glass; it draws its own blurred backdrop.
-            if (playerStyle == PlayerStyle.LIQUID_GLASS) {
-                // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
-            } else if (animatedBackgroundEnabled && !playerState.isVideoMode) {
-                MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
-            } else {
-                Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
+            // Background is style-specific:
+            //  • LIQUID_GLASS draws its own full-screen blurred backdrop — skip here.
+            //  • YT_MUSIC uses the flat YouTube-Music look: solid surface + a subtle blurred
+            //    album-art wash, no decorative gradients (app-wide default).
+            //  • CLASSIC keeps the original animated mesh / vertical color gradient.
+            when (playerStyle) {
+                PlayerStyle.LIQUID_GLASS -> {
+                    // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
+                }
+                PlayerStyle.YT_MUSIC -> {
+                    com.suvojeet.suvmusic.ui.screens.player.components.FlatArtTintBackground(
+                        thumbnailUrl = song?.thumbnailUrl,
+                        isDarkTheme = isAppInDarkTheme,
+                        isVideoMode = playerState.isVideoMode
+                    )
+                }
+                PlayerStyle.CLASSIC -> {
+                    if (animatedBackgroundEnabled && !playerState.isVideoMode) {
+                        MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
+                    }
+                }
             }
 
             val playerMainContent: @Composable () -> Unit = {

@@ -164,7 +164,7 @@ fun SongInfoSection(
                     Row(
                         modifier = Modifier
                             .clip(CircleShape)
-                            .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                            .background(dominantColors.onBackground.copy(alpha = 0.06f))
                             .padding(horizontal = 2.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

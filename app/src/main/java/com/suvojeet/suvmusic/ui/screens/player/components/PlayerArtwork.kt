@@ -134,7 +134,8 @@ fun AlbumArtwork(
             hueShift,
         ).copy(alpha = pulseAlpha)
     } else {
-        dominantColors.primary.copy(alpha = 0.5f)
+        // Flat YT-Music look: keep only a faint art-colored glow, not a heavy halo.
+        dominantColors.primary.copy(alpha = 0.25f)
     }
 
     // Shape state - uses initial shape from settings
@@ -278,7 +279,7 @@ fun AlbumArtwork(
                         rotationZ = rotation + currentRotation
                     }
                     .shadow(
-                        elevation = if (colorFlashingEnabled && isPlaying) 28.dp else 16.dp,
+                        elevation = if (colorFlashingEnabled && isPlaying) 28.dp else 8.dp,
                         shape = RoundedCornerShape(safeCornerRadius),
                         spotColor = glowColor,
                         ambientColor = glowColor

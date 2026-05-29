@@ -24,7 +24,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.ui.components.DominantColors
-import com.suvojeet.suvmusic.ui.theme.SquircleShape
 
 @Composable
 fun PlayerTopBar(
@@ -55,8 +54,8 @@ fun PlayerTopBar(
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .size(44.dp)
-                .clip(SquircleShape)
-                .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                .clip(CircleShape)
+                .background(dominantColors.onBackground.copy(alpha = 0.07f))
                 .clickable(onClick = onBack),
             contentAlignment = Alignment.Center
         ) {
@@ -79,7 +78,7 @@ fun PlayerTopBar(
                     modifier = Modifier
                         .wrapContentSize()
                         .clip(CircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.12f))
+                        .background(dominantColors.onBackground.copy(alpha = 0.08f))
                         .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -89,7 +88,7 @@ fun PlayerTopBar(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.18f) else Color.Transparent)
+                            .background(if (!isVideoMode) dominantColors.onBackground.copy(alpha = 0.14f) else Color.Transparent)
                             .clickable { if (isVideoMode) onVideoToggle() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -106,7 +105,7 @@ fun PlayerTopBar(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.18f) else Color.Transparent)
+                            .background(if (isVideoMode) dominantColors.onBackground.copy(alpha = 0.14f) else Color.Transparent)
                             .clickable { if (!isVideoMode) onVideoToggle() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -139,8 +138,8 @@ fun PlayerTopBar(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(SquircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .clip(CircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.07f))
                     .clickable(onClick = onCastClick),
                 contentAlignment = Alignment.Center
             ) {
@@ -157,8 +156,8 @@ fun PlayerTopBar(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(SquircleShape)
-                        .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                        .clip(CircleShape)
+                        .background(dominantColors.onBackground.copy(alpha = 0.07f))
                         .clickable(onClick = onRecenter),
                     contentAlignment = Alignment.Center
                 ) {
@@ -176,8 +175,8 @@ fun PlayerTopBar(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(SquircleShape)
-                    .background(dominantColors.onBackground.copy(alpha = 0.1f))
+                    .clip(CircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.07f))
                     .clickable(onClick = onMoreClick),
                 contentAlignment = Alignment.Center
             ) {

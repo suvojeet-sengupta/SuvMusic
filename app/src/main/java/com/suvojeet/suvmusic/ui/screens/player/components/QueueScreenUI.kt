@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -93,7 +92,8 @@ fun ModernQueueView(
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
     val scope = rememberCoroutineScope()
     
-    val backgroundColor = if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
+    // Flat YouTube-Music-style queue: a single solid surface, no color-tint gradient.
+    val backgroundColor = if (isDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface
     val contentColor = if (isDarkTheme) Color.White else Color.Black
     val secondaryContentColor = contentColor.copy(alpha = 0.6f)
 
@@ -102,20 +102,6 @@ fun ModernQueueView(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        // Gradient Overlay for subtle color tint
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            dominantColors.primary.copy(alpha = if (isDarkTheme) 0.15f else 0.1f),
-                            backgroundColor
-                        )
-                    )
-                )
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
