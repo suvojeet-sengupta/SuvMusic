@@ -28,6 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.model.RepeatMode
 import com.suvojeet.suvmusic.ui.components.DominantColors
@@ -47,9 +49,10 @@ fun PlaybackControls(
     dominantColors: DominantColors,
     compact: Boolean = false
 ) {
-    // YT Music style sizes
+    // YT Music style sizes — icon kept proportionally smaller so it reads as a
+    // play triangle inside the solid white circle rather than filling it.
     val playSize = if (compact) 64.dp else 84.dp
-    val playIconSize = if (compact) 44.dp else 56.dp
+    val playIconSize = if (compact) 34.dp else 46.dp
     val skipIconSize = if (compact) 32.dp else 40.dp
     val secondaryIconSize = if (compact) 24.dp else 28.dp
 
@@ -78,7 +81,10 @@ fun PlaybackControls(
             iconSize = skipIconSize
         )
 
-        // Play/Pause — keeps its animated background ring + icon swap, so stays bespoke.
+        // Play/Pause — YouTube-Music-style solid filled circle (white on dark,
+        // dark on light) with a contrasting icon and the existing animated swap.
+        val playCircleColor = dominantColors.onBackground
+        val playIconTint = if (playCircleColor.luminance() > 0.5f) Color.Black else Color.White
         Box(
             modifier = Modifier
                 .size(playSize)
@@ -88,7 +94,7 @@ fun PlaybackControls(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(dominantColors.onBackground.copy(alpha = 0.08f), CircleShape),
+                    .background(playCircleColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 AnimatedContent(
@@ -103,7 +109,7 @@ fun PlaybackControls(
                     Icon(
                         imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = dominantColors.onBackground,
+                        tint = playIconTint,
                         modifier = Modifier.size(playIconSize)
                     )
                 }

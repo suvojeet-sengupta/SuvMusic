@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,6 +26,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Recommend
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.ButtonGroup
@@ -44,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.suvojeet.suvmusic.core.model.DownloadState
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
@@ -66,26 +65,29 @@ fun BottomActions(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomTabButton(
-            label = "UP NEXT",
+        // YouTube-Music-style pill chips (icon + label) instead of plain text tabs.
+        BottomChip(
+            label = "Up next",
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
             onClick = onQueueClick,
             dominantColors = dominantColors
         )
 
-        BottomTabButton(
-            label = "LYRICS",
+        BottomChip(
+            label = "Lyrics",
+            icon = Icons.Default.Lyrics,
             onClick = onLyricsClick,
             dominantColors = dominantColors
         )
 
-        BottomTabButton(
-            label = "RELATED",
+        BottomChip(
+            label = "Related",
+            icon = Icons.Default.Recommend,
             onClick = onRelatedClick,
-            dominantColors = dominantColors,
-            enabled = true
+            dominantColors = dominantColors
         )
 
         // Download icon: previously the BottomActions row received
@@ -176,25 +178,35 @@ private fun DownloadAction(
 }
 
 @Composable
-private fun BottomTabButton(
+private fun BottomChip(
     label: String,
+    icon: ImageVector,
     onClick: () -> Unit,
     dominantColors: DominantColors,
     enabled: Boolean = true
 ) {
-    Box(
+    val tint = if (enabled) dominantColors.onBackground.copy(alpha = 0.9f)
+    else dominantColors.onBackground.copy(alpha = 0.3f)
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(CircleShape)
+            .background(dominantColors.onBackground.copy(alpha = if (enabled) 0.08f else 0.04f))
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(16.dp)
+        )
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = if (enabled) dominantColors.onBackground.copy(alpha = 0.8f) else dominantColors.onBackground.copy(alpha = 0.3f),
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp
+            color = tint,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
