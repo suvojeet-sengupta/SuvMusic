@@ -2,6 +2,8 @@ package com.suvojeet.suvmusic.ui.screens.player.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -97,6 +100,7 @@ fun ModernQueueView(
     val haptic = LocalHapticFeedback.current
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
     val scope = rememberCoroutineScope()
+    var showQueueMenu by remember { mutableStateOf(false) }
     
     // Flat YouTube-Music-style queue: a single solid surface, no color-tint gradient.
     val backgroundColor = if (isDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface
@@ -181,24 +185,87 @@ fun ModernQueueView(
                         }
                     }
                 } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Default.KeyboardArrowDown, "Close", tint = contentColor, modifier = Modifier.size(32.dp))
+                    // "Playing from / Your queue" label (matches YouTube Music's queue).
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // The modal sheet supplies its own drag handle + swipe-to-dismiss,
+                        // so the explicit close chevron is only needed off-sheet (tablet pane).
+                        if (!modalMode) {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.Default.KeyboardArrowDown, "Close", tint = contentColor, modifier = Modifier.size(32.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Up Next",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = contentColor
-                        )
+                        Column {
+                            Text(
+                                "Playing from",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = secondaryContentColor
+                            )
+                            Text(
+                                "Your queue",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
-                    
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClearQueue) {
-                            Icon(Icons.Default.DeleteSweep, "Clear", tint = secondaryContentColor)
+                        // Save the queue as a playlist.
+                        Surface(
+                            shape = CircleShape,
+                            color = contentColor.copy(alpha = 0.08f),
+                            modifier = Modifier.clickable { if (queue.isNotEmpty()) onAddToPlaylistClick(queue) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.PlaylistAdd, null, tint = contentColor, modifier = Modifier.size(20.dp))
+                                Text(
+                                    "Save",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor
+                                )
+                            }
                         }
-                        IconButton(onClick = { if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0) }) {
-                            Icon(Icons.Default.Checklist, "Select", tint = dominantColors.accent)
+
+                        // Overflow keeps autoplay / select / clear reachable without
+                        // cluttering the header.
+                        Box {
+                            IconButton(onClick = { showQueueMenu = true }) {
+                                Icon(Icons.Default.MoreVert, "More", tint = contentColor)
+                            }
+                            DropdownMenu(
+                                expanded = showQueueMenu,
+                                onDismissRequest = { showQueueMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isAutoplayEnabled) "Autoplay: On" else "Autoplay: Off") },
+                                    onClick = { onToggleAutoplay(); showQueueMenu = false },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) },
+                                    trailingIcon = { if (isAutoplayEnabled) Icon(Icons.Default.Check, null, tint = dominantColors.accent) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Select") },
+                                    onClick = {
+                                        showQueueMenu = false
+                                        if (queue.isNotEmpty()) onToggleSelection(if (currentIndex >= 0) currentIndex else 0)
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Checklist, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Clear queue") },
+                                    onClick = { showQueueMenu = false; onClearQueue() },
+                                    leadingIcon = { Icon(Icons.Default.DeleteSweep, null) }
+                                )
+                            }
                         }
                     }
                 }
@@ -206,28 +273,10 @@ fun ModernQueueView(
 
             // Queue List
             val listState = rememberLazyListState()
-            val isHeaderVisible by androidx.compose.runtime.remember {
-                androidx.compose.runtime.derivedStateOf {
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 100
-                }
-            }
 
-            // Hero Now Playing Card & Autoplay Toggle with Smart Hiding
-            androidx.compose.animation.AnimatedVisibility(
-                visible = !isSelectionMode && isHeaderVisible,
-                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-            ) {
-                Column {
-                    // When the full player header is shown (expanded sheet) the current
-                    // song already appears up top, so skip the compact hero card.
-                    if (currentSong != null && nowPlayingHeaderOverride == null) {
-                        HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors, isDarkTheme, contentColor)
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-                    AutoplayToggleRow(isAutoplayEnabled, onToggleAutoplay, dominantColors, isDarkTheme, contentColor)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+            // YouTube-Music-style mix filter chips (All / Familiar / Popular / …).
+            if (!isSelectionMode) {
+                QueueFilterChips(dominantColors = dominantColors, contentColor = contentColor)
             }
 
             // Compose's LazyList requires unique keys. The queue can legitimately
@@ -257,7 +306,6 @@ fun ModernQueueView(
                 modifier = Modifier.weight(1f)
             ) {
                 if (currentSong != null) {
-                    item { SectionDivider("NOW PLAYING", secondaryContentColor) }
                     item(key = "current_${currentSong.id}") {
                         ModernQueueListItem(
                             song = currentSong,
@@ -279,7 +327,6 @@ fun ModernQueueView(
                 }
 
                 if (upNextSongs.isNotEmpty()) {
-                    item { SectionDivider(if (isRadioMode || isAutoplayEnabled) "UPCOMING (AUTOPLAY)" else "UP NEXT", secondaryContentColor) }
                     itemsIndexed(
                         keyedUpNext,
                         key = { _, pair -> pair.second }
@@ -316,100 +363,45 @@ fun ModernQueueView(
     }
 }
 
+/**
+ * YouTube-Music-style mix filter chips shown above the queue. Selection is local
+ * and presentational for now — the app's autoplay does not expose mix-tuning
+ * categories (Familiar / Popular / Discover / Deep cuts), so these tune nothing yet.
+ */
 @Composable
-private fun HeroNowPlayingCard(
-    song: Song, 
-    isPlaying: Boolean, 
-    isFavorite: Boolean, 
-    onToggleLike: () -> Unit, 
-    onMoreClick: () -> Unit, 
-    dominantColors: DominantColors,
-    isDarkTheme: Boolean,
-    contentColor: Color
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = contentColor.copy(alpha = 0.05f),
-        border = null
+private fun QueueFilterChips(dominantColors: DominantColors, contentColor: Color) {
+    val filters = remember { listOf("All", "Familiar", "Popular", "Discover", "Deep cuts") }
+    var selected by remember { mutableStateOf("All") }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(contentAlignment = Alignment.Center) {
-                AsyncImage(
-                    model = song.thumbnailUrl,
-                    contentDescription = null,
-                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                if (isPlaying) {
-                    Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                        NowPlayingAnimation(color = Color.White, isPlaying = true)
-                    }
-                }
+        filters.forEach { filter ->
+            val isSel = filter == selected
+            val background = if (isSel) contentColor.copy(alpha = 0.95f) else contentColor.copy(alpha = 0.08f)
+            val foreground = if (isSel) {
+                if (contentColor.luminance() > 0.5f) Color.Black else Color.White
+            } else {
+                contentColor.copy(alpha = 0.85f)
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = background,
+                shape = CircleShape,
+                modifier = Modifier.clickable { selected = filter }
+            ) {
                 Text(
-                    song.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = contentColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    song.artist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.6f),
-                    maxLines = 1
-                )
-            }
-            IconButton(onClick = onToggleLike) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
-                    contentDescription = null, 
-                    tint = if (isFavorite) dominantColors.accent else contentColor.copy(alpha = 0.7f)
+                    text = filter,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = foreground,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
         }
     }
-}
-
-@Composable
-private fun AutoplayToggleRow(enabled: Boolean, onToggle: () -> Unit, dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { onToggle() },
-        shape = RoundedCornerShape(12.dp),
-        color = contentColor.copy(alpha = 0.05f)
-    ) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = if (enabled) dominantColors.accent else contentColor.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Autoplay", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = contentColor)
-            }
-            Switch(
-                checked = enabled, onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White, 
-                    checkedTrackColor = dominantColors.accent, 
-                    uncheckedThumbColor = contentColor.copy(alpha = 0.3f), 
-                    uncheckedTrackColor = contentColor.copy(alpha = 0.08f), 
-                    uncheckedBorderColor = Color.Transparent
-                ),
-                modifier = Modifier.scale(0.7f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SectionDivider(title: String, color: Color) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
-        color = color,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -445,6 +437,7 @@ private fun LazyItemScope.ModernQueueListItem(
     val rowBackground = when {
         isDragging -> MaterialTheme.colorScheme.surfaceContainerHigh
         isSelected -> dominantColors.accent.copy(alpha = 0.15f)
+        isCurrent -> dominantColors.primary.copy(alpha = 0.22f)
         else -> Color.Transparent
     }
 
