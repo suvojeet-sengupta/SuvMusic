@@ -16,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -40,6 +43,10 @@ import com.suvojeet.suvmusic.core.model.Comment
 import com.suvojeet.suvmusic.ui.components.PulseLoadingIndicator
 
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import kotlinx.coroutines.launch
+
+/** Sort tabs shown above the comment list (matches YouTube Music's Top / Newest). */
+private enum class CommentSort { TOP, NEWEST }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,8 +69,12 @@ fun CommentsSheet(
     isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
 ) {
     if (isVisible) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        
+        // Half-open first (partially expanded), drag up to full — YouTube-Music-style.
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        val scope = rememberCoroutineScope()
+        var selectedSort by rememberSaveable { mutableStateOf(CommentSort.TOP) }
+        var showGuidelines by remember { mutableStateOf(false) }
+
         // Determine colors based on theme and dominant colors
         val backgroundColor = if (isDarkTheme) {
             dominantColors?.secondary ?: MaterialTheme.colorScheme.surfaceContainerHigh
@@ -91,47 +102,88 @@ fun CommentsSheet(
                     .fillMaxSize()
                     .padding(horizontal = 20.dp)
             ) {
-                // Header - Material 3 Expressive Style
+                // Header — title + count on the left, info & close on the right.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 20.dp),
+                        .padding(top = 4.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Comments",
-                            style = MaterialTheme.typography.headlineMedium.copy(
+                            style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = (-0.5).sp
                             ),
                             color = contentColor
                         )
-                        
+
                         if (comments != null) {
                             Text(
                                 text = "${comments.size} responses",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = finalAccentColor.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelMedium,
+                                color = contentColor.copy(alpha = 0.6f),
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
-                    
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showGuidelines = !showGuidelines }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = "Comment guidelines",
+                                tint = contentColor.copy(alpha = 0.7f)
+                            )
+                        }
+                        IconButton(onClick = {
+                            scope.launch { sheetState.hide() }
+                                .invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = "Close",
+                                tint = contentColor.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                // Top / Newest sort tabs.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CommentSortTab("Top", selectedSort == CommentSort.TOP, contentColor) {
+                        selectedSort = CommentSort.TOP
+                    }
+                    CommentSortTab("Newest", selectedSort == CommentSort.NEWEST, contentColor) {
+                        selectedSort = CommentSort.NEWEST
+                    }
+                }
+
+                // Community guidelines reminder, toggled by the info icon.
+                AnimatedVisibility(visible = showGuidelines) {
                     Surface(
-                        color = finalAccentColor.copy(alpha = 0.15f),
-                        shape = CircleShape
+                        color = contentColor.copy(alpha = 0.06f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.ChatBubbleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.padding(8.dp).size(20.dp),
-                            tint = finalAccentColor
+                        Text(
+                            text = "Remember to keep comments respectful.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(12.dp)
                         )
                     }
                 }
-                
+
                 // Comments list
                 Box(modifier = Modifier.weight(1f)) {
                     AnimatedContent(
@@ -260,6 +312,34 @@ fun CommentsSheet(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CommentSortTab(
+    label: String,
+    selected: Boolean,
+    contentColor: Color,
+    onClick: () -> Unit
+) {
+    val background = if (selected) contentColor.copy(alpha = 0.95f) else contentColor.copy(alpha = 0.08f)
+    val foreground = if (selected) {
+        if (contentColor.luminance() > 0.5f) Color.Black else Color.White
+    } else {
+        contentColor.copy(alpha = 0.8f)
+    }
+    Surface(
+        color = background,
+        shape = CircleShape,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = foreground,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
+        )
     }
 }
 

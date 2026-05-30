@@ -44,6 +44,7 @@ import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.core.model.ArtworkShape
 import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.ui.screens.player.components.ModernQueueView
+import com.suvojeet.suvmusic.ui.screens.player.components.QueuePlayerHeader
 import com.suvojeet.suvmusic.ui.screens.player.components.SongInfoSection
 import com.suvojeet.suvmusic.ui.components.VideoErrorDialog
 import com.suvojeet.suvmusic.ui.screens.player.components.TimeLabelsWithQuality
@@ -620,6 +621,7 @@ fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: 
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxScope.OverlaysContent(
     state: PlayerScreenState, actions: PlayerScreenActions, activeOverlay: PlayerOverlay, onOverlayChange: (PlayerOverlay) -> Unit,
@@ -650,27 +652,54 @@ fun BoxScope.OverlaysContent(
 
     // Modal Overlays (Queue, Lyrics, Related - only if NOT in expanded pane mode)
     if (!isExpanded) {
-        // Queue View
-        AnimatedVisibility(
-            visible = activeOverlay is PlayerOverlay.Queue || (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromQueue),
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it }
-        ) {
-            ModernQueueView(
-                currentSong = song, queue = playerState.queue, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
-                onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
-                currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
-                isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
-                onBack = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
-                onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
-                onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
-                onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved") } },
-                onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
-                onPlayNext = { playerViewModel.playNext(it) },
-                onAddToQueue = { playerViewModel.addToQueue(it) },
-                onClearQueue = actions.onClearQueue,
-                dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
-            )
+        // Queue — YouTube-Music-style modal bottom sheet. Opens half-expanded and
+        // can be dragged to full height, where the full player header appears on top.
+        val queueVisible = activeOverlay is PlayerOverlay.Queue || (activeOverlay is PlayerOverlay.Actions && activeOverlay.fromQueue)
+        if (queueVisible) {
+            val queueSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+            val isQueueExpanded by remember {
+                derivedStateOf { queueSheetState.targetValue == SheetValue.Expanded }
+            }
+            ModalBottomSheet(
+                onDismissRequest = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) },
+                sheetState = queueSheetState,
+                containerColor = if (isAppInDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface,
+                contentWindowInsets = { WindowInsets(0) },
+                dragHandle = { BottomSheetDefaults.DragHandle() },
+                scrimColor = Color.Black.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                ModernQueueView(
+                    currentSong = song, queue = playerState.queue, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                    onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
+                    currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
+                    isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
+                    onBack = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
+                    onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
+                    onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
+                    onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved") } },
+                    onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
+                    onPlayNext = { playerViewModel.playNext(it) },
+                    onAddToQueue = { playerViewModel.addToQueue(it) },
+                    onClearQueue = actions.onClearQueue,
+                    dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme,
+                    modalMode = true,
+                    nowPlayingHeaderOverride = if (isQueueExpanded) {
+                        {
+                            QueuePlayerHeader(
+                                song = song, isPlaying = playerState.isPlaying,
+                                shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
+                                dominantColors = dominantColors,
+                                progressProvider = progressProvider, positionProvider = positionProvider, durationProvider = durationProvider,
+                                onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious,
+                                onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle,
+                                onSeekTo = actions.onSeekTo, isDarkTheme = isAppInDarkTheme
+                            )
+                        }
+                    } else null
+                )
+            }
         }
 
         // Lyrics View

@@ -86,7 +86,13 @@ fun ModernQueueView(
     onClearQueue: () -> Unit,
     dominantColors: DominantColors,
     animatedBackgroundEnabled: Boolean = true,
-    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme()
+    isDarkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
+    // When hosted inside a modal bottom sheet we drop the status-bar inset (the
+    // sheet already insets) and let the sheet supply the drag handle.
+    modalMode: Boolean = false,
+    // Rendered pinned at the very top when the sheet is fully expanded — the full
+    // player (artwork + controls + seekbar), matching YouTube Music's expanded queue.
+    nowPlayingHeaderOverride: (@Composable () -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val isSelectionMode = selectedQueueIndices.isNotEmpty()
@@ -105,9 +111,14 @@ fun ModernQueueView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .then(if (modalMode) Modifier else Modifier.statusBarsPadding())
                 .navigationBarsPadding()
         ) {
+            // Full player header pinned at the top when the sheet is fully expanded.
+            if (nowPlayingHeaderOverride != null) {
+                nowPlayingHeaderOverride()
+            }
+
             // Refined Header
             Row(
                 modifier = Modifier
@@ -208,7 +219,9 @@ fun ModernQueueView(
                 exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
             ) {
                 Column {
-                    if (currentSong != null) {
+                    // When the full player header is shown (expanded sheet) the current
+                    // song already appears up top, so skip the compact hero card.
+                    if (currentSong != null && nowPlayingHeaderOverride == null) {
                         HeroNowPlayingCard(currentSong, isPlaying, isFavorite, onToggleLike, { onMoreClick(currentSong) }, dominantColors, isDarkTheme, contentColor)
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -577,5 +590,120 @@ private fun LazyItemScope.ModernQueueListItem(
                 Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
         }
+    }
+}
+
+private fun formatQueueTime(ms: Long): String {
+    val totalSeconds = (ms / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
+/**
+ * Full player header shown pinned at the top of the queue when the modal sheet is
+ * fully expanded — large artwork, title/artist, a seekbar with time labels and the
+ * transport controls. Mirrors YouTube Music's expanded "Your queue" view.
+ */
+@Composable
+fun QueuePlayerHeader(
+    song: Song?,
+    isPlaying: Boolean,
+    shuffleEnabled: Boolean,
+    repeatMode: RepeatMode,
+    dominantColors: DominantColors,
+    progressProvider: () -> Float,
+    positionProvider: () -> Long,
+    durationProvider: () -> Long,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    onShuffleToggle: () -> Unit,
+    onRepeatToggle: () -> Unit,
+    onSeekTo: (Long) -> Unit,
+    isDarkTheme: Boolean
+) {
+    val contentColor = if (isDarkTheme) Color.White else Color.Black
+    // While the user is dragging the slider we hold a local override so the thumb
+    // tracks the finger instead of snapping back to the (still-old) play position.
+    var dragValue by remember { mutableStateOf<Float?>(null) }
+    val sliderValue = (dragValue ?: progressProvider()).coerceIn(0f, 1f)
+    val displayPosition = dragValue?.let { (it * durationProvider()).toLong() } ?: positionProvider()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AsyncImage(
+            model = song?.thumbnailUrl,
+            contentDescription = song?.title,
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = song?.title ?: "",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = song?.artist ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+            color = contentColor.copy(alpha = 0.6f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Slider(
+            value = sliderValue,
+            onValueChange = { dragValue = it },
+            onValueChangeFinished = {
+                dragValue?.let { onSeekTo((it * durationProvider()).toLong()) }
+                dragValue = null
+            },
+            colors = SliderDefaults.colors(
+                thumbColor = dominantColors.accent,
+                activeTrackColor = dominantColors.accent,
+                inactiveTrackColor = contentColor.copy(alpha = 0.2f)
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(formatQueueTime(displayPosition), style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = 0.7f))
+            Text(formatQueueTime(durationProvider()), style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = 0.7f))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PlaybackControls(
+            isPlaying = isPlaying,
+            shuffleEnabled = shuffleEnabled,
+            repeatMode = repeatMode,
+            onPlayPause = onPlayPause,
+            onNext = onNext,
+            onPrevious = onPrevious,
+            onShuffleToggle = onShuffleToggle,
+            onRepeatToggle = onRepeatToggle,
+            dominantColors = dominantColors,
+            compact = true
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
