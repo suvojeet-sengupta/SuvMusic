@@ -20,11 +20,21 @@ import okhttp3.Request
  *
  * Pass `null`/blank [cookies] for best-effort (logged-out) requests: only the
  * public headers (User-Agent, Origin, X-Origin) are added in that case.
+ *
+ * When [visitorData] is provided it is sent as `X-Goog-Visitor-Id` to bind the
+ * request to YouTube's visitor session (see [VisitorDataProvider]).
  */
-fun Request.Builder.addYouTubeAuthHeaders(cookies: String?, authUser: Int): Request.Builder {
+fun Request.Builder.addYouTubeAuthHeaders(
+    cookies: String?,
+    authUser: Int,
+    visitorData: String? = null,
+): Request.Builder {
     addHeader("User-Agent", YouTubeConfig.USER_AGENT)
     addHeader("Origin", YouTubeConfig.ORIGIN)
     addHeader("X-Origin", YouTubeConfig.ORIGIN)
+    if (!visitorData.isNullOrBlank()) {
+        addHeader("X-Goog-Visitor-Id", visitorData)
+    }
     if (!cookies.isNullOrBlank()) {
         addHeader("Cookie", cookies)
         YouTubeAuthUtils.getAuthorizationHeader(cookies)?.let { addHeader("Authorization", it) }

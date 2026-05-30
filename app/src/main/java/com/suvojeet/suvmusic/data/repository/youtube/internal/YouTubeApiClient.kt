@@ -18,7 +18,8 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeApiClient @Inject constructor(
     private val okHttpClient: OkHttpClient,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val visitorDataProvider: VisitorDataProvider
 ) {
 
     /**
@@ -30,6 +31,7 @@ class YouTubeApiClient @Inject constructor(
     suspend fun fetchInternalApi(endpoint: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
         val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
         val isBrowse = !endpoint.contains("/")
 
         val url = if (isBrowse) {
@@ -58,7 +60,7 @@ class YouTubeApiClient @Inject constructor(
         val request = okhttp3.Request.Builder()
             .url(url)
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser)
+            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
         try {
@@ -77,6 +79,7 @@ class YouTubeApiClient @Inject constructor(
     suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
         val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
 
         val jsonBody = """
             {
@@ -95,7 +98,7 @@ class YouTubeApiClient @Inject constructor(
         val request = okhttp3.Request.Builder()
             .url("${YouTubeConfig.BASE_URL}/browse?ctoken=$continuationToken&continuation=$continuationToken")
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser)
+            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
         try {
@@ -114,6 +117,7 @@ class YouTubeApiClient @Inject constructor(
     suspend fun fetchInternalApiWithBody(endpoint: String, bodyJson: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
         val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
 
         val url = "${YouTubeConfig.BASE_URL}/$endpoint"
 
@@ -141,7 +145,7 @@ class YouTubeApiClient @Inject constructor(
         val request = okhttp3.Request.Builder()
             .url(url)
             .post(fullBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser)
+            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
         try {
@@ -160,6 +164,7 @@ class YouTubeApiClient @Inject constructor(
     suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
         val cookies = sessionManager.getCookies() ?: return@withContext ""
         val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
 
         val jsonBody = """
             {
@@ -179,7 +184,7 @@ class YouTubeApiClient @Inject constructor(
         val request = okhttp3.Request.Builder()
             .url("${YouTubeConfig.BASE_URL}/browse")
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser)
+            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
         try {
@@ -358,6 +363,7 @@ class YouTubeApiClient @Inject constructor(
         val cookies = sessionManager.getCookies() ?: return false
         if (YouTubeAuthUtils.getAuthorizationHeader(cookies) == null) return false
         val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
 
         try {
             // Step 1: Call /player to get playbackTracking URLs
@@ -381,7 +387,7 @@ class YouTubeApiClient @Inject constructor(
             val playerRequest = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/player")
                 .post(playerBody.toString().toRequestBody("application/json".toMediaType()))
-                .addYouTubeAuthHeaders(cookies, authUser)
+                .addYouTubeAuthHeaders(cookies, authUser, visitorData)
                 .addHeader("Referer", "https://music.youtube.com/")
                 .build()
 

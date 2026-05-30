@@ -2026,6 +2026,19 @@ class SessionManager @Inject constructor(
     
     fun isLoggedIn(): Boolean = !getCookies().isNullOrBlank()
 
+    // visitorData: an account-independent "visitor" session id YouTube uses to
+    // bind requests (sent as X-Goog-Visitor-Id + context.client.visitorData and
+    // as the streaming-poToken session id). Persisted like cookies so it stays
+    // stable across launches; not cleared on logout since it isn't account-bound.
+    fun getVisitorData(): String? =
+        try { encryptedPrefs.getString("visitor_data", null) } catch (e: Exception) { null }
+
+    suspend fun saveVisitorData(visitorData: String) {
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().putString("visitor_data", visitorData).apply()
+        }
+    }
+
     // Account-info snapshot mirrored into encryptedPrefs so the Settings screen
     // can render the avatar + name synchronously on entry instead of waiting for
     // a DataStore read on a coroutine.

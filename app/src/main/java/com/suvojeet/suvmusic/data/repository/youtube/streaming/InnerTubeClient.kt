@@ -2,10 +2,16 @@ package com.suvojeet.suvmusic.data.repository.youtube.streaming
 
 import com.google.gson.JsonParser
 import com.suvojeet.suvmusic.core.model.AudioQuality
+import com.suvojeet.suvmusic.data.repository.youtube.internal.VisitorDataProvider
+import com.suvojeet.suvmusic.data.repository.youtube.streaming.potoken.PoTokenGenerator
+import com.suvojeet.suvmusic.data.repository.youtube.streaming.potoken.PoTokenResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,10 +32,20 @@ import javax.inject.Singleton
  * Caveats (inherent to this approach, not bugs):
  *  - May return UNPLAYABLE on datacenter IPs (works on normal mobile/Wi-Fi IPs).
  *  - Some clients/regions now require a PoToken; this is best-effort.
+ *
+ * PoToken: a WEB_REMIX client carrying a WebView-minted PoToken is appended as
+ * the LAST attempt. The earlier clients (IOS/ANDROID_VR/TV) return un-ciphered
+ * URLs without a PoToken and remain the fast path; the WEB attempt only pays the
+ * PoToken cold-start when everything else has already failed, and falls through
+ * (fail-safe) if generation fails or the formats are ciphered-only. visitorData
+ * is attached only to the WEB client (for the PoToken binding); the other
+ * clients are left byte-identical to their proven, working form.
  */
 @Singleton
 class InnerTubeClient @Inject constructor(
-    okHttpClient: OkHttpClient
+    okHttpClient: OkHttpClient,
+    private val poTokenGenerator: PoTokenGenerator,
+    private val visitorDataProvider: VisitorDataProvider
 ) {
     // Per-call timeout so a single slow client identity can't hang the whole
     // resolve. Clients are tried sequentially (IOS → ANDROID_VR → TV); without a
@@ -42,11 +58,19 @@ class InnerTubeClient @Inject constructor(
         val clientVersion: String,
         val userAgent: String,
         /** Extra JSON fields injected inside the "client" object (must end with a comma). */
-        val extraContext: String = ""
+        val extraContext: String = "",
+        /**
+         * When true, a WebView-minted PoToken is attached to this client's
+         * request (`serviceIntegrityDimensions.poToken` + `pot=` on the stream
+         * URL). Only the WEB family accepts the web PoToken; the others use a
+         * different attestation and must NOT carry it.
+         */
+        val useWebPoTokens: Boolean = false
     )
 
     // Order matters: try the clients most likely to return direct (un-ciphered)
-    // URLs without a PoToken first.
+    // URLs without a PoToken first. The WEB_REMIX + PoToken client is LAST so its
+    // cold-start cost is only paid as a last resort.
     private val clients = listOf(
         ClientProfile(
             clientName = "IOS",
@@ -64,6 +88,12 @@ class InnerTubeClient @Inject constructor(
             clientName = "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
             clientVersion = "2.0",
             userAgent = "Mozilla/5.0 (PlayStation; PlayStation 4/12.00) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+        ),
+        ClientProfile(
+            clientName = "WEB_REMIX",
+            clientVersion = "1.20240101.01.00",
+            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            useWebPoTokens = true
         )
     )
 
@@ -75,9 +105,31 @@ class InnerTubeClient @Inject constructor(
      * choosing among the available audio bitrates.
      */
     suspend fun resolveAudioUrl(videoId: String, audioQuality: AudioQuality): String? {
+        // Fetched once; only attached to the WEB client (which needs it for the
+        // PoToken binding). The IOS/ANDROID_VR/TV requests are left byte-identical
+        // to before so the proven fast path can't regress.
+        val visitorData = try { visitorDataProvider.get() } catch (e: Exception) { null }
         for (client in clients) {
             try {
-                val url = tryClient(videoId, client, audioQuality)
+                // The WEB client needs a PoToken to be accepted; mint it lazily,
+                // bound to the videoId (player) + visitorData (streaming session).
+                // Any failure leaves poToken null and the request still goes out.
+                val poToken = if (client.useWebPoTokens && !visitorData.isNullOrBlank()) {
+                    try {
+                        // getWebClientPoToken uses runBlocking internally, so it must
+                        // never run on the main thread (it would deadlock against the
+                        // WebView's withContext(Main)).
+                        withContext(Dispatchers.IO) {
+                            poTokenGenerator.getWebClientPoToken(videoId, visitorData)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("InnerTube", "poToken gen failed for $videoId: ${e.message}")
+                        null
+                    }
+                } else null
+
+                val clientVisitorData = if (client.useWebPoTokens) visitorData else null
+                val url = tryClient(videoId, client, audioQuality, clientVisitorData, poToken)
                 if (!url.isNullOrBlank()) {
                     android.util.Log.i("InnerTube", "resolved $videoId via ${client.clientName}")
                     return url
@@ -90,19 +142,30 @@ class InnerTubeClient @Inject constructor(
         return null
     }
 
-    private fun tryClient(videoId: String, client: ClientProfile, audioQuality: AudioQuality): String? {
+    private fun tryClient(
+        videoId: String,
+        client: ClientProfile,
+        audioQuality: AudioQuality,
+        visitorData: String?,
+        poToken: PoTokenResult?
+    ): String? {
+        val visitorDataField = if (!visitorData.isNullOrBlank()) "\"visitorData\":\"$visitorData\"," else ""
+        val serviceIntegrity = if (poToken != null) {
+            ",\"serviceIntegrityDimensions\":{\"poToken\":\"${poToken.playerRequestPoToken}\"}"
+        } else ""
         val payload =
             "{\"context\":{\"client\":{\"clientName\":\"${client.clientName}\",\"clientVersion\":\"${client.clientVersion}\"," +
-                "${client.extraContext}\"hl\":\"en\",\"gl\":\"US\",\"utcOffsetMinutes\":0}}," +
+                "${client.extraContext}${visitorDataField}\"hl\":\"en\",\"gl\":\"US\",\"utcOffsetMinutes\":0}}," +
                 "\"videoId\":\"$videoId\"," +
                 "\"playbackContext\":{\"contentPlaybackContext\":{\"html5Preference\":\"HTML5_PREF_WANTS\"}}," +
-                "\"contentCheckOk\":true,\"racyCheckOk\":true}"
+                "\"contentCheckOk\":true,\"racyCheckOk\":true${serviceIntegrity}}"
 
         val request = Request.Builder()
             .url("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
             .addHeader("User-Agent", client.userAgent)
             .addHeader("Content-Type", "application/json")
             .addHeader("X-Goog-Api-Format-Version", "2")
+            .apply { if (!visitorData.isNullOrBlank()) addHeader("X-Goog-Visitor-Id", visitorData) }
             .post(payload.toRequestBody(jsonMedia))
             .build()
 
@@ -157,7 +220,14 @@ class InnerTubeClient @Inject constructor(
                 }
             }
 
-            return bestUrl ?: fallbackUrl
+            val resolvedUrl = bestUrl ?: fallbackUrl
+            // The streaming PoToken must ride along on the stream URL as `pot=` for
+            // the WEB client, or the CDN rejects the request.
+            if (resolvedUrl != null && client.useWebPoTokens && poToken != null) {
+                val separator = if (resolvedUrl.contains("?")) "&" else "?"
+                return "$resolvedUrl${separator}pot=${URLEncoder.encode(poToken.streamingDataPoToken, "UTF-8")}"
+            }
+            return resolvedUrl
         }
     }
 }
