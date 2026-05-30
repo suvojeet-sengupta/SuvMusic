@@ -689,12 +689,10 @@ fun BoxScope.OverlaysContent(
                         {
                             QueuePlayerHeader(
                                 song = song, isPlaying = playerState.isPlaying,
-                                shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
                                 dominantColors = dominantColors,
-                                progressProvider = progressProvider, positionProvider = positionProvider, durationProvider = durationProvider,
+                                progressProvider = progressProvider,
                                 onPlayPause = actions.onPlayPause, onNext = actions.onNext, onPrevious = actions.onPrevious,
-                                onShuffleToggle = actions.onShuffleToggle, onRepeatToggle = actions.onRepeatToggle,
-                                onSeekTo = actions.onSeekTo, isDarkTheme = isAppInDarkTheme
+                                isDarkTheme = isAppInDarkTheme
                             )
                         }
                     } else null
