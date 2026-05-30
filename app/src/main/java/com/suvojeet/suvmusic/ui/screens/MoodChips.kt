@@ -72,14 +72,6 @@ private fun MoodChip(
     isOutlined: Boolean,
     onClick: () -> Unit
 ) {
-    val selectionScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "moodChipScale"
-    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -88,52 +80,34 @@ private fun MoodChip(
         label = "moodChipPress"
     )
 
-    val isFilledStyle = isSelected || !isOutlined
-    val containerColor = when {
-        isSelected -> mood.accent
-        isFilledStyle -> MaterialTheme.colorScheme.surfaceContainerHighest
-        else -> Color.Transparent
+    // YouTube-Music-style flat pill: a lightly rounded rectangle that fills with
+    // the SuvMusic accent when selected and sits on a neutral surface otherwise.
+    // The selected chip keeps a subtle accent tint so the SuvMusic palette still
+    // reads through the otherwise YTM-faithful layout.
+    val containerColor = if (isSelected) {
+        mood.accent
+    } else {
+        MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
     }
     val labelColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
 
-    Row(
+    Box(
         modifier = Modifier
-            .scale(selectionScale * pressScale)
-            .clip(RoundedCornerShape(50))
+            .scale(pressScale)
+            .clip(RoundedCornerShape(8.dp))
             .background(containerColor)
-            .then(
-                if (!isFilledStyle) Modifier.border(
-                    1.5.dp,
-                    mood.accent.copy(alpha = 0.6f),
-                    RoundedCornerShape(50)
-                ) else Modifier
-            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
-            .padding(start = 6.dp, end = 18.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
     ) {
-        // Emoji on a circular tinted disc — gives the chip a "tag" feel.
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isSelected) Color.White.copy(alpha = 0.22f)
-                    else mood.accent.copy(alpha = 0.18f)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = mood.emoji, fontSize = 16.sp)
-        }
         Text(
             text = mood.name,
             style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = labelColor
         )
     }

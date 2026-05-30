@@ -208,79 +208,138 @@ fun VerticalListSection(
     onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val songs = remember(section.items) {
+        section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+    }
+    // YouTube-Music "Trending songs for you": a horizontally-paged list with four
+    // rows per page (swipe for more) and a "Play all" pill in the header.
+    val pages = remember(section.items) { section.items.chunked(4) }
+    val listState = rememberLazyListState()
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        HomeSectionHeader(title = section.title)
-        
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val displayItems = remember(section.items) { section.items.take(5) }
-            val songs = remember(section.items) {
-                section.items.filterIsInstance<HomeItem.SongItem>().map { it.song }
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = (-0.3).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            if (songs.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                PlayAllPill(onClick = { onSongClick(songs, 0) })
             }
-            displayItems.forEach { item ->
-                when (item) {
-                    is HomeItem.SongItem -> {
-                         val onCardClick = remember(item.song, songs) {
-                             {
-                                 val index = songs.indexOf(item.song)
-                                 if (index != -1) onSongClick(songs, index)
-                             }
-                         }
-                         val onMoreClick = remember(item.song) { { onSongMoreClick(item.song) } }
-                         
-                         MusicCard(
-                            song = item.song,
-                            onClick = onCardClick,
-                             onMoreClick = onMoreClick,
-                             backgroundColor = Color.Transparent
-                        )
-                    }
-                    is HomeItem.PlaylistItem -> {
-                        val tempSong = remember(item.playlist) {
-                            Song(
-                                id = item.playlist.id,
-                                title = item.playlist.name,
-                                artist = item.playlist.uploaderName,
-                                thumbnailUrl = item.playlist.thumbnailUrl,
-                                album = "Playlist",
-                                duration = 0L,
-                                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
-                            )
+        }
+
+        LazyRow(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            itemsIndexed(
+                items = pages,
+                key = { index, _ -> "page_$index" }
+            ) { _, page ->
+                Column(
+                    modifier = Modifier.fillParentMaxWidth(if (pages.size > 1) 0.92f else 1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    page.forEach { item ->
+                        when (item) {
+                            is HomeItem.SongItem -> {
+                                MusicCard(
+                                    song = item.song,
+                                    onClick = {
+                                        val index = songs.indexOf(item.song)
+                                        if (index != -1) onSongClick(songs, index)
+                                    },
+                                    onMoreClick = { onSongMoreClick(item.song) },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            is HomeItem.PlaylistItem -> {
+                                val tempSong = Song(
+                                    id = item.playlist.id,
+                                    title = item.playlist.name,
+                                    artist = item.playlist.uploaderName,
+                                    thumbnailUrl = item.playlist.thumbnailUrl,
+                                    album = "Playlist",
+                                    duration = 0L,
+                                    source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
+                                )
+                                MusicCard(
+                                    song = tempSong,
+                                    onClick = { onPlaylistClick(item.playlist) },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            is HomeItem.AlbumItem -> {
+                                val tempSong = Song(
+                                    id = item.album.id,
+                                    title = item.album.title,
+                                    artist = item.album.artist,
+                                    thumbnailUrl = item.album.thumbnailUrl,
+                                    album = item.album.year ?: "Album",
+                                    duration = 0L,
+                                    source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
+                                )
+                                MusicCard(
+                                    song = tempSong,
+                                    onClick = { onAlbumClick(item.album) },
+                                    backgroundColor = Color.Transparent
+                                )
+                            }
+                            else -> {}
                         }
-                        val onPlaylistCardClick = remember(item.playlist) { { onPlaylistClick(item.playlist) } }
-                         MusicCard(
-                            song = tempSong,
-                            onClick = onPlaylistCardClick,
-                            backgroundColor = Color.Transparent
-                        )
                     }
-                    is HomeItem.AlbumItem -> {
-                        val tempSong = remember(item.album) {
-                            Song(
-                                id = item.album.id,
-                                title = item.album.title,
-                                artist = item.album.artist,
-                                thumbnailUrl = item.album.thumbnailUrl,
-                                album = item.album.year ?: "Album",
-                                duration = 0L,
-                                source = com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE
-                            )
-                        }
-                        val onAlbumCardClick = remember(item.album) { { onAlbumClick(item.album) } }
-                        MusicCard(
-                            song = tempSong,
-                            onClick = onAlbumCardClick,
-                            backgroundColor = Color.Transparent
-                        )
-                    }
-                    else -> {}
                 }
             }
+        }
+    }
+}
+
+/**
+ * Compact "Play all" pill used in YouTube-Music-style section headers.
+ */
+@Composable
+private fun PlayAllPill(onClick: () -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 16.dp, top = 7.dp, bottom = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = "Play all",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

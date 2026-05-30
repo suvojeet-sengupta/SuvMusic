@@ -13,6 +13,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -34,8 +35,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.WbTwilight
@@ -103,6 +106,7 @@ fun HomeScreen(
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
     currentSong: Song? = null,
     viewModel: HomeViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
@@ -260,9 +264,11 @@ fun HomeScreen(
                             item(key = "header", contentType = "header") {
                                 ProfileHeader(
                                     modifier = Modifier
-                                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+                                        .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 4.dp)
                                         .animateEnter(index = 0),
+                                    avatarUrl = uiState.userAvatarUrl,
                                     onHistoryClick = onHistoryClick,
+                                    onSearchClick = onSearchClick,
                                     onListenTogetherClick = onListenTogetherClick
                                 )
                             }
@@ -317,25 +323,13 @@ fun HomeScreen(
                             }
                         }
 
-                        // Quick Picks Section
+                        // Speed dial — YouTube-Music quick-access grid of top picks
                         if (uiState.recommendations.isNotEmpty() && uiState.homeSectionsVisibility.contains("quick_picks")) {
-                            item(key = "quick_picks", contentType = "section_quick_picks") {
-                                // Build the section once per recommendations change instead of
-                                // allocating a new HomeSection + mapped list on every recomposition
-                                // (which busts QuickPicksSection's internal remember caches).
-                                val quickPicksSection = remember(uiState.recommendations) {
-                                    HomeSection(
-                                        title = "Quick picks",
-                                        items = uiState.recommendations.map { HomeItem.SongItem(it) },
-                                        type = HomeSectionType.QuickPicks
-                                    )
-                                }
-                                com.suvojeet.suvmusic.ui.components.QuickPicksSection(
-                                    section = quickPicksSection,
+                            item(key = "speed_dial", contentType = "speed_dial") {
+                                SpeedDialGrid(
+                                    songs = uiState.recommendations,
+                                    currentSong = currentSong,
                                     onSongClick = onSongClick,
-                                    onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = onSongMoreClickHandler,
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
                             }
@@ -929,113 +923,237 @@ fun QuickAccessCard(
 @Composable
 private fun ProfileHeader(
     modifier: Modifier = Modifier,
+    avatarUrl: String? = null,
     onHistoryClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {}
 ) {
-    val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
-    val greeting = remember { getGreeting() }
-    val (gradient, glyph, glyphLabel) = remember(hour) {
-        val primary = when {
-            hour < 6 -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
-            hour < 12 -> Triple(Color(0xFFFFB347), Color(0xFFFF7E5F), Icons.Default.WbSunny to "Morning")
-            hour < 17 -> Triple(Color(0xFF36D1DC), Color(0xFF5B86E5), Icons.Default.WbSunny to "Afternoon")
-            hour < 21 -> Triple(Color(0xFFCB356B), Color(0xFF6A2C70), Icons.Default.WbTwilight to "Evening")
-            else -> Triple(Color(0xFF1A1B4B), Color(0xFF2E3A85), Icons.Default.Bedtime to "Night")
-        }
-        Triple(
-            Brush.linearGradient(listOf(primary.first.copy(alpha = 0.85f), primary.second.copy(alpha = 0.85f))),
-            primary.third.first,
-            primary.third.second
-        )
-    }
-
-    Box(
+    // YouTube-Music-style compact top bar: brand wordmark on the leading edge,
+    // a row of round actions + account avatar on the trailing edge. SuvMusic
+    // keeps its own logo + wordmark and theme accent instead of YTM's red.
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(gradient)
-            .padding(horizontal = 20.dp, vertical = 18.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Decorative glyph drifts toward the trailing edge — purely ornamental.
-        Icon(
-            imageVector = glyph,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.18f),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .size(96.dp)
-                .offset(x = 16.dp)
-        )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            com.suvojeet.suvmusic.ui.components.AppLogo(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            Text(
+                text = "SuvMusic",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = (-0.5).sp
+            )
+        }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = glyphLabel.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.7f),
-                    letterSpacing = 2.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = greeting,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    letterSpacing = (-0.5).sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Pick something to play",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
-            }
+            // Listen Together — a SuvMusic-specific action kept in the bar.
+            TopBarAction(
+                icon = Icons.Default.Group,
+                contentDescription = "Listen Together",
+                onClick = onListenTogetherClick
+            )
+            // Activity / history — mirrors YTM's notification bell slot.
+            TopBarAction(
+                icon = Icons.Default.History,
+                contentDescription = "Recent activity",
+                onClick = onHistoryClick,
+                showDot = true
+            )
+            TopBarAction(
+                icon = Icons.Default.Search,
+                contentDescription = "Search",
+                onClick = onSearchClick
+            )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Account avatar
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp))
+                    .clickable(onClick = onHistoryClick),
+                contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = Color.White.copy(alpha = 0.18f),
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clickable(onClick = onListenTogetherClick),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Group,
-                            contentDescription = "Listen Together",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = Color.White.copy(alpha = 0.18f),
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clickable(onClick = onHistoryClick),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "History",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                if (!avatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(avatarUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Account",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Account",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * A round, borderless top-bar action button in the YouTube-Music idiom, with an
+ * optional accent dot to signal pending activity (SuvMusic flourish).
+ */
+@Composable
+private fun TopBarAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    showDot: Boolean = false
+) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(23.dp)
+        )
+        if (showDot) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 9.dp, end = 9.dp)
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
+    }
+}
+
+/**
+ * YouTube-Music "Speed dial" — a compact 3-column grid of the user's top picks
+ * with the artwork title overlaid. The currently-playing tile gets a white ring,
+ * exactly like YTM. SuvMusic keeps its squircle-ish 14dp tiles + bounce press.
+ */
+@Composable
+private fun SpeedDialGrid(
+    songs: List<Song>,
+    currentSong: Song?,
+    onSongClick: (List<Song>, Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (songs.isEmpty()) return
+    val items = remember(songs) { songs.take(9) }
+    val rows = remember(items) { items.chunked(3) }
+
+    Column(modifier = modifier) {
+        Text(
+            text = "Speed dial",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.3).sp,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            rows.forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { song ->
+                        SpeedDialTile(
+                            song = song,
+                            isPlaying = song.id == currentSong?.id,
+                            onClick = {
+                                val index = items.indexOf(song)
+                                if (index != -1) onSongClick(items, index)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpeedDialTile(
+    song: Song,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val shape = RoundedCornerShape(14.dp)
+    val thumb = remember(song.thumbnailUrl) {
+        ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
+    }
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(shape)
+            .bounceClick(shape = shape, onClick = onClick)
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(thumb)
+                .crossfade(true)
+                .size(300)
+                .build(),
+            contentDescription = song.title,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+                    )
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (isPlaying) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .border(2.5.dp, Color.White, shape)
+            )
         }
     }
 }

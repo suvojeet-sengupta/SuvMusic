@@ -113,63 +113,54 @@ fun PlaylistDisplayCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     // Get high-res thumbnail (replace w120 or similar with w544)
     val highResThumbnail = ImageUtils.getHighResThumbnailUrl(playlist.thumbnailUrl) ?: playlist.thumbnailUrl
-    
-    Box(
+
+    // YouTube-Music-style card: square artwork with the title/subtitle stacked
+    // *below* the image rather than overlaid on it. The Expressive squircle clip
+    // is the SuvMusic signature kept on top of the YTM layout.
+    Column(
         modifier = Modifier
             .width(170.dp)
-            .height(220.dp)
-            .clip(SquircleShape)
             .bounceClick(onClick = onClick)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(highResThumbnail)
-                .crossfade(true)
-                .size(544)  // Request high-res
-                .build(),
-            contentDescription = playlist.name,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        
-        // Gradient Overlay for text readability
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.5f),
-                            Color.Black.copy(alpha = 0.85f)
-                        )
-                    )
-                )
-                .padding(12.dp)
+        Surface(
+            modifier = Modifier.size(170.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = SquircleShape,
+            tonalElevation = 2.dp
         ) {
-            Column {
-                Text(
-                    text = playlist.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    color = Color.White,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = playlist.uploaderName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.75f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(highResThumbnail)
+                    .crossfade(true)
+                    .size(544)  // Request high-res
+                    .build(),
+                contentDescription = playlist.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = playlist.name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            color = MaterialTheme.colorScheme.onSurface,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = playlist.uploaderName,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
