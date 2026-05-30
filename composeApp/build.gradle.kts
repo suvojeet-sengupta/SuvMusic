@@ -98,7 +98,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "SuvMusic"
-            packageVersion = "2.5.1"
+            packageVersion = "2.5.2"
             description = "SuvMusic Desktop"
             vendor = "Suvojeet Sengupta"
 

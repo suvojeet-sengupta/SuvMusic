@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.5.2.0] - 2026-05-30
+
+### Improved
+- **High-Quality Audio Sources**: Enhanced HQ audio source selection and streaming stability.
+- **Performance Optimization**: Significant reduction in UI recompositions and general performance tuning.
+
 ## [2.5.1.0] - 2026-05-28
 
 ### Fixed

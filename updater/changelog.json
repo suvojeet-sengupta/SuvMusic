@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.5.2.0",
+      "versionCode": 31,
+      "date": "May 30, 2026",
+      "description": "• High-Quality Audio Sources: Enhanced HQ audio source selection and streaming stability.\n• Performance Optimization: Significant reduction in UI recompositions and general performance tuning.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.5.1.0",
       "versionCode": 30,
       "date": "May 28, 2026",
