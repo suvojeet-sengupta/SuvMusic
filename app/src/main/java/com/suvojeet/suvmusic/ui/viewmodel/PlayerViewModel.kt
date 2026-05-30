@@ -387,15 +387,14 @@ class PlayerViewModel @Inject constructor(
                         // Notify recommendation engine of song change for adaptive recommendations
                         recommendationEngine.onSongPlayed(song)
                         
-                        // Reset sync state for new song
-                        if (song.id != lastSyncedVideoId) {
-                            currentSongPlayTime = 0
-                            // Allow re-sync if it's a new song ID. 
-                            // If it's the same song ID (repeat), we might not want to spam sync.
-                            // But usually repeat implies a new listen. 
-                            // For safety, let's reset lastSyncedVideoId if the song CHANGED.
-                             lastSyncedVideoId = null 
-                        }
+                        // Reset sync state on every distinct song start. This flow only
+                        // emits when currentSong actually changes (distinctUntilChanged),
+                        // so each emission is a genuine new listen session — including
+                        // replaying a song we just synced (A→B→A). The old guard kept
+                        // lastSyncedVideoId set when returning to a recently-synced song,
+                        // which silently dropped that replay's listen.
+                        currentSongPlayTime = 0
+                        lastSyncedVideoId = null
 
                         // Reset provider to AUTO on song change unless user specifically locked a provider?
                         // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".

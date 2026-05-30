@@ -32,11 +32,46 @@ class RemoteAudioRepository @Inject constructor(
     private val gson: Gson,
     private val apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService
 ) {
-    // In-memory caches to reduce server load and improve performance
-    private val searchCache = mutableMapOf<String, List<Song>>()
-    private val songDetailsCache = mutableMapOf<String, Song>()
-    private val streamUrlCache = mutableMapOf<String, String>()
-    private val playlistCache = mutableMapOf<String, Playlist>()
+    // In-memory caches to reduce server load and improve performance.
+    // Bounded (LRU) so a long session can't leak memory by growing forever; the
+    // least-recently-used entry is evicted past the cap. Thread-safe because these
+    // are touched from multiple Dispatchers.IO coroutines concurrently.
+    private fun <V> boundedCache(maxSize: Int): MutableMap<String, V> =
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, V>(16, 0.75f, true) {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, V>): Boolean = size > maxSize
+            }
+        )
+
+    private val searchCache = boundedCache<List<Song>>(80)
+    private val songDetailsCache = boundedCache<Song>(300)
+    private val streamUrlCache = boundedCache<String>(300)
+    private val playlistCache = boundedCache<Playlist>(60)
+
+    // Per-call timeout for raw HTTP requests. Shares the connection pool/dispatcher
+    // with the injected client (newBuilder is cheap) but caps total call time so a
+    // stalled legacy endpoint can't hang a resolve/prefetch indefinitely.
+    private val boundedHttpClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder()
+            .callTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
+    /**
+     * Drop any cached stream URL / song details for [songId] so the next resolve
+     * re-fetches from the backend. Called by the player when a stream URL dies
+     * (HTTP 403/410) mid-playback — without this the cache would keep handing back
+     * the same dead URL and playback could never recover.
+     */
+    fun invalidate(songId: String) {
+        synchronized(streamUrlCache) {
+            streamUrlCache.keys
+                .filter { it == songId || it.startsWith("${songId}_") }
+                .toList()
+                .forEach { streamUrlCache.remove(it) }
+        }
+        songDetailsCache.remove(songId)
+    }
 
     // --- 429 rate-limit backoff (shared across ALL RemoteAudio network calls) ---
     // The backend rate-limits aggressively, and the app used to fire many calls at once
@@ -167,13 +202,17 @@ class RemoteAudioRepository @Inject constructor(
      * Search for artists on RemoteAudio (Legacy fallback for rich profiles).
      */
     suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "searchArtists('$query') SKIP backoff active")
+            return@withContext emptyList()
+        }
         try {
             val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_SEARCH_ARTIST}&_format=json&n=5&q=${query.encodeUrl()}"
             val response = makeRequest(url)
-            
+
             val json = JsonParser.parseString(response).asJsonObject
             val results = json.getAsJsonArray("results") ?: return@withContext emptyList()
-            
+
             results.mapNotNull { element ->
                 val artist = element.asJsonObject
                 val id = artist.get("id")?.asString ?: return@mapNotNull null
@@ -187,14 +226,19 @@ class RemoteAudioRepository @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            android.util.Log.e("RemoteAudio", "searchArtists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
             emptyList()
         }
     }
-    
+
     /**
      * Get detailed artist profile (Legacy internal API).
      */
     suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getArtist($artistId) SKIP backoff active")
+            return@withContext null
+        }
         try {
             val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_WEBAPI_GET}&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
             val response = makeRequest(url)
@@ -229,6 +273,7 @@ class RemoteAudioRepository @Inject constructor(
                 albums = topAlbums
             )
         } catch (e: Exception) {
+            android.util.Log.e("RemoteAudio", "getArtist($artistId) failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
@@ -288,36 +333,54 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun getStreamUrl(songId: String, quality: Int = 320): String? = withContext(Dispatchers.IO) {
         val cacheKey = "${songId}_$quality"
-        if (streamUrlCache.containsKey(cacheKey)) {
+        streamUrlCache[cacheKey]?.let {
             android.util.Log.i("RemoteAudio", ">> getStreamUrl ENTER vid=$songId q=$quality CACHE_HIT")
-            return@withContext streamUrlCache[cacheKey]
+            return@withContext it
+        }
+
+        // Don't even attempt while backing off from a 429 — the player would just
+        // re-trigger the throttle and stall waiting for a URL that won't come.
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", ">> getStreamUrl SKIP vid=$songId q=$quality backoff active")
+            return@withContext null
         }
 
         android.util.Log.i("RemoteAudio", ">> getStreamUrl ENTER vid=$songId q=$quality")
-        val started = System.currentTimeMillis()
-        try {
-            val song = getSongDetails(songId)
-            val streamUrl = song?.streamUrl
-            val ms = System.currentTimeMillis() - started
+        // Retry transient failures (network blip / null) up to 2 attempts so a single
+        // hiccup doesn't stop playback. Parity with the YouTube path, which already retries.
+        val maxAttempts = 2
+        var lastError: Exception? = null
+        repeat(maxAttempts) { attempt ->
+            val started = System.currentTimeMillis()
+            try {
+                val song = getSongDetails(songId)
+                val streamUrl = song?.streamUrl
+                val ms = System.currentTimeMillis() - started
 
-            if (streamUrl.isNullOrBlank()) {
-                android.util.Log.e("RemoteAudio", "<< getStreamUrl EXIT vid=$songId NULL (details=${if (song == null) "null" else "ok but no streamUrl"}) in ${ms}ms")
-            } else {
-                android.util.Log.i("RemoteAudio", "<< getStreamUrl EXIT vid=$songId ok(${streamUrl.take(80)}) in ${ms}ms")
-                streamUrlCache[cacheKey] = streamUrl
+                if (streamUrl.isNullOrBlank()) {
+                    android.util.Log.e("RemoteAudio", "<< getStreamUrl vid=$songId NULL (attempt ${attempt + 1}/$maxAttempts, details=${if (song == null) "null" else "ok but no streamUrl"}) in ${ms}ms")
+                    // A genuinely blank stream URL won't change on retry — bail out.
+                    if (song != null) return@withContext null
+                } else {
+                    android.util.Log.i("RemoteAudio", "<< getStreamUrl EXIT vid=$songId ok(${streamUrl.take(80)}) in ${ms}ms")
+                    streamUrlCache[cacheKey] = streamUrl
+                    return@withContext streamUrl
+                }
+            } catch (e: Exception) {
+                lastError = e
+                if (is429(e)) { noteRateLimited(); return@withContext null }
+                val ms = System.currentTimeMillis() - started
+                android.util.Log.e("RemoteAudio", "<< getStreamUrl vid=$songId FAIL (attempt ${attempt + 1}/$maxAttempts) in ${ms}ms ${e.javaClass.simpleName}: ${e.message}")
             }
-            streamUrl
-        } catch (e: Exception) {
-            val ms = System.currentTimeMillis() - started
-            android.util.Log.e("RemoteAudio", "<< getStreamUrl EXIT vid=$songId FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message}", e)
-            Telemetry.report("stream.resolve", "remoteaudio", e.toAppError(), mapOf("id" to songId))
-            null
+            if (attempt < maxAttempts - 1) kotlinx.coroutines.delay(800)
         }
+        lastError?.let { Telemetry.report("stream.resolve", "remoteaudio", it.toAppError(), mapOf("id" to songId)) }
+        null
     }
 
     // ==================== Radio / Related / Recommendations ====================
 
-    private val relatedCache = mutableMapOf<String, List<Song>>()
+    private val relatedCache = boundedCache<List<Song>>(80)
 
     /**
      * Get songs related to [songId] using RemoteAudio's recommendation endpoint.
@@ -396,12 +459,16 @@ class RemoteAudioRepository @Inject constructor(
      * Get playlist details with all songs.
      */
     suspend fun getPlaylist(playlistId: String): Playlist? = withContext(Dispatchers.IO) {
-        if (playlistCache.containsKey(playlistId)) {
-            return@withContext playlistCache[playlistId]
+        playlistCache[playlistId]?.let { return@withContext it }
+
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getPlaylist($playlistId) SKIP backoff active")
+            return@withContext null
         }
 
         try {
             val response = apiService.getPlaylist(playlistId)
+            noteSuccess()
             val data = response.data
 
             // In some wrapper versions, playlist info might be in 'playlists' or direct 'name/id' fields
@@ -424,6 +491,7 @@ class RemoteAudioRepository @Inject constructor(
             playlistCache[playlistId] = playlist
             playlist
         } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "getPlaylist($playlistId) failed: ${e.message}")
             null
         }
@@ -433,8 +501,13 @@ class RemoteAudioRepository @Inject constructor(
      * Get album details with all songs.
      */
     suspend fun getAlbum(albumId: String): Playlist? = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getAlbum($albumId) SKIP backoff active")
+            return@withContext null
+        }
         try {
             val response = apiService.getAlbumDetails(albumId)
+            noteSuccess()
             val songs = response.data?.mapNotNull { parseSongDto(it) } ?: emptyList()
             
             if (songs.isEmpty()) return@withContext null
@@ -452,6 +525,7 @@ class RemoteAudioRepository @Inject constructor(
                 songs = songs
             )
         } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "getAlbum($albumId) failed: ${e.message}")
             null
         }
@@ -918,7 +992,12 @@ class RemoteAudioRepository @Inject constructor(
      */
     suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem>()
-        
+
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getFeaturedPlaylists SKIP backoff active")
+            return@withContext playlists
+        }
+
         try {
             // Fetch top charts/featured playlists
             val playlistsUrl = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_CHARTS}&_format=json&n=20"
@@ -988,9 +1067,9 @@ class RemoteAudioRepository @Inject constructor(
             }
             
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("RemoteAudio", "getFeaturedPlaylists failed: ${e.javaClass.simpleName}: ${e.message}")
         }
-        
+
         playlists
     }
     
@@ -1006,11 +1085,16 @@ class RemoteAudioRepository @Inject constructor(
             .addHeader("Accept-Language", "en-US,en;q=0.9")
             .build()
 
-        return okHttpClient.newCall(request).execute().use { response ->
+        return boundedHttpClient.newCall(request).execute().use { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
+                // Legacy endpoints go through this raw path (not Retrofit), so a 429 here
+                // never reached the typed is429() check — arm the shared backoff directly
+                // so these callers stop hammering a rate-limited backend too.
+                if (response.code == 429) noteRateLimited()
                 android.util.Log.e("RemoteAudio", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
             } else {
+                noteSuccess()
                 android.util.Log.d("RemoteAudio", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
             }
             body
