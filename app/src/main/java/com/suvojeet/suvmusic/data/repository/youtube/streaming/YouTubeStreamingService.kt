@@ -35,10 +35,27 @@ class YouTubeStreamingService @Inject constructor(
             ?: throw IllegalStateException("YouTube service not found")
     }
 
-    // Cache for stream URLs to avoid re-fetching (max 50 entries, 3 hours expiry)
+    // Cache for stream URLs to avoid re-fetching (max 50 entries).
+    // Backstop TTL only — the real gate is the URL's own `expire` param (see
+    // cachedUrlStillValid). googlevideo links are signed and die well before any
+    // fixed TTL, so a long TTL was serving dead URLs that failed with 403 mid-song.
     private data class CachedStream(val url: String, val extension: String, val timestamp: Long)
     private val streamCache = LruCache<String, CachedStream>(50)
-    private val CACHE_EXPIRY_MS = 3 * 60 * 60 * 1000L // 3 hours
+    private val CACHE_EXPIRY_MS = 60 * 60 * 1000L // 1 hour backstop
+
+    /**
+     * A cached stream URL is valid only if it's within the backstop TTL AND the
+     * signed URL hasn't reached (or is about to reach) its own expiry. googlevideo
+     * URLs carry `expire=<epochSeconds>`; we refresh 5 minutes early so playback
+     * never starts on a URL that dies seconds later with a 403.
+     */
+    private fun cachedUrlStillValid(cached: CachedStream): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - cached.timestamp >= CACHE_EXPIRY_MS) return false
+        val expireSeconds = Regex("[?&]expire=(\\d+)").find(cached.url)?.groupValues?.getOrNull(1)?.toLongOrNull()
+        if (expireSeconds != null && now >= expireSeconds * 1000L - 5 * 60_000L) return false
+        return true
+    }
 
     // In-flight request dedup: if two callers ask for the same videoId concurrently,
     // they share one network fetch instead of racing duplicate requests.
@@ -111,11 +128,12 @@ class YouTubeStreamingService @Inject constructor(
         if (!forceLow) {
             streamCache.get(cacheKey)?.let { cached ->
                 val ageMs = System.currentTimeMillis() - cached.timestamp
-                if (ageMs < CACHE_EXPIRY_MS) {
+                if (cachedUrlStillValid(cached)) {
                     android.util.Log.i("YouTubeStreaming", "CACHE_HIT audio $videoId (age=${ageMs}ms)")
                     return@withContext cached.url
                 }
-                android.util.Log.i("YouTubeStreaming", "CACHE_STALE audio $videoId (age=${ageMs}ms > ${CACHE_EXPIRY_MS}ms)")
+                android.util.Log.i("YouTubeStreaming", "CACHE_STALE audio $videoId (age=${ageMs}ms, expired/expiring) — evicting")
+                streamCache.remove(cacheKey)
             } ?: android.util.Log.i("YouTubeStreaming", "CACHE_MISS audio $videoId")
         } else {
             android.util.Log.i("YouTubeStreaming", "CACHE_BYPASS audio $videoId (forceLow=true)")
@@ -308,12 +326,16 @@ class YouTubeStreamingService @Inject constructor(
             val cachedVideo = streamCache.get(videoCacheKey)
             val cachedAudio = streamCache.get(audioCacheKey)
 
-            if (cachedVideo != null && System.currentTimeMillis() - cachedVideo.timestamp < CACHE_EXPIRY_MS) {
+            if (cachedVideo != null && cachedUrlStillValid(cachedVideo) && (cachedAudio == null || cachedUrlStillValid(cachedAudio))) {
                 android.util.Log.d("YouTubeStreaming", "CACHE_HIT video $videoId/$targetQuality (age=${System.currentTimeMillis() - cachedVideo.timestamp}ms)")
                 return@withContext VideoStreamResult(
                     videoUrl = cachedVideo.url,
                     audioUrl = cachedAudio?.url
                 )
+            }
+            if (cachedVideo != null) {
+                streamCache.remove(videoCacheKey)
+                streamCache.remove(audioCacheKey)
             }
             android.util.Log.d("YouTubeStreaming", "CACHE_MISS video $videoId/$targetQuality")
         }
@@ -450,11 +472,12 @@ class YouTubeStreamingService @Inject constructor(
     suspend fun getStreamUrlForDownload(videoId: String): Pair<String, String>? = withContext(Dispatchers.IO) {
         val cacheKey = "audio_$videoId"
         streamCache.get(cacheKey)?.let { cached ->
-            if (System.currentTimeMillis() - cached.timestamp < CACHE_EXPIRY_MS) {
+            if (cachedUrlStillValid(cached)) {
                 return@withContext cached.url to cached.extension
             }
+            streamCache.remove(cacheKey)
         }
-        
+
         retryWithBackoff {
             val downloadQuality = sessionManager.getDownloadQuality()
             val streamUrl = "https://www.youtube.com/watch?v=$videoId"

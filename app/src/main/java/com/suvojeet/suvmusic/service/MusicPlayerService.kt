@@ -1011,7 +1011,13 @@ class MusicPlayerService : MediaLibraryService() {
                             }
                         }
 
-                        val resolved = finalItems.mapIndexed { index, item ->
+                        // Bound the whole start-item resolution. resolveStreamUrlWithRetry
+                        // can take ~30s worst case; without an outer cap, Android Auto /
+                        // Bluetooth controllers sit unresponsive waiting on this future.
+                        // On timeout we return the placeholders and let onPlayerError /
+                        // onMediaItemTransition resolve lazily, so controls appear promptly.
+                        val resolved = (kotlinx.coroutines.withTimeoutOrNull(20_000L) {
+                          finalItems.mapIndexed { index, item ->
                             // Only resolve URI for the START item to keep latency low.
                             // The rest will be resolved lazily by onMediaItemTransition in the service.
                             if (index != finalStartIndex) return@mapIndexed item
@@ -1040,7 +1046,10 @@ class MusicPlayerService : MediaLibraryService() {
                             } else {
                                 item // Keep as placeholder if resolution fails, onPlayerError might handle it
                             }
-                        }.toMutableList()
+                          }.toMutableList()
+                        } ?: finalItems.toMutableList().also {
+                            android.util.Log.w("MusicPlayerService", "onSetMediaItems resolution timed out — returning placeholders for lazy resolution")
+                        })
 
                         if (resolved.isEmpty()) {
                             future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))

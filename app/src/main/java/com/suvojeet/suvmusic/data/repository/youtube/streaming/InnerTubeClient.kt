@@ -29,8 +29,14 @@ import javax.inject.Singleton
  */
 @Singleton
 class InnerTubeClient @Inject constructor(
-    private val okHttpClient: OkHttpClient
+    okHttpClient: OkHttpClient
 ) {
+    // Per-call timeout so a single slow client identity can't hang the whole
+    // resolve. Clients are tried sequentially (IOS → ANDROID_VR → TV); without a
+    // cap, three stalled calls at the default ~30s each could block playback ~90s.
+    private val httpClient: OkHttpClient = okHttpClient.newBuilder()
+        .callTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
     private data class ClientProfile(
         val clientName: String,
         val clientVersion: String,
@@ -100,7 +106,7 @@ class InnerTubeClient @Inject constructor(
             .post(payload.toRequestBody(jsonMedia))
             .build()
 
-        okHttpClient.newCall(request).execute().use { response ->
+        httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 android.util.Log.w("InnerTube", "${client.clientName} HTTP ${response.code} for $videoId")
                 return null

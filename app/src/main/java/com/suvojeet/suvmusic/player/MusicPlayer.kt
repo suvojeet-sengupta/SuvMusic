@@ -750,9 +750,13 @@ class MusicPlayer @Inject constructor(
                     // Wait for the observer to add more songs, then play the next one.
                     scope.launch {
                         val originalSize = queueSize
-                        // Retry up to 6 seconds (12 x 500ms) to allow autoplay to add songs
-                        repeat(12) {
-                            delay(500)
+                        // Tell the UI we're fetching more so radio doesn't look frozen
+                        // while the observer loads the next batch.
+                        _playerState.update { it.copy(isLoading = true, error = null) }
+                        // Retry up to ~15 seconds (20 x 750ms) — a slow network often
+                        // needs longer than the old 6s to deliver the next radio batch.
+                        repeat(20) {
+                            delay(750)
                             val updatedState = _playerState.value
                             if (updatedState.queue.size > originalSize) {
                                 val newIndex = originalSize
@@ -768,8 +772,12 @@ class MusicPlayer @Inject constructor(
                                 return@launch
                             }
                         }
-                        // Timeout: no new songs were added — playback stops
+                        // Timeout: no new songs were added — surface it instead of going
+                        // silent so the user knows radio stalled and can retry.
                         android.util.Log.w("MusicPlayer", "STATE_ENDED: autoplay timeout, no new songs loaded")
+                        _playerState.update {
+                            it.copy(isLoading = false, error = "Couldn't load more songs. Tap next to retry.")
+                        }
                     }
                 }
                 // RepeatMode.OFF at end of queue (no autoplay) — playback stops naturally (correct)
@@ -1191,10 +1199,19 @@ class MusicPlayer @Inject constructor(
                              }
                              resolvedVideoIds.remove(currentSong.id)
                         } else if (isExpiredUrl && currentSong.source == SongSource.YOUTUBE) {
-                             // Improvement (2): 403 Forbidden Search Fallback
-                             // Clear cached ID to force a fresh search resolution
+                             // 403/410 Forbidden — the signed stream URL died. Purge the
+                             // cached (dead) URL so re-resolution fetches a fresh one;
+                             // without this, getStreamUrl would just hand back the same
+                             // expired URL and we'd loop. Also clear the resolved-id map
+                             // so a stale video match can be re-searched.
+                             streamingService.clearCacheFor(currentSong.id)
                              resolvedVideoIds.remove(currentSong.id)
                              _playerState.update { it.copy(isLoading = true, error = "Stream expired, finding alternative...") }
+                        } else if (isExpiredUrl && currentSong.source == SongSource.REMOTE) {
+                             // Same problem on the RemoteAudio path: drop the cached URL/details
+                             // so the retry re-resolves instead of replaying the dead link.
+                             remoteAudioRepository.invalidate(currentSong.id)
+                             _playerState.update { it.copy(isLoading = true, error = "Stream expired, refreshing...") }
                         } else {
                              _playerState.update { it.copy(isLoading = true, error = null) }
                         }
@@ -2171,6 +2188,13 @@ class MusicPlayer @Inject constructor(
         preloadJob?.cancel()
         isPreloading = false
         lastPreloadAttemptTime = 0L
+        // Clear the cached preload result too. Cancelling the job alone left these set,
+        // so a preload that completed just as the user skipped could later be applied to
+        // the wrong song in onMediaItemTransition's fast-path.
+        preloadedNextSongId = null
+        preloadedStreamUrl = null
+        preloadedIsVideoMode = false
+        preloadedTimestamp = 0L
         val state = _playerState.value
         val queue = state.queue
         if (queue.isEmpty()) return
@@ -2291,6 +2315,16 @@ class MusicPlayer @Inject constructor(
         val queue = state.queue
         if (queue.isEmpty()) return
         val controller = mediaController ?: return
+
+        // Drop any preload aimed at the old "next" — after stepping back it no longer
+        // matches the upcoming item and could be applied to the wrong song.
+        preloadJob?.cancel()
+        isPreloading = false
+        lastPreloadAttemptTime = 0L
+        preloadedNextSongId = null
+        preloadedStreamUrl = null
+        preloadedIsVideoMode = false
+        preloadedTimestamp = 0L
 
         // Wait for the in-flight resolution to actually finish cancelling before
         // we trigger seekToPreviousMediaItem — otherwise the still-running
