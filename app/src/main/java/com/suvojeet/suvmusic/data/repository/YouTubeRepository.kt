@@ -18,6 +18,7 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeConfig
+import com.suvojeet.suvmusic.data.repository.youtube.internal.addYouTubeAuthHeaders
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
 import com.suvojeet.suvmusic.data.repository.youtube.search.YouTubeSearchService
 import com.suvojeet.suvmusic.data.repository.youtube.streaming.YouTubeStreamingService
@@ -1719,7 +1720,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext null
             
             val cookies = sessionManager.getCookies() ?: return@withContext null
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
@@ -1738,11 +1739,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/playlist/create")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -1768,7 +1765,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             // Strip "VL" prefix if present, as edit_playlist expects the raw playlist ID
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
@@ -1794,11 +1791,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -1822,7 +1815,7 @@ class YouTubeRepository @Inject constructor(
             if (videoIds.isEmpty()) return@withContext true
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -1853,11 +1846,7 @@ class YouTubeRepository @Inject constructor(
                 val request = okhttp3.Request.Builder()
                     .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                     .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                    .addHeader("Cookie", cookies)
-                    .addHeader("Authorization", authHeader)
-                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    .addHeader("Origin", "https://music.youtube.com")
-                    .addHeader("X-Goog-AuthUser", "0")
+                    .addYouTubeAuthHeaders(cookies, authUser)
                     .build()
                 
                 val response = okHttpClient.newCall(request).execute()
@@ -1883,7 +1872,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -1908,11 +1897,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -1934,7 +1919,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn() || setVideoIds.isEmpty()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -1965,11 +1950,7 @@ class YouTubeRepository @Inject constructor(
                 val request = okhttp3.Request.Builder()
                     .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                     .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                    .addHeader("Cookie", cookies)
-                    .addHeader("Authorization", authHeader)
-                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    .addHeader("Origin", "https://music.youtube.com")
-                    .addHeader("X-Goog-AuthUser", "0")
+                    .addYouTubeAuthHeaders(cookies, authUser)
                     .build()
                 
                 val response = okHttpClient.newCall(request).execute()
@@ -1996,7 +1977,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -2027,11 +2008,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -2052,7 +2029,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -2071,11 +2048,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/playlist/delete")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -2093,10 +2066,11 @@ class YouTubeRepository @Inject constructor(
     suspend fun getLyrics(videoId: String): com.suvojeet.suvmusic.providers.lyrics.Lyrics? = withContext(Dispatchers.IO) {
         try {
             // 1. Get the "Next" response to find the Lyrics browse ID
+            // Even if not logged in, we can try without auth (the helper omits the
+            // authenticated headers when cookies are null/blank).
             val cookies = sessionManager.getCookies()
-            // Even if not logged in, we can try without auth, or use minimal auth
-            val authHeader = if (cookies != null) YouTubeAuthUtils.getAuthorizationHeader(cookies) else ""
-            
+            val authUser = sessionManager.getAuthUserIndex()
+
             val nextBody = JSONObject().apply {
                  put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
@@ -2113,11 +2087,7 @@ class YouTubeRepository @Inject constructor(
                 .url("${YouTubeConfig.BASE_URL}/next")
                 .post(nextBody.toString().toRequestBody("application/json".toMediaType()))
                 .apply {
-                    if (cookies != null) addHeader("Cookie", cookies)
-                    if (authHeader != null) addHeader("Authorization", authHeader)
-                    addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    addHeader("Origin", "https://music.youtube.com")
-                    addHeader("X-Goog-AuthUser", "0") 
+                    addYouTubeAuthHeaders(cookies, authUser) 
                 }
                 .build()
                 
@@ -2144,11 +2114,7 @@ class YouTubeRepository @Inject constructor(
                 .url("${YouTubeConfig.BASE_URL}/browse")
                 .post(browseBody.toString().toRequestBody("application/json".toMediaType()))
                 .apply {
-                    if (cookies != null) addHeader("Cookie", cookies)
-                    if (authHeader != null) addHeader("Authorization", authHeader)
-                    addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    addHeader("Origin", "https://music.youtube.com")
-                    addHeader("X-Goog-AuthUser", "0")
+                    addYouTubeAuthHeaders(cookies, authUser)
                 }
                 .build()
                 
@@ -2307,8 +2273,11 @@ class YouTubeRepository @Inject constructor(
             if (commentText.isBlank()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
-            
+            // Comments live on www.youtube.com (WEB client), so this request keeps its
+            // own www origin instead of the shared music.youtube.com auth helper.
+            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies)
+            val authUser = sessionManager.getAuthUserIndex()
+
             val jsonBody = JSONObject().apply {
                 put("context", JSONObject().apply {
                     put("client", JSONObject().apply {
@@ -2323,15 +2292,17 @@ class YouTubeRepository @Inject constructor(
                     put("text", commentText)
                 })
             }
-            
+
             val request = okhttp3.Request.Builder()
                 .url("https://www.youtube.com/youtubei/v1/comment/create_comment")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://www.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .apply {
+                    addHeader("Cookie", cookies)
+                    authHeader?.let { addHeader("Authorization", it) }
+                    addHeader("User-Agent", YouTubeConfig.USER_AGENT)
+                    addHeader("Origin", "https://www.youtube.com")
+                    addHeader("X-Goog-AuthUser", authUser.toString())
+                }
                 .build()
             
             val response = okHttpClient.newCall(request).execute()
@@ -2443,7 +2414,7 @@ class YouTubeRepository @Inject constructor(
             if (!sessionManager.isLoggedIn()) return@withContext false
             
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies) ?: ""
+            val authUser = sessionManager.getAuthUserIndex()
             
             val realPlaylistId = if (playlistId.startsWith("VL")) playlistId.substring(2) else playlistId
             
@@ -2471,11 +2442,7 @@ class YouTubeRepository @Inject constructor(
             val request = okhttp3.Request.Builder()
                 .url("${YouTubeConfig.BASE_URL}/browse/edit_playlist")
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .addHeader("Cookie", cookies)
-                .addHeader("Authorization", authHeader)
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .addHeader("Origin", "https://music.youtube.com")
-                .addHeader("X-Goog-AuthUser", "0")
+                .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
             val response = okHttpClient.newCall(request).execute()

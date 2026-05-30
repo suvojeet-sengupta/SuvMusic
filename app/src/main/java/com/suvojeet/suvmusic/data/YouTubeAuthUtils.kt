@@ -18,7 +18,15 @@ object YouTubeAuthUtils {
      * Generates the SAPISIDHASH required for authenticated requests.
      */
     fun getAuthorizationHeader(cookieString: String): String? {
-        val sapisid = getCookieValue(cookieString, "SAPISID") ?: return null
+        // Google sets the API session id under several names. Some accounts (notably
+        // partitioned / __Secure-only cookie jars) never expose a bare "SAPISID",
+        // only the __Secure- variants. Fall back through all of them so the login
+        // gate's accepted cookie always yields a valid SAPISIDHASH instead of a
+        // silently-unauthenticated request.
+        val sapisid = getCookieValue(cookieString, "SAPISID")
+            ?: getCookieValue(cookieString, "__Secure-3PAPISID")
+            ?: getCookieValue(cookieString, "__Secure-1PAPISID")
+            ?: return null
         val timestamp = System.currentTimeMillis() / 1000
         val origin = "https://music.youtube.com"
         

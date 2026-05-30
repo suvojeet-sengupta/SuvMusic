@@ -16,4 +16,7 @@ object YouTubeConfig {
     
     const val BASE_URL = "https://music.youtube.com/youtubei/v1"
     const val PUBLIC_BASE_URL = "https://music.youtube.com/youtubei/v1"
+
+    const val ORIGIN = "https://music.youtube.com"
+    const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
