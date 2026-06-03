@@ -228,9 +228,6 @@ fun NavGraph(
                         onCreateMixClick = {
                             navController.navigate(Destination.PickMusic)
                         },
-                        onSearchClick = {
-                            navController.navigate(Destination.Search)
-                        },
                         currentSong = playbackInfo.currentSong
                     )
                 }

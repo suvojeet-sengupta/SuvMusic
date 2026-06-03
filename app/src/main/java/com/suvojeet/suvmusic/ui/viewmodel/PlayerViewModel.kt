@@ -1159,7 +1159,7 @@ class PlayerViewModel @Inject constructor(
             val currentSong = playerState.value.currentSong
             if (currentSong != null && (currentSong.source == SongSource.YOUTUBE || currentSong.source == SongSource.DOWNLOADED)) {
                  val comments = youTubeRepository.getComments(videoId)
-                 _commentsState.value = comments
+                 _commentsState.value = comments.distinctBy { it.id }
             }
             
             _isFetchingComments.value = false
@@ -1175,7 +1175,9 @@ class PlayerViewModel @Inject constructor(
             val moreComments = youTubeRepository.getMoreComments(currentSong.id)
             if (moreComments.isNotEmpty()) {
                 val currentComments = _commentsState.value ?: emptyList()
-                _commentsState.value = currentComments + moreComments
+                // Dedupe by id: YouTube can repeat a comment across continuation pages,
+                // and a stable LazyColumn key can't tolerate duplicate ids.
+                _commentsState.value = (currentComments + moreComments).distinctBy { it.id }
             }
             _isLoadingMoreComments.value = false
         }
@@ -1220,25 +1222,30 @@ class PlayerViewModel @Inject constructor(
             
             val success = youTubeRepository.postComment(song.id, commentText)
             _commentPostSuccess.value = success
-            
+
             if (success) {
                 // Optimistically add comment
                 val userAvatar = sessionManager.getUserAvatar()
-                
+
                 val newComment = Comment(
                     id = "temp_${System.currentTimeMillis()}",
-                    authorName = "You", 
+                    authorName = "You",
                     authorThumbnailUrl = userAvatar,
                     text = commentText,
                     timestamp = "Just now",
                     likeCount = "0",
                     replyCount = 0
                 )
-                
+
                 val currentComments = _commentsState.value ?: emptyList()
                 _commentsState.value = listOf(newComment) + currentComments
+                com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Comment posted")
+            } else {
+                // Posting can genuinely fail now (comments off, sign-in expired, network) —
+                // tell the user instead of silently swallowing it.
+                com.suvojeet.suvmusic.util.SnackbarUtil.showError("Couldn't post comment. Please try again.")
             }
-            
+
             _isPostingComment.value = false
             
             // Clear the success state after a delay

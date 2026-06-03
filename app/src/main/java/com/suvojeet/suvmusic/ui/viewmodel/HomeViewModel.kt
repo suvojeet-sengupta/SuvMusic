@@ -48,6 +48,7 @@ data class HomeUiState(
     val recommendedArtists: List<RecommendedArtist> = emptyList(),
     val recommendedTracks: List<RecommendedTrack> = emptyList(),
     val userAvatarUrl: String? = null,
+    val userName: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     /** True when loading additional sections at the bottom */
@@ -141,9 +142,13 @@ class HomeViewModel @Inject constructor(
     
     private fun observeSession() {
         viewModelScope.launch {
-            sessionManager.userAvatarFlow.collect { avatarUrl ->
+            kotlinx.coroutines.flow.combine(
+                sessionManager.userAvatarFlow,
+                sessionManager.userNameFlow
+            ) { avatarUrl, name -> avatarUrl to name }.collect { (avatarUrl, name) ->
                 _uiState.update { it.copy(
                     userAvatarUrl = avatarUrl,
+                    userName = name,
                     isLoggedIn = sessionManager.isLoggedIn()
                 ) }
             }

@@ -2271,46 +2271,166 @@ class YouTubeRepository @Inject constructor(
         try {
             if (!sessionManager.isLoggedIn()) return@withContext false
             if (commentText.isBlank()) return@withContext false
-            
+            if (videoId.isBlank()) return@withContext false
+
             val cookies = sessionManager.getCookies() ?: return@withContext false
-            // Comments live on www.youtube.com (WEB client), so this request keeps its
-            // own www origin instead of the shared music.youtube.com auth helper.
-            val authHeader = YouTubeAuthUtils.getAuthorizationHeader(cookies)
             val authUser = sessionManager.getAuthUserIndex()
 
-            val jsonBody = JSONObject().apply {
-                put("context", JSONObject().apply {
-                    put("client", JSONObject().apply {
-                        put("clientName", YouTubeConfig.WEB_CLIENT_NAME)
-                        put("clientVersion", YouTubeConfig.WEB_CLIENT_VERSION)
-                        put("hl", "en")
-                        put("gl", "US")
-                    })
-                })
-                put("createCommentParams", JSONObject().apply {
-                    put("videoId", videoId)
-                    put("text", commentText)
-                })
+            // YouTube's create_comment endpoint does NOT accept a {videoId, text} object —
+            // it needs an opaque `createCommentParams` token that lives in the video's
+            // comment box. Harvest it first; if we can't, the post genuinely can't happen.
+            val createParams = getCreateCommentParams(videoId, cookies, authUser)
+            if (createParams.isNullOrBlank()) {
+                android.util.Log.w("YouTubeComments", "postComment: no createCommentParams for $videoId (comments off / not signed in / schema shift)")
+                return@withContext false
             }
 
-            val request = okhttp3.Request.Builder()
-                .url("https://www.youtube.com/youtubei/v1/comment/create_comment")
-                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                .apply {
-                    addHeader("Cookie", cookies)
-                    authHeader?.let { addHeader("Authorization", it) }
-                    addHeader("User-Agent", YouTubeConfig.USER_AGENT)
-                    addHeader("Origin", "https://www.youtube.com")
-                    addHeader("X-Goog-AuthUser", authUser.toString())
-                }
-                .build()
-            
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            val jsonBody = JSONObject().apply {
+                put("context", webCommentContext())
+                put("commentText", commentText)
+                put("createCommentParams", createParams)
+            }
+
+            val raw = postWebComment("comment/create_comment", jsonBody, cookies, authUser)
+                ?: return@withContext false
+
+            // InnerTube often answers HTTP 200 even when the action failed, with the real
+            // outcome in the body — so confirm YouTube actually created the comment rather
+            // than trusting the status code.
+            val json = runCatching { JSONObject(raw) }.getOrNull()
+            if (json == null || json.has("error")) {
+                android.util.Log.w("YouTubeComments", "postComment rejected: ${raw.take(300)}")
+                return@withContext false
+            }
+            val created = raw.contains("STATUS_SUCCEEDED") ||
+                raw.contains("createCommentAction") ||
+                raw.contains("addCommentAction") ||
+                raw.contains("commentThreadRenderer")
+            if (!created) {
+                android.util.Log.w("YouTubeComments", "postComment: no creation marker in response: ${raw.take(300)}")
+            }
+            created
         } catch (e: Exception) {
             e.printStackTrace()
             false
         }
+    }
+
+    /**
+     * Fresh WEB-client `context` for www.youtube.com comment requests. Comments live on
+     * the WEB client (not WEB_REMIX / music.youtube.com), so this is kept separate from
+     * the YouTube Music context used elsewhere. A new object is returned per call because
+     * org.json objects can't be safely shared across request bodies.
+     */
+    private fun webCommentContext(): JSONObject = JSONObject().apply {
+        put("client", JSONObject().apply {
+            put("clientName", YouTubeConfig.WEB_CLIENT_NAME)
+            put("clientVersion", YouTubeConfig.WEB_CLIENT_VERSION)
+            put("hl", "en")
+            put("gl", "US")
+        })
+    }
+
+    /**
+     * POST an authenticated WEB-client InnerTube request to www.youtube.com and return the
+     * raw body, or null on a transport / non-2xx failure. Always closes the response.
+     */
+    private fun postWebComment(endpoint: String, body: JSONObject, cookies: String, authUser: Int): String? {
+        val request = okhttp3.Request.Builder()
+            .url("https://www.youtube.com/youtubei/v1/$endpoint")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .apply {
+                addHeader("Cookie", cookies)
+                YouTubeAuthUtils.getAuthorizationHeader(cookies)?.let { addHeader("Authorization", it) }
+                addHeader("User-Agent", YouTubeConfig.USER_AGENT)
+                addHeader("Origin", "https://www.youtube.com")
+                addHeader("X-Origin", "https://www.youtube.com")
+                addHeader("X-Goog-AuthUser", authUser.toString())
+                addHeader("Content-Type", "application/json")
+            }
+            .build()
+        return okHttpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                android.util.Log.w("YouTubeComments", "$endpoint HTTP ${response.code}")
+                null
+            } else {
+                response.body.string()
+            }
+        }
+    }
+
+    /**
+     * Harvest the opaque `createCommentParams` token required to post on [videoId]:
+     *   1. `next(videoId)` → find the comments section's continuation token
+     *   2. `next(continuation)` → the comment-box renderer carries `createCommentParams`
+     * Returns null if comments are disabled or the page shape changed. Uses recursive
+     * key search so it survives minor InnerTube structural shifts.
+     */
+    private fun getCreateCommentParams(videoId: String, cookies: String, authUser: Int): String? {
+        val nextBody = JSONObject().apply {
+            put("context", webCommentContext())
+            put("videoId", videoId)
+        }
+        val nextRaw = postWebComment("next", nextBody, cookies, authUser) ?: return null
+        val nextJson = runCatching { JSONObject(nextRaw) }.getOrNull() ?: return null
+
+        // Scope to the comments item-section so we grab ITS continuation token, not the
+        // watch-next / related-videos one that also lives in the response.
+        val commentsScope = deepFindObject(nextJson) { obj ->
+            obj.optString("sectionIdentifier").contains("comment", ignoreCase = true) ||
+                obj.optString("targetId").contains("comment", ignoreCase = true)
+        } ?: nextJson
+        val continuation = deepFindObject(commentsScope) { it.has("continuationCommand") }
+            ?.optJSONObject("continuationCommand")
+            ?.optString("token")
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+
+        val contBody = JSONObject().apply {
+            put("context", webCommentContext())
+            put("continuation", continuation)
+        }
+        val contRaw = postWebComment("next", contBody, cookies, authUser) ?: return null
+        val contJson = runCatching { JSONObject(contRaw) }.getOrNull() ?: return null
+        return deepFindString(contJson, "createCommentParams")
+    }
+
+    /** Depth-first search for the first [JSONObject] satisfying [match]. */
+    private fun deepFindObject(node: Any?, match: (JSONObject) -> Boolean): JSONObject? {
+        when (node) {
+            is JSONObject -> {
+                if (match(node)) return node
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    deepFindObject(node.opt(keys.next()), match)?.let { return it }
+                }
+            }
+            is JSONArray -> {
+                for (i in 0 until node.length()) {
+                    deepFindObject(node.opt(i), match)?.let { return it }
+                }
+            }
+        }
+        return null
+    }
+
+    /** Depth-first search for the first non-blank String value stored under [key]. */
+    private fun deepFindString(node: Any?, key: String): String? {
+        when (node) {
+            is JSONObject -> {
+                (node.opt(key) as? String)?.takeIf { it.isNotBlank() }?.let { return it }
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    deepFindString(node.opt(keys.next()), key)?.let { return it }
+                }
+            }
+            is JSONArray -> {
+                for (i in 0 until node.length()) {
+                    deepFindString(node.opt(i), key)?.let { return it }
+                }
+            }
+        }
+        return null
     }
     
     private fun extractLyricsBrowseId(nextJson: JSONObject): String? {

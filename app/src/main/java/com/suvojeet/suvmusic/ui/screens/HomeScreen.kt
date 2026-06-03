@@ -106,7 +106,6 @@ fun HomeScreen(
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
     currentSong: Song? = null,
     viewModel: HomeViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
@@ -119,15 +118,6 @@ fun HomeScreen(
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
     var selectedSong: Song? by remember { mutableStateOf(null) }
-    var isSpeedDialExpanded by remember { mutableStateOf(false) }
-    var isRadioGenerating by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isRadioGenerating) {
-        if (isRadioGenerating) {
-            delay(2500)
-            isRadioGenerating = false
-        }
-    }
 
     // Stable callback reference — avoids creating new lambdas per section item
     val onSongMoreClickHandler = remember {
@@ -268,7 +258,6 @@ fun HomeScreen(
                                         .animateEnter(index = 0),
                                     avatarUrl = uiState.userAvatarUrl,
                                     onHistoryClick = onHistoryClick,
-                                    onSearchClick = onSearchClick,
                                     onListenTogetherClick = onListenTogetherClick
                                 )
                             }
@@ -329,7 +318,10 @@ fun HomeScreen(
                                 SpeedDialGrid(
                                     songs = uiState.recommendations,
                                     currentSong = currentSong,
+                                    userName = uiState.userName,
+                                    avatarUrl = uiState.userAvatarUrl,
                                     onSongClick = onSongClick,
+                                    onShuffleClick = viewModel::playRandomMix,
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
                             }
@@ -598,74 +590,6 @@ fun HomeScreen(
             }
         }
         
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 174.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            AnimatedVisibility(visible = isSpeedDialExpanded) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    HomeSpeedDialAction(
-                        label = "Moods",
-                        icon = Icons.Default.AutoAwesome,
-                        onClick = {
-                            isSpeedDialExpanded = false
-                            onExploreClick("FEmusic_moods_and_genres", "Moods & genres")
-                        }
-                    )
-                    HomeSpeedDialAction(
-                        label = "Random",
-                        icon = Icons.Default.Shuffle,
-                        onClick = {
-                            isSpeedDialExpanded = false
-                            viewModel.playRandomMix()
-                        }
-                    )
-                    HomeSpeedDialAction(
-                        label = "Listen Together",
-                        icon = Icons.Default.Group,
-                        onClick = {
-                            isSpeedDialExpanded = false
-                            onListenTogetherClick()
-                        }
-                    )
-                    HomeSpeedDialAction(
-                        label = "Radio",
-                        icon = Icons.Default.Radio,
-                        onClick = {
-                            isSpeedDialExpanded = false
-                            isRadioGenerating = true
-                            onStartRadio()
-                        }
-                    )
-                    HomeSpeedDialAction(
-                        label = "Refresh",
-                        icon = Icons.Default.Refresh,
-                        onClick = {
-                            isSpeedDialExpanded = false
-                            viewModel.refresh()
-                        }
-                    )
-                }
-            }
-
-            ExtendedFloatingActionButton(
-                onClick = { isSpeedDialExpanded = !isSpeedDialExpanded },
-                icon = {
-                    Icon(
-                        imageVector = if (isSpeedDialExpanded) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = null
-                    )
-                },
-                text = { Text(if (isSpeedDialExpanded) "Close" else "Quick Mix") }
-            )
-        }
-
         // Song Options Menu
         selectedSong?.let { song ->
             SongMenuBottomSheet(
@@ -720,107 +644,6 @@ fun HomeScreen(
                     playlistViewModel.showCreatePlaylistDialog()
                 }
             )
-        }
-
-        // Generating Radio Overlay
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isRadioGenerating,
-            enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .pointerInput(Unit) { detectTapGestures { } }, // Prevent clicks behind
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "radioPulse")
-                    val pulseState = infiniteTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.3f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-                        ),
-                        label = "pulse"
-                    )
-                    
-                    Surface(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .graphicsLayer {
-                                val pulse = pulseState.value
-                                scaleX = pulse
-                                scaleY = pulse
-                            },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        tonalElevation = 8.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Radio,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    Text(
-                        text = "Radio is generating...",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Tailoring tunes for your vibe",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HomeSpeedDialAction(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    com.suvojeet.suvmusic.ui.components.BounceButton(
-        onClick = onClick,
-        modifier = Modifier.padding(vertical = 4.dp)
-    ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-            tonalElevation = 8.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
         }
     }
 }
@@ -925,7 +748,6 @@ private fun ProfileHeader(
     modifier: Modifier = Modifier,
     avatarUrl: String? = null,
     onHistoryClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
     onListenTogetherClick: () -> Unit = {}
 ) {
     // YouTube-Music-style compact top bar: brand wordmark on the leading edge,
@@ -973,11 +795,6 @@ private fun ProfileHeader(
                 contentDescription = "Recent activity",
                 onClick = onHistoryClick,
                 showDot = true
-            )
-            TopBarAction(
-                icon = Icons.Default.Search,
-                contentDescription = "Search",
-                onClick = onSearchClick
             )
 
             Spacer(modifier = Modifier.width(4.dp))
@@ -1060,14 +877,65 @@ private fun TopBarAction(
 private fun SpeedDialGrid(
     songs: List<Song>,
     currentSong: Song?,
+    userName: String?,
+    avatarUrl: String?,
     onSongClick: (List<Song>, Int) -> Unit,
+    onShuffleClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (songs.isEmpty()) return
-    val items = remember(songs) { songs.take(9) }
-    val rows = remember(items) { items.chunked(3) }
+    // 8 picks + a permanent "shuffle" tile in the last cell (3x3 grid), mirroring
+    // YouTube Music's speed dial where the trailing tile shuffles your mix.
+    val items = remember(songs) { songs.take(8) }
+    // Cell indices: 0..items.lastIndex are songs, the final index is the shuffle tile.
+    val cellCount = items.size + 1
+    val rows = remember(cellCount) { (0 until cellCount).chunked(3) }
 
     Column(modifier = modifier) {
+        // YTM-style header: account avatar + name above the "Speed dial" title.
+        if (!userName.isNullOrBlank()) {
+            Row(
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!avatarUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(avatarUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = userName.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 0.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         Text(
             text = "Speed dial",
             style = MaterialTheme.typography.titleLarge,
@@ -1082,20 +950,73 @@ private fun SpeedDialGrid(
         ) {
             rows.forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { song ->
-                        SpeedDialTile(
-                            song = song,
-                            isPlaying = song.id == currentSong?.id,
-                            onClick = {
-                                val index = items.indexOf(song)
-                                if (index != -1) onSongClick(items, index)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
+                    row.forEach { cellIndex ->
+                        if (cellIndex < items.size) {
+                            val song = items[cellIndex]
+                            SpeedDialTile(
+                                song = song,
+                                isPlaying = song.id == currentSong?.id,
+                                onClick = { onSongClick(items, cellIndex) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            ShuffleTile(
+                                onClick = onShuffleClick,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                     repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The trailing "shuffle" tile of the speed dial — plays a random mix built from the
+ * user's personalized recommendations. Styled to match [SpeedDialTile]: a square,
+ * 14dp-rounded tile with a label overlaid at the bottom.
+ */
+@Composable
+private fun ShuffleTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(10.dp))
+            .bounceClick(shape = shape, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Shuffle,
+            contentDescription = "Shuffle play",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(34.dp)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+                    )
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "Shuffle",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

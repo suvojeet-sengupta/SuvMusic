@@ -265,7 +265,10 @@ fun CommentsSheet(
                             ) {
                                 itemsIndexed(
                                     items = comments,
-                                    key = { index, comment -> "${comment.id}_$index" }
+                                    // Stable key by id (comments are deduped by id upstream),
+                                    // so prepending an optimistic comment animates instead of
+                                    // forcing the whole list to recompose.
+                                    key = { _, comment -> comment.id }
                                 ) { index, comment ->
                                     val isHighlighted = comment.id.startsWith("temp_")
                                     CommentItem(
