@@ -702,7 +702,9 @@ fun PlaybackSettingsScreen(
                 )
                 
                 Text(
-                    text = "Choose where SuvMusic streams from. HQ Audio offers higher quality (320 kbps) audio.",
+                    text = "Choose where SuvMusic streams from. HQ Audio (320 kbps) plays everywhere — " +
+                        "home, search, queue and next/previous. If a track has no HQ match, " +
+                        "SuvMusic tells you and falls back to YouTube automatically.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)

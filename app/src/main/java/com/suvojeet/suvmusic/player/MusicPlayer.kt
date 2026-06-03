@@ -132,7 +132,16 @@ class MusicPlayer @Inject constructor(
     // A blank value ("") is a negative cache marker meaning "searched, no confident
     // RemoteAudio match" so we don't repeat the search every play.
     private val hybridRemoteIds = android.util.LruCache<String, String>(200)
-    
+
+    // Why a given song ended up NOT on RemoteAudio HQ, recorded by the last hybrid
+    // resolve so the player can tell the user the right thing when it falls back to
+    // YouTube (no HQ version vs. the HQ backend being busy/offline).
+    private enum class HqFallbackReason { NONE, NO_MATCH, SOURCE_BUSY }
+    private val hqFallbackReason = android.util.LruCache<String, HqFallbackReason>(200)
+    // Song ids we've already shown an HQ-fallback notice for, so a single song never
+    // spams the snackbar across preload + transition + replays. Cleared on a new queue.
+    private val hqNoticeShown = android.util.LruCache<String, Boolean>(200)
+
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
     private var currentSongStartPosition: Long = 0L
@@ -355,6 +364,8 @@ class MusicPlayer @Inject constructor(
         scope.launch {
             sessionManager.musicSourceFlow.collect {
                 hybridRemoteIds.evictAll()
+                hqFallbackReason.evictAll()
+                hqNoticeShown.evictAll()
             }
         }
 
@@ -959,7 +970,11 @@ class MusicPlayer @Inject constructor(
                             preloadedStreamUrl = null
                             preloadedIsVideoMode = false
                             isPreloading = false
-    
+
+                            // If HQ was selected but this (preloaded/resolved) song ended
+                            // up on YouTube, tell the user now that it's actually playing.
+                            notifyHqFallbackIfNeeded(song)
+
                             // Start aggressive caching for this preloaded/resolved song
                             if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                                 cachingJob?.cancel()
@@ -1041,7 +1056,10 @@ class MusicPlayer @Inject constructor(
                                     if (!timerTriggered) controller.play()
                                 }
                                 _playerState.update { it.copy(isLoading = false, error = null) }
-                                
+
+                                // HQ selected but this preloaded song fell back to YouTube — notify now.
+                                notifyHqFallbackIfNeeded(song)
+
                                 if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                                     cachingJob?.cancel()
                                     startAggressiveCaching(cacheKey, cachedUrl)
@@ -1283,21 +1301,82 @@ class MusicPlayer @Inject constructor(
         // Positive/negative cache of the resolved HQ stream URL so we don't re-search on
         // every play. A blank value is the negative-cache marker ("searched, no match").
         hybridRemoteIds[song.id]?.let { cached -> return cached.ifBlank { null } }
+        // Tracks whether the HQ backend was actually reachable. A timeout / rate-limit /
+        // no-network result means "couldn't ask" (SOURCE_BUSY) rather than "asked, no
+        // match" (NO_MATCH) — the user gets a different message for each.
+        var busy = false
+        suspend fun searchTyped(q: String): List<Song> {
+            val res = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                remoteAudioRepository.searchResult(q)
+            }
+            return when (res) {
+                is com.suvojeet.suvmusic.core.model.AppResult.Success -> res.data
+                is com.suvojeet.suvmusic.core.model.AppResult.Failure -> {
+                    val e = res.error
+                    if (e is com.suvojeet.suvmusic.core.model.AppError.RateLimited ||
+                        e is com.suvojeet.suvmusic.core.model.AppError.NoNetwork ||
+                        e is com.suvojeet.suvmusic.core.model.AppError.Timeout
+                    ) busy = true
+                    emptyList()
+                }
+                null -> { busy = true; emptyList() } // outer 8s timeout
+            }
+        }
         return try {
-            val query = "${song.title} ${song.artist}".trim()
-            val candidates = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                remoteAudioRepository.search(query)
-            } ?: emptyList()
-            val match = pickBestRemoteMatch(song, candidates)
+            // Escalating match: search "title artist" first; only if that yields no
+            // confident match do we spend a second "title only" search (helps when the
+            // YouTube artist string is noisy). Both go through the shared 429 backoff
+            // gate and the search cache, so the second query is cheap on a cache hit.
+            val primaryQuery = "${song.title} ${song.artist}".trim()
+            var match = pickBestRemoteMatch(song, searchTyped(primaryQuery))
+            if (match == null) {
+                val titleOnly = song.title.trim()
+                if (titleOnly.isNotEmpty() && !titleOnly.equals(primaryQuery, ignoreCase = true)) {
+                    match = pickBestRemoteMatch(song, searchTyped(titleOnly))
+                }
+            }
             // Use the 320 kbps stream URL the search result already carries; only fall
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
             // endpoint rate-limits hardest, so we keep it off the hot play path).
             val url = match?.let { remoteStreamUrlFor(it) }
             hybridRemoteIds.put(song.id, url ?: "")
+            hqFallbackReason.put(
+                song.id,
+                when {
+                    url != null -> HqFallbackReason.NONE
+                    busy -> HqFallbackReason.SOURCE_BUSY
+                    else -> HqFallbackReason.NO_MATCH
+                }
+            )
             url
         } catch (e: Exception) {
             android.util.Log.w("MusicPlayer", "Hybrid RemoteAudio resolve failed: ${e.message}")
+            hqFallbackReason.put(song.id, HqFallbackReason.SOURCE_BUSY)
             null
+        }
+    }
+
+    /**
+     * If the user has HQ Audio selected but [song] ended up falling back to YouTube,
+     * tell them once (per song, per queue) with the reason recorded by the last hybrid
+     * resolve. No-op when the song played from HQ, when HQ isn't the selected source,
+     * or when we've already notified for this song.
+     */
+    private fun notifyHqFallbackIfNeeded(song: Song) {
+        val reason = hqFallbackReason[song.id] ?: return
+        if (reason == HqFallbackReason.NONE) return
+        if (hqNoticeShown[song.id] != null) return
+        hqNoticeShown.put(song.id, true)
+        val title = song.title.ifBlank { "this song" }
+        val msg = when (reason) {
+            HqFallbackReason.SOURCE_BUSY -> "HQ source busy — playing “$title” from YouTube"
+            else -> "No HQ version found — playing “$title” from YouTube"
+        }
+        scope.launch(Dispatchers.Main) {
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                msg,
+                com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
+            )
         }
     }
 
@@ -1317,12 +1396,19 @@ class MusicPlayer @Inject constructor(
      */
     private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? {
         if (candidates.isEmpty()) return null
+        // Boilerplate tokens that carry no identity — stripped so a YouTube title like
+        // "Tum Hi Ho (Official Video) | Aashiqui 2" matches the bare HQ "Tum Hi Ho".
+        val noise = setOf(
+            "official", "video", "audio", "lyrics", "lyric", "full", "song", "songs",
+            "hd", "4k", "mv", "feat", "ft", "with", "the", "remastered", "version",
+            "original", "soundtrack", "ost", "from", "movie"
+        )
         fun normalize(s: String): Set<String> =
             s.lowercase()
                 .replace(Regex("\\(.*?\\)|\\[.*?]"), " ") // drop (feat..)/[remix] etc.
                 .replace(Regex("[^a-z0-9\\s]"), " ")
                 .split(Regex("\\s+"))
-                .filter { it.isNotBlank() && it.length > 1 }
+                .filter { it.isNotBlank() && it.length > 1 && it !in noise }
                 .toSet()
 
         val targetTitle = normalize(song.title)
@@ -1335,28 +1421,34 @@ class MusicPlayer @Inject constructor(
             val cTitle = normalize(c.title)
             if (cTitle.isEmpty()) continue
             val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
-            // Looser title gate: a 40% token overlap is enough. Catches songs where
-            // the YouTube title carries extra noise like "Official Video", "Lyrics",
-            // album/year tags, etc.
-            if (titleOverlap < 0.4) continue
+            // Title gate: require at least half the (noise-stripped) title tokens to
+            // overlap. Tighter than before — the confidence floor below leans on this.
+            if (titleOverlap < 0.5) continue
 
-            // Duration gate (only when both are known). Widened to ±15s to tolerate
-            // intros/outros that differ between YouTube and the HQ source.
+            // Duration gate (only when both are known): reject anything beyond ±15s to
+            // tolerate intros/outros while filtering remixes / live / extended cuts.
+            // A closer duration earns a small bonus that breaks ties toward the right take.
+            var durBonus = 0.0
             if (song.duration > 0 && c.duration > 0) {
-                if (kotlin.math.abs(song.duration - c.duration) > 15_000L) continue
+                val diff = kotlin.math.abs(song.duration - c.duration)
+                if (diff > 15_000L) continue
+                durBonus = (1.0 - diff / 15_000.0) * 0.15
             }
 
             val cArtist = normalize(c.artist)
             val artistOverlap = if (targetArtist.isEmpty() || cArtist.isEmpty()) 0.0
                 else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
 
-            val score = titleOverlap + artistOverlap * 0.5
+            val score = titleOverlap + artistOverlap * 0.5 + durBonus
             if (score > bestScore) {
                 bestScore = score
                 best = c
             }
         }
-        return best
+        // Confidence floor: never swap in a weakly-matched (likely wrong) song. A bare
+        // half-title overlap with no artist/duration support scores ~0.5 and is rejected;
+        // a strong title, or a decent title backed by artist/duration, clears 0.6.
+        return if (bestScore >= 0.6) best else null
     }
 
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
@@ -1385,6 +1477,7 @@ class MusicPlayer @Inject constructor(
                         android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from RemoteAudio HQ")
                     } else {
                         android.util.Log.w("MusicPlayer", "Hybrid: no HQ match for '${song.title}' - ${song.artist}; falling back to YouTube")
+                        notifyHqFallbackIfNeeded(song)
                     }
                 }
 
@@ -1901,11 +1994,18 @@ class MusicPlayer @Inject constructor(
                             val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
                             videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
                         } else {
-                            youTubeRepository.getStreamUrl(nextSong.id)
+                            // Hybrid: preload the HQ stream too, so gapless next-track
+                            // honors the HQ source selection instead of silently playing
+                            // the next song from YouTube. No user notice here — preload is
+                            // speculative; the notice fires when the song actually plays
+                            // (resolveAndPlayCurrentItem, or the transition fast-path below).
+                            val hqSelected = sessionManager.getMusicSource() == MusicSource.REMOTE
+                            (if (hqSelected) resolveHybridRemoteStream(nextSong) else null)
+                                ?: youTubeRepository.getStreamUrl(nextSong.id)
                         }
                     }
                 }
-                
+
                 if (streamUrl != null) {
                     // CRITICAL FIX (Shuffle premature transition prevention):
                     // In shuffle mode, calling replaceMediaItem on the next item disrupts
@@ -1996,6 +2096,9 @@ class MusicPlayer @Inject constructor(
         preloadedStreamUrl = null
         preloadedIsVideoMode = false
         isPreloading = false
+
+        // New queue → let HQ-fallback notices fire again for these songs.
+        hqNoticeShown.evictAll()
 
         playJob = scope.launch {
             _playerState.update {
@@ -2090,8 +2193,9 @@ class MusicPlayer @Inject constructor(
                     } else {
                         // Hybrid: prefer RemoteAudio HQ audio for YouTube songs when
                         // the user has selected HQ Audio as their primary source.
-                        val hybrid = if (sessionManager.getMusicSource() == MusicSource.REMOTE)
-                            resolveHybridRemoteStream(song) else null
+                        val hqSelected = sessionManager.getMusicSource() == MusicSource.REMOTE
+                        val hybrid = if (hqSelected) resolveHybridRemoteStream(song) else null
+                        if (hqSelected && hybrid == null) notifyHqFallbackIfNeeded(song)
                         // Retry once if first attempt fails
                         hybrid
                             ?: youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
