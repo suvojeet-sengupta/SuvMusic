@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.3.0] - 2026-06-03
+
+### Fixed
+- General bug fixes and performance improvements.
+
 ## [2.5.2.0] - 2026-05-30
 
 ### Improved
