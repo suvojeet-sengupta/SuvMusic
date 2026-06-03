@@ -8,9 +8,11 @@ import com.suvojeet.suvmusic.data.repository.ListeningHistoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.util.Calendar
@@ -80,11 +82,11 @@ class ListeningStatsViewModel @Inject constructor(
                 
                 val monthTopArtist = calculateTopArtistFromHistory(recentHistory)
                 
-                // Calculate months based on first ever track to now
+                // Months since the user's FIRST ever play (firstPlayed, not lastPlayed).
                 val firstTrack = listeningHistoryRepository.getFirstEverTrack()
                 val totalMonths = firstTrack?.let {
-                    val diff = System.currentTimeMillis() - it.lastPlayed
-                    diff.toDouble() / (1000.0 * 60 * 60 * 24 * 30.44)
+                    val diff = System.currentTimeMillis() - it.firstPlayed
+                    (diff.toDouble() / (1000.0 * 60 * 60 * 24 * 30.44)).coerceAtLeast(0.0)
                 } ?: 0.0
 
                 ListeningStatsUiState(
@@ -100,14 +102,21 @@ class ListeningStatsViewModel @Inject constructor(
                     musicPersonality = personality,
                     isLoading = false
                 )
-            }.catch { e ->
-                // Log error or handle it
-                emit(ListeningStatsUiState(isLoading = false))
             }
+                // Heavy aggregation (grouping, weekly/time-of-day math) runs off the main
+                // thread so collecting the stats never janks the UI.
+                .flowOn(Dispatchers.Default)
+                .catch { _ ->
+                    emit(ListeningStatsUiState(isLoading = false))
+                }
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            // Lazily (not WhileSubscribed) so leaving the screen briefly — or opening
+            // Wrapped and coming back — doesn't cancel the upstream and force a full
+            // reload + re-run of the entry animations. The flow stays warm for the
+            // ViewModel's lifetime, which matches how a one-off insights screen is used.
+            started = SharingStarted.Lazily,
             initialValue = ListeningStatsUiState(isLoading = true)
         )
     

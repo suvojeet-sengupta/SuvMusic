@@ -101,13 +101,7 @@ data class PlayerScreenState(
     val relatedSongs: List<com.suvojeet.suvmusic.core.model.Song> = emptyList(),
     val isFetchingRelated: Boolean = false,
     val selectedRelatedIndices: Set<Int> = emptySet(),
-    val comments: List<com.suvojeet.suvmusic.core.model.Comment>? = null,
-    val isFetchingComments: Boolean = false,
     val isLoggedIn: Boolean = false,
-    val isPostingComment: Boolean = false,
-    val isLoadingMoreComments: Boolean = false,
-    val commentReplies: Map<String, List<com.suvojeet.suvmusic.core.model.Comment>> = emptyMap(),
-    val loadingReplies: Set<String> = emptySet(),
     val sleepTimerOption: com.suvojeet.suvmusic.player.SleepTimerOption = com.suvojeet.suvmusic.player.SleepTimerOption.OFF,
     val sleepTimerRemainingMs: Long? = null,
     val isRadioMode: Boolean = false,
@@ -137,10 +131,6 @@ data class PlayerScreenActions(
     val onPlayFromQueue: (Int) -> Unit,
     val onToggleAutoplay: () -> Unit,
     val onLoadMoreRadioSongs: () -> Unit,
-    val onPostComment: (String) -> Unit,
-    val onLoadMoreComments: () -> Unit,
-    val onLoadReplies: (String) -> Unit = {},
-    val onLoadMoreReplies: (String) -> Unit = {},
     val onSetSleepTimer: (com.suvojeet.suvmusic.player.SleepTimerOption, Int?) -> Unit,
     val onSwitchDevice: (OutputDevice) -> Unit,
     val onRefreshDevices: () -> Unit,
@@ -289,7 +279,6 @@ fun PlayerScreen(
 
     val showQueue = activeOverlay is PlayerOverlay.Queue
     val showLyrics = activeOverlay is PlayerOverlay.Lyrics
-    val showCommentsSheet = activeOverlay is PlayerOverlay.Comments
     val showActionsSheet = activeOverlay is PlayerOverlay.Actions
     val selectedSongForMenu = (activeOverlay as? PlayerOverlay.Actions)?.targetSong
     val showInfoSheet = activeOverlay is PlayerOverlay.SongInfo
@@ -392,7 +381,6 @@ fun PlayerScreen(
                                 onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
                                 onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
                                 onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                                onShowComments = { activeOverlay = PlayerOverlay.Comments },
                                 handleDoubleTapSeek = handleDoubleTapSeek,
                                 onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                                 onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
@@ -423,7 +411,6 @@ fun PlayerScreen(
                                 onShowPlaybackSpeed = { activeOverlay = PlayerOverlay.PlaybackSpeed },
                                 onShowEqualizer = { activeOverlay = PlayerOverlay.Equalizer },
                                 onShowListenTogether = { activeOverlay = PlayerOverlay.ListenTogether },
-                                onShowComments = { activeOverlay = PlayerOverlay.Comments },
                                 handleDoubleTapSeek = handleDoubleTapSeek,
                                 onShapeChange = { shape -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setArtworkShape(shape.name) } },
                                 onSeekbarStyleChange = { style -> coroutineScope.launch(Dispatchers.IO) { sessionManager.setSeekbarStyle(style.name) } },
@@ -753,7 +740,7 @@ fun BoxScope.OverlaysContent(
             onDownload = { if (menuSong.id == song?.id) actions.onDownload() else com.suvojeet.suvmusic.service.DownloadService.startDownload(context, menuSong) },
             onDeleteDownload = { playerViewModel.deleteDownload(menuSong.id) }, onPlayNext = { playerViewModel.playNext(menuSong) }, onAddToQueue = { playerViewModel.addToQueue(menuSong) },
             onViewInfo = { onOverlayChange(PlayerOverlay.SongInfo) }, onAddToPlaylist = { onOverlayChange(PlayerOverlay.None); playlistViewModel.showAddToPlaylistSheet(menuSong) },
-            onViewComments = { onOverlayChange(PlayerOverlay.Comments) }, onSleepTimer = { onOverlayChange(PlayerOverlay.SleepTimer) }, onStartRadio = { actions.onStartRadio() },
+            onSleepTimer = { onOverlayChange(PlayerOverlay.SleepTimer) }, onStartRadio = { actions.onStartRadio() },
             onListenTogether = { onOverlayChange(PlayerOverlay.None); actions.onListenTogetherClick() }, 
             onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
             currentSpeed = playerState.playbackSpeed, isFromQueue = (activeOverlay as? PlayerOverlay.Actions)?.fromQueue ?: false, isCurrentlyPlaying = menuSong.id == song?.id,
@@ -761,15 +748,6 @@ fun BoxScope.OverlaysContent(
             isDarkTheme = isAppInDarkTheme
         )
     }
-
-    com.suvojeet.suvmusic.ui.screens.player.components.CommentsSheet(
-        isVisible = activeOverlay is PlayerOverlay.Comments, comments = state.comments, isLoading = state.isFetchingComments,
-        onDismiss = { if (currentOverlay is PlayerOverlay.Comments) onOverlayChange(PlayerOverlay.None) }, accentColor = dominantColors.accent, isLoggedIn = state.isLoggedIn,
-        isPostingComment = state.isPostingComment, onPostComment = actions.onPostComment, isLoadingMore = state.isLoadingMoreComments, onLoadMore = actions.onLoadMoreComments,
-        commentReplies = state.commentReplies, loadingReplies = state.loadingReplies,
-        onLoadReplies = actions.onLoadReplies, onLoadMoreReplies = actions.onLoadMoreReplies,
-        dominantColors = dominantColors, isDarkTheme = isAppInDarkTheme
-    )
 
     if (song != null) {
         SongInfoSheet(

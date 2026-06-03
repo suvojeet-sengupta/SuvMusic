@@ -177,9 +177,6 @@ fun LibraryScreen(
                                     SmartPlaylistType.DEVICE_SONGS -> {
                                         onPlaylistClick(PlaylistDisplayItem(id = "DEVICE_SONGS", name = "Device files", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
-                                    SmartPlaylistType.OFFLINE_SHUFFLE -> {
-                                        viewModel.playOfflineShuffle()
-                                    }
                                     SmartPlaylistType.TOP_50 -> {
                                         onPlaylistClick(PlaylistDisplayItem(id = "TOP_50", name = "My Top 50", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
                                     }
@@ -233,9 +230,6 @@ fun LibraryScreen(
                                     SmartPlaylistType.DOWNLOADED -> onDownloadsClick()
                                     SmartPlaylistType.DEVICE_SONGS -> {
                                         onPlaylistClick(PlaylistDisplayItem(id = "DEVICE_SONGS", name = "Device files", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
-                                    }
-                                    SmartPlaylistType.OFFLINE_SHUFFLE -> {
-                                        viewModel.playOfflineShuffle()
                                     }
                                     SmartPlaylistType.TOP_50 -> {
                                         onPlaylistClick(PlaylistDisplayItem(id = "TOP_50", name = "My Top 50", url = "", uploaderName = "", thumbnailUrl = null, songCount = 0))
@@ -625,7 +619,7 @@ fun LibraryControlBar(
 }
 
 enum class SmartPlaylistType {
-    LIKED, DOWNLOADED, TOP_50, CACHED, DEVICE_SONGS, OFFLINE_SHUFFLE
+    LIKED, DOWNLOADED, TOP_50, CACHED, DEVICE_SONGS
 }
 
 @Composable
@@ -683,14 +677,6 @@ fun PlaylistsGrid(
                 icon = Icons.Default.MusicNote,
                 count = "${uiState.localSongs.size} songs",
                 onClick = { onSmartPlaylistClick(SmartPlaylistType.DEVICE_SONGS) }
-            )
-        }
-        item {
-             SmartPlaylistCard(
-                title = "Offline Music",
-                icon = Icons.Default.Shuffle,
-                count = "Shuffle all",
-                onClick = { onSmartPlaylistClick(SmartPlaylistType.OFFLINE_SHUFFLE) }
             )
         }
         item {
@@ -909,14 +895,6 @@ fun PlaylistsList(
                  icon = Icons.Default.MusicNote,
                  count = "${uiState.localSongs.size} songs",
                  onClick = { onSmartPlaylistClick(SmartPlaylistType.DEVICE_SONGS) }
-             )
-         }
-         item {
-             SmartPlaylistListItem(
-                 title = "Offline Music",
-                 icon = Icons.Default.Shuffle,
-                 count = "Shuffle all",
-                 onClick = { onSmartPlaylistClick(SmartPlaylistType.OFFLINE_SHUFFLE) }
              )
          }
          item {

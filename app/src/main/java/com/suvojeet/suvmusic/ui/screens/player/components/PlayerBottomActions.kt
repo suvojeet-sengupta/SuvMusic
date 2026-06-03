@@ -26,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Lyrics
@@ -53,7 +52,7 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 /**
  * YouTube-Music-style action chip row that sits directly beneath the song info
  * (title + artist), above the seekbar — matching the now-playing layout where
- * Like / Dislike / Lyrics / Comments are quick chips. Horizontally scrollable so
+ * Like / Dislike / Lyrics / Related are quick chips. Horizontally scrollable so
  * the chips never clip on narrow screens.
  */
 @Composable
@@ -63,7 +62,6 @@ fun PlayerActionChips(
     onToggleLike: () -> Unit,
     onToggleDislike: () -> Unit,
     onLyricsClick: () -> Unit,
-    onCommentsClick: () -> Unit,
     onRelatedClick: () -> Unit,
     onDownloadClick: () -> Unit,
     downloadState: DownloadState,
@@ -106,7 +104,6 @@ fun PlayerActionChips(
         }
 
         BottomChip(label = "Lyrics", icon = Icons.Default.Lyrics, onClick = onLyricsClick, dominantColors = dominantColors)
-        BottomChip(label = "Comments", icon = Icons.Default.Comment, onClick = onCommentsClick, dominantColors = dominantColors)
         BottomChip(label = "Related", icon = Icons.Default.Recommend, onClick = onRelatedClick, dominantColors = dominantColors)
 
         // Download keeps its four-state animation, wrapped in a chip-shaped pill.

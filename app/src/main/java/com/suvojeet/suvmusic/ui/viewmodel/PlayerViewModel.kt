@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.core.model.Comment
 import com.suvojeet.suvmusic.core.model.DownloadState
 import com.suvojeet.suvmusic.core.model.OutputDevice
 import com.suvojeet.suvmusic.core.model.PlayerState
@@ -119,6 +118,16 @@ class PlayerViewModel @Inject constructor(
     private val _selectedLyricsProvider = MutableStateFlow(LyricsProviderType.AUTO)
     val selectedLyricsProvider: StateFlow<LyricsProviderType> = _selectedLyricsProvider.asStateFlow()
 
+    // Remembers the user's MANUAL lyrics-provider choice per song id, so returning to a
+    // song re-applies the source they picked instead of snapping back to AUTO every time.
+    // Session-scoped + bounded (LRU, 100). AUTO means "no override" and isn't stored.
+    private val lyricsProviderBySong =
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, LyricsProviderType>(16, 0.75f, true) {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, LyricsProviderType>): Boolean = size > 100
+            }
+        )
+
     private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
     val artistCredits: StateFlow<List<ArtistCreditInfo>> = _artistCredits.asStateFlow()
 
@@ -138,21 +147,6 @@ class PlayerViewModel @Inject constructor(
         )
     )
     val enabledLyricsProviders: StateFlow<Map<LyricsProviderType, Boolean>> = _enabledLyricsProviders.asStateFlow()
-
-    private val _commentsState = MutableStateFlow<List<Comment>?>(null)
-    val commentsState: StateFlow<List<Comment>?> = _commentsState.asStateFlow()
-
-    private val _isFetchingComments = MutableStateFlow(false)
-    val isFetchingComments: StateFlow<Boolean> = _isFetchingComments.asStateFlow()
-
-    private val _isLoadingMoreComments = MutableStateFlow(false)
-    val isLoadingMoreComments: StateFlow<Boolean> = _isLoadingMoreComments.asStateFlow()
-    
-    private val _isPostingComment = MutableStateFlow(false)
-    val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
-    
-    private val _commentPostSuccess = MutableStateFlow<Boolean?>(null)
-    val commentPostSuccess: StateFlow<Boolean?> = _commentPostSuccess.asStateFlow()
 
     private val _relatedSongsState = MutableStateFlow<List<Song>>(emptyList())
     val relatedSongsState: StateFlow<List<Song>> = _relatedSongsState.asStateFlow()
@@ -234,13 +228,6 @@ class PlayerViewModel @Inject constructor(
     // Queue Selection State
     private val _selectedQueueIndices = MutableStateFlow<Set<Int>>(emptySet())
     val selectedQueueIndices: StateFlow<Set<Int>> = _selectedQueueIndices.asStateFlow()
-
-    // Per-comment replies state keyed by comment id.
-    private val _commentReplies = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
-    val commentReplies: StateFlow<Map<String, List<Comment>>> = _commentReplies.asStateFlow()
-
-    private val _loadingReplies = MutableStateFlow<Set<String>>(emptySet())
-    val loadingReplies: StateFlow<Set<String>> = _loadingReplies.asStateFlow()
 
     // Derived Queue Sections
     /** Songs from index 0 to currentIndex - 1 — already played */
@@ -396,24 +383,23 @@ class PlayerViewModel @Inject constructor(
                         currentSongPlayTime = 0
                         lastSyncedVideoId = null
 
-                        // Reset provider to AUTO on song change unless user specifically locked a provider?
-                        // For now, let's keep it persistent or reset. Resetting is safer for "Best Match".
-                        _selectedLyricsProvider.value = LyricsProviderType.AUTO
-                        
+                        // Re-apply the provider the user previously picked for THIS song
+                        // (default AUTO / Best Match). This makes manual source switching
+                        // sticky per song instead of snapping back to AUTO every change.
+                        val rememberedProvider = lyricsProviderBySong[song.id] ?: LyricsProviderType.AUTO
+                        _selectedLyricsProvider.value = rememberedProvider
+
                         // Clear old data synchronously to prevent stale display
                         _lyricsState.value = null
-                        _commentsState.value = null
                         _relatedSongsState.value = emptyList()
-                        
-                        fetchLyrics(song.id)
-                        fetchComments(song.id)
+
+                        fetchLyrics(song.id, rememberedProvider)
                         fetchRelatedSongs(song.id)
                         fetchArtistCredits(song.artist, song.source)
                         
                         updateDiscordPresence()
                     } else {
                         _lyricsState.value = null
-                        _commentsState.value = null
                         _relatedSongsState.value = emptyList()
                         updateDiscordPresence()
                     }
@@ -1136,6 +1122,10 @@ class PlayerViewModel @Inject constructor(
     fun switchLyricsProvider(provider: LyricsProviderType) {
         _selectedLyricsProvider.value = provider
         val song = playerState.value.currentSong ?: return
+        // Remember the manual choice per song. AUTO clears any override so the song
+        // goes back to Best Match next time.
+        if (provider == LyricsProviderType.AUTO) lyricsProviderBySong.remove(song.id)
+        else lyricsProviderBySong[song.id] = provider
         fetchLyrics(song.id, provider)
     }
 
@@ -1145,112 +1135,6 @@ class PlayerViewModel @Inject constructor(
             lyricsRepository.saveLocalLyrics(song, content)
             // Reload lyrics with LOCAL provider
             switchLyricsProvider(LyricsProviderType.LOCAL)
-        }
-    }
-    
-    private fun fetchComments(videoId: String) {
-        viewModelScope.launch {
-            _isFetchingComments.value = true
-            _commentsState.value = null
-            _commentReplies.value = emptyMap()
-            _loadingReplies.value = emptySet()
-            
-            // Only fetch for YouTube/Downloaded source which have valid video IDs
-            val currentSong = playerState.value.currentSong
-            if (currentSong != null && (currentSong.source == SongSource.YOUTUBE || currentSong.source == SongSource.DOWNLOADED)) {
-                 val comments = youTubeRepository.getComments(videoId)
-                 _commentsState.value = comments.distinctBy { it.id }
-            }
-            
-            _isFetchingComments.value = false
-        }
-    }
-    
-    fun loadMoreComments() {
-        if (_isLoadingMoreComments.value || _isFetchingComments.value) return
-        val currentSong = playerState.value.currentSong ?: return
-
-        viewModelScope.launch {
-            _isLoadingMoreComments.value = true
-            val moreComments = youTubeRepository.getMoreComments(currentSong.id)
-            if (moreComments.isNotEmpty()) {
-                val currentComments = _commentsState.value ?: emptyList()
-                // Dedupe by id: YouTube can repeat a comment across continuation pages,
-                // and a stable LazyColumn key can't tolerate duplicate ids.
-                _commentsState.value = (currentComments + moreComments).distinctBy { it.id }
-            }
-            _isLoadingMoreComments.value = false
-        }
-    }
-
-    fun loadReplies(commentId: String) {
-        if (_loadingReplies.value.contains(commentId)) return
-        if (_commentReplies.value.containsKey(commentId)) return
-        viewModelScope.launch {
-            _loadingReplies.update { it + commentId }
-            val replies = youTubeRepository.getCommentReplies(commentId)
-            _commentReplies.update { it + (commentId to replies) }
-            _loadingReplies.update { it - commentId }
-        }
-    }
-
-    fun loadMoreReplies(commentId: String) {
-        if (_loadingReplies.value.contains(commentId)) return
-        viewModelScope.launch {
-            _loadingReplies.update { it + commentId }
-            val more = youTubeRepository.getMoreCommentReplies(commentId)
-            if (more.isNotEmpty()) {
-                _commentReplies.update { map ->
-                    val existing = map[commentId].orEmpty()
-                    map + (commentId to existing + more)
-                }
-            }
-            _loadingReplies.update { it - commentId }
-        }
-    }
-
-    /**
-     * Post a comment on the current song's video.
-     */
-    fun postComment(commentText: String) {
-        val song = playerState.value.currentSong ?: return
-        if (commentText.isBlank()) return
-        
-        viewModelScope.launch {
-            _isPostingComment.value = true
-            _commentPostSuccess.value = null
-            
-            val success = youTubeRepository.postComment(song.id, commentText)
-            _commentPostSuccess.value = success
-
-            if (success) {
-                // Optimistically add comment
-                val userAvatar = sessionManager.getUserAvatar()
-
-                val newComment = Comment(
-                    id = "temp_${System.currentTimeMillis()}",
-                    authorName = "You",
-                    authorThumbnailUrl = userAvatar,
-                    text = commentText,
-                    timestamp = "Just now",
-                    likeCount = "0",
-                    replyCount = 0
-                )
-
-                val currentComments = _commentsState.value ?: emptyList()
-                _commentsState.value = listOf(newComment) + currentComments
-                com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Comment posted")
-            } else {
-                // Posting can genuinely fail now (comments off, sign-in expired, network) —
-                // tell the user instead of silently swallowing it.
-                com.suvojeet.suvmusic.util.SnackbarUtil.showError("Couldn't post comment. Please try again.")
-            }
-
-            _isPostingComment.value = false
-            
-            // Clear the success state after a delay
-            delay(2000)
-            _commentPostSuccess.value = null
         }
     }
     

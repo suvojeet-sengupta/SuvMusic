@@ -545,13 +545,6 @@ fun SuvMusicApp(
     val artistCredits by playerViewModel.artistCredits.collectAsStateWithLifecycle(initialValue = emptyList<ArtistCreditInfo>())
     val showMultipleArtistsDialog by playerViewModel.showMultipleArtistsDialog.collectAsStateWithLifecycle(initialValue = false)
     
-    val comments by playerViewModel.commentsState.collectAsStateWithLifecycle(initialValue = null)
-    val isFetchingComments by playerViewModel.isFetchingComments.collectAsStateWithLifecycle(initialValue = false)
-    val isPostingComment by playerViewModel.isPostingComment.collectAsStateWithLifecycle(initialValue = false)
-    val isLoadingMoreComments by playerViewModel.isLoadingMoreComments.collectAsStateWithLifecycle(initialValue = false)
-    val commentReplies by playerViewModel.commentReplies.collectAsStateWithLifecycle(initialValue = emptyMap())
-    val loadingReplies by playerViewModel.loadingReplies.collectAsStateWithLifecycle(initialValue = emptySet())
-    
     // Track if song is playing for Activity-level volume interception
     // Use playbackInfo (stable) to avoid recomposing the whole app shell on progress updates
     val hasSong = playbackInfo.currentSong != null
@@ -937,13 +930,7 @@ fun SuvMusicApp(
                             player = playerViewModel.getPlayer(),
                             lyrics = lyrics,
                             isFetchingLyrics = isFetchingLyrics,
-                            comments = comments,
-                            isFetchingComments = isFetchingComments,
                             isLoggedIn = isLoggedIn,
-                            isPostingComment = isPostingComment,
-                            onPostComment = { commentText -> playerViewModel.postComment(commentText) },
-                            isLoadingMoreComments = isLoadingMoreComments,
-                            onLoadMoreComments = { playerViewModel.loadMoreComments() },
                             sleepTimerOption = sleepTimerOption,
                             sleepTimerRemainingMs = sleepTimerRemainingMs,
                             onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
@@ -1002,13 +989,7 @@ fun SuvMusicApp(
                     relatedSongs = relatedSongs,
                     isFetchingRelated = isFetchingRelated,
                     selectedRelatedIndices = selectedRelatedIndices,
-                    comments = comments,
-                    isFetchingComments = isFetchingComments,
                     isLoggedIn = isLoggedIn,
-                    isPostingComment = isPostingComment,
-                    isLoadingMoreComments = isLoadingMoreComments,
-                    commentReplies = commentReplies,
-                    loadingReplies = loadingReplies,
                     isRadioMode = isRadioMode,
                     isLoadingMoreSongs = isLoadingMoreSongs,
                     selectedLyricsProvider = selectedLyricsProvider,
@@ -1058,10 +1039,6 @@ fun SuvMusicApp(
                         navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null))
                     },
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
-                    onPostComment = { commentText -> playerViewModel.postComment(commentText) },
-                    onLoadMoreComments = { playerViewModel.loadMoreComments() },
-                    onLoadReplies = { id -> playerViewModel.loadReplies(id) },
-                    onLoadMoreReplies = { id -> playerViewModel.loadMoreReplies(id) },
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                     onImportLyrics = { playerViewModel.importLyrics(it) },
                     onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },

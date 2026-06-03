@@ -82,13 +82,7 @@ fun NavGraph(
     player: Player? = null,
     lyrics: com.suvojeet.suvmusic.providers.lyrics.Lyrics?,
     isFetchingLyrics: Boolean,
-    comments: List<com.suvojeet.suvmusic.core.model.Comment>?,
-    isFetchingComments: Boolean,
     isLoggedIn: Boolean = false,
-    isPostingComment: Boolean = false,
-    onPostComment: (String) -> Unit = {},
-    isLoadingMoreComments: Boolean = false,
-    onLoadMoreComments: () -> Unit = {},
     // Lyrics Provider
     selectedLyricsProvider: com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType = com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType.AUTO,
     enabledLyricsProviders: Map<com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType, Boolean> = emptyMap(),

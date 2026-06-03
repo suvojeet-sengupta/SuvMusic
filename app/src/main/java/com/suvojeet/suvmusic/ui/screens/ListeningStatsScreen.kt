@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -160,14 +161,14 @@ fun ListeningStatsScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // 1. Music Personality Hero Section
-                item {
+                item(key = "personality") {
                     AnimatedEntry {
                         MusicPersonalityHero(uiState.musicPersonality)
                     }
                 }
 
                 // 2. Global Key Metrics
-                item {
+                item(key = "metrics") {
                     AnimatedEntry(delay = 100) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             GlobalStatsRow(uiState)
@@ -176,7 +177,7 @@ fun ListeningStatsScreen(
                 }
 
                 // 3. Weekly Activity Chart (Premium Bezier)
-                item {
+                item(key = "weekly") {
                     AnimatedEntry(delay = 200) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             WeeklyActivitySection(uiState.weeklyTrends)
@@ -186,7 +187,7 @@ fun ListeningStatsScreen(
 
                 // 4. Monthly Highlight
                 if (uiState.topArtistThisMonth != null) {
-                    item {
+                    item(key = "monthly") {
                         AnimatedEntry(delay = 300) {
                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                 MonthlyHighlightSection(uiState.topArtistThisMonth!!)
@@ -196,7 +197,7 @@ fun ListeningStatsScreen(
                 }
 
                 // 5. Top Content
-                item {
+                item(key = "top_content") {
                     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                         if (uiState.topSongs.isNotEmpty()) {
                             AnimatedEntry(delay = 400) {
@@ -235,7 +236,7 @@ fun ListeningStatsScreen(
                 }
 
                 // 6. Time of Day Breakdown
-                item {
+                item(key = "time_of_day") {
                     AnimatedEntry(delay = 600) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             TimeOfDaySection(uiState.timeOfDayStats)
@@ -259,11 +260,27 @@ private fun AnimatedEntry(
             visible = true
         }
     }
-    
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(400)) + 
-                slideInVertically(initialOffsetY = { 20 }, animationSpec = tween(400))
+
+    // Fade + slide WITHOUT AnimatedVisibility. AnimatedVisibility reserves zero height
+    // until each staggered item animates in, so the LazyColumn's total height grew over
+    // the first few hundred ms and items re-animated when scrolled back into view —
+    // that was the janky scroll. Here the content keeps its full height from frame one
+    // (stable scroll); we only animate alpha + a small upward slide via graphicsLayer.
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(400),
+        label = "entryAlpha"
+    )
+    val translateY by animateFloatAsState(
+        targetValue = if (visible) 0f else 24f,
+        animationSpec = tween(400),
+        label = "entryTranslateY"
+    )
+    Box(
+        modifier = Modifier.graphicsLayer {
+            this.alpha = alpha
+            this.translationY = translateY
+        }
     ) {
         content()
     }

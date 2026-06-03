@@ -46,7 +46,6 @@ fun SongActionsSheet(
     onAddToQueue: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
     onViewInfo: () -> Unit = {},
-    onViewComments: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
     onToggleFavorite: () -> Unit = {},
     onToggleDislike: () -> Unit = {},
@@ -263,10 +262,6 @@ fun SongActionsSheet(
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                     ModernActionItem(Icons.Default.Info, "Song Details", contentColor, { handleAction(onViewInfo) })
-                    // Comments are a YouTube-only feature; RemoteAudio has no comments API.
-                    if (song.source != com.suvojeet.suvmusic.core.model.SongSource.REMOTE) {
-                        ModernActionItem(Icons.Default.Comment, "View Comments", contentColor, { handleAction(onViewComments) })
-                    }
 
                     if (onRemoveFromQueue != null) {
                         Spacer(modifier = Modifier.height(8.dp))
