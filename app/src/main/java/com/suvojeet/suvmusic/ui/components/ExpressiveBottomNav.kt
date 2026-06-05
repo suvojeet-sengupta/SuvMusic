@@ -46,9 +46,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,6 +93,7 @@ fun ExpressiveBottomNav(
             onDestinationChange = onDestinationChange,
             onReClick = onReClick,
             modifier = modifier,
+            alpha = alpha,
             blurAmount = iosNavBarBlur
         )
     } else {
@@ -119,16 +118,18 @@ private fun LiquidGlassNavBar(
     onDestinationChange: (Destination) -> Unit,
     onReClick: (Destination) -> Unit,
     modifier: Modifier = Modifier,
+    alpha: Float = 1.0f,
     blurAmount: Float = 60f
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val surfaceColor = MaterialTheme.colorScheme.surface
     val primaryColor = MaterialTheme.colorScheme.primary
     val glassShape = RoundedCornerShape(28.dp)
-    val density = LocalDensity.current
+    // alpha is transparency (0 = opaque, 1 = fully transparent); invert for glass intensity
+    val glassIntensity = (1f - alpha.coerceIn(0f, 1f)).coerceAtLeast(0.05f)
 
     // Glass material colors – adaptive for dark/light
-    val glassBaseAlpha = if (isDarkTheme) 0.45f else 0.35f
+    val glassBaseAlpha = (if (isDarkTheme) 0.45f else 0.35f) * glassIntensity
     val glassBaseColor = if (isDarkTheme) {
         surfaceColor.copy(alpha = glassBaseAlpha)
     } else {
@@ -137,39 +138,30 @@ private fun LiquidGlassNavBar(
 
     // Specular highlight (simulates light hitting the top of the glass)
     val specularHighlight = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.18f else 0.25f),
-        0.3f to Color.White.copy(alpha = if (isDarkTheme) 0.06f else 0.08f),
+        0.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.18f else 0.25f) * glassIntensity),
+        0.3f to Color.White.copy(alpha = (if (isDarkTheme) 0.06f else 0.08f) * glassIntensity),
         0.5f to Color.Transparent,
-        1.0f to Color.Black.copy(alpha = if (isDarkTheme) 0.08f else 0.02f)
+        1.0f to Color.Black.copy(alpha = (if (isDarkTheme) 0.08f else 0.02f) * glassIntensity)
     )
 
     // Border rim – luminous on top, fading to transparent
     val borderBrush = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = if (isDarkTheme) 0.35f else 0.45f),
-        0.4f to Color.White.copy(alpha = if (isDarkTheme) 0.12f else 0.15f),
-        1.0f to Color.White.copy(alpha = if (isDarkTheme) 0.05f else 0.08f)
+        0.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.35f else 0.45f) * glassIntensity),
+        0.4f to Color.White.copy(alpha = (if (isDarkTheme) 0.12f else 0.15f) * glassIntensity),
+        1.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.05f else 0.08f) * glassIntensity)
     )
 
     // Inner tint – subtle color wash from primary/accent
-    val innerTintColor = primaryColor.copy(alpha = if (isDarkTheme) 0.08f else 0.04f)
+    val innerTintColor = primaryColor.copy(alpha = (if (isDarkTheme) 0.08f else 0.04f) * glassIntensity)
 
-    // Track positions for morphing indicator
-    var selectedItemIndex by remember { mutableIntStateOf(0) }
-    var itemWidths by remember { mutableStateOf(FloatArray(navItems.size)) }
-    var itemPositions by remember { mutableStateOf(FloatArray(navItems.size)) }
-    
-    selectedItemIndex = navItems.indexOfFirst { it.destination == currentDestination }.coerceAtLeast(0)
+    val selectedItemIndex = navItems
+        .indexOfFirst { it.destination == currentDestination }
+        .coerceAtLeast(0)
 
-    val indicatorX by animateFloatAsState(
-        targetValue = if (itemPositions.isNotEmpty()) itemPositions[selectedItemIndex] else 0f,
+    val indicatorIndex by animateFloatAsState(
+        targetValue = selectedItemIndex.toFloat(),
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-        label = "indicatorX"
-    )
-    
-    val indicatorWidth by animateFloatAsState(
-        targetValue = if (itemWidths.isNotEmpty()) itemWidths[selectedItemIndex] else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-        label = "indicatorWidth"
+        label = "indicatorIndex"
     )
 
     Box(
@@ -205,7 +197,7 @@ private fun LiquidGlassNavBar(
                 .matchParentSize()
                 .clip(glassShape)
                 .then(
-                    if (Build.VERSION.SDK_INT >= 31) {
+                    if (blurAmount > 0.5f && Build.VERSION.SDK_INT >= 31) {
                         Modifier.graphicsLayer {
                             renderEffect = android.graphics.RenderEffect.createBlurEffect(
                                 blurAmount,
@@ -213,8 +205,10 @@ private fun LiquidGlassNavBar(
                                 android.graphics.Shader.TileMode.DECAL
                             ).asComposeRenderEffect()
                         }
-                    } else {
+                    } else if (blurAmount > 0.5f) {
                         Modifier.blur((blurAmount / 2).dp)
+                    } else {
+                        Modifier
                     }
                 )
                 .drawWithContent {
@@ -247,21 +241,22 @@ private fun LiquidGlassNavBar(
                 .background(specularHighlight)
         )
 
-        // Layer 4: Morphing Indicator
-        if (indicatorWidth > 0) {
+        // Layer 4: Morphing Indicator (equal-width tabs — no onGloballyPositioned state)
+        BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+            val tabWidth = maxWidth / navItems.size
             Box(
                 modifier = Modifier
-                    .offset(x = with(density) { indicatorX.toDp() })
-                    .width(with(density) { indicatorWidth.toDp() })
+                    .offset(x = tabWidth * indicatorIndex)
+                    .width(tabWidth)
                     .fillMaxHeight()
                     .padding(vertical = 6.dp, horizontal = 4.dp)
                     .background(
-                        color = primaryColor.copy(alpha = if (isDarkTheme) 0.15f else 0.12f),
+                        color = primaryColor.copy(alpha = (if (isDarkTheme) 0.15f else 0.12f) * glassIntensity),
                         shape = RoundedCornerShape(22.dp)
                     )
                     .border(
                         width = 0.5.dp,
-                        color = primaryColor.copy(alpha = if (isDarkTheme) 0.25f else 0.18f),
+                        color = primaryColor.copy(alpha = (if (isDarkTheme) 0.25f else 0.18f) * glassIntensity),
                         shape = RoundedCornerShape(22.dp)
                     )
             )
@@ -284,7 +279,7 @@ private fun LiquidGlassNavBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            navItems.forEachIndexed { index, item ->
+            navItems.forEach { item ->
                 val isSelected = currentDestination == item.destination
                 LiquidGlassNavItem(
                     item = item,
@@ -297,17 +292,7 @@ private fun LiquidGlassNavBar(
                         }
                     },
                     isDarkTheme = isDarkTheme,
-                    modifier = Modifier
-                        .weight(1f)
-                        .onGloballyPositioned { coords ->
-                            val newWidths = itemWidths.copyOf()
-                            newWidths[index] = coords.size.width.toFloat()
-                            itemWidths = newWidths
-                            
-                            val newPositions = itemPositions.copyOf()
-                            newPositions[index] = coords.positionInParent().x
-                            itemPositions = newPositions
-                        }
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
