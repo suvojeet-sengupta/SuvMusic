@@ -218,7 +218,7 @@ private fun LiquidGlassNavBar(
                     // Draw noise/grain texture for realistic glass
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
-                            alpha = (if (isDarkTheme) 8 else 5)
+                            this.alpha = if (isDarkTheme) 8 else 5
                         }
                         val random = Random(42)
                         for (i in 0 until 1000) {
