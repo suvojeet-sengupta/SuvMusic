@@ -66,6 +66,7 @@ class SleepTimerManager @Inject constructor() {
     /**
      * Start sleep timer with specified option.
      */
+    @Synchronized
     fun startTimer(option: SleepTimerOption, customMinutes: Int? = null) {
         cancelTimer()
         
@@ -146,6 +147,7 @@ class SleepTimerManager @Inject constructor() {
     /**
      * Cancel the current timer.
      */
+    @Synchronized
     fun cancelTimer() {
         countDownTimer?.cancel()
         countDownTimer = null
@@ -159,7 +161,11 @@ class SleepTimerManager @Inject constructor() {
      * Called when a song ends - triggers stop if in "End of Song" mode.
      * @return true if the timer triggered (stop requested), false otherwise.
      */
+    @Synchronized
     fun onSongEnded(): Boolean {
+        // Synchronized + read-then-clear so two near-simultaneous song-end
+        // callbacks can't both observe endOfSongMode==true and fire the stop
+        // callback twice.
         if (_endOfSongMode.value) {
             _endOfSongMode.value = false
             _isActive.value = false

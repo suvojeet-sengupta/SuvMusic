@@ -11,6 +11,7 @@ import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -81,6 +82,11 @@ class RecommendationEngine @Inject constructor(
      */
     private val dislikedArtists: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
+    // Completed once the persisted dislikes have loaded (or failed to). Public
+    // section generators await this so recommendations computed right after cold
+    // start don't ignore the user's dislikes (which load asynchronously below).
+    private val dislikesReady = CompletableDeferred<Unit>()
+
     init {
         // Load persistent dislikes on initialization
         scope.launch(Dispatchers.IO) {
@@ -89,9 +95,14 @@ class RecommendationEngine @Inject constructor(
                 dislikedArtists.addAll(dislikedItemDao.getAllDislikedArtistNames())
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load persistent dislikes", e)
+            } finally {
+                dislikesReady.complete(Unit)
             }
         }
     }
+
+    /** Suspend until persisted dislikes have loaded, so they're applied to results. */
+    private suspend fun awaitDislikesReady() = dislikesReady.await()
 
     // ============================================================================================
     // UTILITIES — Deduplication & Filtering
@@ -176,6 +187,7 @@ class RecommendationEngine @Inject constructor(
      * Uses genre affinity vector from the taste profile for accurate genre identification.
      */
     suspend fun getGenreBasedSections(): List<HomeSection> = coroutineScope {
+        awaitDislikesReady()
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS + "_genre")
         if (cached != null) return@coroutineScope cached
 
@@ -224,6 +236,7 @@ class RecommendationEngine @Inject constructor(
      * Creates sections like "Friday Night Energy", "Weekend Chill", "Your Late Night Mix".
      */
     suspend fun getContextAwareSections(): List<HomeSection> = coroutineScope {
+        awaitDislikesReady()
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS + "_context")
         if (cached != null) return@coroutineScope cached
 
@@ -328,6 +341,7 @@ class RecommendationEngine @Inject constructor(
         page: Int,
         existingTitles: Set<String>
     ): List<HomeSection> = coroutineScope {
+        awaitDislikesReady()
         if (page > 6) return@coroutineScope emptyList()
 
         val profile = tasteProfileBuilder.getProfile()
@@ -467,6 +481,7 @@ class RecommendationEngine @Inject constructor(
      * Generate the complete set of personalized home sections, tightly coupled with YT Music.
      */
     suspend fun getPersonalizedHomeSections(): List<HomeSection> = coroutineScope {
+        awaitDislikesReady()
         val cached = cache.getSections(RecommendationCache.Keys.HOME_SECTIONS)
         if (cached != null) return@coroutineScope cached
 

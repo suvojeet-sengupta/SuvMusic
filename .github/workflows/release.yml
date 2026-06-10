@@ -48,6 +48,17 @@ jobs:
         VERSION=$(jq -r '.releases[0].versionName' updater/changelog.json)
         DATE=$(jq -r '.releases[0].date' updater/changelog.json)
         DESCRIPTION=$(jq -r '.releases[0].description' updater/changelog.json)
+
+        # Fail fast on a missing/null version so we never publish a broken "v" tag.
+        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+          echo "::error::versionName missing or null in updater/changelog.json"
+          exit 1
+        fi
+
+        # Derive the target SDK from the build file instead of hardcoding it,
+        # so this release note can't drift from app/build.gradle.kts.
+        TARGET_SDK=$(grep -oE 'targetSdk[[:space:]]*=[[:space:]]*[0-9]+' app/build.gradle.kts | grep -oE '[0-9]+' | head -1)
+        TARGET_SDK=${TARGET_SDK:-unknown}
         
         # Format the description: convert bullet points to markdown lists
         FORMATTED_DESC=$(echo "$DESCRIPTION" | sed 's/^• / - /g')
@@ -65,7 +76,7 @@ jobs:
         ### Release Overview
         - **Version:** $VERSION
         - **Build Date:** $DATE
-        - **Target SDK:** 36 (Android 15+)
+        - **Target SDK:** $TARGET_SDK
         - **Status:** Stable Release
 
         ---

@@ -64,13 +64,16 @@ class RemoteAudioRepository @Inject constructor(
      * the same dead URL and playback could never recover.
      */
     fun invalidate(songId: String) {
+        // Both caches dropped under the same lock so a concurrent reader can't
+        // observe a half-invalidated state (stream URL gone but stale details, or
+        // vice versa).
         synchronized(streamUrlCache) {
             streamUrlCache.keys
                 .filter { it == songId || it.startsWith("${songId}_") }
                 .toList()
                 .forEach { streamUrlCache.remove(it) }
+            songDetailsCache.remove(songId)
         }
-        songDetailsCache.remove(songId)
     }
 
     // --- 429 rate-limit backoff (shared across ALL RemoteAudio network calls) ---
@@ -476,6 +479,12 @@ class RemoteAudioRepository @Inject constructor(
             val title = playlistObj?.name ?: "" 
             val image = playlistObj?.image?.lastOrNull()?.url
             
+            // Surface schema drift: empty-string/empty-list defaults above otherwise
+            // mask a backend response shape change as a benign "empty playlist".
+            if (data?.songs?.results == null) {
+                android.util.Log.w("RemoteAudio", "getPlaylist($playlistId): no songs.results in response — possible schema drift")
+            }
+
             val songs = data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
 
             if (songs.isEmpty()) return@withContext null
@@ -1086,7 +1095,7 @@ class RemoteAudioRepository @Inject constructor(
             .build()
 
         return boundedHttpClient.newCall(request).execute().use { response ->
-            val body = response.body.string()
+            val body = response.body?.string() ?: ""
             if (!response.isSuccessful) {
                 // Legacy endpoints go through this raw path (not Retrofit), so a 429 here
                 // never reached the typed is429() check — arm the shared backoff directly

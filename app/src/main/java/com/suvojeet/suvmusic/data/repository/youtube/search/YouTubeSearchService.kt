@@ -78,6 +78,10 @@ class YouTubeSearchService @Inject constructor(
                         isMembersOnly = false // Default to false until we verify the field name
                     )
                 } catch (e: Exception) {
+                    // A dropped item usually means NewPipe's item shape drifted (e.g.
+                    // extractVideoId couldn't parse item.url). Log so silent result
+                    // loss is detectable instead of just showing fewer results.
+                    android.util.Log.w("YouTubeSearch", "dropped search item (url=${item.url}): ${e.javaClass.simpleName}: ${e.message}")
                     null
                 }
             }

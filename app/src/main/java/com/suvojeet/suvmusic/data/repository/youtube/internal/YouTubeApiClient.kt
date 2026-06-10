@@ -65,10 +65,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -103,10 +109,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -150,10 +162,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -189,10 +207,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -228,10 +252,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -273,10 +303,16 @@ class YouTubeApiClient @Inject constructor(
 
         try {
             okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ""
+                if (!response.isSuccessful) {
+                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
+                    return@withContext ""
+                }
                 response.body?.string() ?: ""
             }
         } catch (e: Exception) {
+            // Log instead of silently returning "": network errors and InnerTube
+            // schema drift otherwise vanish into empty results with no signal.
+            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
             ""
         }
     }
@@ -392,7 +428,7 @@ class YouTubeApiClient @Inject constructor(
                 .build()
 
             val playerResponse = okHttpClient.newCall(playerRequest).execute()
-            val playerResponseBody = playerResponse.body.string()
+            val playerResponseBody = playerResponse.body?.string()
             
             if (!playerResponse.isSuccessful || playerResponseBody.isNullOrBlank()) {
                 android.util.Log.e("YouTubeApiClient", "Player request failed: ${playerResponse.code}")
@@ -435,7 +471,7 @@ class YouTubeApiClient @Inject constructor(
 
             val playbackTrackResponse = okHttpClient.newCall(playbackTrackRequest).execute()
             android.util.Log.d("YouTubeApiClient", "Playback tracking response: ${playbackTrackResponse.code}")
-            playbackTrackResponse.body.close()
+            playbackTrackResponse.body?.close()
 
             // Step 3: Hit videostatsWatchtimeUrl (signals watch time - THIS records history)
             val watchtimeTrackingUrl = "$watchtimeUrl&ver=2&cpn=$cpn&el=detailpage&st=0&et=$durationSeconds&len=$durationSeconds&cmt=$durationSeconds"
@@ -450,7 +486,7 @@ class YouTubeApiClient @Inject constructor(
 
             val watchtimeTrackResponse = okHttpClient.newCall(watchtimeTrackRequest).execute()
             android.util.Log.d("YouTubeApiClient", "Watchtime tracking response: ${watchtimeTrackResponse.code}")
-            watchtimeTrackResponse.body.close()
+            watchtimeTrackResponse.body?.close()
 
             return playbackTrackResponse.isSuccessful && watchtimeTrackResponse.isSuccessful
         } catch (e: Exception) {

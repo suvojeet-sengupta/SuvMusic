@@ -191,5 +191,10 @@ class CrossfadeController(
     fun cancel() {
         fadeJob?.cancel()
         fadeJob = null
+        // Reset eagerly: the fade coroutine's finally also clears this, but that
+        // runs asynchronously when cancellation is processed. Clearing it here
+        // means a caller that restores volume right after cancel() won't observe
+        // a stale "still fading in" and leave the next track attenuated.
+        isFadingIn = false
     }
 }

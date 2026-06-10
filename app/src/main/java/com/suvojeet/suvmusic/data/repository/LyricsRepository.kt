@@ -223,10 +223,12 @@ class LyricsRepository @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                // Continue
+                // Log and continue to the next provider. Swallowing silently hid
+                // provider outages and parser drift behind "no lyrics found".
+                android.util.Log.w("LyricsRepository", "provider '${provider.name}' failed for '${song.title}': ${e.javaClass.simpleName}: ${e.message}")
             }
         }
-        
+
         // 2. Try LRCLIB for synced lyrics
         val lrcLibLyrics = fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
         if (lrcLibLyrics != null) {
@@ -265,8 +267,10 @@ class LyricsRepository @Inject constructor(
                 persist(song.id, lyrics)
                 return@withContext lyrics
             }
-        } catch (e: Exception) { }
-        
+        } catch (e: Exception) {
+            android.util.Log.w("LyricsRepository", "LRCLIB plain-lyrics fallback failed for '${song.title}': ${e.javaClass.simpleName}: ${e.message}")
+        }
+
         null
     }
     

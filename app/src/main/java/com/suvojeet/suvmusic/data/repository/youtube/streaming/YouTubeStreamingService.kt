@@ -53,7 +53,13 @@ class YouTubeStreamingService @Inject constructor(
         val now = System.currentTimeMillis()
         if (now - cached.timestamp >= CACHE_EXPIRY_MS) return false
         val expireSeconds = Regex("[?&]expire=(\\d+)").find(cached.url)?.groupValues?.getOrNull(1)?.toLongOrNull()
-        if (expireSeconds != null && now >= expireSeconds * 1000L - 5 * 60_000L) return false
+        if (expireSeconds == null) {
+            // No parseable expire param. Either YouTube changed the URL format or this
+            // isn't a googlevideo URL — log it so silent serving of dead URLs is visible.
+            android.util.Log.d("YouTubeStreaming", "cached URL has no parseable expire= param; relying on backstop TTL only")
+        } else if (now >= expireSeconds * 1000L - 5 * 60_000L) {
+            return false
+        }
         return true
     }
 

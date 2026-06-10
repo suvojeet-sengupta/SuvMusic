@@ -59,8 +59,16 @@ class NewReleaseWorker @AssistedInject constructor(
                             // First time checking this artist: just save current as known, don't notify
                             editor.putString("last_release_${artistEntity.id}", latestAlbum.id)
                         } else if (latestAlbum.id != lastKnownId) {
-                            // New release found!
-                            showNotification(artistEntity.title, latestAlbum.title, latestAlbum.id, latestAlbum.thumbnailUrl)
+                            // New release found! Guard against duplicate notifications:
+                            // only notify if we haven't already notified for this artist
+                            // within the last 24h (IDs can flap as browse data shuffles).
+                            val lastNotifyKey = "last_notify_${artistEntity.id}"
+                            val lastNotifyAt = prefs.getLong(lastNotifyKey, 0L)
+                            val now = System.currentTimeMillis()
+                            if (now - lastNotifyAt >= TimeUnit.HOURS.toMillis(24)) {
+                                showNotification(artistEntity.title, latestAlbum.title, latestAlbum.id, latestAlbum.thumbnailUrl)
+                                editor.putLong(lastNotifyKey, now)
+                            }
                             editor.putString("last_release_${artistEntity.id}", latestAlbum.id)
                         }
                     }

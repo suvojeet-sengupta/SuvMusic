@@ -33,11 +33,9 @@ android {
 
     buildTypes {
         release {
+            // Library modules are not minified — only :app runs R8. Dead proguardFiles()
+            // config removed; isMinifyEnabled=false is the library default.
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
     buildFeatures {

@@ -150,7 +150,9 @@ fun ModernQueueView(
                         
                         IconButton(onClick = { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
-                                if (index < queue.size) queue[index] else null
+                                // Guard both ends: a stale selection can hold an index
+                                // that's now negative or past the end after a queue edit.
+                                queue.getOrNull(index)
                             }
                             if (selectedSongs.isNotEmpty()) {
                                 onPlayNext(selectedSongs)
@@ -162,7 +164,9 @@ fun ModernQueueView(
 
                         IconButton(onClick = { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
-                                if (index < queue.size) queue[index] else null
+                                // Guard both ends: a stale selection can hold an index
+                                // that's now negative or past the end after a queue edit.
+                                queue.getOrNull(index)
                             }
                             if (selectedSongs.isNotEmpty()) {
                                 onAddToQueue(selectedSongs)
@@ -174,7 +178,9 @@ fun ModernQueueView(
 
                         IconButton(onClick = { 
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
-                                if (index < queue.size) queue[index] else null
+                                // Guard both ends: a stale selection can hold an index
+                                // that's now negative or past the end after a queue edit.
+                                queue.getOrNull(index)
                             }
                             onAddToPlaylistClick(selectedSongs) 
                         }) {

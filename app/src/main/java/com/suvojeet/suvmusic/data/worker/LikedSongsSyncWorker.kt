@@ -27,7 +27,7 @@ class LikedSongsSyncWorker @AssistedInject constructor(
             val success = youTubeRepository.syncLikedSongs(fetchAll = true)
             if (success) Result.success() else Result.retry()
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("LikedSongsSyncWorker", "Liked-songs sync failed", e)
             Result.failure()
         }
     }

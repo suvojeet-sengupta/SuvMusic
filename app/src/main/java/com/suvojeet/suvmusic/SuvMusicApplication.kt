@@ -217,6 +217,7 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             .setConstraints(
                 androidx.work.Constraints.Builder()
                     .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
                     .build()
             )
             .build()
@@ -234,6 +235,7 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
             .setConstraints(
                 androidx.work.Constraints.Builder()
                     .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
                     .build()
             )
             .build()

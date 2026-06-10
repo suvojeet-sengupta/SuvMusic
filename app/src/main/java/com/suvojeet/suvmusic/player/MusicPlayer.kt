@@ -950,7 +950,7 @@ class MusicPlayer @Inject constructor(
                     // - YouTube placeholders: "https://youtube.com/watch?v=..."
                     // - General placeholders: "https://placeholder.invalid/..."
                     // - RemoteAudio/empty: null, empty, or doesn't look like a valid stream URL
-                    val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+                    val isYouTubePlaceholder = isYouTubeWatchPlaceholder(currentUri)
                     val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
                     val isEmptyOrInvalid = currentUri.isNullOrBlank()
                     val needsResolution = isYouTubePlaceholder || isInvalidPlaceholder || isEmptyOrInvalid
@@ -1122,7 +1122,7 @@ class MusicPlayer @Inject constructor(
             
             // Placeholder Check: If current URI is a placeholder, it MUST be resolved
             val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString()
-            val isYouTubePlaceholder = currentUri != null && (currentUri.contains("youtube.com/watch") || currentUri.contains("youtu.be"))
+            val isYouTubePlaceholder = isYouTubeWatchPlaceholder(currentUri)
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
             if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
@@ -1901,40 +1901,85 @@ class MusicPlayer @Inject constructor(
      * Save current playback state for resume functionality.
      */
     private fun saveCurrentPlaybackState() {
+        scope.launch(Dispatchers.IO) {
+            persistPlaybackState()
+        }
+    }
+
+    /**
+     * Serialize the current song + queue + position to persistent storage.
+     * Extracted from [saveCurrentPlaybackState] so [release] can run a final,
+     * bounded persist synchronously before cancelling the scope (otherwise the
+     * last debounced save is aborted and the resume position is lost).
+     */
+    private suspend fun persistPlaybackState() {
         val state = _playerState.value
         val currentSong = state.currentSong ?: return
         val queue = state.queue
-        
         if (queue.isEmpty()) return
-        
-        scope.launch(Dispatchers.IO) {
-            try {
-                val queueJson = org.json.JSONArray().apply {
-                    queue.forEach { song ->
-                        put(org.json.JSONObject().apply {
-                            put("id", song.id)
-                            put("title", song.title)
-                            put("artist", song.artist)
-                            put("album", song.album ?: "")
-                            put("thumbnailUrl", song.thumbnailUrl ?: "")
-                            put("duration", song.duration)
-                            put("source", song.source.name)
-                        })
-                    }
-                }.toString()
-                
-                sessionManager.savePlaybackState(
-                    songId = currentSong.id,
-                    position = state.currentPosition,
-                    queueJson = queueJson,
-                    index = state.currentIndex
-                )
-            } catch (e: Exception) {
-                // Silently fail - not critical
-            }
+        try {
+            val queueJson = org.json.JSONArray().apply {
+                queue.forEach { song ->
+                    put(org.json.JSONObject().apply {
+                        put("id", song.id)
+                        put("title", song.title)
+                        put("artist", song.artist)
+                        put("album", song.album ?: "")
+                        put("thumbnailUrl", song.thumbnailUrl ?: "")
+                        put("duration", song.duration)
+                        put("source", song.source.name)
+                    })
+                }
+            }.toString()
+
+            sessionManager.savePlaybackState(
+                songId = currentSong.id,
+                position = state.currentPosition,
+                queueJson = queueJson,
+                index = state.currentIndex
+            )
+        } catch (e: Exception) {
+            // Silently fail - not critical
         }
     }
     
+    /**
+     * Cancel any in-flight preload and clear all preload state. Call this whenever
+     * the thing being preloaded no longer matches what the next transition will need
+     * — e.g. video/audio mode flips, or the repeat mode changes which item plays next.
+     * Without this a stale preloaded (audio) URL can be applied to a transition that
+     * now expects video (or the prefetched next-song stream is silently wasted).
+     */
+    /**
+     * True when [uriString] is an app-generated YouTube *watch* placeholder. Uses a
+     * host + path check rather than a naive `contains("youtube.com/watch")` so a real
+     * stream URL that happens to carry a youtube referrer in a query parameter can't
+     * be misclassified as an unresolved placeholder.
+     */
+    private fun isYouTubeWatchPlaceholder(uriString: String?): Boolean {
+        if (uriString.isNullOrBlank()) return false
+        return try {
+            val uri = android.net.Uri.parse(uriString)
+            val host = uri.host?.lowercase().orEmpty()
+            when {
+                host == "youtu.be" -> true
+                (host == "youtube.com" || host.endsWith(".youtube.com")) && uri.path == "/watch" -> true
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun invalidatePreload() {
+        preloadJob?.cancel()
+        preloadedNextSongId = null
+        preloadedStreamUrl = null
+        preloadedIsVideoMode = false
+        preloadedTimestamp = 0L
+        isPreloading = false
+    }
+
     /**
      * Preload next song's stream URL ahead of time for gapless playback.
      * Starts preloading ~15 seconds before current song ends.
@@ -2454,6 +2499,10 @@ class MusicPlayer @Inject constructor(
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
             RepeatMode.ONE -> Player.REPEAT_MODE_ONE
         }
+        // The repeat mode determines which item plays next (REPEAT_ONE loops the
+        // current track, so any preloaded "next song" is now wrong). Drop the
+        // preload so it re-computes against the new mode.
+        invalidatePreload()
         _playerState.update { it.copy(repeatMode = mode) }
     }
     
@@ -2886,7 +2935,11 @@ class MusicPlayer @Inject constructor(
         val newVideoMode = !state.isVideoMode
         
         _playerState.update { it.copy(isLoading = true, isVideoMode = newVideoMode, videoNotFound = false) }
-        
+
+        // A mode flip invalidates any preload: a prefetched audio URL must not be
+        // applied to a transition that now expects video, and vice versa.
+        invalidatePreload()
+
         scope.launch {
             try {
                 var streamUrl: String? = null
@@ -3021,11 +3074,27 @@ class MusicPlayer @Inject constructor(
 
     fun release() {
         positionUpdateJob?.cancel()
-        
+
+        // Best-effort final persist BEFORE cancelling the scope, so the last
+        // playback position/queue isn't lost when scope.cancel() aborts the
+        // in-flight (debounced) save. Bounded so teardown can't hang on a slow
+        // DataStore write.
+        try {
+            kotlinx.coroutines.runBlocking {
+                kotlinx.coroutines.withTimeoutOrNull(1500) { persistPlaybackState() }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicPlayer", "final playback-state persist failed", e)
+        }
+
         // Cancel the entire coroutine scope to stop all launched coroutines
         // (flow collectors, preloading, caching, error-recovery, etc.)
         scope.cancel()
-        
+
+        // Detach our listener before dropping the controller. Its closures capture
+        // this singleton, so leaving it attached leaks the controller (and everything
+        // it references) and lets stale events fire after release.
+        mediaController?.removeListener(playerListener)
         controllerFuture?.let { MediaController.releaseFuture(it) }
         mediaController = null
         

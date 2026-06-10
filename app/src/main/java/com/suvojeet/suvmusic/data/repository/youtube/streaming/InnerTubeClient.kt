@@ -174,8 +174,8 @@ class InnerTubeClient @Inject constructor(
                 android.util.Log.w("InnerTube", "${client.clientName} HTTP ${response.code} for $videoId")
                 return null
             }
-            val body = response.body.string()
-            if (body.isBlank()) return null
+            val body = response.body?.string()
+            if (body.isNullOrBlank()) return null
             val root = JsonParser.parseString(body).asJsonObject
 
             val status = root.getAsJsonObject("playabilityStatus")?.get("status")?.asString
