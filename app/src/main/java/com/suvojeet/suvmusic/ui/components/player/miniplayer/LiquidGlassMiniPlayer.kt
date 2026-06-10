@@ -98,14 +98,18 @@ fun LiquidGlassMiniPlayer(
     ) {
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
+        // One shared spec for both press animations so scale and background settle in
+        // lockstep — using different springs made rapid taps flicker as one finished
+        // before the other.
+        val pressSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
         val scale by animateFloatAsState(
             targetValue = if (isPressed) 0.82f else 1f,
-            animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessMedium),
+            animationSpec = pressSpec,
             label = "glassBtnScale"
         )
         val bgAlpha by animateFloatAsState(
             targetValue = if (isPressed) 0.18f else 0f,
-            animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium),
+            animationSpec = pressSpec,
             label = "glassBtnBg"
         )
         Box(

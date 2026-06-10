@@ -428,6 +428,10 @@ class MusicPlayerService : MediaLibraryService() {
                         startSponsorBlockMonitoring()
                     } else {
                         sponsorBlockJob?.cancel()
+                        // Re-arm the audio-sink kickstart on pause. On the affected
+                        // devices a READY->PAUSED->READY cycle without a BUFFERING state
+                        // would otherwise skip the unmute nudge and resume silently.
+                        audioSinkKickstartDone = false
                     }
                 }
 

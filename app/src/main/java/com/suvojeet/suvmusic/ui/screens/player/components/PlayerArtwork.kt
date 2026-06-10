@@ -14,6 +14,8 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.LinearEasing
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -155,13 +157,19 @@ fun AlbumArtwork(
     
     LaunchedEffect(isPlaying, currentShape, isRotatingEnabled) {
         if (isPlaying && currentShape == ArtworkShape.VINYL && isRotatingEnabled) {
-            // Continuously animate. 
-            // We use a simple loop to keep it rotating.
-            while (true) {
-                rotationAnimatable.animateTo(
-                    targetValue = rotationAnimatable.value + 360f,
-                    animationSpec = tween(8000, easing = LinearEasing)
-                )
+            try {
+                // Continuously animate.
+                // We use a simple loop to keep it rotating.
+                while (true) {
+                    rotationAnimatable.animateTo(
+                        targetValue = rotationAnimatable.value + 360f,
+                        animationSpec = tween(8000, easing = LinearEasing)
+                    )
+                }
+            } finally {
+                // Settle on cancellation (key change / leaving the screen) so the
+                // Animatable isn't left in a half-finished running state.
+                withContext(NonCancellable) { rotationAnimatable.snapTo(rotationAnimatable.value) }
             }
         } else {
             rotationAnimatable.stop()

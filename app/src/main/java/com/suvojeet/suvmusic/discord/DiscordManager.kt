@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,9 @@ class DiscordManager @Inject constructor(
     private var useDetails: Boolean = false
     private var isIncognitoMode: Boolean = false
     
-    private val scope = CoroutineScope(Dispatchers.IO)
+    // SupervisorJob so a single failing collector (e.g. the incognito-mode flow)
+    // doesn't cancel the whole scope and silently kill future Discord updates.
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var initializationJob: Job? = null
     
     private val _connectionStatus = MutableStateFlow("Disconnected")

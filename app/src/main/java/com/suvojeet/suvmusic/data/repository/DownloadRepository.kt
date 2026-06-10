@@ -137,11 +137,14 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private fun scanFolderRecursive(folder: File, currentSongs: MutableList<Song>, collectionName: String? = null): Boolean {
+    private suspend fun scanFolderRecursive(folder: File, currentSongs: MutableList<Song>, collectionName: String? = null): Boolean {
         var hasNew = false
         val files = folder.listFiles() ?: return false
-        
+
         for (file in files) {
+            // Cooperative cancellation: a deep tree on the IO pool would otherwise
+            // run to completion even after the caller's scope is cancelled.
+            currentCoroutineContext().ensureActive()
             if (file.isDirectory) {
                 // Use subfolder name as collection name
                 if (scanFolderRecursive(file, currentSongs, file.name)) hasNew = true

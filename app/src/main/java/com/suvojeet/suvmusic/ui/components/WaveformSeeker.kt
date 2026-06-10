@@ -224,7 +224,11 @@ fun WaveformSeeker(
                             dragX = offset.x
                         },
                         onDragEnd = {
-                            onSeek(currentProgress)
+                            // Don't deliver a stale seek if the player is no longer in a
+                            // valid state. A dismissed sheet / cleared queue drops duration
+                            // to 0, so an in-flight drag would otherwise seek an invalid
+                            // position on teardown.
+                            if (duration > 0) onSeek(currentProgress)
                             isDragging = false
                         },
                         onHorizontalDrag = { change, _ ->

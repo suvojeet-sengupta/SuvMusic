@@ -322,17 +322,21 @@ class SessionManager @Inject constructor(
                         // Float is used for alpha/spacing.
                         
                         val doubleVal = value.toDouble()
-                        
+
                         // Heuristic: if it's a whole number, it might be Int or Long
                         if (doubleVal == doubleVal.toLong().toDouble()) {
-                             // Try common Long keys
-                             if (keyName.contains("timestamp") || keyName.contains("time") || 
+                             val longVal = value.toLong()
+                             // Use Long for known time-ish keys OR any value that won't fit
+                             // in an Int — the latter guards against a timestamp/position
+                             // silently overflowing when forced through toInt().
+                             if (keyName.contains("timestamp") || keyName.contains("time") ||
                                  keyName.contains("position") || keyName.contains("at") ||
-                                 keyName.contains("limit")) {
-                                 prefs[longPreferencesKey(keyName)] = value.toLong()
+                                 keyName.contains("limit") ||
+                                 longVal > Int.MAX_VALUE || longVal < Int.MIN_VALUE) {
+                                 prefs[longPreferencesKey(keyName)] = longVal
                              } else {
                                  // Default to Int for small whole numbers
-                                 prefs[intPreferencesKey(keyName)] = value.toInt()
+                                 prefs[intPreferencesKey(keyName)] = longVal.toInt()
                              }
                         } else {
                              // Float for fractional values
