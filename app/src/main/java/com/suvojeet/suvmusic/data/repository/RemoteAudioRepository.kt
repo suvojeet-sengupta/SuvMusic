@@ -132,6 +132,13 @@ class RemoteAudioRepository @Inject constructor(
      * Typed variant of [search]: returns [AppResult.Success] (possibly with an empty list
      * when the backend genuinely had nothing) or [AppResult.Failure] with a classified
      * [com.suvojeet.suvmusic.core.model.AppError]. Failures are also reported to telemetry.
+     *
+     * POLICY: this backend rate-limits (429) aggressively. It must only be called from the
+     * Search tab, song-detail resolution, and the hybrid HQ playback path — NEVER from home
+     * / recommendation section generation (which fires one search per row). The recommendation
+     * engine routes home content through YouTube only; do not add a RemoteAudio call there.
+     * Every call is logged below, so a stray home-path call shows up as a burst of RemoteAudio
+     * searches in logcat.
      */
     suspend fun searchResult(query: String): AppResult<List<Song>> = withContext(Dispatchers.IO) {
         val cacheKey = query.trim().lowercase()

@@ -167,14 +167,30 @@ class RecommendationEngine @Inject constructor(
      * Source-aware song search used by all discovery/section generators so the
      * home screen stays consistent with the active source (RemoteAudio vs YouTube).
      */
-    private suspend fun searchSongs(query: String): List<Song> = try {
+    // Short-lived query cache so multiple discovery generators (genre rows, artist
+    // mixes, context sections) that search the same query within one refresh share a
+    // single YouTube round-trip instead of each firing their own — the N+1 the home
+    // rows otherwise cause.
+    private val searchQueryCache = ConcurrentHashMap<String, Pair<Long, List<Song>>>()
+    private val searchCacheTtlMs = 5 * 60 * 1000L
+
+    private suspend fun searchSongs(query: String): List<Song> {
         // Home/recommendation content ALWAYS comes from YouTube. The RemoteAudio (HQ)
         // backend is reserved for playback stream resolution + the explicit Search tab;
         // the home screen must never call it, since firing one search per genre row /
         // artist mix / context section is exactly what triggers its 429 rate-limiting.
-        youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
-    } catch (e: Exception) {
-        emptyList()
+        val key = query.trim().lowercase()
+        val now = System.currentTimeMillis()
+        searchQueryCache[key]?.let { (ts, songs) ->
+            if (now - ts < searchCacheTtlMs) return songs
+        }
+        return try {
+            val result = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+            if (result.isNotEmpty()) searchQueryCache[key] = now to result
+            result
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     // ============================================================================================
@@ -206,10 +222,9 @@ class RecommendationEngine @Inject constructor(
                 apiSemaphore.withPermit {
                     try {
                         // Always YouTube — home content never touches the RemoteAudio backend.
-                        val songs = youTubeRepository.search(
-                            "$genreName music mix",
-                            YouTubeRepository.FILTER_SONGS
-                        )
+                        // Routed through searchSongs so repeated genre queries within a
+                        // refresh hit the short-TTL cache instead of re-querying YouTube.
+                        val songs = searchSongs("$genreName music mix")
                         val scored = scoreAndRank(songs, profile)
                         val unique = deduplicate(scored, seenIds, seenFingerprints).take(12)
                         if (unique.isNotEmpty()) {

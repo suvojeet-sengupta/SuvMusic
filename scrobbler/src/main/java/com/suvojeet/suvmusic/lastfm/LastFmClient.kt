@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import javax.inject.Inject
+import javax.inject.Singleton
 
 interface LastFmConfig {
     val apiKey: String
@@ -22,6 +23,10 @@ interface LastFmConfig {
     val userAgent: String get() = "SuvMusic (https://github.com/suvojeet-sengupta/SuvMusic)"
 }
 
+// Singleton so the owned ktor HttpClient (CIO) below exists exactly once for the
+// whole app instead of one engine per injection site — it lives for the process
+// lifetime and is never explicitly closed, so it must not be allowed to multiply.
+@Singleton
 class LastFmClient @Inject constructor(
     private val config: LastFmConfig
 ) {

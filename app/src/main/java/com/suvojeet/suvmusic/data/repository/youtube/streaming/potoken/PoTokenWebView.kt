@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Collections
@@ -210,7 +211,7 @@ class PoTokenWebView private constructor(
                 // NOTE: obtainPoToken is now async, so we use .then()
                 webView.evaluateJavascript(
                     """try {
-                        identifier = "$identifier"
+                        identifier = ${JSONObject.quote(identifier)}
                         u8Identifier = ${stringToU8(identifier)}
                         obtainPoToken(u8Identifier).then(function(poTokenU8) {
                             poTokenU8String = poTokenU8.join(",")

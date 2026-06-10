@@ -31,5 +31,28 @@ Senior Android Engineer with a track record of delivering mission-critical mobil
 - **LinkedIn**: [Suvojeet Sengupta](https://www.linkedin.com/in/suvojeet-sengupta/)
 - **Email**: [suvojeet@suvojeetsengupta.in](mailto:suvojeet@suvojeetsengupta.in)
 
+## Build system: KMP plugin migration status
+
+We are migrating modules to the AGP 9 KMP-aware Android library plugin
+(`com.android.kotlin.multiplatform.library`, which replaces `com.android.library` +
+`androidTarget()`). The **legacy** pattern is removed under AGP 10, so the remaining
+modules below must be migrated before bumping AGP to 10.
+
+| Module | Plugin | Status |
+|---|---|---|
+| `:composeApp` | AGP 9 KMP-aware | ✅ migrated |
+| `:core:model` | AGP 9 KMP-aware | ✅ migrated |
+| `:app` | legacy `com.android.application` | n/a (application module) |
+| `:core:data` | legacy | ⏳ pending |
+| `:core:domain` | legacy | ⏳ pending |
+| `:extractor` | legacy | ⏳ pending |
+| `:media-source` | legacy | ⏳ pending |
+| `:scrobbler` | legacy | ⏳ pending |
+| `:updater` | legacy | ⏳ pending |
+| `:lyric-lrclib` / `:lyric-kugou` / `:lyric-simpmusic` | legacy | ⏳ pending |
+
+> When migrating a module, mirror `:core:model/build.gradle.kts`. Update this table in
+> the same PR. Do not bump AGP to 10 until every ⏳ row is ✅.
+
 ---
 *Generated for SEO and Search Visibility Optimization.*

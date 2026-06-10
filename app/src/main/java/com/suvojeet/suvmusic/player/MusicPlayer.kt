@@ -108,6 +108,7 @@ class MusicPlayer @Inject constructor(
     
     // Audio Manager for device detection
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
     
     // Preloading state for gapless playback
     private var preloadedNextSongId: String? = null
@@ -591,17 +592,28 @@ class MusicPlayer @Inject constructor(
         val capturedId = manualSelectedDeviceId
         val capturedName = manualSelectedDeviceName
         if (!hasSelection && isInGracePeriod && capturedId != null && capturedName != null) {
-            val placeholderDevice = OutputDevice(
-                id = capturedId,
-                name = capturedName,
-                type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
-                isSelected = true
-            )
-            // Add at correct position or replace if same name exists
-            val newList = devicesWithSelection.toMutableList()
-            newList.add(placeholderDevice)
-            devicesWithSelection = newList
-            hasSelection = true
+            // A reconnecting Bluetooth device often comes back under a NEW device id
+            // (fresh ACL session). If a real device with the same name is now present,
+            // adopt its new id and select it — otherwise the grace placeholder pins the
+            // stale id and blocks recognising the reconnected device for up to 10s.
+            val reconnected = devicesWithSelection.firstOrNull { it.name == capturedName }
+            if (reconnected != null) {
+                manualSelectedDeviceId = reconnected.id
+                devicesWithSelection = devicesWithSelection.map { it.copy(isSelected = it.id == reconnected.id) }
+                hasSelection = true
+            } else {
+                val placeholderDevice = OutputDevice(
+                    id = capturedId,
+                    name = capturedName,
+                    type = DeviceType.BLUETOOTH, // Assume Bluetooth for grace period issues
+                    isSelected = true
+                )
+                // Add at correct position or replace if same name exists
+                val newList = devicesWithSelection.toMutableList()
+                newList.add(placeholderDevice)
+                devicesWithSelection = newList
+                hasSelection = true
+            }
         }
 
         if (!hasSelection && !isInGracePeriod) {
@@ -1339,7 +1351,14 @@ class MusicPlayer @Inject constructor(
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
             // endpoint rate-limits hardest, so we keep it off the hot play path).
             val url = match?.let { remoteStreamUrlFor(it) }
-            hybridRemoteIds.put(song.id, url ?: "")
+            // Only cache a genuine result: a positive URL, or a real "no match". If the
+            // backend was merely busy (rate-limited / timeout / no network) we must NOT
+            // negatively-cache the miss — otherwise the song stays pinned to YouTube for
+            // the rest of the session even after the HQ service recovers. The shared 429
+            // backoff gate keeps the retry from hammering the backend.
+            if (url != null || !busy) {
+                hybridRemoteIds.put(song.id, url ?: "")
+            }
             hqFallbackReason.put(
                 song.id,
                 when {
@@ -1724,9 +1743,13 @@ class MusicPlayer @Inject constructor(
             kotlinx.coroutines.flow.flow {
                 while (true) {
                     emit(Unit)
-                    // Adaptive delay: faster when playing for smooth seekbar, slower when paused/buffering
+                    // Adaptive delay: faster when playing for smooth seekbar, slower when
+                    // paused/buffering. When the screen is off, nothing renders the
+                    // fine-grained position, so drop to the slow cadence to save battery
+                    // on metered/screen-off playback.
                     val isPlaying = mediaController?.isPlaying == true
-                    kotlinx.coroutines.delay(if (isPlaying) 400L else 1000L)
+                    val screenOn = powerManager.isInteractive
+                    kotlinx.coroutines.delay(if (isPlaying && screenOn) 400L else 1000L)
                 }
             }.collect {
                 mediaController?.let { controller ->

@@ -285,6 +285,14 @@ class DiscordRPC(
         } catch (e: Exception) {
             AppLog.e(tag, "Error closing gateway", e)
         }
+        // Release the ktor HttpClient too — close() means this instance is done
+        // (DiscordManager.disconnect nulls it and connect() builds a fresh one), so
+        // its engine/threads would otherwise leak for every enable/disable cycle.
+        try {
+            client.close()
+        } catch (e: Exception) {
+            AppLog.e(tag, "Error closing HttpClient", e)
+        }
     }
 
     fun updateActivity(

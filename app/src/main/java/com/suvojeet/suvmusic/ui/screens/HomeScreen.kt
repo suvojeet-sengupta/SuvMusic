@@ -38,6 +38,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.WbSunny
@@ -132,20 +135,24 @@ fun HomeScreen(
     
     val lazyListState = rememberLazyListState()
 
-    // Handle Events
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is HomeEvent.ShowAddToPlaylistSheet -> {
-                    playlistViewModel.showAddToPlaylistSheet(event.song)
-                }
-                is HomeEvent.ScrollToTop -> {
-                    if (uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty()) {
-                        lazyListState.animateScrollToItem(0)
+    // Handle Events — collected lifecycle-aware so UI actions (sheets, scroll)
+    // aren't dispatched against a paused/destroyed screen.
+    val homeLifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(homeLifecycleOwner) {
+        homeLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is HomeEvent.ShowAddToPlaylistSheet -> {
+                        playlistViewModel.showAddToPlaylistSheet(event.song)
                     }
-                }
-                is HomeEvent.Refresh -> {
-                   // Refresh is already triggered in ViewModel, which sets isRefreshing = true
+                    is HomeEvent.ScrollToTop -> {
+                        if (uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty()) {
+                            lazyListState.animateScrollToItem(0)
+                        }
+                    }
+                    is HomeEvent.Refresh -> {
+                       // Refresh is already triggered in ViewModel, which sets isRefreshing = true
+                    }
                 }
             }
         }

@@ -50,6 +50,18 @@
 -keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.cache.** {
     <fields>;
 }
+# AI effect/prompt models (ai/AIModels.kt: AudioEffectState, AIPromptHistory,
+# SongAISettings) are Gson-serialized by reflection. Same failure mode as the cache
+# wrappers above: under R8 full mode their renamed fields stop matching the JSON keys
+# and Gson silently deserializes to defaults. Keep their fields.
+-keepclassmembers,allowobfuscation class com.suvojeet.suvmusic.ai.** {
+    <fields>;
+}
+
+# Audit aid (see audit B2): emit the fully-merged R8 configuration so the team can
+# inspect exactly what is kept/renamed on a release build and catch the next missing
+# reflection -keep before it ships.
+-printconfiguration build/r8-merged-configuration.txt
 
 # Strip only verbose / debug Log calls in release. Info / warn / error
 # survive so diagnostic logs (stream resolution traces, NewPipe failures,
