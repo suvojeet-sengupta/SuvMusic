@@ -98,11 +98,11 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "SuvMusic"
-            // Tracks app/build.gradle.kts versionName (2.5.3.0) — kept in sync so
+            // Tracks app/build.gradle.kts versionName (2.5.4.0) — kept in sync so
             // Windows MSI upgrade chains see new builds as upgrades. MSI versions
             // are major.minor.patch only (the 4th app field is ignored by Windows
             // Installer anyway), so the meaningful prefix is mirrored here.
-            packageVersion = "2.5.3"
+            packageVersion = "2.5.4"
             description = "SuvMusic Desktop"
             vendor = "Suvojeet Sengupta"
 
