@@ -36,6 +36,8 @@ import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -273,7 +275,7 @@ class PlayerViewModel @Inject constructor(
 
         // Ticker loop for tracking playback time
         viewModelScope.launch {
-            while(true) {
+            while (isActive) {
                 delay(1000)
                 if (playerState.value.isPlaying) {
                     currentSongPlayTime += 1000
@@ -356,6 +358,15 @@ class PlayerViewModel @Inject constructor(
                 if (currentSelection != LyricsProviderType.AUTO && newMap[currentSelection] == false) {
                     Log.d("PlayerViewModel", "Current provider $currentSelection disabled, switching to AUTO")
                     switchLyricsProvider(LyricsProviderType.AUTO)
+                } else {
+                    // Even under AUTO, the lyrics currently on screen may have come from
+                    // a provider the user just disabled. Re-fetch so disabled-source
+                    // lyrics don't linger until the next song.
+                    val shownProvider = _lyricsState.value?.provider
+                    val currentSong = playerState.value.currentSong
+                    if (shownProvider != null && newMap[shownProvider] == false && currentSong != null) {
+                        fetchLyrics(currentSong.id, currentSelection)
+                    }
                 }
             }
         }
@@ -480,8 +491,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    private var likeCheckJob: Job? = null
     private fun checkLikeStatus(song: Song) {
-        viewModelScope.launch {
+        // Cancel any in-flight check for a previous song so a slow repository read
+        // can't land after the user moved on (or tapped like) and revert the button.
+        likeCheckJob?.cancel()
+        likeCheckJob = viewModelScope.launch {
             val isLiked = if (sessionManager.isLoggedIn()) {
                 // Signed-in: source of truth is the user's YT Music "Liked Music" playlist
                 val likedSongs = youTubeRepository.getLikedMusic()
@@ -490,7 +505,11 @@ class PlayerViewModel @Inject constructor(
                 // Signed-out: local-only like state from listening history
                 listeningHistoryRepository.isSongLiked(song.id)
             }
-            musicPlayer.updateLikeStatus(isLiked)
+            // Only apply if this is still the current song — guards against a stale
+            // result overwriting state after a transition.
+            if (musicPlayer.playerState.value.currentSong?.id == song.id) {
+                musicPlayer.updateLikeStatus(isLiked)
+            }
         }
     }
     

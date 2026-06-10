@@ -137,7 +137,11 @@ fun LiquidGlassMiniPlayer(
                 .clickable(onClick = onTap),
             shape = pillShape,
             blurAmount = blurAmount,
-            intensity = effectiveAlpha.coerceAtLeast(0.7f),
+            // Respect the user's transparency slider across its full range. The old
+            // coerceAtLeast(0.7f) floor capped transparency at ~30%, so the slider's
+            // lower end did nothing. The pill's content (artwork/text/buttons) renders
+            // independently of this glass intensity, so it stays visible and tappable.
+            intensity = effectiveAlpha.coerceIn(0f, 1f),
             tint = dominantColors.primary,
             isDarkTheme = isDarkTheme
         ) {

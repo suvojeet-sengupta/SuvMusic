@@ -5,6 +5,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.suvojeet.suvmusic.data.SessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +53,10 @@ class AudioARManager @Inject constructor(
 
     private var isPlaying = false
     private var isSettingsEnabled = false
+    // Whether the app process is in the foreground. The rotation sensor is only
+    // useful while the user is looking at the device; keeping it registered while
+    // backgrounded just drains battery and pins this singleton.
+    private var isAppInForeground = true
     private var sensitivity = 1.0f
     private var autoCalibrateEnabled = true
 
@@ -77,6 +84,24 @@ class AudioARManager @Inject constructor(
                 autoCalibrateEnabled = enabled
             }
         }
+
+        // Stop the sensor whenever the app goes to the background and re-evaluate
+        // when it returns, so the rotation sensor never runs while the user can't
+        // see the screen (battery + keeps the singleton from being pinned active).
+        // addObserver must run on the main thread; scope is the Main dispatcher.
+        scope.launch {
+            ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    isAppInForeground = true
+                    updateSensorState()
+                }
+
+                override fun onStop(owner: LifecycleOwner) {
+                    isAppInForeground = false
+                    updateSensorState()
+                }
+            })
+        }
     }
 
     fun setPlaying(playing: Boolean) {
@@ -85,7 +110,7 @@ class AudioARManager @Inject constructor(
     }
 
     private fun updateSensorState() {
-        if (isSettingsEnabled && isPlaying) {
+        if (isSettingsEnabled && isPlaying && isAppInForeground) {
             start()
         } else {
             stop()

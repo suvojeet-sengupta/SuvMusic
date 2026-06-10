@@ -38,6 +38,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
@@ -569,8 +572,14 @@ fun SuvMusicApp(
     }
 
     // Handle MainEvents (Navigation, Toasts)
-    LaunchedEffect(Unit) {
-        mainViewModel.events.collect { event ->
+    // Collect under repeatOnLifecycle so deep-link playback/navigation events
+    // are only handled while the Activity is at least STARTED. Without this the
+    // LaunchedEffect(Unit) collector keeps firing during pause/destroy and can
+    // act against a dead Activity or nav controller.
+    val eventsLifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(eventsLifecycleOwner) {
+        eventsLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            mainViewModel.events.collect { event ->
             when (event) {
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.PlayFromDeepLink -> {
                     playerViewModel.playFromDeepLink(event.videoId)
@@ -602,6 +611,7 @@ fun SuvMusicApp(
                 is com.suvojeet.suvmusic.ui.viewmodel.MainEvent.ShowToast -> {
                     com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(event.message)
                 }
+            }
             }
         }
     }

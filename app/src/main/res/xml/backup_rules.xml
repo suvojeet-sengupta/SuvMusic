@@ -6,8 +6,8 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- API < 31 backup. Exclude the session secret stores so tokens/cookies never
+         leave the device via auto-backup (the fallback file can be plaintext). -->
+    <exclude domain="sharedpref" path="suvmusic_secure_session.xml"/>
+    <exclude domain="sharedpref" path="suvmusic_secure_session_fallback.xml"/>
 </full-backup-content>

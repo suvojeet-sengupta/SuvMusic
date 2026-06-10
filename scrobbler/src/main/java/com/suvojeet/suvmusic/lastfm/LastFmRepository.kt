@@ -19,11 +19,15 @@ class LastFmRepository @Inject constructor(
     }
 
     suspend fun updateNowPlaying(sessionKey: String, artist: String, track: String, album: String?, duration: Long) = withContext(Dispatchers.IO) {
-        lastFmClient.updateNowPlaying(sessionKey, artist, track, album, duration)
+        lastFmClient.updateNowPlaying(sessionKey, artist, track, album, duration).also { result ->
+            result.onFailure { android.util.Log.w("LastFmRepository", "updateNowPlaying failed for $artist – $track: ${it.message}") }
+        }
     }
 
     suspend fun scrobble(sessionKey: String, artist: String, track: String, album: String?, duration: Long, timestamp: Long) = withContext(Dispatchers.IO) {
-        lastFmClient.scrobble(sessionKey, artist, track, album, duration, timestamp)
+        lastFmClient.scrobble(sessionKey, artist, track, album, duration, timestamp).also { result ->
+            result.onFailure { android.util.Log.w("LastFmRepository", "scrobble failed for $artist – $track: ${it.message}") }
+        }
     }
 
     suspend fun setLoveStatus(sessionKey: String, artist: String, track: String, love: Boolean) = withContext(Dispatchers.IO) {

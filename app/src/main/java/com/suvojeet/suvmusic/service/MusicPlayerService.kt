@@ -184,6 +184,9 @@ class MusicPlayerService : MediaLibraryService() {
 
     private var lastCustomLayout: List<CommandButton>? = null
     private var fadeJob: kotlinx.coroutines.Job? = null
+    // Held so onDestroy() can detach it from the player; otherwise listeners
+    // accumulate across service recreations and leak the captured references.
+    private var playerListener: androidx.media3.common.Player.Listener? = null
     private val FADE_IN_DURATION_MS = 500L
 
     private fun updateCustomLayout() {
@@ -334,7 +337,7 @@ class MusicPlayerService : MediaLibraryService() {
                 }
             }
             
-            addListener(object : androidx.media3.common.Player.Listener {
+            val transitionListener = object : androidx.media3.common.Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     super.onMediaItemTransition(mediaItem, reason)
                     updateCustomLayout()
@@ -348,7 +351,7 @@ class MusicPlayerService : MediaLibraryService() {
                         val boostEnabled = sessionManager.volumeBoostEnabledFlow.first()
                         val boostAmount = sessionManager.volumeBoostAmountFlow.first()
                         val gain = if (normEnabled) {
-                            loudnessAnalyzer.getCachedGainDb(mediaItem?.mediaId)
+                            loudnessAnalyzer.getCachedGainDbAwait(mediaItem?.mediaId)
                         } else 0f
                         spatialAudioProcessor.setLimiterConfig(
                             boostEnabled = boostEnabled,
@@ -607,7 +610,9 @@ class MusicPlayerService : MediaLibraryService() {
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                     updateCustomLayout()
                 }
-            })
+            }
+            playerListener = transitionListener
+            addListener(transitionListener)
         }
             
         lastFmManager.setPlayer(player)
@@ -638,7 +643,7 @@ class MusicPlayerService : MediaLibraryService() {
                  val currentSongId = (mediaLibrarySession?.player as? ExoPlayer)
                      ?.currentMediaItem?.mediaId
                  val normGainDb = if (state.normEnabled) {
-                     loudnessAnalyzer.getCachedGainDb(currentSongId)
+                     loudnessAnalyzer.getCachedGainDbAwait(currentSongId)
                  } else 0f
 
                  spatialAudioProcessor.setLimiterConfig(
@@ -1670,10 +1675,12 @@ class MusicPlayerService : MediaLibraryService() {
         audioARManager.setPlaying(false)
         listenTogetherManager.setPlayer(null)
         mediaLibrarySession?.run {
+            playerListener?.let { player.removeListener(it) }
             player.release()
             release()
             mediaLibrarySession = null
         }
+        playerListener = null
         super.onDestroy()
     }
 

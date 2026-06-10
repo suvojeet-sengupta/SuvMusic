@@ -27,6 +27,9 @@ metroserver/
 # Qoder AI
 .qoder/
 
+# MCP server scratch dir (local tooling, not part of the build)
+mcps/
+
 # Captured device logs — must not be checked in
 suvmusic_*.log
 suvmusic_bug_report_*.txt

@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.player
 
 import com.suvojeet.suvmusic.data.SessionManager
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,6 +43,9 @@ class LoudnessAnalyzer @Inject constructor(
     // when we commit a new measurement.
     @Volatile private var cache: Map<String, Float> = emptyMap()
     @Volatile private var cacheLoaded = false
+    // Completed once the persisted cache has been read. Lets the first lookup
+    // after cold start wait for real measurements instead of returning 0 dB.
+    private val cacheReady = CompletableDeferred<Unit>()
 
     // Running stats for the song currently being measured.
     @Volatile private var currentSongId: String? = null
@@ -65,6 +69,7 @@ class LoudnessAnalyzer @Inject constructor(
         scope.launch {
             cache = sessionManager.getLoudnessCache()
             cacheLoaded = true
+            cacheReady.complete(Unit)
         }
     }
 
@@ -77,6 +82,19 @@ class LoudnessAnalyzer @Inject constructor(
      */
     fun getCachedGainDb(songId: String?): Float {
         songId ?: return 0f
+        val rms = cache[songId] ?: return 0f
+        return gainOffsetForRms(rms)
+    }
+
+    /**
+     * Cache-aware variant of [getCachedGainDb]. Suspends until the persisted
+     * cache has loaded so the very first song after a cold start gets its real
+     * normalization gain rather than 0 dB — otherwise that first track plays at
+     * an audibly different level from every song that follows.
+     */
+    suspend fun getCachedGainDbAwait(songId: String?): Float {
+        songId ?: return 0f
+        cacheReady.await()
         val rms = cache[songId] ?: return 0f
         return gainOffsetForRms(rms)
     }

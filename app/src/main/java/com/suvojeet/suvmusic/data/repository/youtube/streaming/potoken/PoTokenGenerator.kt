@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.data.repository.youtube.streaming.potoken
 
 import android.content.Context
+import android.os.Looper
 import android.util.Log
 import android.webkit.CookieManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -45,6 +46,15 @@ class PoTokenGenerator @Inject constructor(
 
     fun getWebClientPoToken(videoId: String, sessionId: String): PoTokenResult? {
         Log.d(TAG, "getWebClientPoToken called: videoId=$videoId, sessionId=$sessionId")
+        // This wraps runBlocking, and token generation calls withContext(Dispatchers.Main)
+        // for the WebView. Running it on the main thread would deadlock the looper. Callers
+        // are expected to be off-main (see InnerTubeClient's withContext(IO)); enforce it
+        // here and stay fail-safe (null falls through to the non-PoToken client chain)
+        // rather than freezing the UI if a future caller forgets.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Log.e(TAG, "getWebClientPoToken called on the main thread; refusing to runBlocking (would deadlock). Falling through without PoToken.")
+            return null
+        }
         Log.d(TAG, "WebView state: supported=$webViewSupported, badImpl=$webViewBadImpl")
         if (!webViewSupported || webViewBadImpl) {
             Log.d(TAG, "WebView not available: supported=$webViewSupported, badImpl=$webViewBadImpl")

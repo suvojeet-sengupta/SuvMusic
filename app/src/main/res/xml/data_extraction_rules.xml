@@ -5,9 +5,14 @@
         <include domain="file" path="."/>
         <include domain="database" path="."/>
         <include domain="sharedpref" path="."/>
-        
+
         <!-- Exclude large/ephemeral thumbnails from cloud backup -->
         <exclude domain="file" path="thumbnails"/>
+        <!-- Never cloud-back-up the session secret stores: the encrypted file is
+             keystore-bound (useless after restore) and the degraded-mode fallback
+             can hold session/cookies/tokens in plaintext. -->
+        <exclude domain="sharedpref" path="suvmusic_secure_session.xml"/>
+        <exclude domain="sharedpref" path="suvmusic_secure_session_fallback.xml"/>
     </cloud-backup>
     <device-transfer>
         <!-- Device-to-device transfer can include everything -->

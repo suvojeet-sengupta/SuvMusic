@@ -38,6 +38,18 @@ class CrashReportSender : ReportSender {
         context.startActivity(chooserIntent)
     }
 
+    /**
+     * Mask the value following any secret-looking key so tokens/cookies/keys don't
+     * leave the device in a shared crash report. Matches common shapes like
+     * `Authorization: Bearer xyz`, `api_key=xyz`, `"token":"xyz"`, `cookie: ...`.
+     */
+    private fun redactSensitive(text: String): String {
+        val pattern = Regex("(?i)(api[_-]?key|authorization|auth[_-]?token|token|secret|password|passwd|cookie|set-cookie|bearer)([\"'\\s:=]+)([^\\s\"',}&;]+)")
+        return text.lineSequence().joinToString("\n") { line ->
+            pattern.replace(line) { m -> "${m.groupValues[1]}${m.groupValues[2]}***REDACTED***" }
+        }
+    }
+
     private fun writeCrashReportFile(
         context: Context,
         data: CrashReportData
@@ -77,14 +89,15 @@ class CrashReportSender : ReportSender {
             }
             writer.appendLine()
             writer.appendLine("── Stack Trace ──")
-            writer.appendLine(data.getString(ReportField.STACK_TRACE) ?: "N/A")
+            writer.appendLine(redactSensitive(data.getString(ReportField.STACK_TRACE) ?: "N/A"))
             writer.appendLine()
 
-            // Logcat
+            // Logcat — redacted before writing: raw logcat can carry auth tokens,
+            // cookies, and API keys, and this report is shared via chooser.
             val logcat = data.getString(ReportField.LOGCAT)
             if (!logcat.isNullOrBlank()) {
                 writer.appendLine("── Logcat ──")
-                writer.appendLine(logcat)
+                writer.appendLine(redactSensitive(logcat))
             }
 
             writer.appendLine()
