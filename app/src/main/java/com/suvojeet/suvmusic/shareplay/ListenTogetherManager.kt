@@ -62,6 +62,11 @@ class ListenTogetherManager @Inject constructor(
     // Drift Correction
     private var anchorTime: Long = 0
     private var anchorPosition: Long = 0
+    // Track the anchors were taken against. The drift corrector must not act while the
+    // player has moved on to a different track (e.g. auto-advanced to the next queue
+    // item) — the wall-clock anchor would extrapolate a huge position and hard-seek the
+    // fresh track to its end, which manifested as the song "stopping and looping".
+    private var anchorTrackId: String? = null
     private var driftCorrectionJob: Job? = null
 
     // Pending sync to apply after buffering completes for guest
@@ -349,11 +354,29 @@ class ListenTogetherManager @Inject constructor(
                 delay(500) // Check every 500ms
                 val p = player ?: continue
                 if (!p.isPlaying) continue
-                
-                val expectedPosition = anchorPosition + (System.currentTimeMillis() - anchorTime)
+                // Only correct while the player is actually ready. Seeking during a
+                // buffer/stall creates a feedback loop: the wall-clock keeps advancing
+                // while the player is stuck, the gap grows past the hard-seek threshold,
+                // and we keep re-seeking the same spot.
+                if (p.playbackState != Player.STATE_READY) continue
+                // Don't correct a track the anchors weren't taken against — wait for the
+                // host's next sync to re-anchor on the new track first.
+                if (anchorTrackId != null && p.currentMediaItem?.mediaId != anchorTrackId) continue
+
+                val rawExpected = anchorPosition + (System.currentTimeMillis() - anchorTime)
+                // Never extrapolate past the end of the track. Without this clamp the
+                // wall-clock position keeps growing beyond the song length and the hard
+                // seek below jumps to/past the end, ending the track (and, with repeat on,
+                // looping it) — the "stops at X:XX and starts looping" report.
+                val duration = p.duration
+                val expectedPosition = if (duration != androidx.media3.common.C.TIME_UNSET && duration > 0) {
+                    rawExpected.coerceIn(0L, duration)
+                } else {
+                    rawExpected.coerceAtLeast(0L)
+                }
                 val currentPosition = p.currentPosition
                 val drift = currentPosition - expectedPosition
-                
+
                 // Drift thresholds
                 when {
                     kotlin.math.abs(drift) > 2000 -> {
@@ -362,6 +385,7 @@ class ListenTogetherManager @Inject constructor(
                         p.seekTo(expectedPosition)
                         anchorPosition = expectedPosition
                         anchorTime = System.currentTimeMillis()
+                        anchorTrackId = p.currentMediaItem?.mediaId
                     }
                     drift < -40 -> {
                         // Behind by > 40ms: Speed up slightly (1.05x)
@@ -385,6 +409,7 @@ class ListenTogetherManager @Inject constructor(
     private fun stopDriftCorrection() {
         driftCorrectionJob?.cancel()
         driftCorrectionJob = null
+        anchorTrackId = null
         player?.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
     }
 
@@ -402,6 +427,7 @@ class ListenTogetherManager @Inject constructor(
         // Initialize anchors for drift correction upon starting playback
         anchorPosition = targetPos
         anchorTime = System.currentTimeMillis()
+        anchorTrackId = p.currentMediaItem?.mediaId
 
         if (kotlin.math.abs(p.currentPosition - targetPos) > 100) {
             p.seekTo(targetPos)
@@ -468,6 +494,7 @@ class ListenTogetherManager @Inject constructor(
                     // Update anchors
                     anchorPosition = targetPos
                     anchorTime = System.currentTimeMillis()
+                    anchorTrackId = action.trackId ?: p.currentMediaItem?.mediaId
 
                     if (kotlin.math.abs(p.currentPosition - targetPos) > 100) p.seekTo(targetPos)
                     
@@ -493,6 +520,7 @@ class ListenTogetherManager @Inject constructor(
                     if (p.isPlaying) {
                         anchorPosition = pos
                         anchorTime = System.currentTimeMillis()
+                        anchorTrackId = p.currentMediaItem?.mediaId
                     }
                     p.seekTo(pos)
                 }

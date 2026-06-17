@@ -37,22 +37,24 @@ fun PlayerTopBar(
     audioArEnabled: Boolean = false,
     onRecenter: () -> Unit = {}
 ) {
-    // Box-based layout so the center pill (audio/video switch) sits in the
-    // true horizontal middle of the screen. A Row with SpaceBetween centers
-    // the pill between the back button and the right cluster — and because
-    // the right cluster has 2-3 buttons vs the left's 1, the pill ends up
-    // visibly off-center toward the back button. Anchoring left/center/right
-    // independently keeps the switch dead-center regardless of right-cluster
-    // width.
-    Box(
+    // Row-based layout: a fixed-width back button, a flexible center zone that
+    // takes the remaining space, and a fixed-width right cluster. The center
+    // content (audio/video pill or "NOW PLAYING" title) is centered *within*
+    // the gap between the two clusters, so it can never overlap them no matter
+    // the screen density or font scale.
+    //
+    // A previous "truly center on screen" Box layout overlapped the title with
+    // the right-side buttons on high-density / large-font devices because the
+    // screen-centered title's right edge ran underneath the button cluster.
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 2.dp, end = 0.dp, top = 12.dp, bottom = 12.dp)
+            .padding(start = 2.dp, end = 0.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Left side: Back Button
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(dominantColors.onBackground.copy(alpha = 0.07f))
@@ -67,9 +69,11 @@ fun PlayerTopBar(
             )
         }
 
-        // Center: Switch or Title — truly centered on screen
+        // Center: Switch or Title — fills the space between the side clusters
         Box(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             if (isYouTubeSong) {
@@ -132,7 +136,6 @@ fun PlayerTopBar(
 
         // Right side: Cast, Audio AR and More Menu
         Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(

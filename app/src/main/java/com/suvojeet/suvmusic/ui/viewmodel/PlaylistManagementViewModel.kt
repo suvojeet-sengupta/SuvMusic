@@ -147,6 +147,24 @@ class PlaylistManagementViewModel @Inject constructor(
                     var success = false
                     if (syncWithYt && sessionManager.isLoggedIn() && !playlistId.startsWith("local_")) {
                         success = youTubeRepository.addSongsToPlaylist(playlistId, songs.map { it.id })
+                        if (success) {
+                            // Persist a local copy so the freshly-created synced playlist and
+                            // its songs show up immediately instead of waiting for a YouTube
+                            // re-fetch (the "songs don't sync well" symptom on create).
+                            try {
+                                libraryRepository.savePlaylist(
+                                    Playlist(
+                                        id = playlistId,
+                                        title = title,
+                                        author = "You",
+                                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+                                        songs = songs
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                // Best-effort — the songs already synced to YouTube.
+                            }
+                        }
                     } else {
                         var successCount = 0
                         for (song in songs) {
@@ -241,8 +259,15 @@ class PlaylistManagementViewModel @Inject constructor(
                 }
             } else {
                 val success = youTubeRepository.addSongsToPlaylist(playlistId, songs.map { it.id })
-                if (success) successCount = songs.size
-                else lastMessage = "Failed to add songs to YouTube"
+                if (success) {
+                    successCount = songs.size
+                    // Mirror into the local song cache so the additions show up immediately
+                    // instead of waiting for a full YouTube re-fetch (the "doesn't sync well"
+                    // symptom).
+                    mirrorAddToLocalCacheIfCached(playlistId, songs)
+                } else {
+                    lastMessage = "Failed to add songs to YouTube"
+                }
             }
             
             val success = successCount > 0
@@ -266,6 +291,27 @@ class PlaylistManagementViewModel @Inject constructor(
         }
     }
     
+    /**
+     * Mirror a YouTube playlist add into the local song cache, but ONLY when a local
+     * cache for this playlist already exists. Appending to an existing cache is safe (the
+     * other songs are already there). We deliberately skip playlists with no cache yet —
+     * writing a partial list would make the local-first loader show only the newly added
+     * songs and hide the rest until a full re-fetch.
+     */
+    private suspend fun mirrorAddToLocalCacheIfCached(playlistId: String, songs: List<Song>) {
+        try {
+            val cached = libraryRepository.getCachedPlaylistSongs(playlistId)
+            if (cached.isEmpty()) return
+            val existingIds = cached.map { it.id }.toSet()
+            val toAdd = songs.filter { it.id !in existingIds }
+            if (toAdd.isNotEmpty()) {
+                libraryRepository.appendPlaylistSongs(playlistId, toAdd, cached.size)
+            }
+        } catch (e: Exception) {
+            // Best-effort cache mirror — the authoritative add already succeeded on YouTube.
+        }
+    }
+
     /**
      * Clear any messages.
      */

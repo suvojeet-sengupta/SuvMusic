@@ -534,6 +534,39 @@ class PlayerViewModel @Inject constructor(
         recommendationEngine.onSongPlayed(song)
 
         musicPlayer.playSong(song, queue, startIndex)
+
+        // When a single song is played standalone (i.e. NOT started from an album,
+        // playlist or other multi-song list), auto-generate a continuation queue of
+        // related songs — mirroring YT Music's "tap a song → endless radio" behaviour.
+        // Album/playlist plays pass their own multi-song queue, so we skip those.
+        // Respects the Automix master switch.
+        if (automixEnabled && queue.size <= 1) {
+            autoGenerateQueueFor(song)
+        }
+    }
+
+    /**
+     * Build and append a related-songs queue for a standalone single-song play so the
+     * user always has an auto-generated "up next" list. Runs in the background and only
+     * applies its result if the user is still on the same seed song and hasn't queued a
+     * longer list in the meantime.
+     */
+    private fun autoGenerateQueueFor(seed: Song) {
+        viewModelScope.launch {
+            try {
+                val relatedSongs = smartQueueManager.buildRadioQueue(seedSong = seed)
+                val state = playerState.value
+                if (relatedSongs.isNotEmpty() &&
+                    state.currentSong?.id == seed.id &&
+                    state.queue.size <= 1
+                ) {
+                    musicPlayer.replaceQueue(listOf(seed) + relatedSongs)
+                    radioBaseSongId = smartQueueManager.lastSeedId ?: seed.id
+                }
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error auto-generating queue", e)
+            }
+        }
     }
     
     fun playNext(song: Song) {

@@ -853,12 +853,35 @@ class DownloadRepository @Inject constructor(
                     DL_TAG,
                     "[STREAM_URL] fetch start id=${song.id} src=${song.source}",
                 )
-                val streamResult = when (song.source) {
-                    SongSource.REMOTE -> {
-                        val url = remoteAudioRepository.getStreamUrl(song.id, 320)
-                        if (url != null) url to "m4a" else null
+                // Resolve the stream URL with a bounded retry. Bulk library downloads
+                // (60+ songs) repeatedly hit YouTube / RemoteAudio and can get briefly
+                // throttled or rate-limited (429). A single null used to fail the song
+                // outright — which is why large batches "downloaded to ~50-60% then said
+                // download failed": once throttling kicked in, every remaining song failed
+                // immediately. A short backoff rides out transient throttle windows so the
+                // batch completes instead of cascading into failures.
+                var streamResult: Pair<String, String>? = null
+                var streamAttempt = 0
+                val maxStreamAttempts = 3
+                while (streamAttempt < maxStreamAttempts) {
+                    streamAttempt++
+                    streamResult = when (song.source) {
+                        SongSource.REMOTE -> {
+                            val url = remoteAudioRepository.getStreamUrl(song.id, 320)
+                            if (url != null) url to "m4a" else null
+                        }
+                        else -> youTubeRepository.getStreamUrlForDownload(song.id)
                     }
-                    else -> youTubeRepository.getStreamUrlForDownload(song.id)
+                    if (streamResult != null) break
+                    if (streamAttempt < maxStreamAttempts) {
+                        val backoff = 4000L * streamAttempt // 4s, then 8s
+                        android.util.Log.w(
+                            DL_TAG,
+                            "[STREAM_URL] null id=${song.id} src=${song.source} " +
+                                "attempt=$streamAttempt/$maxStreamAttempts — retrying in ${backoff}ms",
+                        )
+                        kotlinx.coroutines.delay(backoff)
+                    }
                 }
                 val streamElapsed = System.currentTimeMillis() - rt0
                 if (streamResult == null) {

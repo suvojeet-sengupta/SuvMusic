@@ -648,6 +648,19 @@ class PlaylistViewModel @Inject constructor(
             } else {
                 success = youTubeRepository.addSongToPlaylist(targetPlaylistId, song.id)
                 message = if (success) "Added ${song.title} to playlist" else "Failed to add to YouTube playlist"
+                if (success) {
+                    // Mirror into the local cache when one already exists so the song shows
+                    // up right away instead of waiting for a full YouTube re-fetch. Skip when
+                    // there's no cache yet, to avoid a partial list hiding the other songs.
+                    try {
+                        val cached = libraryRepository.getCachedPlaylistSongs(targetPlaylistId)
+                        if (cached.isNotEmpty() && cached.none { it.id == song.id }) {
+                            libraryRepository.appendPlaylistSongs(targetPlaylistId, listOf(song), cached.size)
+                        }
+                    } catch (e: Exception) {
+                        // Best-effort cache mirror — the YouTube add already succeeded.
+                    }
+                }
             }
             
             _uiState.update { 
