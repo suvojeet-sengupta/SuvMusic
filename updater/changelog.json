@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.5.5.0",
+      "versionCode": 34,
+      "date": "June 17, 2026",
+      "description": "• Liquid Glass UI (App-Wide): When the iOS Liquid Glass toggle is enabled, frosted glass now extends across bottom sheets, top bars, and cards app-wide. 12 sheets across Settings, Playback Settings, Library, and Customization all frost automatically. Polished the core glass effect with sharper specular falloff, a crisp top-edge glint, and a brighter rim border.\n• Miniplayer Vinyl Spin: When the Vinyl artwork shape is selected, the artwork in all four miniplayer styles (Standard, YT Music, Pill, Liquid Glass) now rotates continuously while playing — matching the full player behaviour.\n• Lyrics Screen UX: Added a floating 'Resume' pill (Apple Music / Spotify style) that appears whenever the active lyric line scrolls off screen while reading ahead. Tap it to instantly snap back to the playing line with a smooth animation. Auto-scroll resumes 4 seconds after the last manual scroll (up from 2).\n• About Screen Fixes: Social icon badges now wrap to multiple rows on narrow screens using FlowRow, preventing overflow. Tech-stack row values (versions, library names) no longer truncate — the label flexes and the value stays fully visible.\n• NewPipe Extractor v0.26.3: Updated to the official upstream release which resolves the YouTube 'audioStreams EMPTY' issue (SABR protocol). Removed the temporary MonseyNY fork workaround.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.5.4.0",
       "versionCode": 33,
       "date": "June 10, 2026",
