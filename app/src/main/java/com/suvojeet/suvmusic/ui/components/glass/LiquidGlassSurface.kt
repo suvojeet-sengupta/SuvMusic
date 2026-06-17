@@ -65,29 +65,38 @@ fun LiquidGlassSurface(
 
     val specularHighlight = Brush.verticalGradient(
         colors = if (isDarkTheme) listOf(
-            Color.White.copy(alpha = 0.18f * i),
-            Color.White.copy(alpha = 0.06f * i),
+            Color.White.copy(alpha = 0.20f * i),
+            Color.White.copy(alpha = 0.07f * i),
             Color.Transparent,
-            Color.Black.copy(alpha = 0.08f * i)
+            Color.Transparent,
+            Color.Black.copy(alpha = 0.10f * i)
         ) else listOf(
-            Color.White.copy(alpha = 0.25f * i),
-            Color.White.copy(alpha = 0.08f * i),
+            Color.White.copy(alpha = 0.28f * i),
+            Color.White.copy(alpha = 0.09f * i),
             Color.Transparent,
-            Color.Black.copy(alpha = 0.04f * i)
+            Color.Transparent,
+            Color.Black.copy(alpha = 0.05f * i)
         )
+    )
+
+    // Crisp glint along the very top lip of the glass — the single detail that most
+    // sells the "polished pane" look. Concentrated in the top ~12% then gone.
+    val topSheen = Brush.verticalGradient(
+        0.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.30f else 0.42f) * i),
+        0.12f to Color.Transparent
     )
 
     val borderBrush = Brush.verticalGradient(
         colors = if (isDarkTheme) listOf(
-            Color.White.copy(alpha = 0.35f * i),
-            Color.White.copy(alpha = 0.10f * i),
+            Color.White.copy(alpha = 0.42f * i),
+            Color.White.copy(alpha = 0.12f * i),
             Color.White.copy(alpha = 0.05f * i),
-            Color.White.copy(alpha = 0.20f * i)
+            Color.White.copy(alpha = 0.22f * i)
         ) else listOf(
-            Color.White.copy(alpha = 0.45f * i),
-            Color.White.copy(alpha = 0.15f * i),
+            Color.White.copy(alpha = 0.55f * i),
+            Color.White.copy(alpha = 0.18f * i),
             Color.Black.copy(alpha = 0.03f * i),
-            Color.Black.copy(alpha = 0.08f * i)
+            Color.Black.copy(alpha = 0.10f * i)
         )
     )
 
@@ -148,6 +157,14 @@ fun LiquidGlassSurface(
                 .matchParentSize()
                 .clip(shape)
                 .background(specularHighlight)
+        )
+
+        // Layer 4b: Top-edge glint — the bright lip that reads as real glass.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(shape)
+                .background(topSheen)
         )
 
         // Layer 5: Luminous rim

@@ -259,14 +259,32 @@ fun HomeScreen(
                         // Greeting & Profile Header
                         if (uiState.homeSectionsVisibility.contains("greeting")) {
                             item(key = "header", contentType = "header") {
-                                ProfileHeader(
-                                    modifier = Modifier
-                                        .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 4.dp)
-                                        .animateEnter(index = 0),
-                                    avatarUrl = uiState.userAvatarUrl,
-                                    onHistoryClick = onHistoryClick,
-                                    onListenTogetherClick = onListenTogetherClick
-                                )
+                                val glassCfg = com.suvojeet.suvmusic.ui.components.glass.rememberLiquidGlassConfig()
+                                if (glassCfg.enabled) {
+                                    // Frosted top bar to match the Liquid Glass nav bar.
+                                    com.suvojeet.suvmusic.ui.components.glass.GlassCard(
+                                        modifier = Modifier
+                                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
+                                            .animateEnter(index = 0),
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                                    ) {
+                                        ProfileHeader(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            avatarUrl = uiState.userAvatarUrl,
+                                            onHistoryClick = onHistoryClick,
+                                            onListenTogetherClick = onListenTogetherClick
+                                        )
+                                    }
+                                } else {
+                                    ProfileHeader(
+                                        modifier = Modifier
+                                            .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 4.dp)
+                                            .animateEnter(index = 0),
+                                        avatarUrl = uiState.userAvatarUrl,
+                                        onHistoryClick = onHistoryClick,
+                                        onListenTogetherClick = onListenTogetherClick
+                                    )
+                                }
                             }
                         }
 

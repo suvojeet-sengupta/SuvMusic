@@ -212,7 +212,7 @@ fun CustomizationScreen(
                     CustomizationSwitchItem(
                         icon = Icons.Default.BlurOn,
                         title = "iOS Liquid Glass",
-                        subtitle = "Apply liquid blur effect to player",
+                        subtitle = "Frosted glass across nav bar, top bar & sheets",
                         checked = iosLiquidGlassEnabled,
                         onCheckedChange = { viewModel.setIosLiquidGlassEnabled(it) }
                     )
@@ -258,10 +258,10 @@ fun CustomizationScreen(
 
     // Mini Player Style Bottom Sheet
     if (showMiniPlayerStyleSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showMiniPlayerStyleSheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -304,10 +304,10 @@ fun CustomizationScreen(
 
     // Home Sections Visibility Bottom Sheet
     if (showHomeSectionsSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showHomeSectionsSheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
