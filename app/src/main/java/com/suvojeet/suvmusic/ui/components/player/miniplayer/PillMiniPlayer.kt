@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -81,6 +82,8 @@ fun PillMiniPlayer(
     val highResThumbnail = remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
+
+    val vinylRotation = rememberMiniPlayerVinylRotation(artworkShape, isPlaying)
 
     @Composable
     fun MiniPlayerButton(
@@ -193,6 +196,7 @@ fun PillMiniPlayer(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(4.dp)
+                            .graphicsLayer { rotationZ = vinylRotation() }
                             .clip(artShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center

@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,8 @@ fun StandardMiniPlayer(
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
 
+    val vinylRotation = rememberMiniPlayerVinylRotation(artworkShape, isPlaying)
+
     Surface(
         modifier = modifier
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -97,6 +100,7 @@ fun StandardMiniPlayer(
                     Box(
                         modifier = Modifier
                             .size(42.dp)
+                            .graphicsLayer { rotationZ = vinylRotation() }
                             .clip(artShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center

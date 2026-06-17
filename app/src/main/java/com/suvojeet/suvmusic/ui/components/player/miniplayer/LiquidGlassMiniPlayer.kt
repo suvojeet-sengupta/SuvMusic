@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -89,6 +90,8 @@ fun LiquidGlassMiniPlayer(
     val highResThumbnail = remember(song.thumbnailUrl) {
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
+
+    val vinylRotation = rememberMiniPlayerVinylRotation(artworkShape, isPlaying)
 
     @Composable
     fun GlassButton(
@@ -160,6 +163,7 @@ fun LiquidGlassMiniPlayer(
                     modifier = Modifier
                         .size(48.dp)
                         .padding(4.dp)
+                        .graphicsLayer { rotationZ = vinylRotation() }
                         .clip(artShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center

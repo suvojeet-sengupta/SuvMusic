@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +70,8 @@ fun YTMusicMiniPlayer(
         com.suvojeet.suvmusic.util.ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl, size = 544)
     }
 
+    val vinylRotation = rememberMiniPlayerVinylRotation(artworkShape, isPlaying)
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -101,6 +104,7 @@ fun YTMusicMiniPlayer(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
+                            .graphicsLayer { rotationZ = vinylRotation() }
                             .clip(artShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
