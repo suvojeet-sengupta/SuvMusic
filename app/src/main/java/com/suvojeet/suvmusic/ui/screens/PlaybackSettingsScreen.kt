@@ -543,10 +543,10 @@ fun PlaybackSettingsScreen(
 
     // Audio Quality Bottom Sheet
     if (showAudioQualitySheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showAudioQualitySheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -589,10 +589,10 @@ fun PlaybackSettingsScreen(
     
     // Video Quality Bottom Sheet
     if (showVideoQualitySheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showVideoQualitySheet = false },
             sheetState = videoSheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -634,10 +634,10 @@ fun PlaybackSettingsScreen(
     }
 
     if (showDownloadQualitySheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showDownloadQualitySheet = false },
             sheetState = downloadSheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -687,10 +687,10 @@ fun PlaybackSettingsScreen(
 
     // Music Source Bottom Sheet
     if (showMusicSourceSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showMusicSourceSheet = false },
             sheetState = musicSourceSheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -747,10 +747,10 @@ fun PlaybackSettingsScreen(
 
     // Double Tap Seek Sheet
     if (showDoubleTapSeekSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showDoubleTapSeekSheet = false },
             sheetState = doubleTapSeekSheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -795,10 +795,10 @@ fun PlaybackSettingsScreen(
     
     // Haptics Mode Bottom Sheet
     if (showHapticsModeSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showHapticsModeSheet = false },
             sheetState = hapticsModeSheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -856,10 +856,10 @@ fun PlaybackSettingsScreen(
 
     // Haptics Intensity Bottom Sheet
     if (showHapticsIntensitySheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showHapticsIntensitySheet = false },
             sheetState = hapticsIntensitySheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {

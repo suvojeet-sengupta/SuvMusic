@@ -408,9 +408,9 @@ fun LibraryScreen(
 
     // Add Menu Bottom Sheet
     if (showAddMenu) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showAddMenu = false },
-            containerColor = MaterialTheme.colorScheme.surface,
+            fallbackContainerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(

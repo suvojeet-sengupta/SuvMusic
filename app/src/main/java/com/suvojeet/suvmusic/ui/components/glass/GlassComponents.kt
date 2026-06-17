@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +107,7 @@ fun GlassModalBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
     shape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     fallbackContainerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val glass = rememberLiquidGlassConfig()
@@ -115,6 +118,7 @@ fun GlassModalBottomSheet(
             sheetState = sheetState,
             shape = shape,
             containerColor = fallbackContainerColor,
+            contentColor = contentColor,
             content = content
         )
         return
@@ -138,9 +142,11 @@ fun GlassModalBottomSheet(
                 isDarkTheme = glass.isDarkTheme,
                 drawShadow = false
             ) {}
-            Column(modifier = Modifier.fillMaxWidth()) {
-                BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
-                content()
+            CompositionLocalProvider(LocalContentColor provides contentColor) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    content()
+                }
             }
         }
     }

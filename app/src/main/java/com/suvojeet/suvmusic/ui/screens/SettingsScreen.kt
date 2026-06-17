@@ -670,10 +670,10 @@ fun SettingsScreen(
 
     // Accounts Bottom Sheet
     if (showAccountsSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showAccountsSheet = false },
             sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
@@ -882,9 +882,9 @@ fun SettingsScreen(
 
     // Update Channel Bottom Sheet
     if (showUpdateChannelSheet) {
-        ModalBottomSheet(
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
             onDismissRequest = { showUpdateChannelSheet = false },
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
