@@ -1,7 +1,12 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -423,12 +428,12 @@ fun LyricsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
                         .background(
                             animatedTextColor.copy(alpha = 0.04f),
-                            RoundedCornerShape(32.dp)
+                            RoundedCornerShape(28.dp)
                         )
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
                 ) {
                     var sliderPosition by remember { mutableStateOf<Float?>(null) }
                     val progress = sliderPosition ?: (currentTimeProvider().toFloat() / duration.toFloat()).coerceIn(0f, 1f)
@@ -474,55 +479,55 @@ fun LyricsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
+                            .padding(top = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         BounceButton(
                             onClick = onPrevious,
-                            modifier = Modifier.size(52.dp)
+                            modifier = Modifier.size(48.dp)
                         ) { isPressed ->
                             Icon(
                                 imageVector = Icons.Default.SkipPrevious,
                                 contentDescription = "Previous",
                                 tint = animatedTextColor.copy(alpha = if (isPressed) 0.6f else 0.9f),
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(30.dp)
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.width(32.dp))
-                        
+
+                        Spacer(modifier = Modifier.width(28.dp))
+
                         BounceButton(
                             onClick = onPlayPause,
-                            modifier = Modifier.size(72.dp),
-                            shape = RoundedCornerShape(24.dp)
+                            modifier = Modifier.size(60.dp),
+                            shape = RoundedCornerShape(20.dp)
                         ) { isPressed ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(animatedTextColor, RoundedCornerShape(24.dp)),
+                                    .background(animatedTextColor, RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
                                     tint = animatedBgColor,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                         }
-                        
-                        Spacer(modifier = Modifier.width(32.dp))
-                        
+
+                        Spacer(modifier = Modifier.width(28.dp))
+
                         BounceButton(
                             onClick = onNext,
-                            modifier = Modifier.size(52.dp)
+                            modifier = Modifier.size(48.dp)
                         ) { isPressed ->
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
                                 tint = animatedTextColor.copy(alpha = if (isPressed) 0.6f else 0.9f),
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(30.dp)
                             )
                         }
                     }
@@ -1127,7 +1132,9 @@ fun LyricsList(
                 
                 // Check if we should auto-scroll
                 val timeSinceInteraction = System.currentTimeMillis() - lastUserInteractionTime
-                val shouldAutoScroll = timeSinceInteraction > 2000 // Faster auto-resume
+                // Comfortable read-ahead window: let the user browse for a few seconds before
+                // snapping back. The "Resume" pill gives instant control in the meantime.
+                val shouldAutoScroll = timeSinceInteraction > 4000
                 
                 if (shouldAutoScroll) {
                     try {
@@ -1147,6 +1154,14 @@ fun LyricsList(
                     }
                 }
             }
+        }
+    }
+
+    // Whether the currently-playing line is on screen. Drives the "Resume" pill so the user
+    // can jump straight back after scrolling ahead to read.
+    val isActiveLineVisible by remember {
+        derivedStateOf {
+            activeLineIndex < 0 || listState.layoutInfo.visibleItemsInfo.any { it.index == activeLineIndex }
         }
     }
 
@@ -1353,6 +1368,57 @@ fun LyricsList(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        // "Resume" pill — floats up when the playing line scrolls off screen, so the user can
+        // read ahead freely and jump back to the current line with one tap.
+        AnimatedVisibility(
+            visible = lyrics.isSynced && !isSelectionMode && activeLineIndex >= 0 && !isActiveLineVisible,
+            enter = fadeIn() + scaleIn(initialScale = 0.85f),
+            exit = fadeOut() + scaleOut(targetScale = 0.85f),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable {
+                        coroutineScope.launch {
+                            try {
+                                isAutoScrolling = true
+                                val viewportHeight = listState.layoutInfo.viewportSize.height
+                                val topOffset = viewportHeight / 3
+                                listState.animateScrollToItem(
+                                    index = activeLineIndex.coerceAtLeast(0),
+                                    scrollOffset = -topOffset
+                                )
+                            } catch (e: Exception) {
+                                // Ignore transient layout races
+                            } finally {
+                                isAutoScrolling = false
+                                lastUserInteractionTime = 0L // resume normal auto-scroll
+                            }
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Resume",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
