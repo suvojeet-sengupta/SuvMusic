@@ -125,3 +125,51 @@ data class RemoteAudioDownloadUrlDto(
     @SerializedName("quality") val quality: String? = null,
     @SerializedName("url") val url: String? = null
 )
+
+@Serializable
+data class RemoteAudioLyricsResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: RemoteAudioLyricsDto? = null
+)
+
+@Serializable
+data class RemoteAudioLyricsDto(
+    @SerializedName("lyrics") val lyrics: String? = null,
+    @SerializedName("copyright") val copyright: String? = null,
+    @SerializedName("snippet") val snippet: String? = null
+)
+
+@Serializable
+data class RemoteAudioArtistSearchResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: RemoteAudioArtistSearchData? = null
+)
+
+@Serializable
+data class RemoteAudioArtistSearchData(
+    @SerializedName("results") val results: List<RemoteAudioArtistDto>? = null
+)
+
+@Serializable
+data class RemoteAudioArtistResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: RemoteAudioArtistDetailDto? = null
+)
+
+@Serializable
+data class RemoteAudioArtistDetailDto(
+    @SerializedName("id") val id: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("fanCount") val fanCount: String? = null,
+    @SerializedName("bio") val bio: List<RemoteAudioArtistBioDto>? = null,
+    @SerializedName("wiki") val wiki: String? = null,
+    @SerializedName("image") val image: List<RemoteAudioImageDto>? = null,
+    @SerializedName("topSongs") val topSongs: List<RemoteAudioSongDto>? = null,
+    @SerializedName("topAlbums") val topAlbums: List<RemoteAudioAlbumDto>? = null
+)
+
+@Serializable
+data class RemoteAudioArtistBioDto(
+    @SerializedName("text") val text: String? = null,
+    @SerializedName("title") val title: String? = null
+)
