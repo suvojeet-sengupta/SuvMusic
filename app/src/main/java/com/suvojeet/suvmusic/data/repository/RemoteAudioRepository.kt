@@ -85,7 +85,12 @@ class RemoteAudioRepository @Inject constructor(
     @Volatile private var rateLimitedUntilMs = 0L
     @Volatile private var rateLimitStreak = 0
 
-    private fun isRateLimited(): Boolean = System.currentTimeMillis() < rateLimitedUntilMs
+    private fun isRateLimited(): Boolean {
+        if (com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiStatus.isPrimaryApiWorking.value) {
+            return false
+        }
+        return System.currentTimeMillis() < rateLimitedUntilMs
+    }
 
     @Synchronized
     private fun noteRateLimited() {
