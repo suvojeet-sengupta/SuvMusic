@@ -214,7 +214,7 @@ class RemoteAudioRepository @Inject constructor(
     }
     
     /**
-     * Search for artists on RemoteAudio (Legacy fallback for rich profiles).
+     * Search for artists on RemoteAudio.
      */
     suspend fun searchArtists(query: String): List<com.suvojeet.suvmusic.core.model.Artist> = withContext(Dispatchers.IO) {
         if (isRateLimited()) {
@@ -222,32 +222,25 @@ class RemoteAudioRepository @Inject constructor(
             return@withContext emptyList()
         }
         try {
-            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_SEARCH_ARTIST}&_format=json&n=5&q=${query.encodeUrl()}"
-            val response = makeRequest(url)
-
-            val json = JsonParser.parseString(response).asJsonObject
-            val results = json.getAsJsonArray("results") ?: return@withContext emptyList()
-
-            results.mapNotNull { element ->
-                val artist = element.asJsonObject
-                val id = artist.get("id")?.asString ?: return@mapNotNull null
-                val name = artist.get("name")?.asString ?: artist.get("title")?.asString ?: ""
-                val image = artist.get("image")?.asString?.toHighResImage()
-                
+            val response = apiService.searchArtists(query, limit = 5)
+            noteSuccess()
+            response.data?.results?.mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
                 com.suvojeet.suvmusic.core.model.Artist(
                     id = id,
-                    name = name.decodeHtml(),
-                    thumbnailUrl = image
+                    name = (dto.name ?: "").decodeHtml(),
+                    thumbnailUrl = dto.image?.lastOrNull()?.url
                 )
-            }
+            } ?: emptyList()
         } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "searchArtists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
             emptyList()
         }
     }
 
     /**
-     * Get detailed artist profile (Legacy internal API).
+     * Get detailed artist profile.
      */
     suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {
         if (isRateLimited()) {
@@ -255,39 +248,41 @@ class RemoteAudioRepository @Inject constructor(
             return@withContext null
         }
         try {
-            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_WEBAPI_GET}&token=$artistId&type=artist&p=1&n_song=20&n_album=20&sub_type=songs&category=&sort_order=&includeMetaTags=0&ctx=web6dot0&api_version=4&_format=json&_marker=0"
-            val response = makeRequest(url)
-            val json = JsonParser.parseString(response).asJsonObject
-            
-            val name = json.get("name")?.asString ?: "Unknown Artist"
-            val image = json.get("image")?.asString?.toHighResImage()
-            val fans = json.get("fan_count")?.asString
-            val description = json.get("wiki")?.asString?.decodeHtml()
-            
-            // Songs
-            val topSongs = json.getAsJsonArray("topSongs")?.mapNotNull { parseSong(it.asJsonObject) } ?: emptyList()
-            
-            // Albums
-            val topAlbums = json.getAsJsonArray("topAlbums")?.mapNotNull { element ->
-                val obj = element.asJsonObject
-                val albumId = obj.get("id")?.asString ?: return@mapNotNull null
-                val title = obj.get("title")?.asString ?: obj.get("name")?.asString ?: ""
-                val albumImage = obj.get("image")?.asString?.toHighResImage()
-                val year = obj.get("year")?.asString
-                
-                com.suvojeet.suvmusic.core.model.Album(albumId, title.decodeHtml(), name.decodeHtml(), albumImage, year)
+            val response = apiService.getArtist(artistId, songCount = 20, albumCount = 20)
+            noteSuccess()
+            val data = response.data ?: return@withContext null
+            val name = data.name ?: "Unknown Artist"
+            val image = data.image?.lastOrNull()?.url
+            val fans = data.fanCount
+            val description = data.wiki?.decodeHtml()
+
+            val topSongs = data.topSongs?.mapNotNull { parseSongDto(it) } ?: emptyList()
+
+            val topAlbums = data.topAlbums?.mapNotNull { albumDto ->
+                val albumId = albumDto.id ?: return@mapNotNull null
+                val title = albumDto.name ?: "Album"
+                val albumImage = albumDto.image?.lastOrNull()?.url
+                val year = albumDto.year
+                com.suvojeet.suvmusic.core.model.Album(
+                    id = albumId,
+                    title = title.decodeHtml(),
+                    artist = name.decodeHtml(),
+                    thumbnailUrl = albumImage,
+                    year = year
+                )
             } ?: emptyList()
-            
+
             com.suvojeet.suvmusic.core.model.Artist(
                 id = artistId,
                 name = name.decodeHtml(),
                 thumbnailUrl = image,
                 description = description,
-                subscribers = if (fans != null) "$fans Fans" else null,
+                subscribers = if (!fans.isNullOrBlank()) "$fans Fans" else null,
                 songs = topSongs,
                 albums = topAlbums
             )
         } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "getArtist($artistId) failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
@@ -558,13 +553,16 @@ class RemoteAudioRepository @Inject constructor(
      * Get plain lyrics from RemoteAudio (internal fallback).
      */
     suspend fun getLyricsFromRemote(songId: String): String? = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getLyricsFromRemote($songId) SKIP backoff active")
+            return@withContext null
+        }
         try {
-            val url = "$BASE_URL?${RemoteConstants.PARAM_CALL}${RemoteConstants.EP_LYRICS}&_format=json&lyrics_id=$songId"
-            val response = makeRequest(url)
-            
-            val json = JsonParser.parseString(response).asJsonObject
-            json.get("lyrics")?.asString
+            val response = apiService.getSongLyrics(songId)
+            noteSuccess()
+            response.data?.lyrics
         } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
             null
         }
     }
