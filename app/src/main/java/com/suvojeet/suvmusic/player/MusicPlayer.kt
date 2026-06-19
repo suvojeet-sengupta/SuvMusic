@@ -1339,13 +1339,19 @@ class MusicPlayer @Inject constructor(
             // confident match do we spend a second "title only" search (helps when the
             // YouTube artist string is noisy). Both go through the shared 429 backoff
             // gate and the search cache, so the second query is cheap on a cache hit.
-            val primaryQuery = "${song.title} ${song.artist}".trim()
+            val cleanTitle = cleanSongTitle(song.title)
+            val cleanArtist = cleanSongArtist(song.artist)
+            val primaryQuery = if (cleanArtist.isNotEmpty()) "$cleanTitle $cleanArtist" else cleanTitle
             var match = pickBestRemoteMatch(song, searchTyped(primaryQuery))
             if (match == null) {
-                val titleOnly = song.title.trim()
+                val titleOnly = cleanTitle
                 if (titleOnly.isNotEmpty() && !titleOnly.equals(primaryQuery, ignoreCase = true)) {
                     match = pickBestRemoteMatch(song, searchTyped(titleOnly))
                 }
+            }
+            // Save the matched remote song id so lyrics repository can also fetch lyrics from HQ Audio Source
+            if (match != null) {
+                sessionManager.putMatchedRemoteSongId(song.id, match.id)
             }
             // Use the 320 kbps stream URL the search result already carries; only fall
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
@@ -3184,5 +3190,40 @@ class MusicPlayer @Inject constructor(
 
             player.trackSelectionParameters = newParameters
         }
+    }
+
+    private fun cleanSongTitle(title: String): String {
+        var clean = title
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val delimiters = listOf("|", "-", "–", "—", "•", "/")
+        for (delim in delimiters) {
+            if (clean.contains(delim)) {
+                val parts = clean.split(delim)
+                if (parts.isNotEmpty() && parts[0].trim().isNotEmpty()) {
+                    clean = parts[0]
+                    break
+                }
+            }
+        }
+        val junkWords = Regex("(?i)\\b(official|video|audio|lyrics|lyric|lyrical|full|song|songs|hd|4k|mv|remastered|version|original|soundtrack|ost|from|movie|presents|presents:|hits|visualizer|lq)\\b")
+        clean = clean.replace(junkWords, " ")
+        return clean.replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun cleanSongArtist(artist: String): String {
+        var clean = artist
+        clean = clean.replace(Regex("(?i)-\\s*Topic"), " ")
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val separators = listOf(",", "&", "feat.", "feat", "ft.", "ft")
+        for (sep in separators) {
+            val idx = clean.toLowerCase().indexOf(sep)
+            if (idx != -1) {
+                val part = clean.substring(0, idx).trim()
+                if (part.isNotEmpty()) {
+                    clean = part
+                }
+            }
+        }
+        return clean.replace(Regex("\\s+"), " ").trim()
     }
 }

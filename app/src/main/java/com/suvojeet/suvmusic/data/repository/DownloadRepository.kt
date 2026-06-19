@@ -870,7 +870,18 @@ class DownloadRepository @Inject constructor(
                             val url = remoteAudioRepository.getStreamUrl(song.id, 320)
                             if (url != null) url to "m4a" else null
                         }
-                        else -> youTubeRepository.getStreamUrlForDownload(song.id)
+                        else -> {
+                            val preferRemote = sessionManager.isPreferRemoteAudio()
+                            val hqUrl = if (preferRemote && (song.source == SongSource.YOUTUBE || song.source == SongSource.YOUTUBE_MUSIC)) {
+                                resolveHybridRemoteStream(song)
+                            } else null
+
+                            if (hqUrl != null) {
+                                hqUrl to "m4a"
+                            } else {
+                                youTubeRepository.getStreamUrlForDownload(song.id)
+                            }
+                        }
                     }
                     if (streamResult != null) break
                     if (streamAttempt < maxStreamAttempts) {
@@ -1615,5 +1626,120 @@ class DownloadRepository @Inject constructor(
     fun downloadPlaylist(playlist: com.suvojeet.suvmusic.core.model.Playlist) {
         val songsToDownload = playlist.songs.map { song -> song.copy(customFolderPath = playlist.title, collectionId = playlist.id, collectionName = playlist.title, thumbnailUrl = song.thumbnailUrl ?: playlist.thumbnailUrl) }
         downloadSongs(songsToDownload)
+    }
+
+    private suspend fun resolveHybridRemoteStream(song: Song): String? {
+        val cleanTitle = cleanSongTitle(song.title)
+        val cleanArtist = cleanSongArtist(song.artist)
+        val query = if (cleanArtist.isNotEmpty()) "$cleanTitle $cleanArtist" else cleanTitle
+
+        suspend fun searchTyped(q: String): List<Song> {
+            val res = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                remoteAudioRepository.searchResult(q)
+            }
+            return when (res) {
+                is com.suvojeet.suvmusic.core.model.AppResult.Success -> res.data
+                else -> emptyList()
+            }
+        }
+
+        return try {
+            var match = pickBestRemoteMatch(song, searchTyped(query))
+            if (match == null) {
+                val titleOnly = cleanSongTitle(song.title)
+                if (titleOnly.isNotEmpty() && !titleOnly.equals(query, ignoreCase = true)) {
+                    match = pickBestRemoteMatch(song, searchTyped(titleOnly))
+                }
+            }
+            if (match != null) {
+                sessionManager.putMatchedRemoteSongId(song.id, match.id)
+            }
+            match?.let { it.streamUrl?.takeIf { it.isNotBlank() } ?: remoteAudioRepository.getStreamUrl(it.id) }
+        } catch (e: Exception) {
+            android.util.Log.w("DownloadRepository", "Hybrid RemoteAudio download resolve failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? {
+        if (candidates.isEmpty()) return null
+        val noise = setOf(
+            "official", "video", "audio", "lyrics", "lyric", "full", "song", "songs",
+            "hd", "4k", "mv", "feat", "ft", "with", "the", "remastered", "version",
+            "original", "soundtrack", "ost", "from", "movie"
+        )
+        fun normalize(s: String): Set<String> =
+            s.lowercase()
+                .replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .split(Regex("\\s+"))
+                .filter { it.isNotBlank() && it.length > 1 && it !in noise }
+                .toSet()
+
+        val targetTitle = normalize(song.title)
+        val targetArtist = normalize(song.artist)
+        if (targetTitle.isEmpty()) return null
+
+        var best: Song? = null
+        var bestScore = 0.0
+        for (c in candidates) {
+            val cTitle = normalize(c.title)
+            if (cTitle.isEmpty()) continue
+            val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
+            if (titleOverlap < 0.5) continue
+
+            var durBonus = 0.0
+            if (song.duration > 0 && c.duration > 0) {
+                val diff = kotlin.math.abs(song.duration - c.duration)
+                if (diff > 15_000L) continue
+                durBonus = (1.0 - diff / 15_000.0) * 0.15
+            }
+
+            val cArtist = normalize(c.artist)
+            val artistOverlap = if (targetArtist.isEmpty() || cArtist.isEmpty()) 0.0
+                else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
+
+            val score = titleOverlap + artistOverlap * 0.5 + durBonus
+            if (score > bestScore) {
+                bestScore = score
+                best = c
+            }
+        }
+        return if (bestScore >= 0.6) best else null
+    }
+
+    private fun cleanSongTitle(title: String): String {
+        var clean = title
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val delimiters = listOf("|", "-", "–", "—", "•", "/")
+        for (delim in delimiters) {
+            if (clean.contains(delim)) {
+                val parts = clean.split(delim)
+                if (parts.isNotEmpty() && parts[0].trim().isNotEmpty()) {
+                    clean = parts[0]
+                    break
+                }
+            }
+        }
+        val junkWords = Regex("(?i)\\b(official|video|audio|lyrics|lyric|lyrical|full|song|songs|hd|4k|mv|remastered|version|original|soundtrack|ost|from|movie|presents|presents:|hits|visualizer|lq)\\b")
+        clean = clean.replace(junkWords, " ")
+        return clean.replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun cleanSongArtist(artist: String): String {
+        var clean = artist
+        clean = clean.replace(Regex("(?i)-\\s*Topic"), " ")
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val separators = listOf(",", "&", "feat.", "feat", "ft.", "ft")
+        for (sep in separators) {
+            val idx = clean.toLowerCase().indexOf(sep)
+            if (idx != -1) {
+                val part = clean.substring(0, idx).trim()
+                if (part.isNotEmpty()) {
+                    clean = part
+                }
+            }
+        }
+        return clean.replace(Regex("\\s+"), " ").trim()
     }
 }

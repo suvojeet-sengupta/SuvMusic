@@ -8,7 +8,7 @@ class FallbackRemoteAudioApiService(
 ) : RemoteAudioApiService {
 
     companion object {
-        private const val FAILURE_COOLDOWN_MS = 5 * 60 * 1000L // 5 minutes cooldown before retrying primary
+        private const val FAILURE_COOLDOWN_MS = 60 * 1000L // 1 minute cooldown before retrying primary
         @Volatile
         private var lastFailureTime = 0L
     }
@@ -35,7 +35,10 @@ class FallbackRemoteAudioApiService(
                 else -> true
             }
             if (!success) {
-                throw RuntimeException("Primary API returned success=false")
+                // If it is success=false in response body, the API server is up and responsive.
+                // We should NOT count this as a primary API outage (which sets setPrimaryApiWorking(false) and cooldown).
+                // Just use fallback for this request.
+                return fallbackService.block()
             }
             
             // If primary call succeeded
@@ -45,9 +48,20 @@ class FallbackRemoteAudioApiService(
             }
             result
         } catch (e: Exception) {
-            Log.e("FallbackRemoteAudioApi", "Primary HQ Audio API failed, falling back to legacy API. Error: ${e.message}")
-            lastFailureTime = System.currentTimeMillis()
-            RemoteAudioApiStatus.setPrimaryApiWorking(false)
+            // Only flag primary as down on real server errors/timeouts or network loss, not client errors
+            val isServerErrorOrNetwork = when (e) {
+                is java.io.IOException -> true
+                is retrofit2.HttpException -> e.code() >= 500 || e.code() == 429
+                else -> true // default to true for unknown issues
+            }
+
+            if (isServerErrorOrNetwork) {
+                Log.e("FallbackRemoteAudioApi", "Primary HQ Audio API failed, falling back to legacy API. Error: ${e.message}")
+                lastFailureTime = System.currentTimeMillis()
+                RemoteAudioApiStatus.setPrimaryApiWorking(false)
+            } else {
+                Log.w("FallbackRemoteAudioApi", "Primary HQ Audio API returned client error, using fallback. Error: ${e.message}")
+            }
             
             try {
                 fallbackService.block()

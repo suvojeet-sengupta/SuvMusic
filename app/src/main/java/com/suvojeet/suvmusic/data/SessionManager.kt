@@ -3139,6 +3139,20 @@ class SessionManager @Inject constructor(
         }
     }
 
+    private val matchedRemoteSongIds = java.util.Collections.synchronizedMap(
+        object : java.util.LinkedHashMap<String, String>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>): Boolean = size > 200
+        }
+    )
+
+    fun putMatchedRemoteSongId(ytSongId: String, remoteSongId: String) {
+        matchedRemoteSongIds[ytSongId] = remoteSongId
+    }
+
+    fun getMatchedRemoteSongId(ytSongId: String): String? {
+        return matchedRemoteSongIds[ytSongId]
+    }
+
 }
 
 /**
