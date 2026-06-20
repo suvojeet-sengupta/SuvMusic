@@ -9,6 +9,7 @@ import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
@@ -217,7 +218,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         isLoading = false, 
-                        error = e.message
+                        error = e.toUserFriendlyMessage()
                     ) 
                 }
             }
@@ -232,8 +233,11 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(currentSource = source) }
             
             // 1. Load Cache Synchronously (from DataStore first emission).
-            // Browsing always uses YouTube, regardless of selected music source.
-            val cachedSections = sessionManager.getCachedHomeSections().first()
+            val cachedSections = if (source == MusicSource.REMOTE) {
+                sessionManager.getCachedRemoteAudioHomeSections().first()
+            } else {
+                sessionManager.getCachedHomeSections().first()
+            }
             
             val cachedQuickPicks = sessionManager.getCachedQuickPicks().first()
             
@@ -268,8 +272,11 @@ class HomeViewModel @Inject constructor(
     private suspend fun fetchFreshData(source: MusicSource) {
         try {
             _uiState.update { it.copy(isRefreshing = true) }
-            // Browsing is always YouTube — HQ Audio source only swaps playback streams.
-            val sections = youTubeRepository.getHomeSections()
+            val sections = if (source == MusicSource.REMOTE) {
+                remoteAudioRepository.getHomeSections()
+            } else {
+                youTubeRepository.getHomeSections()
+            }
             
             if (sections.isNotEmpty()) {
                 _uiState.update { 
@@ -283,15 +290,18 @@ class HomeViewModel @Inject constructor(
                 }
                 sessionManager.updateLastHomeFetchTime(source)
 
-                // Always cache to the YouTube bucket — browsing is YouTube-only now.
-                sessionManager.saveHomeCache(sections)
+                if (source == MusicSource.REMOTE) {
+                    sessionManager.saveRemoteAudioHomeCache(sections)
+                } else {
+                    sessionManager.saveHomeCache(sections)
+                }
             } else {
                 _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             }
         } catch (e: Exception) {
             _uiState.update { 
                 it.copy(
-                    error = if (it.homeSections.isEmpty()) e.message ?: "Failed to load content" else null,
+                    error = if (it.homeSections.isEmpty()) e.toUserFriendlyMessage() else null,
                     isLoading = false,
                     isRefreshing = false
                 ) 

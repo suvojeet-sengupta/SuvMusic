@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.BrowseCategory
@@ -236,7 +237,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        error = e.message,
+                        error = e.toUserFriendlyMessage(),
                         isLoading = false
                     )
                 }
@@ -484,7 +485,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = e.message,
+                        error = e.toUserFriendlyMessage(),
                         isLoading = false
                     )
                 }

@@ -7,6 +7,7 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.CancellationException
+import androidx.media3.common.PlaybackException
 
 /**
  * Maps a platform [Throwable] to a typed [AppError].
@@ -43,4 +44,39 @@ fun Int.toHttpError(detail: String? = null): AppError = when (this) {
     429 -> AppError.RateLimited(detail ?: "HTTP $this")
     in 500..599 -> AppError.Upstream(detail ?: "HTTP $this")
     else -> AppError.Http(this, detail)
+}
+
+/** Get a user-friendly error message for the given [AppError]. */
+fun AppError.toUserFriendlyMessage(): String = when (this) {
+    is AppError.NoNetwork -> "No network connection. Please check your internet connection."
+    is AppError.Timeout -> "Connection timed out. Your internet connection might be slow."
+    is AppError.RateLimited -> "Too many requests. Please wait a moment."
+    is AppError.AuthExpired -> "Session expired. Please log in again."
+    is AppError.Upstream -> "The music server is experiencing issues. Please try again later."
+    is AppError.Parse -> "Could not read music data. (Format shift)"
+    is AppError.Http -> "Server returned error (Code: $code)."
+    is AppError.Unknown -> "Playback error: ${detail ?: "Unknown issue"}"
+}
+
+/** Get a user-friendly error message for the given [Throwable]. */
+fun Throwable.toUserFriendlyMessage(): String {
+    if (this is PlaybackException) {
+        val isAudioSinkError = this.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                             this.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED
+        val isDecoderError = this.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                           this.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ||
+                           this.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                           this.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED
+        when {
+            isAudioSinkError -> return "Audio output error. Please check your audio output device."
+            isDecoderError -> return "Audio format not supported or decoding failed."
+        }
+    }
+
+    val cause = this.cause
+    if (cause != null && cause != this) {
+        return cause.toUserFriendlyMessage()
+    }
+
+    return this.toAppError().toUserFriendlyMessage()
 }

@@ -13,6 +13,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.core.model.DownloadState
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.PlayerState
@@ -1257,7 +1258,7 @@ class MusicPlayer @Inject constructor(
                                  mediaController?.seekTo(resumePosition)
                              }
                         } catch (e: Exception) {
-                             _playerState.update { it.copy(error = "Playback failed: ${error.message}", isLoading = false) }
+                             _playerState.update { it.copy(error = "Playback failed: ${e.toUserFriendlyMessage()}", isLoading = false) }
                         }
                     }
                     return
@@ -1266,7 +1267,7 @@ class MusicPlayer @Inject constructor(
 
             _playerState.update { 
                 it.copy(
-                    error = error.message ?: "Playback error",
+                    error = error.toUserFriendlyMessage(),
                     isLoading = false
                 )
             }
@@ -1755,7 +1756,7 @@ class MusicPlayer @Inject constructor(
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     android.util.Log.e("MusicPlayer", "Resolution failed: ${e.message}", e)
-                    _playerState.update { it.copy(error = e.message, isLoading = false) }
+                    _playerState.update { it.copy(error = e.toUserFriendlyMessage(), isLoading = false) }
                 }
             }
         }
