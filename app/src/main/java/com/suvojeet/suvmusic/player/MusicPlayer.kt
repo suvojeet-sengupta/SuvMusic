@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.selects.select
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
@@ -1497,12 +1498,76 @@ class MusicPlayer @Inject constructor(
                     !_playerState.value.isVideoMode &&
                     sessionManager.getMusicSource() == MusicSource.REMOTE
                 ) {
-                    streamUrl = resolveHybridRemoteStream(song)
-                    if (streamUrl != null) {
-                        android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from RemoteAudio HQ")
-                    } else {
-                        android.util.Log.w("MusicPlayer", "Hybrid: no HQ match for '${song.title}' - ${song.artist}; falling back to YouTube")
-                        notifyHqFallbackIfNeeded(song)
+                    coroutineScope {
+                        val remoteJob = async(Dispatchers.IO) {
+                            try {
+                                resolveHybridRemoteStream(song)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                        val ytJob = async(Dispatchers.IO) {
+                            try {
+                                youTubeRepository.getStreamUrl(song.id)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        // Prefer Remote (HQ) but start playback as fast as possible.
+                        // Wait for Remote with a grace period of 800ms.
+                        val resolvedUrl = select<String?> {
+                            remoteJob.onAwait { remote ->
+                                if (remote != null) {
+                                    android.util.Log.d("MusicPlayer", "Race: Remote resolved first or fast")
+                                    remote
+                                } else {
+                                    null
+                                }
+                            }
+                            onTimeout(800L) {
+                                if (ytJob.isCompleted) {
+                                    val ytUrl = ytJob.await()
+                                    if (ytUrl != null) {
+                                        android.util.Log.d("MusicPlayer", "Race: Remote took too long, using YouTube")
+                                        remoteJob.cancel()
+                                        notifyHqFallbackIfNeeded(song)
+                                        ytUrl
+                                    } else {
+                                        null
+                                    }
+                                } else {
+                                    null
+                                }
+                            }
+                        }
+
+                        if (resolvedUrl != null) {
+                            streamUrl = resolvedUrl
+                        } else {
+                            // If we didn't resolve remoteUrl within 800ms grace period, wait for whichever resolves first
+                            val firstResolved = select<Pair<String?, Boolean>> {
+                                remoteJob.onAwait { remote ->
+                                    if (remote != null) Pair(remote, true) else Pair(null, false)
+                                }
+                                ytJob.onAwait { yt ->
+                                    if (yt != null) Pair(yt, false) else Pair(null, false)
+                                }
+                            }
+                            if (firstResolved.first != null) {
+                                streamUrl = firstResolved.first
+                                if (firstResolved.second) {
+                                    android.util.Log.d("MusicPlayer", "Race: Remote resolved eventually")
+                                } else {
+                                    android.util.Log.d("MusicPlayer", "Race: YouTube resolved first after timeout fallback")
+                                    notifyHqFallbackIfNeeded(song)
+                                }
+                            }
+                        }
+
+                        // Cancel outstanding tasks to release network/CPU resources
+                        remoteJob.cancel()
+                        ytJob.cancel()
                     }
                 }
 
