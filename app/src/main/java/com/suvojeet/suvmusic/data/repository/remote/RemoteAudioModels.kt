@@ -173,3 +173,25 @@ data class RemoteAudioArtistBioDto(
     @SerializedName("text") val text: String? = null,
     @SerializedName("title") val title: String? = null
 )
+
+@Serializable
+data class RemoteAudioAlbumSearchResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: RemoteAudioAlbumSearchData? = null
+)
+
+@Serializable
+data class RemoteAudioAlbumSearchData(
+    @SerializedName("results") val results: List<RemoteAudioAlbumDto>? = null
+)
+
+@Serializable
+data class RemoteAudioPlaylistSearchResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("data") val data: RemoteAudioPlaylistSearchData? = null
+)
+
+@Serializable
+data class RemoteAudioPlaylistSearchData(
+    @SerializedName("results") val results: List<RemoteAudioPlaylistDto>? = null
+)

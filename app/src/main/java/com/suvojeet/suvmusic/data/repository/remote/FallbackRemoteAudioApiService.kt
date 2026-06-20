@@ -79,4 +79,12 @@ class FallbackRemoteAudioApiService(
     override suspend fun getSongLyrics(songId: String): RemoteAudioLyricsResponse {
         return executeWithFallback { getSongLyrics(songId) }
     }
+
+    override suspend fun searchAlbums(query: String, page: Int, limit: Int): RemoteAudioAlbumSearchResponse {
+        return executeWithFallback { searchAlbums(query, page, limit) }
+    }
+
+    override suspend fun searchPlaylists(query: String, page: Int, limit: Int): RemoteAudioPlaylistSearchResponse {
+        return executeWithFallback { searchPlaylists(query, page, limit) }
+    }
 }

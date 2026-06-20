@@ -240,6 +240,63 @@ class RemoteAudioRepository @Inject constructor(
     }
 
     /**
+     * Search for albums on RemoteAudio.
+     */
+    suspend fun searchAlbums(query: String): List<com.suvojeet.suvmusic.core.model.Album> = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "searchAlbums('$query') SKIP backoff active")
+            return@withContext emptyList()
+        }
+        try {
+            val response = apiService.searchAlbums(query, limit = 20)
+            noteSuccess()
+            response.data?.results?.mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
+                com.suvojeet.suvmusic.core.model.Album(
+                    id = id,
+                    title = (dto.name ?: "").decodeHtml(),
+                    artist = "",
+                    thumbnailUrl = dto.image?.lastOrNull()?.url,
+                    year = dto.year
+                )
+            } ?: emptyList()
+        } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
+            android.util.Log.e("RemoteAudio", "searchAlbums('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Search for playlists on RemoteAudio.
+     */
+    suspend fun searchPlaylists(query: String): List<com.suvojeet.suvmusic.core.model.Playlist> = withContext(Dispatchers.IO) {
+        if (isRateLimited()) {
+            android.util.Log.w("RemoteAudio", "searchPlaylists('$query') SKIP backoff active")
+            return@withContext emptyList()
+        }
+        try {
+            val response = apiService.searchPlaylists(query, limit = 20)
+            noteSuccess()
+            response.data?.results?.mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
+                com.suvojeet.suvmusic.core.model.Playlist(
+                    id = id,
+                    title = (dto.name ?: "").decodeHtml(),
+                    author = "Featured",
+                    thumbnailUrl = dto.image?.lastOrNull()?.url,
+                    songs = emptyList()
+                )
+            } ?: emptyList()
+        } catch (e: Exception) {
+            if (is429(e)) noteRateLimited()
+            android.util.Log.e("RemoteAudio", "searchPlaylists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
+            emptyList()
+        }
+    }
+
+
+    /**
      * Get detailed artist profile.
      */
     suspend fun getArtist(artistId: String): com.suvojeet.suvmusic.core.model.Artist? = withContext(Dispatchers.IO) {

@@ -59,4 +59,18 @@ interface RemoteAudioApiService {
     suspend fun getSongLyrics(
         @Path("id") songId: String
     ): RemoteAudioLyricsResponse
+
+    @GET("search/albums")
+    suspend fun searchAlbums(
+        @Query("query") query: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): RemoteAudioAlbumSearchResponse
+
+    @GET("search/playlists")
+    suspend fun searchPlaylists(
+        @Query("query") query: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): RemoteAudioPlaylistSearchResponse
 }
