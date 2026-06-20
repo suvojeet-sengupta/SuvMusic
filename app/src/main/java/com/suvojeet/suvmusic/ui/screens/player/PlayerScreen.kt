@@ -363,7 +363,7 @@ fun PlayerScreen(
 
             val playerMainContent: @Composable () -> Unit = {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val useWideLayout = maxWidth > 500.dp || isExpanded
+                    val useWideLayout = maxWidth > 520.dp
                     val isCompactHeight = maxHeight < 600.dp
 
                     when (playerStyle) {
@@ -583,10 +583,22 @@ fun AdaptiveSupportingContent(
             )
         }
         else -> {
-            // Placeholder or empty state for supporting pane when nothing is selected
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Select Queue or Lyrics to view here", color = dominantColors.onBackground.copy(alpha = 0.5f))
-            }
+            // Default to play queue in supporting pane when no specific overlay (like Lyrics or Related) is selected
+            ModernQueueView(
+                currentSong = song, queue = playerState.queue, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
+                currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
+                isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
+                onBack = { onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
+                onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
+                onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
+                onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved") } },
+                onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
+                onPlayNext = { playerViewModel.playNext(it) },
+                onAddToQueue = { playerViewModel.addToQueue(it) },
+                onClearQueue = { playerViewModel.clearQueue() },
+                dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
+            )
         }
     }
 }
