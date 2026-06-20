@@ -233,11 +233,8 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(currentSource = source) }
             
             // 1. Load Cache Synchronously (from DataStore first emission).
-            val cachedSections = if (source == MusicSource.REMOTE) {
-                sessionManager.getCachedRemoteAudioHomeSections().first()
-            } else {
-                sessionManager.getCachedHomeSections().first()
-            }
+            // Browsing always uses YouTube, regardless of selected music source.
+            val cachedSections = sessionManager.getCachedHomeSections().first()
             
             val cachedQuickPicks = sessionManager.getCachedQuickPicks().first()
             
@@ -272,11 +269,8 @@ class HomeViewModel @Inject constructor(
     private suspend fun fetchFreshData(source: MusicSource) {
         try {
             _uiState.update { it.copy(isRefreshing = true) }
-            val sections = if (source == MusicSource.REMOTE) {
-                remoteAudioRepository.getHomeSections()
-            } else {
-                youTubeRepository.getHomeSections()
-            }
+            // Browsing always uses YouTube — HQ Audio source only swaps playback streams.
+            val sections = youTubeRepository.getHomeSections()
             
             if (sections.isNotEmpty()) {
                 _uiState.update { 
@@ -290,11 +284,8 @@ class HomeViewModel @Inject constructor(
                 }
                 sessionManager.updateLastHomeFetchTime(source)
 
-                if (source == MusicSource.REMOTE) {
-                    sessionManager.saveRemoteAudioHomeCache(sections)
-                } else {
-                    sessionManager.saveHomeCache(sections)
-                }
+                // Always cache to the YouTube bucket — browsing is YouTube-only.
+                sessionManager.saveHomeCache(sections)
             } else {
                 _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             }
