@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.onTimeout
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
@@ -3281,7 +3282,7 @@ class MusicPlayer @Inject constructor(
         clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
         val separators = listOf(",", "&", "feat.", "feat", "ft.", "ft")
         for (sep in separators) {
-            val idx = clean.toLowerCase().indexOf(sep)
+            val idx = clean.lowercase().indexOf(sep)
             if (idx != -1) {
                 val part = clean.substring(0, idx).trim()
                 if (part.isNotEmpty()) {
