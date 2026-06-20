@@ -345,22 +345,32 @@ fun SearchScreen(
                         )
                     }
                     
-                    // Category Chips for YouTube Tab
-                    if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) {
+                    // Category Chips for YouTube / REMOTE Tab
+                    if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC || uiState.selectedTab == SearchTab.REMOTE) {
                         AnimatedVisibility(
                             visible = uiState.query.isNotBlank(),
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
-                            val filters = listOf(
-                                ResultFilter.ALL to "All",
-                                ResultFilter.SONGS to "Songs",
-                                ResultFilter.VIDEOS to "Videos",
-                                ResultFilter.ALBUMS to "Albums",
-                                ResultFilter.ARTISTS to "Artists",
-                                ResultFilter.COMMUNITY_PLAYLISTS to "Community",
-                                ResultFilter.FEATURED_PLAYLISTS to "Featured"
-                            )
+                            val filters = if (uiState.selectedTab == SearchTab.REMOTE) {
+                                listOf(
+                                    ResultFilter.ALL to "All",
+                                    ResultFilter.SONGS to "Songs",
+                                    ResultFilter.ALBUMS to "Albums",
+                                    ResultFilter.ARTISTS to "Artists",
+                                    ResultFilter.COMMUNITY_PLAYLISTS to "Playlists"
+                                )
+                            } else {
+                                listOf(
+                                    ResultFilter.ALL to "All",
+                                    ResultFilter.SONGS to "Songs",
+                                    ResultFilter.VIDEOS to "Videos",
+                                    ResultFilter.ALBUMS to "Albums",
+                                    ResultFilter.ARTISTS to "Artists",
+                                    ResultFilter.COMMUNITY_PLAYLISTS to "Community",
+                                    ResultFilter.FEATURED_PLAYLISTS to "Featured"
+                                )
+                            }
                             
                             SingleChoiceSegmentedButtonRow(
                                 modifier = Modifier
@@ -485,50 +495,76 @@ fun SearchScreen(
                 } else if (uiState.selectedTab == SearchTab.REMOTE) {
                     // RemoteAudio results (320 kbps HQ audio)
                     if (!uiState.isLoading && uiState.query.isNotBlank()) {
-                        if (uiState.artistResults.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                Column {
-                                    Text("Artists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
-                                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                                        items(uiState.artistResults, key = { it.id }) { artist -> ArtistSearchCard(artist = artist, onClick = { onArtistClick(artist.id) }) }
+                        if (uiState.resultFilter != ResultFilter.ALL) {
+                            when (uiState.resultFilter) {
+                                ResultFilter.SONGS, ResultFilter.VIDEOS -> {
+                                    itemsIndexed(uiState.results, key = { _, song -> "remote_song_${song.id}" }) { index, song ->
+                                        SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
                                     }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                                }
+                                ResultFilter.ARTISTS -> {
+                                    items(uiState.artistResults, key = { it.id }) { artist ->
+                                        ArtistSearchListItem(artist = artist, onClick = { onArtistClick(artist.id) })
+                                    }
+                                }
+                                ResultFilter.ALBUMS -> {
+                                    items(uiState.albumResults, key = { it.id }) { album ->
+                                        AlbumSearchListItem(album = album, onClick = { viewModel.addToRecentSearches(album); onAlbumClick(album) })
+                                    }
+                                }
+                                ResultFilter.COMMUNITY_PLAYLISTS, ResultFilter.FEATURED_PLAYLISTS -> {
+                                    items(uiState.playlistResults, key = { it.id }) { playlist ->
+                                        PlaylistSearchListItem(playlist = playlist, onClick = { viewModel.addToRecentSearches(playlist); onPlaylistClick(playlist.id) })
+                                    }
                                 }
                             }
-                        }
-                        if (uiState.playlistResults.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                Column {
-                                    Text("Playlists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
-                                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                                        items(uiState.playlistResults, key = { it.id }) { playlist -> PlaylistSearchCard(playlist = playlist, onClick = { viewModel.addToRecentSearches(playlist); onPlaylistClick(playlist.id) }) }
+                        } else {
+                            if (uiState.artistResults.isNotEmpty()) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Column {
+                                        Text("Artists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                                        LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+                                            items(uiState.artistResults, key = { it.id }) { artist -> ArtistSearchCard(artist = artist, onClick = { onArtistClick(artist.id) }) }
+                                        }
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                                     }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                                 }
                             }
-                        }
-                        if (uiState.albumResults.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                Column {
-                                    Text("Albums", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
-                                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                                        items(uiState.albumResults, key = { it.id }) { album -> AlbumSearchCard(album = album, onClick = { viewModel.addToRecentSearches(album); onAlbumClick(album) }) }
+                            if (uiState.playlistResults.isNotEmpty()) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Column {
+                                        Text("Playlists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                                        LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+                                            items(uiState.playlistResults, key = { it.id }) { playlist -> PlaylistSearchCard(playlist = playlist, onClick = { viewModel.addToRecentSearches(playlist); onPlaylistClick(playlist.id) }) }
+                                        }
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                                     }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                                 }
                             }
-                        }
-                        if (uiState.results.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { _, song -> "remote_${song.id}" }) { index, song ->
-                                SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
+                            if (uiState.albumResults.isNotEmpty()) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Column {
+                                        Text("Albums", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                                        LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
+                                            items(uiState.albumResults, key = { it.id }) { album -> AlbumSearchCard(album = album, onClick = { viewModel.addToRecentSearches(album); onAlbumClick(album) }) }
+                                        }
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                                    }
+                                }
                             }
-                        }
+                            if (uiState.results.isNotEmpty()) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
+                                itemsIndexed(uiState.results, key = { _, song -> "remote_${song.id}" }) { index, song ->
+                                    SearchResultItem(song = song, onClick = { viewModel.addToRecentSearches(song); onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
+                                }
+                            }
 
-                        if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No HQ Audio results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                            if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No HQ Audio results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
+                            }
                         }
                     }
+                }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
                     // Local Search results
                     if (!uiState.isLoading && uiState.query.isNotBlank()) {
