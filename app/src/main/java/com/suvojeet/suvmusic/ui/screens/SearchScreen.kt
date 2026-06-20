@@ -517,6 +517,7 @@ fun SearchScreen(
                                         PlaylistSearchListItem(playlist = playlist, onClick = { viewModel.addToRecentSearches(playlist); onPlaylistClick(playlist.id) })
                                     }
                                 }
+                                else -> {}
                             }
                         } else {
                             if (uiState.artistResults.isNotEmpty()) {
@@ -564,7 +565,6 @@ fun SearchScreen(
                             }
                         }
                     }
-                }
                 } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
                     // Local Search results
                     if (!uiState.isLoading && uiState.query.isNotBlank()) {
