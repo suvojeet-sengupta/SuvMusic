@@ -106,8 +106,21 @@ class AlbumViewModel @Inject constructor(
                     }
                 } else null
 
-                // Albums always come from YouTube — HQ Audio source only affects playback.
-                val album = localAlbum ?: youTubeRepository.getAlbum(albumId)
+                // If it is Remote source (HQ Audio), load from RemoteAudioRepository. Otherwise from YouTubeRepository.
+                val isRemoteSource = sessionManager.getMusicSource() == MusicSource.REMOTE
+                val album = localAlbum ?: if (isRemoteSource) {
+                    remoteAudioRepository.getAlbum(albumId)?.let { playlist ->
+                        Album(
+                            id = playlist.id,
+                            title = playlist.title,
+                            artist = playlist.author,
+                            thumbnailUrl = playlist.thumbnailUrl,
+                            songs = playlist.songs
+                        )
+                    }
+                } else {
+                    youTubeRepository.getAlbum(albumId)
+                }
                 
                 // Merge with initial data if fetch failed partially or returns default
                 val finalAlbum = if (album != null) {

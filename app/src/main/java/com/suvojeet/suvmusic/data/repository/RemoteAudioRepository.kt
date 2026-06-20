@@ -540,18 +540,22 @@ class RemoteAudioRepository @Inject constructor(
 
             // In some wrapper versions, playlist info might be in 'playlists' or direct 'name/id' fields
             val playlistObj = data?.playlists?.results?.firstOrNull()
-            val title = playlistObj?.name ?: "" 
-            val image = playlistObj?.image?.lastOrNull()?.url
             
             // Surface schema drift: empty-string/empty-list defaults above otherwise
             // mask a backend response shape change as a benign "empty playlist".
-            if (data?.songs?.results == null) {
-                android.util.Log.w("RemoteAudio", "getPlaylist($playlistId): no songs.results in response — possible schema drift")
+            if (data?.songs?.results == null && data?.results == null) {
+                android.util.Log.w("RemoteAudio", "getPlaylist($playlistId): no songs.results or results in response — possible schema drift")
             }
 
-            val songs = data?.songs?.results?.mapNotNull { parseSongDto(it) } ?: emptyList()
+            val songs = data?.results?.mapNotNull { parseSongDto(it) }
+                ?: data?.songs?.results?.mapNotNull { parseSongDto(it) }
+                ?: emptyList()
 
             if (songs.isEmpty()) return@withContext null
+
+            val firstSong = songs.firstOrNull()
+            val title = playlistObj?.name ?: firstSong?.album?.takeIf { it.isNotBlank() } ?: "Playlist"
+            val image = playlistObj?.image?.lastOrNull()?.url ?: firstSong?.thumbnailUrl
 
             val playlist = Playlist(
                 id = playlistId,

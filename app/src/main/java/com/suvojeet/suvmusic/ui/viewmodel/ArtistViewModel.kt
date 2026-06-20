@@ -109,9 +109,9 @@ class ArtistViewModel @Inject constructor(
                 val isYouTubeId = artistId.startsWith("UC") || artistId.startsWith("FE") || artistId.startsWith("VL")
                 val isLocalId = artistId.toLongOrNull() != null
                 
-                val artist = if (isYouTubeId) {
-                    youTubeRepository.getArtist(artistId)
-                } else if (isLocalId) {
+                val isRemoteSource = sessionManager.getMusicSource() == MusicSource.REMOTE
+                
+                val artist = if (isLocalId) {
                     val id = artistId.toLong()
                     val artists = localAudioRepository.getAllLocalArtists()
                     val artistBase = artists.find { it.id == artistId }
@@ -120,8 +120,12 @@ class ArtistViewModel @Inject constructor(
                         val albums = localAudioRepository.getAlbumsByArtist(id)
                         artistBase.copy(songs = songs, albums = albums)
                     } else null
+                } else if (isRemoteSource || !isYouTubeId) {
+                    remoteAudioRepository.getArtist(artistId) ?: if (isYouTubeId) {
+                        youTubeRepository.getArtist(artistId)
+                    } else null
                 } else {
-                    remoteAudioRepository.getArtist(artistId)
+                    youTubeRepository.getArtist(artistId)
                 }
 
                 if (artist != null) {
