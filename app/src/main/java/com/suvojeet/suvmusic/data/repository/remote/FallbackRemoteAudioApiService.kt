@@ -16,58 +16,31 @@ class FallbackRemoteAudioApiService(
     private suspend fun <T> executeWithFallback(
         block: suspend RemoteAudioApiService.() -> T
     ): T {
-        val now = System.currentTimeMillis()
-        if (now - lastFailureTime < FAILURE_COOLDOWN_MS) {
-            // Primary has failed recently, go straight to fallback
-            return try {
-                fallbackService.block()
-            } catch (e: Exception) {
-                throw e
-            }
-        }
-
         return try {
             val result = primaryService.block()
-            // Check if API returned successful status in response body
             val success = when (result) {
                 is RemoteAudioSearchResponse -> result.success != false
                 is RemoteAudioSongDetailsResponse -> result.success != false
                 else -> true
             }
-            if (!success) {
-                // If it is success=false in response body, the API server is up and responsive.
-                // We should NOT count this as a primary API outage (which sets setPrimaryApiWorking(false) and cooldown).
-                // Just use fallback for this request.
-                return fallbackService.block()
-            }
-            
-            // If primary call succeeded
-            if (lastFailureTime != 0L) {
-                lastFailureTime = 0L
+            if (success) {
                 RemoteAudioApiStatus.setPrimaryApiWorking(true)
             }
             result
         } catch (e: Exception) {
-            // Only flag primary as down on real server errors/timeouts or network loss, not client errors
             val isServerErrorOrNetwork = when (e) {
                 is java.io.IOException -> true
                 is retrofit2.HttpException -> e.code() >= 500 || e.code() == 429
-                else -> true // default to true for unknown issues
+                else -> true
             }
 
             if (isServerErrorOrNetwork) {
-                Log.e("FallbackRemoteAudioApi", "Primary HQ Audio API failed, falling back to legacy API. Error: ${e.message}")
-                lastFailureTime = System.currentTimeMillis()
+                Log.e("FallbackRemoteAudioApi", "Primary HQ Audio API failed. Error: ${e.message}")
                 RemoteAudioApiStatus.setPrimaryApiWorking(false)
             } else {
-                Log.w("FallbackRemoteAudioApi", "Primary HQ Audio API returned client error, using fallback. Error: ${e.message}")
+                Log.w("FallbackRemoteAudioApi", "Primary HQ Audio API returned client error. Error: ${e.message}")
             }
-            
-            try {
-                fallbackService.block()
-            } catch (fallbackEx: Exception) {
-                throw fallbackEx
-            }
+            throw e
         }
     }
 
