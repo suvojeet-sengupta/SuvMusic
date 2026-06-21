@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.BrowseCategory
@@ -236,7 +237,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
-                        error = e.message,
+                        error = e.toUserFriendlyMessage(),
                         isLoading = false
                     )
                 }
@@ -448,16 +449,39 @@ class SearchViewModel @Inject constructor(
                         }
                     }
                     SearchTab.REMOTE -> {
-                        // Search RemoteAudio (320kbps) - Comprehensive search
-                        val results = remoteAudioRepository.searchAll(query)
-                        _uiState.update { 
-                            it.copy(
-                                results = results.songs,
-                                artistResults = results.artists,
-                                albumResults = results.albums,
-                                playlistResults = results.playlists,
-                                isLoading = false
-                            )
+                        coroutineScope {
+                            val filter = _uiState.value.resultFilter
+                            
+                            when (filter) {
+                                ResultFilter.ALL -> {
+                                    val results = remoteAudioRepository.searchAll(query)
+                                    _uiState.update { 
+                                        it.copy(
+                                            results = results.songs,
+                                            artistResults = results.artists,
+                                            albumResults = results.albums,
+                                            playlistResults = results.playlists,
+                                            isLoading = false
+                                        )
+                                    }
+                                }
+                                ResultFilter.SONGS, ResultFilter.VIDEOS -> {
+                                    val results = remoteAudioRepository.search(query)
+                                    _uiState.update { it.copy(results = results, isLoading = false) }
+                                }
+                                ResultFilter.ALBUMS -> {
+                                    val results = remoteAudioRepository.searchAlbums(query)
+                                    _uiState.update { it.copy(albumResults = results, isLoading = false) }
+                                }
+                                ResultFilter.ARTISTS -> {
+                                    val results = remoteAudioRepository.searchArtists(query)
+                                    _uiState.update { it.copy(artistResults = results, isLoading = false) }
+                                }
+                                ResultFilter.COMMUNITY_PLAYLISTS, ResultFilter.FEATURED_PLAYLISTS -> {
+                                    val results = remoteAudioRepository.searchPlaylists(query)
+                                    _uiState.update { it.copy(playlistResults = results, isLoading = false) }
+                                }
+                            }
                         }
                     }
                     SearchTab.YOUR_LIBRARY -> {
@@ -484,7 +508,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
-                        error = e.message,
+                        error = e.toUserFriendlyMessage(),
                         isLoading = false
                     )
                 }

@@ -11,6 +11,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -107,7 +110,8 @@ data class PlayerScreenState(
     val isRadioMode: Boolean = false,
     val isLoadingMoreSongs: Boolean = false,
     val selectedLyricsProvider: LyricsProviderType = LyricsProviderType.AUTO,
-    val enabledLyricsProviders: Map<LyricsProviderType, Boolean> = emptyMap()
+    val enabledLyricsProviders: Map<LyricsProviderType, Boolean> = emptyMap(),
+    val listenTogetherBufferingUsers: List<String> = emptyList()
 )
 
 /**
@@ -157,7 +161,7 @@ data class PlayerScreenActions(
 @Composable
 fun PlayerScreen(
     state: PlayerScreenState,
-    actions: PlayerScreenActions,
+    originalActions: PlayerScreenActions,
     player: Player? = null,
     playlistViewModel: PlaylistManagementViewModel = koinViewModel(),
     ringtoneViewModel: RingtoneViewModel = koinViewModel<RingtoneViewModel>(),
@@ -175,6 +179,27 @@ fun PlayerScreen(
     val sponsorSegments by playerViewModel.sponsorSegments.collectAsStateWithLifecycle(initialValue = emptyList())
     val isFullScreen by playerViewModel.isFullScreen.collectAsStateWithLifecycle()
     val isSwitchingMode by playerViewModel.isSwitchingMode.collectAsStateWithLifecycle()
+    
+    val listenTogetherRole by playerViewModel.listenTogetherManager.role.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.RoomRole.NONE)
+    val isGuest = listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.GUEST
+    val listenTogetherConnectionState by playerViewModel.listenTogetherManager.connectionState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.ConnectionState.DISCONNECTED)
+    val listenTogetherRoomState by playerViewModel.listenTogetherManager.roomState.collectAsStateWithLifecycle(initialValue = null)
+    
+    val actions = remember(originalActions, isGuest) {
+        if (isGuest) {
+            val blockedMsg = { com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Host has controls in Listen Together!") }
+            originalActions.copy(
+                onPlayPause = blockedMsg,
+                onNext = blockedMsg,
+                onPrevious = blockedMsg,
+                onSeekTo = { _ -> blockedMsg() },
+                onPlayFromQueue = { blockedMsg() },
+                onShuffleToggle = blockedMsg,
+                onRepeatToggle = blockedMsg,
+                onToggleAutoplay = blockedMsg
+            )
+        } else originalActions
+    }
     
     // Adaptive Layout Support
     val adaptiveInfo = currentWindowAdaptiveInfo()
@@ -363,7 +388,7 @@ fun PlayerScreen(
 
             val playerMainContent: @Composable () -> Unit = {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val useWideLayout = maxWidth > 500.dp || isExpanded
+                    val useWideLayout = maxWidth > 520.dp
                     val isCompactHeight = maxHeight < 600.dp
 
                     when (playerStyle) {
@@ -518,6 +543,81 @@ fun PlayerScreen(
                     positionProvider = positionProvider,
                     durationProvider = durationProvider
                 )
+                
+                // Listen Together Live Session Status Pill
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = listenTogetherRole != com.suvojeet.suvmusic.shareplay.RoomRole.NONE,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 54.dp)
+                ) {
+                    val code = listenTogetherRoomState?.roomCode ?: ""
+                    val userCount = listenTogetherRoomState?.users?.size ?: 1
+                    val isBuffering = state.listenTogetherBufferingUsers.isNotEmpty()
+                    
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = Color.Black.copy(alpha = 0.75f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = dominantColors.primary.copy(alpha = 0.5f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .clickable {
+                                activeOverlay = PlayerOverlay.ListenTogether
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Connection indicator dot
+                            val dotColor = when (listenTogetherConnectionState) {
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTED -> Color(0xFF4CAF50)
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING,
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING -> Color(0xFFFF9800)
+                                else -> Color(0xFFF44336)
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(dotColor, CircleShape)
+                            )
+                            
+                            // Status text
+                            val statusText = when {
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING || 
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING -> "Reconnecting..."
+                                isBuffering -> "Syncing (${state.listenTogetherBufferingUsers.size} buffering)..."
+                                listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.HOST -> "Room: $code • Host • $userCount listening"
+                                else -> "Room: $code • Guest • $userCount listening"
+                            }
+                            
+                            Text(
+                                text = statusText,
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                            
+                            if (isBuffering || 
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING ||
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    color = dominantColors.primary,
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
       }
@@ -583,10 +683,22 @@ fun AdaptiveSupportingContent(
             )
         }
         else -> {
-            // Placeholder or empty state for supporting pane when nothing is selected
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Select Queue or Lyrics to view here", color = dominantColors.onBackground.copy(alpha = 0.5f))
-            }
+            // Default to play queue in supporting pane when no specific overlay (like Lyrics or Related) is selected
+            ModernQueueView(
+                currentSong = song, queue = playerState.queue, upNextSongs = upNextSongs, selectedQueueIndices = selectedQueueIndices,
+                onToggleSelection = { playerViewModel.toggleQueueSelection(it) }, onSelectAll = { playerViewModel.selectAllQueueItems() }, onClearSelection = { playerViewModel.clearQueueSelection() },
+                currentIndex = playerState.currentIndex, isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
+                isAutoplayEnabled = playerState.isAutoplayEnabled, isFavorite = playerState.isLiked, isRadioMode = state.isRadioMode, isLoadingMore = state.isLoadingMoreSongs,
+                onBack = { onOverlayChange(PlayerOverlay.None) }, onSongClick = actions.onPlayFromQueue, onPlayPause = actions.onPlayPause,
+                onToggleShuffle = actions.onShuffleToggle, onToggleRepeat = actions.onRepeatToggle, onToggleAutoplay = actions.onToggleAutoplay, onToggleLike = actions.onToggleLike,
+                onMoreClick = { onOverlayChange(PlayerOverlay.Actions(it, fromQueue = true)) }, onLoadMore = actions.onLoadMoreRadioSongs, onMoveItem = { from, to -> playerViewModel.moveQueueItem(from, to) },
+                onRemoveItems = { playerViewModel.removeQueueItems(it) }, onSaveAsPlaylist = { t, d, p, s -> playerViewModel.saveQueueAsPlaylist(t, d, p, s) { if (it) com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved") } },
+                onAddToPlaylistClick = { playlistViewModel.showAddToPlaylistSheet(it) },
+                onPlayNext = { playerViewModel.playNext(it) },
+                onAddToQueue = { playerViewModel.addToQueue(it) },
+                onClearQueue = { playerViewModel.clearQueue() },
+                dominantColors = dominantColors, animatedBackgroundEnabled = animatedBackgroundEnabled, isDarkTheme = isAppInDarkTheme
+            )
         }
     }
 }

@@ -9,6 +9,7 @@ import com.suvojeet.suvmusic.core.model.HomeSectionType
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.lastfm.LastFmRepository
@@ -217,7 +218,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         isLoading = false, 
-                        error = e.message
+                        error = e.toUserFriendlyMessage()
                     ) 
                 }
             }
@@ -268,7 +269,7 @@ class HomeViewModel @Inject constructor(
     private suspend fun fetchFreshData(source: MusicSource) {
         try {
             _uiState.update { it.copy(isRefreshing = true) }
-            // Browsing is always YouTube — HQ Audio source only swaps playback streams.
+            // Browsing always uses YouTube — HQ Audio source only swaps playback streams.
             val sections = youTubeRepository.getHomeSections()
             
             if (sections.isNotEmpty()) {
@@ -283,7 +284,7 @@ class HomeViewModel @Inject constructor(
                 }
                 sessionManager.updateLastHomeFetchTime(source)
 
-                // Always cache to the YouTube bucket — browsing is YouTube-only now.
+                // Always cache to the YouTube bucket — browsing is YouTube-only.
                 sessionManager.saveHomeCache(sections)
             } else {
                 _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
@@ -291,7 +292,7 @@ class HomeViewModel @Inject constructor(
         } catch (e: Exception) {
             _uiState.update { 
                 it.copy(
-                    error = if (it.homeSections.isEmpty()) e.message ?: "Failed to load content" else null,
+                    error = if (it.homeSections.isEmpty()) e.toUserFriendlyMessage() else null,
                     isLoading = false,
                     isRefreshing = false
                 ) 

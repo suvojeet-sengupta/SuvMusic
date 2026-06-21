@@ -312,7 +312,7 @@ fun ModernQueueView(
                 modifier = Modifier.weight(1f)
             ) {
                 if (currentSong != null) {
-                    item(key = "current_${currentSong.id}") {
+                    item(key = "current_${currentSong.id}", contentType = "queue_item") {
                         ModernQueueListItem(
                             song = currentSong,
                             isCurrent = true,
@@ -335,7 +335,8 @@ fun ModernQueueView(
                 if (upNextSongs.isNotEmpty()) {
                     itemsIndexed(
                         keyedUpNext,
-                        key = { _, pair -> pair.second }
+                        key = { _, pair -> pair.second },
+                        contentType = { _, _ -> "queue_item" }
                     ) { indexInList, (song, _) ->
                         val actualIndex = currentIndex + 1 + indexInList
                         ModernQueueListItem(
@@ -422,6 +423,7 @@ private fun LazyItemScope.ModernQueueListItem(
     var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
+    val rowShape = remember { RoundedCornerShape(12.dp) }
     
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isDragging) 1.05f else 1f,
@@ -463,9 +465,9 @@ private fun LazyItemScope.ModernQueueListItem(
                 this.scaleY = scale
                 this.shadowElevation = with(density) { elevation.toPx() }
                 this.clip = true
-                this.shape = RoundedCornerShape(12.dp)
+                this.shape = rowShape
             }
-            .clip(RoundedCornerShape(12.dp))
+            .clip(rowShape)
             .background(rowBackground)
             .combinedClickable(
                 onClick = onClick,

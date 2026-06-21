@@ -13,6 +13,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.error.toUserFriendlyMessage
 import com.suvojeet.suvmusic.core.model.DownloadState
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.PlayerState
@@ -44,6 +45,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.onTimeout
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import androidx.mediarouter.media.MediaRouter
@@ -1255,7 +1258,7 @@ class MusicPlayer @Inject constructor(
                                  mediaController?.seekTo(resumePosition)
                              }
                         } catch (e: Exception) {
-                             _playerState.update { it.copy(error = "Playback failed: ${error.message}", isLoading = false) }
+                             _playerState.update { it.copy(error = "Playback failed: ${e.toUserFriendlyMessage()}", isLoading = false) }
                         }
                     }
                     return
@@ -1264,7 +1267,7 @@ class MusicPlayer @Inject constructor(
 
             _playerState.update { 
                 it.copy(
-                    error = error.message ?: "Playback error",
+                    error = error.toUserFriendlyMessage(),
                     isLoading = false
                 )
             }
@@ -1339,13 +1342,19 @@ class MusicPlayer @Inject constructor(
             // confident match do we spend a second "title only" search (helps when the
             // YouTube artist string is noisy). Both go through the shared 429 backoff
             // gate and the search cache, so the second query is cheap on a cache hit.
-            val primaryQuery = "${song.title} ${song.artist}".trim()
+            val cleanTitle = cleanSongTitle(song.title)
+            val cleanArtist = cleanSongArtist(song.artist)
+            val primaryQuery = if (cleanArtist.isNotEmpty()) "$cleanTitle $cleanArtist" else cleanTitle
             var match = pickBestRemoteMatch(song, searchTyped(primaryQuery))
             if (match == null) {
-                val titleOnly = song.title.trim()
+                val titleOnly = cleanTitle
                 if (titleOnly.isNotEmpty() && !titleOnly.equals(primaryQuery, ignoreCase = true)) {
                     match = pickBestRemoteMatch(song, searchTyped(titleOnly))
                 }
+            }
+            // Save the matched remote song id so lyrics repository can also fetch lyrics from HQ Audio Source
+            if (match != null) {
+                sessionManager.putMatchedRemoteSongId(song.id, match.id)
             }
             // Use the 320 kbps stream URL the search result already carries; only fall
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
@@ -1491,12 +1500,76 @@ class MusicPlayer @Inject constructor(
                     !_playerState.value.isVideoMode &&
                     sessionManager.getMusicSource() == MusicSource.REMOTE
                 ) {
-                    streamUrl = resolveHybridRemoteStream(song)
-                    if (streamUrl != null) {
-                        android.util.Log.d("MusicPlayer", "Hybrid: streaming '${song.title}' from RemoteAudio HQ")
-                    } else {
-                        android.util.Log.w("MusicPlayer", "Hybrid: no HQ match for '${song.title}' - ${song.artist}; falling back to YouTube")
-                        notifyHqFallbackIfNeeded(song)
+                    coroutineScope {
+                        val remoteJob = async(Dispatchers.IO) {
+                            try {
+                                resolveHybridRemoteStream(song)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                        val ytJob = async(Dispatchers.IO) {
+                            try {
+                                youTubeRepository.getStreamUrl(song.id)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        // Prefer Remote (HQ) but start playback as fast as possible.
+                        // Wait for Remote with a grace period of 800ms.
+                        val resolvedUrl = select<String?> {
+                            remoteJob.onAwait { remote ->
+                                if (remote != null) {
+                                    android.util.Log.d("MusicPlayer", "Race: Remote resolved first or fast")
+                                    remote
+                                } else {
+                                    null
+                                }
+                            }
+                            onTimeout(800L) {
+                                if (ytJob.isCompleted) {
+                                    val ytUrl = ytJob.await()
+                                    if (ytUrl != null) {
+                                        android.util.Log.d("MusicPlayer", "Race: Remote took too long, using YouTube")
+                                        remoteJob.cancel()
+                                        notifyHqFallbackIfNeeded(song)
+                                        ytUrl
+                                    } else {
+                                        null
+                                    }
+                                } else {
+                                    null
+                                }
+                            }
+                        }
+
+                        if (resolvedUrl != null) {
+                            streamUrl = resolvedUrl
+                        } else {
+                            // If we didn't resolve remoteUrl within 800ms grace period, wait for whichever resolves first
+                            val firstResolved = select<Pair<String?, Boolean>> {
+                                remoteJob.onAwait { remote ->
+                                    if (remote != null) Pair(remote, true) else Pair(null, false)
+                                }
+                                ytJob.onAwait { yt ->
+                                    if (yt != null) Pair(yt, false) else Pair(null, false)
+                                }
+                            }
+                            if (firstResolved.first != null) {
+                                streamUrl = firstResolved.first
+                                if (firstResolved.second) {
+                                    android.util.Log.d("MusicPlayer", "Race: Remote resolved eventually")
+                                } else {
+                                    android.util.Log.d("MusicPlayer", "Race: YouTube resolved first after timeout fallback")
+                                    notifyHqFallbackIfNeeded(song)
+                                }
+                            }
+                        }
+
+                        // Cancel outstanding tasks to release network/CPU resources
+                        remoteJob.cancel()
+                        ytJob.cancel()
                     }
                 }
 
@@ -1683,7 +1756,7 @@ class MusicPlayer @Inject constructor(
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     android.util.Log.e("MusicPlayer", "Resolution failed: ${e.message}", e)
-                    _playerState.update { it.copy(error = e.message, isLoading = false) }
+                    _playerState.update { it.copy(error = e.toUserFriendlyMessage(), isLoading = false) }
                 }
             }
         }
@@ -3184,5 +3257,40 @@ class MusicPlayer @Inject constructor(
 
             player.trackSelectionParameters = newParameters
         }
+    }
+
+    private fun cleanSongTitle(title: String): String {
+        var clean = title
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val delimiters = listOf("|", "-", "–", "—", "•", "/")
+        for (delim in delimiters) {
+            if (clean.contains(delim)) {
+                val parts = clean.split(delim)
+                if (parts.isNotEmpty() && parts[0].trim().isNotEmpty()) {
+                    clean = parts[0]
+                    break
+                }
+            }
+        }
+        val junkWords = Regex("(?i)\\b(official|video|audio|lyrics|lyric|lyrical|full|song|songs|hd|4k|mv|remastered|version|original|soundtrack|ost|from|movie|presents|presents:|hits|visualizer|lq)\\b")
+        clean = clean.replace(junkWords, " ")
+        return clean.replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun cleanSongArtist(artist: String): String {
+        var clean = artist
+        clean = clean.replace(Regex("(?i)-\\s*Topic"), " ")
+        clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
+        val separators = listOf(",", "&", "feat.", "feat", "ft.", "ft")
+        for (sep in separators) {
+            val idx = clean.lowercase().indexOf(sep)
+            if (idx != -1) {
+                val part = clean.substring(0, idx).trim()
+                if (part.isNotEmpty()) {
+                    clean = part
+                }
+            }
+        }
+        return clean.replace(Regex("\\s+"), " ").trim()
     }
 }

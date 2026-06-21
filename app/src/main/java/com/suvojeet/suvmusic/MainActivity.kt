@@ -1004,6 +1004,7 @@ fun SuvMusicApp(
                     isLoadingMoreSongs = isLoadingMoreSongs,
                     selectedLyricsProvider = selectedLyricsProvider,
                     enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
+                    listenTogetherBufferingUsers = playerViewModel.listenTogetherBufferingUsers.collectAsStateWithLifecycle().value,
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs
                 )
@@ -1081,7 +1082,7 @@ fun SuvMusicApp(
 
                 com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
                     state = playerScreenState,
-                    actions = playerScreenActions,
+                    originalActions = playerScreenActions,
                     player = playerViewModel.getPlayer(),
                     playerViewModel = playerViewModel,
                     volumeKeyEvents = volumeKeyEvents

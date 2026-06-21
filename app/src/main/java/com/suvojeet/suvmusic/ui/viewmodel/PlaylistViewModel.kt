@@ -265,40 +265,45 @@ class PlaylistViewModel @Inject constructor(
                     songs = songs
                 )
             } else {
-                // Playlists always load from YouTube — HQ Audio source only swaps playback.
-                // Use getPlaylistFlow for staged loading.
-                try {
-                    var emitted = false
-                    youTubeRepository.getPlaylistFlow(playlistId, autoSave = true).collect { stagedPlaylist ->
-                        emitted = true
-                        val finalPlaylist = stagedPlaylist.copy(
-                            title = if (stagedPlaylist.title == "Unknown Playlist" && initialName != null) initialName else stagedPlaylist.title,
-                            thumbnailUrl = initialThumbnail ?: stagedPlaylist.thumbnailUrl,
-                            author = stagedPlaylist.author.takeIf { it.isNotBlank() } ?: ""
-                        )
-                        
-                        _uiState.update { 
-                            it.copy(
-                                playlist = finalPlaylist,
-                                originalSongs = finalPlaylist.songs,
-                                totalSongCount = finalPlaylist.totalSongCount,
-                                isLoading = false,
-                                isLoadingMore = finalPlaylist.totalSongCount != null && finalPlaylist.songs.size < finalPlaylist.totalSongCount!!
+                val isRemoteSource = currentSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE
+                if (isRemoteSource) {
+                    remoteAudioRepository.getPlaylist(playlistId) ?: throw Exception("Failed to load playlist from REMOTE")
+                } else {
+                    // Playlists always load from YouTube — HQ Audio source only swaps playback.
+                    // Use getPlaylistFlow for staged loading.
+                    try {
+                        var emitted = false
+                        youTubeRepository.getPlaylistFlow(playlistId, autoSave = true).collect { stagedPlaylist ->
+                            emitted = true
+                            val finalPlaylist = stagedPlaylist.copy(
+                                title = if (stagedPlaylist.title == "Unknown Playlist" && initialName != null) initialName else stagedPlaylist.title,
+                                thumbnailUrl = initialThumbnail ?: stagedPlaylist.thumbnailUrl,
+                                author = stagedPlaylist.author.takeIf { it.isNotBlank() } ?: ""
                             )
+                            
+                            _uiState.update { 
+                                it.copy(
+                                    playlist = finalPlaylist,
+                                    originalSongs = finalPlaylist.songs,
+                                    totalSongCount = finalPlaylist.totalSongCount,
+                                    isLoading = false,
+                                    isLoadingMore = finalPlaylist.totalSongCount != null && finalPlaylist.songs.size < finalPlaylist.totalSongCount!!
+                                )
+                            }
+                            applySort()
                         }
-                        applySort()
+                        
+                        if (!emitted) {
+                            _uiState.update { it.copy(isLoading = false) }
+                        }
+                        
+                        // Re-check editability now that we have author info
+                        checkEditable()
+                        return // Collected all, exit method
+                    } catch (e: Exception) {
+                        // Fallback to RemoteAudio if YouTube fails
+                        remoteAudioRepository.getPlaylist(playlistId) ?: throw e
                     }
-                    
-                    if (!emitted) {
-                        _uiState.update { it.copy(isLoading = false) }
-                    }
-                    
-                    // Re-check editability now that we have author info
-                    checkEditable()
-                    return // Collected all, exit method
-                } catch (e: Exception) {
-                    // Fallback to RemoteAudio if YouTube fails
-                    remoteAudioRepository.getPlaylist(playlistId) ?: throw e
                 }
             }
             

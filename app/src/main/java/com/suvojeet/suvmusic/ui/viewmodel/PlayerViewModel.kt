@@ -84,6 +84,9 @@ class PlayerViewModel @Inject constructor(
     val aiAutoStatus = aiEqualizerService.autoStatus
     val lastAIResult = aiEqualizerService.lastResult
     
+    // Listen Together Syncing Status
+    val listenTogetherBufferingUsers = listenTogetherManager.bufferingUsers
+    
     // Stable player state that ignores frequent progress updates for UI optimization.
     // Optimization: Use a custom comparator to avoid emissions when only progress/buffer changes.
     val playbackInfo = musicPlayer.playerState.distinctUntilChanged { old, new ->
@@ -338,14 +341,15 @@ class PlayerViewModel @Inject constructor(
             combine(
                 sessionManager.enableBetterLyricsFlow,
                 sessionManager.enableSimpMusicFlow,
-                sessionManager.developerModeFlow
-            ) { betterLyricsEnabled, simpMusicEnabled, devMode ->
+                sessionManager.developerModeFlow,
+                com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiStatus.isPrimaryApiWorking
+            ) { betterLyricsEnabled, simpMusicEnabled, devMode, primaryWorking ->
                 mapOf(
                     LyricsProviderType.AUTO to true, // Always enabled
                     LyricsProviderType.BETTER_LYRICS to betterLyricsEnabled,
                     LyricsProviderType.SIMP_MUSIC to simpMusicEnabled,
                     LyricsProviderType.LRCLIB to true,
-                    LyricsProviderType.REMOTE to devMode,
+                    LyricsProviderType.REMOTE to (devMode || primaryWorking),
                     LyricsProviderType.YOUTUBE to true,
                     LyricsProviderType.LOCAL to true
                 )

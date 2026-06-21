@@ -8,6 +8,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import javax.inject.Singleton
 class ListenTogetherManager @Inject constructor(
     private val client: ListenTogetherClient,
     private val youTubeRepository: YouTubeRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     companion object {
@@ -50,22 +52,20 @@ class ListenTogetherManager @Inject constructor(
     // a later, still-in-progress sync operation.
     private val syncToken = java.util.concurrent.atomic.AtomicLong(0)
 
-    // Estimated offset between the server clock and this device's clock
-    // (serverClock - localClock), in ms. Used so latency compensation does not break when
-    // the two clocks are not synchronized. Updated from every playback sync that carries a
-    // server timestamp.
-    @Volatile
-    private var serverClockOffset: Long = 0
-    
     // Track the last state we synced to avoid duplicate events
     @Volatile
     private var lastSyncedIsPlaying: Boolean? = null
     @Volatile
     private var lastSyncedTrackId: String? = null
     
+    // Cache for resolved stream URLs to avoid repeating slow network requests
+    private val streamUrlCache = android.util.LruCache<String, String>(50)
+    
     // Track ID being buffered
     @Volatile
     private var bufferingTrackId: String? = null
+    @Volatile
+    private var pendingBufferReadyTrackId: String? = null
     
     // Track active sync job to cancel it if a better update arrives
     @Volatile
@@ -139,7 +139,7 @@ class ListenTogetherManager @Inject constructor(
                 Log.d(TAG, "Host sending PLAY at position $position for $trackId")
                 client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = true
-            } else if (!playWhenReady && (lastSyncedIsPlaying == true)) {
+            } else if (!playWhenReady && lastSyncedIsPlaying != false) {
                 Log.d(TAG, "Host sending PAUSE at position $position for $trackId")
                 client.sendPlaybackAction(PlaybackActions.PAUSE, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = false
@@ -181,6 +181,20 @@ class ListenTogetherManager @Inject constructor(
                 client.sendPlaybackAction(PlaybackActions.SEEK, position = newPosition.positionMs, trackId = trackId)
             }
         }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (!isInRoom || isHost) return
+            Log.d(TAG, "Playback state changed: $playbackState")
+            if (playbackState == Player.STATE_READY) {
+                val trackIdToSend = pendingBufferReadyTrackId
+                val currentMediaId = player?.currentMediaItem?.mediaId
+                if (trackIdToSend != null && currentMediaId == trackIdToSend) {
+                    pendingBufferReadyTrackId = null
+                    Log.d(TAG, "Player is STATE_READY for $trackIdToSend, sending buffer ready")
+                    client.sendBufferReady(trackIdToSend)
+                }
+            }
+        }
     }
 
     fun setPlayer(exoPlayer: ExoPlayer?) {
@@ -220,14 +234,26 @@ class ListenTogetherManager @Inject constructor(
             role.collect { newRole ->
                 val oldRole = previousRole
                 previousRole = newRole
+                if (player != null) {
+                    if (newRole != RoomRole.NONE) {
+                        if (!playerListenerRegistered) {
+                            player?.addListener(playerListener)
+                            playerListenerRegistered = true
+                            Log.d(TAG, "Role changed to $newRole, added player listener")
+                        }
+                    } else {
+                        if (playerListenerRegistered) {
+                            player?.removeListener(playerListener)
+                            playerListenerRegistered = false
+                            Log.d(TAG, "Role changed to NONE, removed player listener")
+                        }
+                    }
+                }
+                
                 if (newRole == RoomRole.HOST && oldRole != RoomRole.HOST && player != null) {
                     Log.d(TAG, "Role changed to HOST, starting sync services")
                     startHeartbeat()
                     stopDriftCorrection()
-                    if (!playerListenerRegistered) {
-                        player?.addListener(playerListener)
-                        playerListenerRegistered = true
-                    }
                 } else if (newRole != RoomRole.HOST && oldRole == RoomRole.HOST) {
                     Log.d(TAG, "Role changed from HOST, stopping sync services")
                     stopHeartbeat()
@@ -289,18 +315,80 @@ class ListenTogetherManager @Inject constructor(
             is ListenTogetherEvent.UserJoined -> {
                 if (isHost) {
                     player?.currentMediaItem?.let { item ->
-                        sendTrackChange(item)
-                        if (player?.playWhenReady == true) {
-                            val pos = player?.currentPosition ?: 0
-                            client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = item.mediaId)
-                        }
+                        // Don't send separate CHANGE_TRACK — the guest already gets room state
+                        // from JoinApproved. Only send FORCE_SYNC so the server creates ONE
+                        // buffer coordination flow. Send it regardless of play/pause state so
+                        // the guest always syncs to the host's current track + position.
+                        val pos = player?.currentPosition ?: 0
+                        val trackInfo = getTrackInfo(item)
+                        client.sendPlaybackAction(
+                            PlaybackActions.FORCE_SYNC,
+                            position = pos,
+                            trackId = item.mediaId,
+                            trackInfo = trackInfo
+                        )
+                    }
+                }
+            }
+            is ListenTogetherEvent.BufferWait -> {
+                isSyncing = true
+                player?.pause()
+                if (!isHost) {
+                    stopDriftCorrection()
+                    // Setup state to resume playing after buffer is complete
+                    if (pendingSyncState == null) {
+                        bufferingTrackId = event.trackId
+                        pendingSyncState = SyncStatePayload(
+                            currentTrack = null,
+                            isPlaying = true,
+                            position = player?.currentPosition ?: 0L,
+                            lastUpdate = System.currentTimeMillis(),
+                            queue = emptyList(),
+                            volume = 1f
+                        )
                     }
                 }
             }
             is ListenTogetherEvent.BufferComplete -> {
-                if (!isHost && bufferingTrackId == event.trackId) {
+                if (isHost) {
+                    // Host resumes automatically once all guests are ready
+                    player?.play()
+                    
+                    // Since isSyncing is true, our listener ignores the play event.
+                    // We MUST manually tell the server we are playing so it updates room.is_playing!
+                    val pos = player?.currentPosition ?: 0
+                    val trackId = player?.currentMediaItem?.mediaId
+                    client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = trackId)
+                    lastSyncedIsPlaying = true
+                    
+                    scope.launch {
+                        delay(200)
+                        isSyncing = false
+                    }
+                } else {
+                    // Guest: try the pending sync flow first
                     bufferCompleteReceivedForTrack = event.trackId
-                    applyPendingSyncIfReady()
+                    if (pendingSyncState != null && (bufferingTrackId == event.trackId)) {
+                        applyPendingSyncIfReady()
+                    } else if (bufferingTrackId == event.trackId || bufferingTrackId == null) {
+                        // Track is already loaded (e.g., from JoinApproved flow). Just play.
+                        Log.d(TAG, "BufferComplete: no pending sync, resuming playback for ${event.trackId}")
+                        isSyncing = true
+                        player?.let { p ->
+                            anchorPosition = p.currentPosition
+                            anchorTime = System.currentTimeMillis()
+                            anchorTrackId = p.currentMediaItem?.mediaId
+                            p.play()
+                            startDriftCorrectionJob()
+                        }
+                        scope.launch {
+                            delay(200)
+                            isSyncing = false
+                        }
+                        bufferingTrackId = null
+                        pendingSyncState = null
+                        bufferCompleteReceivedForTrack = null
+                    }
                 }
             }
             is ListenTogetherEvent.SyncStateReceived -> {
@@ -369,6 +457,7 @@ class ListenTogetherManager @Inject constructor(
         lastSyncedIsPlaying = null
         lastSyncedTrackId = null
         bufferingTrackId = null
+        pendingBufferReadyTrackId = null
         isSyncing = false
         bufferCompleteReceivedForTrack = null
     }
@@ -405,25 +494,26 @@ class ListenTogetherManager @Inject constructor(
 
                 // Drift thresholds
                 when {
-                    kotlin.math.abs(drift) > 2000 -> {
-                        // Major drift (> 2s): Hard seek
-                        Log.d(TAG, "Major drift ($drift ms), seeking to $expectedPosition")
-                        p.seekTo(expectedPosition)
+                    kotlin.math.abs(drift) > 1000 -> {
+                        // Strict sync requirement: Guest detects > 1000ms drift
+                        Log.w(TAG, "Strict match failed ($drift ms drift), forcing global sync pause!")
+                        p.pause()
+                        client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = expectedPosition, trackId = anchorTrackId)
                         anchorPosition = expectedPosition
                         anchorTime = System.currentTimeMillis()
-                        anchorTrackId = p.currentMediaItem?.mediaId
+                        p.seekTo(expectedPosition)
                     }
-                    drift < -40 -> {
-                        // Behind by > 40ms: Speed up slightly (1.05x). Pitch is pinned to
-                        // 1.0 so the time-stretch does not audibly raise the pitch.
+                    drift < -150 -> {
+                        // Behind by > 150ms: Speed up slightly (1.05x). Pitch pinned to 1.0
+                        // so the time-stretch does not audibly raise the pitch.
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f, 1.0f)
                     }
-                    drift > 40 -> {
-                         // Ahead by > 40ms: Slow down slightly (0.95x), pitch preserved.
+                    drift > 150 -> {
+                         // Ahead by > 150ms: Slow down slightly (0.95x), pitch preserved.
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f, 1.0f)
                     }
-                    kotlin.math.abs(drift) < 20 -> {
-                        // Within 20ms: Sync is good, reset to normal speed
+                    kotlin.math.abs(drift) <= 150 -> {
+                        // Within 150ms: Sync is good, reset to normal speed
                          if (p.playbackParameters.speed != 1.0f) {
                              p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
                          }
@@ -456,7 +546,7 @@ class ListenTogetherManager @Inject constructor(
         anchorTime = System.currentTimeMillis()
         anchorTrackId = p.currentMediaItem?.mediaId
 
-        if (kotlin.math.abs(p.currentPosition - targetPos) > 100) {
+        if (kotlin.math.abs(p.currentPosition - targetPos) > 1000) {
             p.seekTo(targetPos)
         }
         
@@ -477,37 +567,52 @@ class ListenTogetherManager @Inject constructor(
     private fun handlePlaybackSync(action: PlaybackActionPayload) {
         val p = player ?: return
 
-        // Re-estimate the server↔device clock offset from this message's server timestamp.
-        // We assume transit delay is small relative to clock skew; this cancels the (often
-        // large) absolute difference between the two clocks so latency compensation below
-        // measures real elapsed time instead of clock skew.
-        action.serverTime?.let { serverTime ->
-            serverClockOffset = serverTime - System.currentTimeMillis()
-        }
-
         // Track checking: If action has a trackId, ensure we are on it
-        val targetTrackId = action.trackId
-        val currentTrackId = p.currentMediaItem?.mediaId
+        // Treat empty string same as null (protobuf default for string is "")
+        val targetTrackId = action.trackId?.takeIf { it.isNotEmpty() }
+        val currentTrackId = p.currentMediaItem?.mediaId?.takeIf { it.isNotEmpty() }
         
+        // If we have a target track but guest has nothing loaded, or it's a different track
         if (targetTrackId != null && targetTrackId != currentTrackId) {
+            // If this track is already being buffered (e.g., from JoinApproved flow that started
+            // syncToTrack but hasn't finished loading the stream yet), DON'T start a new syncToTrack.
+            // That would cancel the in-progress one and skip buffer_ready, leaving the server stuck.
+            if (bufferingTrackId == targetTrackId) {
+                Log.d(TAG, "Track $targetTrackId already being buffered, skipping mismatch handling for ${action.action}")
+                // For FORCE_SYNC, just update the position we'll seek to when ready
+                if (action.action == PlaybackActions.FORCE_SYNC) {
+                    val pos = action.position ?: 0L
+                    pendingSyncState = pendingSyncState?.copy(position = pos) ?: SyncStatePayload(
+                        currentTrack = action.trackInfo,
+                        isPlaying = true,
+                        position = pos,
+                        lastUpdate = System.currentTimeMillis()
+                    )
+                }
+                return
+            }
             Log.d(TAG, "Guest track mismatch: current=$currentTrackId, target=$targetTrackId. Switching...")
             action.trackInfo?.let { track ->
                 syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             } ?: run {
                 // If trackInfo missing but we have ID, try to resolve it
-                if (action.trackId != null) {
-                    Log.d(TAG, "Track info missing, resolving from ID: ${action.trackId}")
-                    val placeholderTrack = TrackInfo(
-                        id = action.trackId,
-                        title = "Loading...",
-                        artist = "Please wait...",
-                        duration = 0L
-                    )
-                    syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
-                } else {
-                    client.requestSync()
-                }
+                Log.d(TAG, "Track info missing, resolving from ID: $targetTrackId")
+                val placeholderTrack = TrackInfo(
+                    id = targetTrackId,
+                    title = "Loading...",
+                    artist = "Please wait...",
+                    duration = 0L
+                )
+                syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             }
+            return
+        }
+        
+        // Defensive: if no track is loaded at all but we got play/force_sync with trackInfo, load it
+        if (currentTrackId == null && action.trackInfo != null && 
+            action.action in listOf(PlaybackActions.PLAY, PlaybackActions.FORCE_SYNC, PlaybackActions.CHANGE_TRACK)) {
+            Log.d(TAG, "No track loaded on guest, loading from trackInfo: ${action.trackInfo.title}")
+            syncToTrack(action.trackInfo, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             return
         }
 
@@ -516,21 +621,18 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    // Server-time based position adjustment for better sync. Use the
-                    // estimated server clock (localNow + offset) so device clock skew does
-                    // not corrupt the extrapolated position.
+                    // Server-time based position adjustment using raw clocks is inaccurate
+                    // due to clock desync between host and guest. We just use the base position
+                    // and a tiny estimated latency (50ms) to ensure we stay tightly synced.
                     val basePos = action.position ?: 0L
-                    val targetPos = action.serverTime?.let { serverTime ->
-                        val serverNow = System.currentTimeMillis() + serverClockOffset
-                        basePos + kotlin.math.max(0L, serverNow - serverTime)
-                    } ?: basePos
+                    val targetPos = basePos + 50L
                     
                     // Update anchors
                     anchorPosition = targetPos
                     anchorTime = System.currentTimeMillis()
                     anchorTrackId = action.trackId ?: p.currentMediaItem?.mediaId
 
-                    if (kotlin.math.abs(p.currentPosition - targetPos) > 100) p.seekTo(targetPos)
+                    if (kotlin.math.abs(p.currentPosition - targetPos) > 1000) p.seekTo(targetPos)
                     
                     // FORCE PLAY even if buffering was "active" logic-wise
                     // We trust the host's command. If we aren't actually ready, ExoPlayer will buffer anyway.
@@ -546,7 +648,7 @@ class ListenTogetherManager @Inject constructor(
                     p.pause()
                     stopDriftCorrection()
                     
-                    if (kotlin.math.abs(p.currentPosition - pos) > 100) p.seekTo(pos)
+                    if (kotlin.math.abs(p.currentPosition - pos) > 1000) p.seekTo(pos)
                 }
                 PlaybackActions.SEEK -> {
                     val pos = action.position ?: 0L
@@ -617,6 +719,21 @@ class ListenTogetherManager @Inject constructor(
                 PlaybackActions.SYNC_QUEUE -> {
                     // Logic remains same or implemented later
                 }
+                PlaybackActions.FORCE_SYNC -> {
+                    // Host has initiated a global sync pause. Pause playback, seek to
+                    // the host's position, and prepare for the BufferWait/BufferComplete
+                    // flow that will follow.
+                    val pos = action.position ?: 0L
+                    Log.d(TAG, "Guest received FORCE_SYNC: pausing and seeking to $pos for ${action.trackId}")
+                    stopDriftCorrection()
+                    p.pause()
+                    if (kotlin.math.abs(p.currentPosition - pos) > 1000) {
+                        p.seekTo(pos)
+                    }
+                    // The BufferWait event (which arrives separately) will set up 
+                    // pendingSyncState if needed. We just pause and position here.
+                    bufferingTrackId = action.trackId
+                }
             }
         } finally {
             endSyncAfter(200)
@@ -660,20 +777,32 @@ class ListenTogetherManager @Inject constructor(
         queue: List<TrackInfo>? = null
     ) {
         bufferingTrackId = track.id
+        pendingBufferReadyTrackId = null
         activeSyncJob?.cancel()
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
-                // 1. Fetch full song details to get "normal app" metadata (high-res art, source info)
-                val songDetails = youTubeRepository.getSongDetails(track.id)
+                // 1. Determine track source based on ID characteristics (YouTube IDs are always 11 chars)
+                val isYouTube = track.id.length == 11 && track.id.matches(Regex("[a-zA-Z0-9_-]{11}"))
                 
-                // 2. Resolve stream URL (prioritizing details if available)
-                val streamUrl = if (songDetails != null) {
-                    // Use standard repository resolution if we have song details
-                    youTubeRepository.getStreamUrl(songDetails.id)
+                // 2. Resolve stream URL from cache or direct fetch
+                val cachedUrl = streamUrlCache.get(track.id)
+                val streamUrl = if (cachedUrl != null) {
+                    cachedUrl
                 } else {
-                    // Fallback to direct fetch
-                    youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                    val resolved = if (isYouTube) {
+                        youTubeRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                            ?: remoteAudioRepository.getStreamUrl(track.id)
+                    } else {
+                        remoteAudioRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                    }
+                    if (resolved != null) {
+                        streamUrlCache.put(track.id, resolved)
+                    }
+                    resolved
                 }
                 
                 if (streamUrl == null) {
@@ -685,13 +814,8 @@ class ListenTogetherManager @Inject constructor(
                     return@launch
                 }
 
-                // 3. Create MediaItem using the best available metadata
-                // If songDetails is available, use it (better metadata), otherwise fallback to track info
-                val currentMediaItem = if (songDetails != null) {
-                    createMediaItemFromSong(songDetails, streamUrl)
-                } else {
-                    createMediaItem(track, streamUrl)
-                }
+                // 3. Create MediaItem using the available track info metadata (no need for slow details endpoint)
+                val currentMediaItem = createMediaItem(track, streamUrl)
                 
                 launch(Dispatchers.Main) {
                     val p = player ?: return@launch
@@ -721,10 +845,22 @@ class ListenTogetherManager @Inject constructor(
                     
                     if (bypassBuffer) {
                         if (queue == null) p.seekTo(position) // Already set in setMediaItems if queue present
-                        if (shouldPlay) p.play() else p.pause()
+                        
+                        // CRITICAL FIX: We must anchor drift correction when switching tracks!
+                        anchorPosition = position
+                        anchorTime = System.currentTimeMillis()
+                        anchorTrackId = track.id
+                        
+                        if (shouldPlay) {
+                            p.play()
+                            startDriftCorrectionJob()
+                        } else {
+                            p.pause()
+                            stopDriftCorrection()
+                        }
                         bufferingTrackId = null
                     } else {
-                        // Standard sync: pause, send ready
+                        // Standard sync: pause, wait for STATE_READY to send ready
                         p.pause()
                         
                         pendingSyncState = SyncStatePayload(
@@ -734,13 +870,22 @@ class ListenTogetherManager @Inject constructor(
                             lastUpdate = System.currentTimeMillis()
                         )
                         
-                        client.sendBufferReady(track.id)
+                        pendingBufferReadyTrackId = track.id
+                        if (p.playbackState == Player.STATE_READY && p.currentMediaItem?.mediaId == track.id) {
+                            pendingBufferReadyTrackId = null
+                            Log.d(TAG, "Player already STATE_READY for ${track.id}, sending buffer ready immediately")
+                            client.sendBufferReady(track.id)
+                        }
                         
                         // Add a timeout fallback for buffering
                         scope.launch {
                             delay(5000) // 5 seconds timeout
                             if (bufferingTrackId == track.id && pendingSyncState != null) {
                                 Log.w(TAG, "Buffer timeout for ${track.id}, forcing play")
+                                if (pendingBufferReadyTrackId == track.id) {
+                                    pendingBufferReadyTrackId = null
+                                    client.sendBufferReady(track.id)
+                                }
                                 bufferCompleteReceivedForTrack = track.id
                                 applyPendingSyncIfReady()
                             }
@@ -835,7 +980,7 @@ class ListenTogetherManager @Inject constructor(
         
         val trackInfo = getTrackInfo(mediaItem)
         
-        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackInfo = trackInfo)
+        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackId = mediaItem.mediaId, trackInfo = trackInfo)
     }
     
     private fun getTrackInfo(mediaItem: MediaItem): TrackInfo {
@@ -911,7 +1056,9 @@ class ListenTogetherManager @Inject constructor(
                 delay(15000L)
                 player?.let { p ->
                     if (p.playWhenReady && p.playbackState == Player.STATE_READY) {
-                        client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition)
+                        val trackId = p.currentMediaItem?.mediaId
+                        val trackInfo = p.currentMediaItem?.let { getTrackInfo(it) }
+                        client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition, trackId = trackId, trackInfo = trackInfo)
                     }
                 }
             }

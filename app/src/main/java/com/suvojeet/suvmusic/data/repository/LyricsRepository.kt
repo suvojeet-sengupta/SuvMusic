@@ -320,10 +320,13 @@ class LyricsRepository @Inject constructor(
                 }
             }
             LyricsProviderType.REMOTE -> {
-                remoteAudioRepository.getLyricsFromRemote(song.id)?.let { text ->
-                    val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
-                    Lyrics(lines = lines, sourceCredit = "Lyrics from HQ Audio Source", isSynced = false, provider = LyricsProviderType.REMOTE)
-                }
+                val targetId = if (song.source == SongSource.REMOTE) song.id else sessionManager.getMatchedRemoteSongId(song.id)
+                if (targetId != null) {
+                    remoteAudioRepository.getLyricsFromRemote(targetId)?.let { text ->
+                        val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                        Lyrics(lines = lines, sourceCredit = "Lyrics from HQ Audio Source", isSynced = false, provider = LyricsProviderType.REMOTE)
+                    }
+                } else null
             }
             LyricsProviderType.YOUTUBE -> {
                 try {
@@ -382,7 +385,15 @@ class LyricsRepository @Inject constructor(
                 }
             }
             SongSource.YOUTUBE, SongSource.DOWNLOADED, SongSource.LOCAL -> {
-                try {
+                val matchedRemoteId = sessionManager.getMatchedRemoteSongId(song.id)
+                val hqLyrics = if (matchedRemoteId != null) {
+                    remoteAudioRepository.getLyricsFromRemote(matchedRemoteId)?.let { text ->
+                        val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
+                        Lyrics(lines = lines, sourceCredit = "Lyrics from HQ Audio Source", isSynced = false, provider = LyricsProviderType.REMOTE)
+                    }
+                } else null
+
+                hqLyrics ?: try {
                      youTubeRepository.getLyrics(song.id)?.copy(provider = LyricsProviderType.YOUTUBE)
                 } catch (e: Exception) {
                     null

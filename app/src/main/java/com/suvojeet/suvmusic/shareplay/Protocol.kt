@@ -63,6 +63,7 @@ object PlaybackActions {
     const val QUEUE_CLEAR = "queue_clear"
     const val SYNC_QUEUE = "sync_queue"
     const val SET_VOLUME = "set_volume"
+    const val FORCE_SYNC = "force_sync"
 }
 
 /**
