@@ -516,9 +516,11 @@ class ListenTogetherManager @Inject constructor(
         val p = player ?: return
         
         // Track checking: If action has a trackId, ensure we are on it
-        val targetTrackId = action.trackId
-        val currentTrackId = p.currentMediaItem?.mediaId
+        // Treat empty string same as null (protobuf default for string is "")
+        val targetTrackId = action.trackId?.takeIf { it.isNotEmpty() }
+        val currentTrackId = p.currentMediaItem?.mediaId?.takeIf { it.isNotEmpty() }
         
+        // If we have a target track but guest has nothing loaded, or it's a different track
         if (targetTrackId != null && targetTrackId != currentTrackId) {
             // If this track is already being buffered (e.g., from JoinApproved flow that started
             // syncToTrack but hasn't finished loading the stream yet), DON'T start a new syncToTrack.
@@ -542,19 +544,23 @@ class ListenTogetherManager @Inject constructor(
                 syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             } ?: run {
                 // If trackInfo missing but we have ID, try to resolve it
-                if (action.trackId != null) {
-                    Log.d(TAG, "Track info missing, resolving from ID: ${action.trackId}")
-                    val placeholderTrack = TrackInfo(
-                        id = action.trackId,
-                        title = "Loading...",
-                        artist = "Please wait...",
-                        duration = 0L
-                    )
-                    syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
-                } else {
-                    client.requestSync()
-                }
+                Log.d(TAG, "Track info missing, resolving from ID: $targetTrackId")
+                val placeholderTrack = TrackInfo(
+                    id = targetTrackId,
+                    title = "Loading...",
+                    artist = "Please wait...",
+                    duration = 0L
+                )
+                syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             }
+            return
+        }
+        
+        // Defensive: if no track is loaded at all but we got play/force_sync with trackInfo, load it
+        if (currentTrackId == null && action.trackInfo != null && 
+            action.action in listOf(PlaybackActions.PLAY, PlaybackActions.FORCE_SYNC, PlaybackActions.CHANGE_TRACK)) {
+            Log.d(TAG, "No track loaded on guest, loading from trackInfo: ${action.trackInfo.title}")
+            syncToTrack(action.trackInfo, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
             return
         }
 
@@ -911,7 +917,7 @@ class ListenTogetherManager @Inject constructor(
         
         val trackInfo = getTrackInfo(mediaItem)
         
-        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackInfo = trackInfo)
+        client.sendPlaybackAction(PlaybackActions.CHANGE_TRACK, trackId = mediaItem.mediaId, trackInfo = trackInfo)
     }
     
     private fun getTrackInfo(mediaItem: MediaItem): TrackInfo {
@@ -957,7 +963,9 @@ class ListenTogetherManager @Inject constructor(
                 delay(15000L)
                 player?.let { p ->
                     if (p.playWhenReady && p.playbackState == Player.STATE_READY) {
-                        client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition)
+                        val trackId = p.currentMediaItem?.mediaId
+                        val trackInfo = p.currentMediaItem?.let { getTrackInfo(it) }
+                        client.sendPlaybackAction(PlaybackActions.PLAY, position = p.currentPosition, trackId = trackId, trackInfo = trackInfo)
                     }
                 }
             }
