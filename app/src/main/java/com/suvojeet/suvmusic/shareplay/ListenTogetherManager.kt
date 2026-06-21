@@ -58,6 +58,8 @@ class ListenTogetherManager @Inject constructor(
     // Track ID being buffered
     @Volatile
     private var bufferingTrackId: String? = null
+    @Volatile
+    private var pendingBufferReadyTrackId: String? = null
     
     // Track active sync job to cancel it if a better update arrives
     @Volatile
@@ -173,6 +175,20 @@ class ListenTogetherManager @Inject constructor(
                 client.sendPlaybackAction(PlaybackActions.SEEK, position = newPosition.positionMs, trackId = trackId)
             }
         }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (!isInRoom || isHost) return
+            Log.d(TAG, "Playback state changed: $playbackState")
+            if (playbackState == Player.STATE_READY) {
+                val trackIdToSend = pendingBufferReadyTrackId
+                val currentMediaId = player?.currentMediaItem?.mediaId
+                if (trackIdToSend != null && currentMediaId == trackIdToSend) {
+                    pendingBufferReadyTrackId = null
+                    Log.d(TAG, "Player is STATE_READY for $trackIdToSend, sending buffer ready")
+                    client.sendBufferReady(trackIdToSend)
+                }
+            }
+        }
     }
 
     fun setPlayer(exoPlayer: ExoPlayer?) {
@@ -212,14 +228,26 @@ class ListenTogetherManager @Inject constructor(
             role.collect { newRole ->
                 val oldRole = previousRole
                 previousRole = newRole
+                if (player != null) {
+                    if (newRole != RoomRole.NONE) {
+                        if (!playerListenerRegistered) {
+                            player?.addListener(playerListener)
+                            playerListenerRegistered = true
+                            Log.d(TAG, "Role changed to $newRole, added player listener")
+                        }
+                    } else {
+                        if (playerListenerRegistered) {
+                            player?.removeListener(playerListener)
+                            playerListenerRegistered = false
+                            Log.d(TAG, "Role changed to NONE, removed player listener")
+                        }
+                    }
+                }
+                
                 if (newRole == RoomRole.HOST && oldRole != RoomRole.HOST && player != null) {
                     Log.d(TAG, "Role changed to HOST, starting sync services")
                     startHeartbeat()
                     stopDriftCorrection()
-                    if (!playerListenerRegistered) {
-                        player?.addListener(playerListener)
-                        playerListenerRegistered = true
-                    }
                 } else if (newRole != RoomRole.HOST && oldRole == RoomRole.HOST) {
                     Log.d(TAG, "Role changed from HOST, stopping sync services")
                     stopHeartbeat()
@@ -410,6 +438,7 @@ class ListenTogetherManager @Inject constructor(
         lastSyncedIsPlaying = null
         lastSyncedTrackId = null
         bufferingTrackId = null
+        pendingBufferReadyTrackId = null
         isSyncing = false
         bufferCompleteReceivedForTrack = null
     }
@@ -735,6 +764,7 @@ class ListenTogetherManager @Inject constructor(
         queue: List<TrackInfo>? = null
     ) {
         bufferingTrackId = track.id
+        pendingBufferReadyTrackId = null
         activeSyncJob?.cancel()
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
@@ -817,7 +847,7 @@ class ListenTogetherManager @Inject constructor(
                         }
                         bufferingTrackId = null
                     } else {
-                        // Standard sync: pause, send ready
+                        // Standard sync: pause, wait for STATE_READY to send ready
                         p.pause()
                         
                         pendingSyncState = SyncStatePayload(
@@ -827,13 +857,22 @@ class ListenTogetherManager @Inject constructor(
                             lastUpdate = System.currentTimeMillis()
                         )
                         
-                        client.sendBufferReady(track.id)
+                        pendingBufferReadyTrackId = track.id
+                        if (p.playbackState == Player.STATE_READY && p.currentMediaItem?.mediaId == track.id) {
+                            pendingBufferReadyTrackId = null
+                            Log.d(TAG, "Player already STATE_READY for ${track.id}, sending buffer ready immediately")
+                            client.sendBufferReady(track.id)
+                        }
                         
                         // Add a timeout fallback for buffering
                         scope.launch {
                             delay(5000) // 5 seconds timeout
                             if (bufferingTrackId == track.id && pendingSyncState != null) {
                                 Log.w(TAG, "Buffer timeout for ${track.id}, forcing play")
+                                if (pendingBufferReadyTrackId == track.id) {
+                                    pendingBufferReadyTrackId = null
+                                    client.sendBufferReady(track.id)
+                                }
                                 bufferCompleteReceivedForTrack = track.id
                                 applyPendingSyncIfReady()
                             }
