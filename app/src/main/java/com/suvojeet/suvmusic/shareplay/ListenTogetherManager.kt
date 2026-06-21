@@ -276,11 +276,18 @@ class ListenTogetherManager @Inject constructor(
             is ListenTogetherEvent.UserJoined -> {
                 if (isHost) {
                     player?.currentMediaItem?.let { item ->
-                        sendTrackChange(item)
-                        if (player?.playWhenReady == true) {
-                            val pos = player?.currentPosition ?: 0
-                            client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = pos, trackId = item.mediaId)
-                        }
+                        // Don't send separate CHANGE_TRACK — the guest already gets room state
+                        // from JoinApproved. Only send FORCE_SYNC so the server creates ONE
+                        // buffer coordination flow. Send it regardless of play/pause state so
+                        // the guest always syncs to the host's current track + position.
+                        val pos = player?.currentPosition ?: 0
+                        val trackInfo = getTrackInfo(item)
+                        client.sendPlaybackAction(
+                            PlaybackActions.FORCE_SYNC,
+                            position = pos,
+                            trackId = item.mediaId,
+                            trackInfo = trackInfo
+                        )
                     }
                 }
             }
@@ -318,9 +325,30 @@ class ListenTogetherManager @Inject constructor(
                         delay(200)
                         isSyncing = false
                     }
-                } else if (bufferingTrackId == event.trackId) {
+                } else {
+                    // Guest: try the pending sync flow first
                     bufferCompleteReceivedForTrack = event.trackId
-                    applyPendingSyncIfReady()
+                    if (pendingSyncState != null && (bufferingTrackId == event.trackId)) {
+                        applyPendingSyncIfReady()
+                    } else if (bufferingTrackId == event.trackId || bufferingTrackId == null) {
+                        // Track is already loaded (e.g., from JoinApproved flow). Just play.
+                        Log.d(TAG, "BufferComplete: no pending sync, resuming playback for ${event.trackId}")
+                        isSyncing = true
+                        player?.let { p ->
+                            anchorPosition = p.currentPosition
+                            anchorTime = System.currentTimeMillis()
+                            anchorTrackId = p.currentMediaItem?.mediaId
+                            p.play()
+                            startDriftCorrectionJob()
+                        }
+                        scope.launch {
+                            delay(200)
+                            isSyncing = false
+                        }
+                        bufferingTrackId = null
+                        pendingSyncState = null
+                        bufferCompleteReceivedForTrack = null
+                    }
                 }
             }
             is ListenTogetherEvent.SyncStateReceived -> {
@@ -615,6 +643,21 @@ class ListenTogetherManager @Inject constructor(
                 }
                 PlaybackActions.SYNC_QUEUE -> {
                     // Logic remains same or implemented later
+                }
+                PlaybackActions.FORCE_SYNC -> {
+                    // Host has initiated a global sync pause. Pause playback, seek to
+                    // the host's position, and prepare for the BufferWait/BufferComplete
+                    // flow that will follow.
+                    val pos = action.position ?: 0L
+                    Log.d(TAG, "Guest received FORCE_SYNC: pausing and seeking to $pos for ${action.trackId}")
+                    stopDriftCorrection()
+                    p.pause()
+                    if (kotlin.math.abs(p.currentPosition - pos) > 100) {
+                        p.seekTo(pos)
+                    }
+                    // The BufferWait event (which arrives separately) will set up 
+                    // pendingSyncState if needed. We just pause and position here.
+                    bufferingTrackId = action.trackId
                 }
             }
         } finally {
