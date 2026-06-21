@@ -8,6 +8,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
+import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import javax.inject.Singleton
 class ListenTogetherManager @Inject constructor(
     private val client: ListenTogetherClient,
     private val youTubeRepository: YouTubeRepository,
+    private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     companion object {
@@ -440,8 +442,8 @@ class ListenTogetherManager @Inject constructor(
 
                 // Drift thresholds
                 when {
-                    kotlin.math.abs(drift) > 50 -> {
-                        // Strict sync requirement: Guest detects > 50ms drift
+                    kotlin.math.abs(drift) > 1000 -> {
+                        // Strict sync requirement: Guest detects > 1000ms drift
                         Log.w(TAG, "Strict match failed ($drift ms drift), forcing global sync pause!")
                         p.pause()
                         client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = expectedPosition, trackId = anchorTrackId)
@@ -449,16 +451,16 @@ class ListenTogetherManager @Inject constructor(
                         anchorTime = System.currentTimeMillis()
                         p.seekTo(expectedPosition)
                     }
-                    drift < -20 -> {
-                        // Behind by > 20ms: Speed up slightly (1.05x)
+                    drift < -150 -> {
+                        // Behind by > 150ms: Speed up slightly (1.05x)
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f)
                     }
-                    drift > 20 -> {
-                         // Ahead by > 20ms: Slow down slightly (0.95x)
+                    drift > 150 -> {
+                         // Ahead by > 150ms: Slow down slightly (0.95x)
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f)
                     }
-                    kotlin.math.abs(drift) <= 20 -> {
-                        // Within 20ms: Sync is good, reset to normal speed
+                    kotlin.math.abs(drift) <= 150 -> {
+                        // Within 150ms: Sync is good, reset to normal speed
                          if (p.playbackParameters.speed != 1.0f) {
                              p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
                          }
@@ -491,7 +493,7 @@ class ListenTogetherManager @Inject constructor(
         anchorTime = System.currentTimeMillis()
         anchorTrackId = p.currentMediaItem?.mediaId
 
-        if (kotlin.math.abs(p.currentPosition - targetPos) > 100) {
+        if (kotlin.math.abs(p.currentPosition - targetPos) > 1000) {
             p.seekTo(targetPos)
         }
         
@@ -580,7 +582,7 @@ class ListenTogetherManager @Inject constructor(
                     anchorTime = System.currentTimeMillis()
                     anchorTrackId = action.trackId ?: p.currentMediaItem?.mediaId
 
-                    if (kotlin.math.abs(p.currentPosition - targetPos) > 100) p.seekTo(targetPos)
+                    if (kotlin.math.abs(p.currentPosition - targetPos) > 1000) p.seekTo(targetPos)
                     
                     // FORCE PLAY even if buffering was "active" logic-wise
                     // We trust the host's command. If we aren't actually ready, ExoPlayer will buffer anyway.
@@ -596,7 +598,7 @@ class ListenTogetherManager @Inject constructor(
                     p.pause()
                     stopDriftCorrection()
                     
-                    if (kotlin.math.abs(p.currentPosition - pos) > 100) p.seekTo(pos)
+                    if (kotlin.math.abs(p.currentPosition - pos) > 1000) p.seekTo(pos)
                 }
                 PlaybackActions.SEEK -> {
                     val pos = action.position ?: 0L
@@ -675,7 +677,7 @@ class ListenTogetherManager @Inject constructor(
                     Log.d(TAG, "Guest received FORCE_SYNC: pausing and seeking to $pos for ${action.trackId}")
                     stopDriftCorrection()
                     p.pause()
-                    if (kotlin.math.abs(p.currentPosition - pos) > 100) {
+                    if (kotlin.math.abs(p.currentPosition - pos) > 1000) {
                         p.seekTo(pos)
                     }
                     // The BufferWait event (which arrives separately) will set up 
@@ -734,15 +736,27 @@ class ListenTogetherManager @Inject constructor(
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
                 // 1. Fetch full song details to get "normal app" metadata (high-res art, source info)
-                val songDetails = youTubeRepository.getSongDetails(track.id)
+                var songDetails = youTubeRepository.getSongDetails(track.id)
+                var isRemoteAudio = false
+                if (songDetails == null) {
+                    songDetails = remoteAudioRepository.getSongDetails(track.id)
+                    if (songDetails != null) {
+                        isRemoteAudio = true
+                    }
+                }
                 
                 // 2. Resolve stream URL (prioritizing details if available)
                 val streamUrl = if (songDetails != null) {
-                    // Use standard repository resolution if we have song details
-                    youTubeRepository.getStreamUrl(songDetails.id)
+                    if (isRemoteAudio) {
+                        remoteAudioRepository.getStreamUrl(songDetails.id)
+                    } else {
+                        youTubeRepository.getStreamUrl(songDetails.id)
+                    }
                 } else {
                     // Fallback to direct fetch
-                    youTubeRepository.getStreamUrl(track.id) ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                    youTubeRepository.getStreamUrl(track.id) 
+                        ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                        ?: remoteAudioRepository.getStreamUrl(track.id)
                 }
                 
                 if (streamUrl == null) {

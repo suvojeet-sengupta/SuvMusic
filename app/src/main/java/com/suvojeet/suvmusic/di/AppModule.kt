@@ -224,9 +224,10 @@ object AppModule {
     fun provideListenTogetherManager(
         client: com.suvojeet.suvmusic.shareplay.ListenTogetherClient,
         youTubeRepository: YouTubeRepository,
+        remoteAudioRepository: RemoteAudioRepository,
         sessionManager: SessionManager
     ): com.suvojeet.suvmusic.shareplay.ListenTogetherManager {
-        val manager = com.suvojeet.suvmusic.shareplay.ListenTogetherManager(client, youTubeRepository, sessionManager)
+        val manager = com.suvojeet.suvmusic.shareplay.ListenTogetherManager(client, youTubeRepository, remoteAudioRepository, sessionManager)
         manager.initialize()
         return manager
     }
