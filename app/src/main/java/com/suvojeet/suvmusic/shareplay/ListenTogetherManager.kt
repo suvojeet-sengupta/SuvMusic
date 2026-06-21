@@ -279,7 +279,7 @@ class ListenTogetherManager @Inject constructor(
                         sendTrackChange(item)
                         if (player?.playWhenReady == true) {
                             val pos = player?.currentPosition ?: 0
-                            client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = item.mediaId)
+                            client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = pos, trackId = item.mediaId)
                         }
                     }
                 }

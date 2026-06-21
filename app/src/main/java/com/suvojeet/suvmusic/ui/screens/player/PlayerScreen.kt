@@ -158,7 +158,7 @@ data class PlayerScreenActions(
 @Composable
 fun PlayerScreen(
     state: PlayerScreenState,
-    actions: PlayerScreenActions,
+    originalActions: PlayerScreenActions,
     player: Player? = null,
     playlistViewModel: PlaylistManagementViewModel = koinViewModel(),
     ringtoneViewModel: RingtoneViewModel = koinViewModel<RingtoneViewModel>(),
@@ -176,6 +176,25 @@ fun PlayerScreen(
     val sponsorSegments by playerViewModel.sponsorSegments.collectAsStateWithLifecycle(initialValue = emptyList())
     val isFullScreen by playerViewModel.isFullScreen.collectAsStateWithLifecycle()
     val isSwitchingMode by playerViewModel.isSwitchingMode.collectAsStateWithLifecycle()
+    
+    val listenTogetherRole by playerViewModel.listenTogetherManager.role.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.RoomRole.NONE)
+    val isGuest = listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.GUEST
+    
+    val actions = remember(originalActions, isGuest) {
+        if (isGuest) {
+            val blockedMsg = { com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Host has controls in Listen Together!") }
+            originalActions.copy(
+                onPlayPause = blockedMsg,
+                onNext = blockedMsg,
+                onPrevious = blockedMsg,
+                onSeekTo = { _ -> blockedMsg() },
+                onPlayFromQueue = { blockedMsg() },
+                onShuffleToggle = blockedMsg,
+                onRepeatToggle = blockedMsg,
+                onToggleAutoplay = blockedMsg
+            )
+        } else originalActions
+    }
     
     // Adaptive Layout Support
     val adaptiveInfo = currentWindowAdaptiveInfo()
