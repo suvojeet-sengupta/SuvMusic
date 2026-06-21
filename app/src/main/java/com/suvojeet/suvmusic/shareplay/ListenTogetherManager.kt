@@ -284,8 +284,34 @@ class ListenTogetherManager @Inject constructor(
                     }
                 }
             }
+            is ListenTogetherEvent.BufferWait -> {
+                isSyncing = true
+                player?.pause()
+                if (!isHost) {
+                    stopDriftCorrection()
+                    // Setup state to resume playing after buffer is complete
+                    if (pendingSyncState == null) {
+                        bufferingTrackId = event.trackId
+                        pendingSyncState = SyncStatePayload(
+                            currentTrack = null,
+                            isPlaying = true,
+                            position = player?.currentPosition ?: 0L,
+                            lastUpdate = System.currentTimeMillis(),
+                            queue = emptyList(),
+                            volume = 1f
+                        )
+                    }
+                }
+            }
             is ListenTogetherEvent.BufferComplete -> {
-                if (!isHost && bufferingTrackId == event.trackId) {
+                if (isHost) {
+                    // Host resumes automatically once all guests are ready
+                    player?.play()
+                    scope.launch {
+                        delay(200)
+                        isSyncing = false
+                    }
+                } else if (bufferingTrackId == event.trackId) {
                     bufferCompleteReceivedForTrack = event.trackId
                     applyPendingSyncIfReady()
                 }
