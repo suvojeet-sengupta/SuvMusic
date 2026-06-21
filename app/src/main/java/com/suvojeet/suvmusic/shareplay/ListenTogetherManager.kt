@@ -484,12 +484,11 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    // Server-time based position adjustment for better sync
+                    // Server-time based position adjustment using raw clocks is inaccurate 
+                    // due to clock desync between host and guest. We just use the base position 
+                    // and a tiny estimated latency (50ms) to ensure we stay tightly synced.
                     val basePos = action.position ?: 0L
-                    val now = System.currentTimeMillis()
-                    val targetPos = action.serverTime?.let { serverTime ->
-                        basePos + kotlin.math.max(0L, now - serverTime)
-                    } ?: basePos
+                    val targetPos = basePos + 50L
                     
                     // Update anchors
                     anchorPosition = targetPos
@@ -691,7 +690,19 @@ class ListenTogetherManager @Inject constructor(
                     
                     if (bypassBuffer) {
                         if (queue == null) p.seekTo(position) // Already set in setMediaItems if queue present
-                        if (shouldPlay) p.play() else p.pause()
+                        
+                        // CRITICAL FIX: We must anchor drift correction when switching tracks!
+                        anchorPosition = position
+                        anchorTime = System.currentTimeMillis()
+                        anchorTrackId = track.id
+                        
+                        if (shouldPlay) {
+                            p.play()
+                            startDriftCorrectionJob()
+                        } else {
+                            p.pause()
+                            stopDriftCorrection()
+                        }
                         bufferingTrackId = null
                     } else {
                         // Standard sync: pause, send ready
