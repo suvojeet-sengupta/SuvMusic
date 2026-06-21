@@ -1082,7 +1082,7 @@ fun SuvMusicApp(
 
                 com.suvojeet.suvmusic.ui.screens.player.PlayerScreen(
                     state = playerScreenState,
-                    actions = playerScreenActions,
+                    originalActions = playerScreenActions,
                     player = playerViewModel.getPlayer(),
                     playerViewModel = playerViewModel,
                     volumeKeyEvents = volumeKeyEvents
