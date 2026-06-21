@@ -520,25 +520,30 @@ fun PlayerScreen(
                     durationProvider = durationProvider
                 )
                 
-                // Listen Together Global Syncing Overlay
+                // Listen Together Global Syncing Overlay - Non-blocking Pill
                 androidx.compose.animation.AnimatedVisibility(
                     visible = state.listenTogetherBufferingUsers.isNotEmpty(),
-                    enter = androidx.compose.animation.fadeIn(),
-                    exit = androidx.compose.animation.fadeOut()
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(Color.Black.copy(alpha = 0.7f), shape = androidx.compose.foundation.shape.CircleShape)
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            androidx.compose.material3.CircularProgressIndicator(color = dominantColors.primary)
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = dominantColors.primary,
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 "Syncing (${state.listenTogetherBufferingUsers.size} waiting)...", 
                                 color = Color.White, 
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
                         }

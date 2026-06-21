@@ -379,23 +379,24 @@ class ListenTogetherManager @Inject constructor(
 
                 // Drift thresholds
                 when {
-                    kotlin.math.abs(drift) > 2000 -> {
-                        // Major drift (> 2s): Hard seek
-                        Log.d(TAG, "Major drift ($drift ms), seeking to $expectedPosition")
-                        p.seekTo(expectedPosition)
+                    kotlin.math.abs(drift) > 50 -> {
+                        // Strict sync requirement: Guest detects > 50ms drift
+                        Log.w(TAG, "Strict match failed ($drift ms drift), forcing global sync pause!")
+                        p.pause()
+                        client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = expectedPosition, trackId = anchorTrackId)
                         anchorPosition = expectedPosition
                         anchorTime = System.currentTimeMillis()
-                        anchorTrackId = p.currentMediaItem?.mediaId
+                        p.seekTo(expectedPosition)
                     }
-                    drift < -40 -> {
-                        // Behind by > 40ms: Speed up slightly (1.05x)
+                    drift < -20 -> {
+                        // Behind by > 20ms: Speed up slightly (1.05x)
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f)
                     }
-                    drift > 40 -> {
-                         // Ahead by > 40ms: Slow down slightly (0.95x)
+                    drift > 20 -> {
+                         // Ahead by > 20ms: Slow down slightly (0.95x)
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f)
                     }
-                    kotlin.math.abs(drift) < 20 -> {
+                    kotlin.math.abs(drift) <= 20 -> {
                         // Within 20ms: Sync is good, reset to normal speed
                          if (p.playbackParameters.speed != 1.0f) {
                              p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
