@@ -307,6 +307,13 @@ class ListenTogetherManager @Inject constructor(
                 if (isHost) {
                     // Host resumes automatically once all guests are ready
                     player?.play()
+                    
+                    // Since isSyncing is true, our listener ignores the play event.
+                    // We MUST manually tell the server we are playing so it updates room.is_playing!
+                    val pos = player?.currentPosition ?: 0
+                    val trackId = player?.currentMediaItem?.mediaId
+                    client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = trackId)
+                    
                     scope.launch {
                         delay(200)
                         isSyncing = false
