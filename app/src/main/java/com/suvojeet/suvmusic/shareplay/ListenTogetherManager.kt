@@ -52,6 +52,9 @@ class ListenTogetherManager @Inject constructor(
     @Volatile
     private var lastSyncedTrackId: String? = null
     
+    // Cache for resolved stream URLs to avoid repeating slow network requests
+    private val streamUrlCache = android.util.LruCache<String, String>(50)
+    
     // Track ID being buffered
     @Volatile
     private var bufferingTrackId: String? = null
@@ -736,28 +739,27 @@ class ListenTogetherManager @Inject constructor(
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
-                // 1. Fetch full song details to get "normal app" metadata (high-res art, source info)
-                var songDetails = youTubeRepository.getSongDetails(track.id)
-                var isRemoteAudio = false
-                if (songDetails == null) {
-                    songDetails = remoteAudioRepository.getSongDetails(track.id)
-                    if (songDetails != null) {
-                        isRemoteAudio = true
-                    }
-                }
+                // 1. Determine track source based on ID characteristics (YouTube IDs are always 11 chars)
+                val isYouTube = track.id.length == 11 && track.id.matches(Regex("[a-zA-Z0-9_-]{11}"))
                 
-                // 2. Resolve stream URL (prioritizing details if available)
-                val streamUrl = if (songDetails != null) {
-                    if (isRemoteAudio) {
-                        remoteAudioRepository.getStreamUrl(songDetails.id)
-                    } else {
-                        youTubeRepository.getStreamUrl(songDetails.id)
-                    }
+                // 2. Resolve stream URL from cache or direct fetch
+                val cachedUrl = streamUrlCache.get(track.id)
+                val streamUrl = if (cachedUrl != null) {
+                    cachedUrl
                 } else {
-                    // Fallback to direct fetch
-                    youTubeRepository.getStreamUrl(track.id) 
-                        ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
-                        ?: remoteAudioRepository.getStreamUrl(track.id)
+                    val resolved = if (isYouTube) {
+                        youTubeRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                            ?: remoteAudioRepository.getStreamUrl(track.id)
+                    } else {
+                        remoteAudioRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrl(track.id)
+                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                    }
+                    if (resolved != null) {
+                        streamUrlCache.put(track.id, resolved)
+                    }
+                    resolved
                 }
                 
                 if (streamUrl == null) {
@@ -769,13 +771,8 @@ class ListenTogetherManager @Inject constructor(
                     return@launch
                 }
 
-                // 3. Create MediaItem using the best available metadata
-                // If songDetails is available, use it (better metadata), otherwise fallback to track info
-                val currentMediaItem = if (songDetails != null) {
-                    createMediaItemFromSong(songDetails, streamUrl)
-                } else {
-                    createMediaItem(track, streamUrl)
-                }
+                // 3. Create MediaItem using the available track info metadata (no need for slow details endpoint)
+                val currentMediaItem = createMediaItem(track, streamUrl)
                 
                 launch(Dispatchers.Main) {
                     val p = player ?: return@launch
