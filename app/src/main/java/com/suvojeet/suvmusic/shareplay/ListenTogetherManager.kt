@@ -520,6 +520,23 @@ class ListenTogetherManager @Inject constructor(
         val currentTrackId = p.currentMediaItem?.mediaId
         
         if (targetTrackId != null && targetTrackId != currentTrackId) {
+            // If this track is already being buffered (e.g., from JoinApproved flow that started
+            // syncToTrack but hasn't finished loading the stream yet), DON'T start a new syncToTrack.
+            // That would cancel the in-progress one and skip buffer_ready, leaving the server stuck.
+            if (bufferingTrackId == targetTrackId) {
+                Log.d(TAG, "Track $targetTrackId already being buffered, skipping mismatch handling for ${action.action}")
+                // For FORCE_SYNC, just update the position we'll seek to when ready
+                if (action.action == PlaybackActions.FORCE_SYNC) {
+                    val pos = action.position ?: 0L
+                    pendingSyncState = pendingSyncState?.copy(position = pos) ?: SyncStatePayload(
+                        currentTrack = action.trackInfo,
+                        isPlaying = true,
+                        position = pos,
+                        lastUpdate = System.currentTimeMillis()
+                    )
+                }
+                return
+            }
             Log.d(TAG, "Guest track mismatch: current=$currentTrackId, target=$targetTrackId. Switching...")
             action.trackInfo?.let { track ->
                 syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
