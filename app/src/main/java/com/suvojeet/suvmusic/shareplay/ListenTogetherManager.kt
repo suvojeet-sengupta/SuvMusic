@@ -128,7 +128,7 @@ class ListenTogetherManager @Inject constructor(
                 Log.d(TAG, "Host sending PLAY at position $position for $trackId")
                 client.sendPlaybackAction(PlaybackActions.PLAY, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = true
-            } else if (!playWhenReady && (lastSyncedIsPlaying == true)) {
+            } else if (!playWhenReady && lastSyncedIsPlaying != false) {
                 Log.d(TAG, "Host sending PAUSE at position $position for $trackId")
                 client.sendPlaybackAction(PlaybackActions.PAUSE, position = position, trackId = trackId, trackInfo = trackInfo)
                 lastSyncedIsPlaying = false
@@ -322,6 +322,7 @@ class ListenTogetherManager @Inject constructor(
                     val pos = player?.currentPosition ?: 0
                     val trackId = player?.currentMediaItem?.mediaId
                     client.sendPlaybackAction(PlaybackActions.PLAY, position = pos, trackId = trackId)
+                    lastSyncedIsPlaying = true
                     
                     scope.launch {
                         delay(200)
