@@ -295,7 +295,7 @@ fun ConnectToServerContent(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "SERVER CONFIGURATION",
+                    text = "Server Configuration",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary,
@@ -477,7 +477,7 @@ fun SetupContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "WHO ARE YOU?",
+                    text = "Your Profile Name",
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.5.sp
@@ -866,7 +866,7 @@ fun RoomContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "ROOM CODE", 
+                        "Active Room Code", 
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 2.sp
@@ -946,10 +946,10 @@ fun RoomContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatItem(label = "ELAPSED", value = durationString, modifier = Modifier.weight(1f))
-                StatItem(label = "LISTENING", value = "${room.users.size}", modifier = Modifier.weight(1f))
+                StatItem(label = "Elapsed", value = durationString, modifier = Modifier.weight(1f))
+                StatItem(label = "Listening", value = "${room.users.size}", modifier = Modifier.weight(1f))
                 StatItem(
-                    label = "SYNC", 
+                    label = "Sync", 
                     value = if (room.isPlaying) "Live" else "Paused", 
                     modifier = Modifier.weight(1f), 
                     highlight = room.isPlaying, 
@@ -963,7 +963,7 @@ fun RoomContent(
             val track = room.currentTrack
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "NOW SYNCING", 
+                    "Now Syncing", 
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.2.sp
@@ -1041,7 +1041,7 @@ fun RoomContent(
         // Listeners List
         item {
             Text(
-                "LISTENERS", 
+                "Listeners", 
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.2.sp

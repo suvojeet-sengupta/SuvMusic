@@ -179,6 +179,8 @@ fun PlayerScreen(
     
     val listenTogetherRole by playerViewModel.listenTogetherManager.role.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.RoomRole.NONE)
     val isGuest = listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.GUEST
+    val listenTogetherConnectionState by playerViewModel.listenTogetherManager.connectionState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.ConnectionState.DISCONNECTED)
+    val listenTogetherRoomState by playerViewModel.listenTogetherManager.roomState.collectAsStateWithLifecycle(initialValue = null)
     
     val actions = remember(originalActions, isGuest) {
         if (isGuest) {
@@ -539,32 +541,77 @@ fun PlayerScreen(
                     durationProvider = durationProvider
                 )
                 
-                // Listen Together Global Syncing Overlay - Non-blocking Pill
+                // Listen Together Live Session Status Pill
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = state.listenTogetherBufferingUsers.isNotEmpty(),
+                    visible = listenTogetherRole != com.suvojeet.suvmusic.shareplay.RoomRole.NONE,
                     enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
                     exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }),
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp)
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 54.dp)
                 ) {
+                    val code = listenTogetherRoomState?.roomCode ?: ""
+                    val userCount = listenTogetherRoomState?.users?.size ?: 1
+                    val isBuffering = state.listenTogetherBufferingUsers.isNotEmpty()
+                    
                     Box(
                         modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.7f), shape = androidx.compose.foundation.shape.CircleShape)
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                            .background(
+                                color = Color.Black.copy(alpha = 0.75f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = dominantColors.primary.copy(alpha = 0.5f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .clickable {
+                                activeOverlay = PlayerOverlay.ListenTogether
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                color = dominantColors.primary,
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Connection indicator dot
+                            val dotColor = when (listenTogetherConnectionState) {
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTED -> Color(0xFF4CAF50)
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING,
+                                com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING -> Color(0xFFFF9800)
+                                else -> Color(0xFFF44336)
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(dotColor, CircleShape)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            // Status text
+                            val statusText = when {
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING || 
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING -> "Reconnecting..."
+                                isBuffering -> "Syncing (${state.listenTogetherBufferingUsers.size} buffering)..."
+                                listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.HOST -> "Room: $code • Host • $userCount listening"
+                                else -> "Room: $code • Guest • $userCount listening"
+                            }
+                            
                             Text(
-                                "Syncing (${state.listenTogetherBufferingUsers.size} waiting)...", 
-                                color = Color.White, 
+                                text = statusText,
+                                color = Color.White,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
+                            
+                            if (isBuffering || 
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING ||
+                                listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    color = dominantColors.primary,
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
                         }
                     }
                 }
