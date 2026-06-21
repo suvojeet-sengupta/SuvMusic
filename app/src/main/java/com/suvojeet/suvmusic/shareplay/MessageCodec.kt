@@ -227,7 +227,8 @@ class MessageCodec(
                     insertNext = pb.insertNext.takeIf { it },
                     queue = pb.queueList?.map { protoToTrackInfo(it) },
                     queueTitle = pb.queueTitle.takeIf { it.isNotEmpty() },
-                    volume = pb.volume.takeIf { it > 0 },
+                    // Keep volume as-is (do NOT drop 0.0) so a mute (set_volume → 0) syncs.
+                    volume = pb.volume,
                     serverTime = pb.serverTime.takeIf { it > 0 }
                 )
             }

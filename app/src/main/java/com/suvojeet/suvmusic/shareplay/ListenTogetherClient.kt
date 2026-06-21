@@ -121,6 +121,8 @@ class ListenTogetherClient @Inject constructor(
         private const val PING_INTERVAL_MS = 25000L
         private const val MAX_LOG_ENTRIES = 500
         private const val SESSION_GRACE_PERIOD_MS = 10 * 60 * 1000L
+        private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L  // refreshed each ping
+        private const val MAX_AUTO_REJOIN_ATTEMPTS = 3
 
         // Notification constants
         private const val NOTIFICATION_CHANNEL_ID = "listen_together_channel"
@@ -238,7 +240,11 @@ class ListenTogetherClient @Inject constructor(
     private var storedRoomCode: String? = null
     private var wasHost: Boolean = false
     private var sessionStartTime: Long = 0
-    
+
+    // Bounds how many times a guest will automatically re-join after the server reports
+    // its session is gone, so a persistent failure cannot spam the host with requests.
+    private var autoRejoinAttempts = 0
+
     // Pending actions to execute when connected
     private var pendingAction: PendingAction? = null
     
@@ -289,8 +295,10 @@ class ListenTogetherClient @Inject constructor(
 
     // Second init: runs AFTER all MutableStateFlow fields above are initialized,
     // so the IO coroutine cannot race ahead and hit a null _userId/_blockedUsers.
+    // Reuses the shared `scope` (also IO + SupervisorJob) instead of spawning a
+    // throwaway scope that would never be cancelled.
     init {
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+        scope.launch {
             loadPersistedSession()
         }
     }
@@ -331,20 +339,29 @@ class ListenTogetherClient @Inject constructor(
     suspend fun getServerUrl(): String {
         val prefs = context.dataStore.data.first()
         val url = prefs[ListenTogetherServerUrlKey] ?: DEFAULT_SERVER_URL
-        return if (url.startsWith("http") || url.startsWith("ws")) url else DEFAULT_SERVER_URL
+        // Only encrypted WebSocket endpoints are honoured; anything else (e.g. a stale
+        // cleartext ws:// value) falls back to the secure default to avoid MITM exposure.
+        return if (isSecureWsUrl(url)) url else DEFAULT_SERVER_URL
     }
 
     suspend fun setServerUrl(url: String) {
         val sanitized = url.trim()
-        if (sanitized.isNotBlank()) {
-            context.dataStore.edit { preferences ->
-                preferences[ListenTogetherServerUrlKey] = sanitized
-            }
+        if (sanitized.isBlank()) return
+        if (!isSecureWsUrl(sanitized)) {
+            log(LogLevel.WARNING, "Rejected insecure server URL", "Only wss:// is allowed: $sanitized")
+            return
+        }
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherServerUrlKey] = sanitized
         }
     }
+
+    private fun isSecureWsUrl(url: String): Boolean =
+        url.startsWith("wss://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
     
     private fun calculateBackoffDelay(attempt: Int): Long {
-        val exponentialDelay = INITIAL_RECONNECT_DELAY_MS * (2 shl (minOf(attempt - 1, 4)))
+        // 1 shl n == 2^n. (Previously used `2 shl n` == 2^(n+1), doubling every delay.)
+        val exponentialDelay = INITIAL_RECONNECT_DELAY_MS * (1L shl minOf(attempt - 1, 5))
         val cappedDelay = minOf(exponentialDelay, MAX_RECONNECT_DELAY_MS)
         val jitter = (cappedDelay * 0.2 * Math.random()).toLong()
         return cappedDelay + jitter
@@ -515,6 +532,9 @@ class ListenTogetherClient @Inject constructor(
             while (true) {
                 delay(PING_INTERVAL_MS)
                 sendMessageNoPayload(MessageTypes.PING)
+                // Re-arm the wake lock so it never silently expires during a long,
+                // otherwise-idle session (the timeout is shorter than a session can last).
+                if (isInRoom) acquireWakeLock()
             }
         }
     }
@@ -526,12 +546,17 @@ class ListenTogetherClient @Inject constructor(
             wakeLock = powerManager?.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "SuvMusic:ListenTogether"
-            )
+            )?.apply {
+                // Not reference counted: acquire() simply (re)sets the timeout and a single
+                // release() fully releases. This lets the ping loop re-arm the timeout
+                // without leaking nested acquisitions.
+                setReferenceCounted(false)
+            }
         }
-        if (wakeLock?.isHeld == false) {
-            wakeLock?.acquire(10 * 60 * 1000L)  // 10 minutes to reduce battery drain
-            log(LogLevel.DEBUG, "Wake lock acquired")
-        }
+        // (Re)acquire with a fresh timeout. Called periodically from the ping loop so the
+        // lock never silently expires mid-session.
+        wakeLock?.acquire(WAKELOCK_TIMEOUT_MS)
+        log(LogLevel.DEBUG, "Wake lock acquired/refreshed")
     }
     
     private fun releaseWakeLock() {
@@ -775,6 +800,7 @@ class ListenTogetherClient @Inject constructor(
                     sessionStartTime = System.currentTimeMillis()
                     
                     _roomState.value = payload.state
+                    autoRejoinAttempts = 0
                     savePersistedSession()
                     acquireWakeLock()
                     log(LogLevel.INFO, "Joined room", "Code: ${payload.roomCode}")
@@ -956,13 +982,19 @@ class ListenTogetherClient @Inject constructor(
                     
                     when (payload.code) {
                         "session_not_found" -> {
-                            if (storedRoomCode != null && storedUsername != null && !wasHost) {
-                                log(LogLevel.WARNING, "Session expired on server", "Attempting automatic rejoin")
+                            if (storedRoomCode != null && storedUsername != null && !wasHost &&
+                                autoRejoinAttempts < MAX_AUTO_REJOIN_ATTEMPTS) {
+                                autoRejoinAttempts++
+                                log(LogLevel.WARNING, "Session expired on server",
+                                    "Automatic rejoin attempt $autoRejoinAttempts/$MAX_AUTO_REJOIN_ATTEMPTS")
                                 scope.launch {
                                     delay(500)
                                     joinRoom(storedRoomCode!!, storedUsername!!)
                                 }
                             } else {
+                                if (autoRejoinAttempts >= MAX_AUTO_REJOIN_ATTEMPTS) {
+                                    log(LogLevel.ERROR, "Giving up automatic rejoin", "Too many attempts")
+                                }
                                 clearPersistedSession()
                                 sessionToken = null
                             }
@@ -1071,6 +1103,7 @@ class ListenTogetherClient @Inject constructor(
         wasHost = false
         storedUsername = username
         reconnectAttempts = 0
+        autoRejoinAttempts = 0
 
         if (_connectionState.value == ConnectionState.CONNECTED) {
             sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(roomCode.uppercase(), username))

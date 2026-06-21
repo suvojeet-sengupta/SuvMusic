@@ -45,7 +45,13 @@ class ListenTogetherManager @Inject constructor(
     // Whether we're currently syncing (to prevent feedback loops)
     @Volatile
     private var isSyncing = false
-    
+
+    // Monotonic token guarding the isSyncing flag. Each "suppress echo" window bumps the
+    // token; only the launch that owns the latest token is allowed to clear isSyncing.
+    // This fixes the old race where an earlier delay(200) cleared the flag mid-way through
+    // a later, still-in-progress sync operation.
+    private val syncToken = java.util.concurrent.atomic.AtomicLong(0)
+
     // Track the last state we synced to avoid duplicate events
     @Volatile
     private var lastSyncedIsPlaying: Boolean? = null
@@ -428,6 +434,19 @@ class ListenTogetherManager @Inject constructor(
         }
     }
     
+    /**
+     * Clear [isSyncing] after [delayMs], but only if no newer suppress-echo window has
+     * started in the meantime. Prevents overlapping sync operations from clearing the
+     * flag out from under each other.
+     */
+    private fun endSyncAfter(delayMs: Long = 200) {
+        val my = syncToken.incrementAndGet()
+        scope.launch {
+            delay(delayMs)
+            if (syncToken.get() == my) isSyncing = false
+        }
+    }
+
     private fun cleanup() {
         if (playerListenerRegistered) {
             player?.removeListener(playerListener)
@@ -485,17 +504,18 @@ class ListenTogetherManager @Inject constructor(
                         p.seekTo(expectedPosition)
                     }
                     drift < -150 -> {
-                        // Behind by > 150ms: Speed up slightly (1.05x)
-                         p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f)
+                        // Behind by > 150ms: Speed up slightly (1.05x). Pitch pinned to 1.0
+                        // so the time-stretch does not audibly raise the pitch.
+                         p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f, 1.0f)
                     }
                     drift > 150 -> {
-                         // Ahead by > 150ms: Slow down slightly (0.95x)
-                         p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f)
+                         // Ahead by > 150ms: Slow down slightly (0.95x), pitch preserved.
+                         p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f, 1.0f)
                     }
                     kotlin.math.abs(drift) <= 150 -> {
                         // Within 150ms: Sync is good, reset to normal speed
                          if (p.playbackParameters.speed != 1.0f) {
-                             p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f)
+                             p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
                          }
                     }
                 }
@@ -538,10 +558,7 @@ class ListenTogetherManager @Inject constructor(
             stopDriftCorrection()
         }
 
-        scope.launch {
-            delay(200)
-            isSyncing = false
-        }
+        endSyncAfter(200)
         bufferingTrackId = null
         pendingSyncState = null
         bufferCompleteReceivedForTrack = null
@@ -549,7 +566,7 @@ class ListenTogetherManager @Inject constructor(
 
     private fun handlePlaybackSync(action: PlaybackActionPayload) {
         val p = player ?: return
-        
+
         // Track checking: If action has a trackId, ensure we are on it
         // Treat empty string same as null (protobuf default for string is "")
         val targetTrackId = action.trackId?.takeIf { it.isNotEmpty() }
@@ -604,8 +621,8 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    // Server-time based position adjustment using raw clocks is inaccurate 
-                    // due to clock desync between host and guest. We just use the base position 
+                    // Server-time based position adjustment using raw clocks is inaccurate
+                    // due to clock desync between host and guest. We just use the base position
                     // and a tiny estimated latency (50ms) to ensure we stay tightly synced.
                     val basePos = action.position ?: 0L
                     val targetPos = basePos + 50L
@@ -719,10 +736,7 @@ class ListenTogetherManager @Inject constructor(
                 }
             }
         } finally {
-             scope.launch {
-                delay(200)
-                isSyncing = false
-            }
+            endSyncAfter(200)
         }
     }
 
@@ -750,8 +764,7 @@ class ListenTogetherManager @Inject constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                delay(200)
-                isSyncing = false
+                endSyncAfter(200)
             }
         }
     }
@@ -879,8 +892,7 @@ class ListenTogetherManager @Inject constructor(
                         }
                     }
                     
-                    delay(100)
-                    isSyncing = false
+                    endSyncAfter(100)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -973,19 +985,49 @@ class ListenTogetherManager @Inject constructor(
     
     private fun getTrackInfo(mediaItem: MediaItem): TrackInfo {
         val metadata = mediaItem.mediaMetadata
+        // Use the player's real duration when this is the currently loaded item and the
+        // duration is known; otherwise 0 (unknown) instead of a fake fixed 3:00.
+        val realDuration = player?.let { p ->
+            if (p.currentMediaItem?.mediaId == mediaItem.mediaId) {
+                val d = p.duration
+                if (d != androidx.media3.common.C.TIME_UNSET && d > 0) d else 0L
+            } else 0L
+        } ?: 0L
         return TrackInfo(
             id = mediaItem.mediaId,
             title = metadata.title?.toString() ?: "Unknown",
             artist = metadata.artist?.toString() ?: "Unknown",
             album = metadata.albumTitle?.toString(),
-            duration = 180000L, // Approximation or fetch real duration if available
+            duration = realDuration,
             thumbnail = metadata.artworkUri?.toString()
         )
     }
     
     fun requestSync() = client.requestSync()
     fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
-    fun approveSuggestion(id: String) = client.approveSuggestion(id)
+    fun approveSuggestion(id: String) {
+        // The host must enqueue the approved track into its own player: the server only
+        // broadcasts queue_add to guests, and the host never processes its own sync echo.
+        // (Previously approving a suggestion did nothing on either side.)
+        if (isHost) {
+            val track = pendingSuggestions.value.firstOrNull { it.suggestionId == id }?.trackInfo
+            if (track != null) {
+                scope.launch(Dispatchers.IO) {
+                    val streamResult = youTubeRepository.getStreamUrlForDownload(track.id)
+                    if (streamResult != null) {
+                        val (streamUrl, _) = streamResult
+                        val mediaItem = createMediaItem(track, streamUrl)
+                        launch(Dispatchers.Main) {
+                            isSyncing = true
+                            player?.addMediaItem(mediaItem)
+                            endSyncAfter(200)
+                        }
+                    }
+                }
+            }
+        }
+        client.approveSuggestion(id)
+    }
     fun rejectSuggestion(id: String) = client.rejectSuggestion(id)
     fun forceReconnect() = client.forceReconnect()
     fun getPersistedRoomCode() = client.getPersistedRoomCode()
