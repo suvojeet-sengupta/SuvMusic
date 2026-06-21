@@ -20,6 +20,12 @@ object ListenTogetherServers {
     private const val ServersJson = """
         [
           {
+            "name": "SuvMusic Official Sync",
+            "url": "wss://listen.suvojeetsengupta.in/ws",
+            "location": "Global (Default)",
+            "operator": "Suvojeet Sengupta"
+          },
+          {
             "name": "The Meowery",
             "url": "wss://metroserverx.meowery.eu/ws",
             "location": "Poland",
