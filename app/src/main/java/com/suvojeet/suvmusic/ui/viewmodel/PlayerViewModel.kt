@@ -84,6 +84,9 @@ class PlayerViewModel @Inject constructor(
     val aiAutoStatus = aiEqualizerService.autoStatus
     val lastAIResult = aiEqualizerService.lastResult
     
+    // Listen Together Syncing Status
+    val listenTogetherBufferingUsers = listenTogetherManager.bufferingUsers
+    
     // Stable player state that ignores frequent progress updates for UI optimization.
     // Optimization: Use a custom comparator to avoid emissions when only progress/buffer changes.
     val playbackInfo = musicPlayer.playerState.distinctUntilChanged { old, new ->

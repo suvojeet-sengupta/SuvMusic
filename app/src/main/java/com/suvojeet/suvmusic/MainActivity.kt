@@ -1004,6 +1004,7 @@ fun SuvMusicApp(
                     isLoadingMoreSongs = isLoadingMoreSongs,
                     selectedLyricsProvider = selectedLyricsProvider,
                     enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
+                    listenTogetherBufferingUsers = playerViewModel.listenTogetherBufferingUsers.collectAsStateWithLifecycle().value,
                     sleepTimerOption = sleepTimerOption,
                     sleepTimerRemainingMs = sleepTimerRemainingMs
                 )

@@ -107,7 +107,8 @@ data class PlayerScreenState(
     val isRadioMode: Boolean = false,
     val isLoadingMoreSongs: Boolean = false,
     val selectedLyricsProvider: LyricsProviderType = LyricsProviderType.AUTO,
-    val enabledLyricsProviders: Map<LyricsProviderType, Boolean> = emptyMap()
+    val enabledLyricsProviders: Map<LyricsProviderType, Boolean> = emptyMap(),
+    val listenTogetherBufferingUsers: List<String> = emptyList()
 )
 
 /**
@@ -518,6 +519,31 @@ fun PlayerScreen(
                     positionProvider = positionProvider,
                     durationProvider = durationProvider
                 )
+                
+                // Listen Together Global Syncing Overlay
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = state.listenTogetherBufferingUsers.isNotEmpty(),
+                    enter = androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.fadeOut()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            androidx.compose.material3.CircularProgressIndicator(color = dominantColors.primary)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Syncing (${state.listenTogetherBufferingUsers.size} waiting)...", 
+                                color = Color.White, 
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
       }
