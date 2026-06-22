@@ -87,7 +87,7 @@ class MessageCodec(
      * Compress data using GZIP
      */
     private fun compressData(data: ByteArray): ByteArray {
-        val outputStream = ByteArrayOutputStream()
+        val outputStream = ByteArrayOutputStream(data.size)
         GZIPOutputStream(outputStream).use { gzip ->
             gzip.write(data)
         }
@@ -99,9 +99,41 @@ class MessageCodec(
      */
     private fun decompressData(data: ByteArray): ByteArray? {
         return try {
+            val len = data.size
+            val isize = if (len >= 4) {
+                (data[len - 4].toInt() and 0xFF) or
+                ((data[len - 3].toInt() and 0xFF) shl 8) or
+                ((data[len - 2].toInt() and 0xFF) shl 16) or
+                ((data[len - 1].toInt() and 0xFF) shl 24)
+            } else {
+                0
+            }
             val inputStream = ByteArrayInputStream(data)
             GZIPInputStream(inputStream).use { gzip ->
-                gzip.readBytes()
+                if (isize > 0) {
+                    val buffer = ByteArray(isize)
+                    var offset = 0
+                    while (offset < isize) {
+                        val read = gzip.read(buffer, offset, isize - offset)
+                        if (read == -1) break
+                        offset += read
+                    }
+                    if (offset == isize && gzip.read() == -1) {
+                        buffer
+                    } else {
+                        val out = ByteArrayOutputStream(isize + 4096)
+                        out.write(buffer, 0, offset)
+                        val tempBuf = ByteArray(4096)
+                        while (true) {
+                            val read = gzip.read(tempBuf)
+                            if (read == -1) break
+                            out.write(tempBuf, 0, read)
+                        }
+                        out.toByteArray()
+                    }
+                } else {
+                    gzip.readBytes()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decompress data", e)
