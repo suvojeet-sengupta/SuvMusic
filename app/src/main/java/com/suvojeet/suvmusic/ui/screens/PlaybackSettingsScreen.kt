@@ -46,7 +46,8 @@ fun PlaybackSettingsScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showAudioQualitySheet by remember { mutableStateOf(false) }
+    var showWifiAudioQualitySheet by remember { mutableStateOf(false) }
+    var showMobileAudioQualitySheet by remember { mutableStateOf(false) }
     var showVideoQualitySheet by remember { mutableStateOf(false) }
     var showDownloadQualitySheet by remember { mutableStateOf(false) }
     var showMusicSourceSheet by remember { mutableStateOf(false) }
@@ -143,9 +144,18 @@ fun PlaybackSettingsScreen(
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     PlaybackNavigationItem(
                         icon = Icons.Default.HighQuality,
-                        title = "Streaming Quality",
-                        subtitle = getAudioQualityLabel(uiState.audioQuality, uiState.musicSource),
-                        onClick = { showAudioQualitySheet = true }
+                        title = "Wi-Fi Streaming Quality",
+                        subtitle = getAudioQualityLabel(uiState.wifiAudioQuality, uiState.musicSource),
+                        onClick = { showWifiAudioQualitySheet = true }
+                    )
+
+                    HorizontalDivider()
+
+                    PlaybackNavigationItem(
+                        icon = Icons.Default.HighQuality,
+                        title = "Mobile Streaming Quality",
+                        subtitle = getAudioQualityLabel(uiState.mobileAudioQuality, uiState.musicSource),
+                        onClick = { showMobileAudioQualitySheet = true }
                     )
 
                     HorizontalDivider()
@@ -541,17 +551,17 @@ fun PlaybackSettingsScreen(
         }
     }
 
-    // Audio Quality Bottom Sheet
-    if (showAudioQualitySheet) {
+    // Wi-Fi Audio Quality Bottom Sheet
+    if (showWifiAudioQualitySheet) {
         com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
-            onDismissRequest = { showAudioQualitySheet = false },
+            onDismissRequest = { showWifiAudioQualitySheet = false },
             sheetState = sheetState,
             fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    text = "Audio Quality",
+                    text = "Wi-Fi Audio Quality",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
@@ -562,7 +572,7 @@ fun PlaybackSettingsScreen(
                         headlineContent = { Text(getAudioQualityLabel(quality, uiState.musicSource)) },
                         leadingContent = {
                             RadioButton(
-                                selected = uiState.audioQuality == quality,
+                                selected = uiState.wifiAudioQuality == quality,
                                 onClick = null
                             )
                         },
@@ -570,10 +580,56 @@ fun PlaybackSettingsScreen(
                             .fillMaxWidth()
                             .dpadFocusable(
                                 onClick = {
-                                    viewModel.setAudioQuality(quality)
+                                    viewModel.setWifiAudioQuality(quality)
                                     scope.launch {
                                         sheetState.hide()
-                                        showAudioQualitySheet = false
+                                        showWifiAudioQualitySheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // Mobile Audio Quality Bottom Sheet
+    if (showMobileAudioQualitySheet) {
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
+            onDismissRequest = { showMobileAudioQualitySheet = false },
+            sheetState = sheetState,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Mobile Audio Quality",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+                
+                AudioQuality.entries.forEach { quality ->
+                    ListItem(
+                        headlineContent = { Text(getAudioQualityLabel(quality, uiState.musicSource)) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.mobileAudioQuality == quality,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setMobileAudioQuality(quality)
+                                    scope.launch {
+                                        sheetState.hide()
+                                        showMobileAudioQualitySheet = false
                                     }
                                 },
                                 shape = SquircleShape

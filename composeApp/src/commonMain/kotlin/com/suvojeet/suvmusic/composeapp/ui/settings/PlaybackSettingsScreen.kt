@@ -94,7 +94,8 @@ fun PlaybackSettingsScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
 ) {
-    var showAudioQualitySheet by remember { mutableStateOf(false) }
+    var showWifiAudioQualitySheet by remember { mutableStateOf(false) }
+    var showMobileAudioQualitySheet by remember { mutableStateOf(false) }
     var showVideoQualitySheet by remember { mutableStateOf(false) }
     var showDownloadQualitySheet by remember { mutableStateOf(false) }
     var showMusicSourceSheet by remember { mutableStateOf(false) }
@@ -159,9 +160,16 @@ fun PlaybackSettingsScreen(
             SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                 NavigationRow(
                     icon = Icons.Default.HighQuality,
-                    title = "Streaming Quality",
-                    subtitle = audioQualityLabel(state.audioQuality, state.musicSource),
-                    onClick = { showAudioQualitySheet = true },
+                    title = "Wi-Fi Streaming Quality",
+                    subtitle = audioQualityLabel(state.wifiAudioQuality, state.musicSource),
+                    onClick = { showWifiAudioQualitySheet = true },
+                )
+                ThinDivider()
+                NavigationRow(
+                    icon = Icons.Default.HighQuality,
+                    title = "Mobile Streaming Quality",
+                    subtitle = audioQualityLabel(state.mobileAudioQuality, state.musicSource),
+                    onClick = { showMobileAudioQualitySheet = true },
                 )
                 ThinDivider()
                 NavigationRow(
@@ -395,21 +403,43 @@ fun PlaybackSettingsScreen(
         }
     }
 
-    if (showAudioQualitySheet) {
+    if (showWifiAudioQualitySheet) {
         QualityBottomSheet(
-            title = "Audio Quality",
+            title = "Wi-Fi Audio Quality",
             sheetState = sheetState,
-            onDismiss = { showAudioQualitySheet = false },
+            onDismiss = { showWifiAudioQualitySheet = false },
         ) {
             AudioQuality.entries.forEach { quality ->
                 RadioRow(
                     label = audioQualityLabel(quality, state.musicSource),
-                    selected = state.audioQuality == quality,
+                    selected = state.wifiAudioQuality == quality,
                     onClick = {
-                        callbacks.onSetAudioQuality(quality)
+                        callbacks.onSetWifiAudioQuality(quality)
                         scope.launch {
                             sheetState.hide()
-                            showAudioQualitySheet = false
+                            showWifiAudioQualitySheet = false
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    if (showMobileAudioQualitySheet) {
+        QualityBottomSheet(
+            title = "Mobile Audio Quality",
+            sheetState = sheetState,
+            onDismiss = { showMobileAudioQualitySheet = false },
+        ) {
+            AudioQuality.entries.forEach { quality ->
+                RadioRow(
+                    label = audioQualityLabel(quality, state.musicSource),
+                    selected = state.mobileAudioQuality == quality,
+                    onClick = {
+                        callbacks.onSetMobileAudioQuality(quality)
+                        scope.launch {
+                            sheetState.hide()
+                            showMobileAudioQualitySheet = false
                         }
                     },
                 )
@@ -853,7 +883,8 @@ data class PlaybackSettingsState(
     val musicSource: MusicSource = MusicSource.YOUTUBE,
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
-    val audioQuality: AudioQuality = AudioQuality.AUTO,
+    val wifiAudioQuality: AudioQuality = AudioQuality.AUTO,
+    val mobileAudioQuality: AudioQuality = AudioQuality.AUTO,
     val videoQuality: VideoQuality,
     val downloadQuality: DownloadQuality = DownloadQuality.MEDIUM,
     val crossfeedEnabled: Boolean = false,
@@ -888,7 +919,8 @@ data class PlaybackSettingsCallbacks(
     val onSetMusicSource: (MusicSource) -> Unit,
     val onLanguagesClick: () -> Unit,
     val onSetYouTubeHistorySyncEnabled: (Boolean) -> Unit,
-    val onSetAudioQuality: (AudioQuality) -> Unit,
+    val onSetWifiAudioQuality: (AudioQuality) -> Unit,
+    val onSetMobileAudioQuality: (AudioQuality) -> Unit,
     val onSetVideoQuality: (VideoQuality) -> Unit,
     val onSetDownloadQuality: (DownloadQuality) -> Unit,
     val onSetCrossfeedEnabled: (Boolean) -> Unit,

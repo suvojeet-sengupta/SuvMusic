@@ -2,6 +2,8 @@ package com.suvojeet.suvmusic.data
 
 import android.content.Context
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -77,6 +79,8 @@ class SessionManager @Inject constructor(
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         private val AUDIO_QUALITY_KEY = stringPreferencesKey("audio_quality")
+        private val WIFI_AUDIO_QUALITY_KEY = stringPreferencesKey("wifi_audio_quality")
+        private val MOBILE_AUDIO_QUALITY_KEY = stringPreferencesKey("mobile_audio_quality")
         private val GAPLESS_PLAYBACK_KEY = booleanPreferencesKey("gapless_playback")
         private val AUTOMIX_KEY = booleanPreferencesKey("automix")
         private val DOWNLOAD_QUALITY_KEY = stringPreferencesKey("download_quality")
@@ -2098,22 +2102,80 @@ class SessionManager @Inject constructor(
         }
     }
     
-    suspend fun getAudioQuality(): AudioQuality {
-        val qualityName = context.dataStore.data.first()[AUDIO_QUALITY_KEY]
-        return qualityName?.let { 
+    private val connectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    private fun isOnWifi(): Boolean {
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
+    suspend fun getWifiAudioQuality(): AudioQuality {
+        val qualityName = context.dataStore.data.first()[WIFI_AUDIO_QUALITY_KEY]
+            ?: context.dataStore.data.first()[AUDIO_QUALITY_KEY]
+        return qualityName?.let {
             try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
         } ?: AudioQuality.HIGH
     }
-    
-    val audioQualityFlow: Flow<AudioQuality> = context.dataStore.data.map { preferences ->
-        preferences[AUDIO_QUALITY_KEY]?.let {
+
+    val wifiAudioQualityFlow: Flow<AudioQuality> = context.dataStore.data.map { preferences ->
+        val qualityName = preferences[WIFI_AUDIO_QUALITY_KEY] ?: preferences[AUDIO_QUALITY_KEY]
+        qualityName?.let {
             try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
         } ?: AudioQuality.HIGH
     }
-    
-    suspend fun setAudioQuality(quality: AudioQuality) {
+
+    suspend fun setWifiAudioQuality(quality: AudioQuality) {
         context.dataStore.edit { preferences ->
-            preferences[AUDIO_QUALITY_KEY] = quality.name
+            preferences[WIFI_AUDIO_QUALITY_KEY] = quality.name
+        }
+    }
+
+    suspend fun getMobileAudioQuality(): AudioQuality {
+        val qualityName = context.dataStore.data.first()[MOBILE_AUDIO_QUALITY_KEY]
+            ?: context.dataStore.data.first()[AUDIO_QUALITY_KEY]
+        return qualityName?.let {
+            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.MEDIUM }
+        } ?: AudioQuality.MEDIUM
+    }
+
+    val mobileAudioQualityFlow: Flow<AudioQuality> = context.dataStore.data.map { preferences ->
+        val qualityName = preferences[MOBILE_AUDIO_QUALITY_KEY] ?: preferences[AUDIO_QUALITY_KEY]
+        qualityName?.let {
+            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.MEDIUM }
+        } ?: AudioQuality.MEDIUM
+    }
+
+    suspend fun setMobileAudioQuality(quality: AudioQuality) {
+        context.dataStore.edit { preferences ->
+            preferences[MOBILE_AUDIO_QUALITY_KEY] = quality.name
+        }
+    }
+
+    suspend fun getAudioQuality(): AudioQuality {
+        return if (isOnWifi()) {
+            getWifiAudioQuality()
+        } else {
+            getMobileAudioQuality()
+        }
+    }
+
+    val audioQualityFlow: Flow<AudioQuality> = context.dataStore.data.map { preferences ->
+        val key = if (isOnWifi()) WIFI_AUDIO_QUALITY_KEY else MOBILE_AUDIO_QUALITY_KEY
+        val fallbackKey = AUDIO_QUALITY_KEY
+        val qualityName = preferences[key] ?: preferences[fallbackKey]
+        qualityName?.let {
+            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
+        } ?: AudioQuality.HIGH
+    }
+
+    suspend fun setAudioQuality(quality: AudioQuality) {
+        if (isOnWifi()) {
+            setWifiAudioQuality(quality)
+        } else {
+            setMobileAudioQuality(quality)
         }
     }
     

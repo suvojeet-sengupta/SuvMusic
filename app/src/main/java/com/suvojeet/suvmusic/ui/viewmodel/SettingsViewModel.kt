@@ -43,6 +43,8 @@ data class SettingsUiState(
     val storedAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val availableAccounts: List<SessionManager.StoredAccount> = emptyList(),
     val audioQuality: AudioQuality = AudioQuality.HIGH,
+    val wifiAudioQuality: AudioQuality = AudioQuality.HIGH,
+    val mobileAudioQuality: AudioQuality = AudioQuality.MEDIUM,
     val videoQuality: VideoQuality = VideoQuality.MEDIUM,
     val downloadQuality: DownloadQuality = DownloadQuality.HIGH,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -246,6 +248,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.audioQualityFlow.collect { quality ->
                 _uiState.update { it.copy(audioQuality = quality) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.wifiAudioQualityFlow.collect { quality ->
+                _uiState.update { it.copy(wifiAudioQuality = quality) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.mobileAudioQualityFlow.collect { quality ->
+                _uiState.update { it.copy(mobileAudioQuality = quality) }
             }
         }
 
@@ -703,6 +717,8 @@ class SettingsViewModel @Inject constructor(
             val userName = storedAccounts.firstOrNull()?.name
             
             val audioQuality = sessionManager.getAudioQuality()
+            val wifiAudioQuality = sessionManager.getWifiAudioQuality()
+            val mobileAudioQuality = sessionManager.getMobileAudioQuality()
             val videoQuality = sessionManager.getVideoQuality()
             val downloadQuality = sessionManager.getDownloadQuality()
             val themeMode = sessionManager.getThemeMode()
@@ -788,6 +804,8 @@ class SettingsViewModel @Inject constructor(
                 storedAccounts = storedAccounts,
 
                     audioQuality = audioQuality,
+                    wifiAudioQuality = wifiAudioQuality,
+                    mobileAudioQuality = mobileAudioQuality,
                     videoQuality = videoQuality,
                     downloadQuality = downloadQuality,
                     themeMode = themeMode,
@@ -1244,6 +1262,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setAudioQuality(quality)
             _uiState.update { it.copy(audioQuality = quality) }
+        }
+    }
+
+    fun setWifiAudioQuality(quality: AudioQuality) {
+        viewModelScope.launch {
+            sessionManager.setWifiAudioQuality(quality)
+            _uiState.update { it.copy(wifiAudioQuality = quality) }
+        }
+    }
+
+    fun setMobileAudioQuality(quality: AudioQuality) {
+        viewModelScope.launch {
+            sessionManager.setMobileAudioQuality(quality)
+            _uiState.update { it.copy(mobileAudioQuality = quality) }
         }
     }
 
