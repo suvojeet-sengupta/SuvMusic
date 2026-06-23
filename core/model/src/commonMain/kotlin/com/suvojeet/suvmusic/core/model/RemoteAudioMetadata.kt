@@ -12,5 +12,6 @@ data class RemoteAudioMetadata(
     val hasLyrics: Boolean? = null,
     val year: String? = null,
     val releaseDate: String? = null,
-    val artists: List<ArtistCreditInfo> = emptyList()
+    val artists: List<ArtistCreditInfo> = emptyList(),
+    val downloadUrls: Map<String, String> = emptyMap()
 )

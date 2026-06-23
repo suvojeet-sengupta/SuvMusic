@@ -1408,14 +1408,17 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    /**
-     * HQ stream URL for a RemoteAudio song. Prefers the 320 kbps URL the [song] already
-     * carries (populated from search results) so playback resolves by song name via the
-     * search API and avoids the rate-limited `/songs/{id}` detail endpoint. Only when no
-     * embedded URL is present does it fall back to the id-based lookup.
-     */
-    private suspend fun remoteStreamUrlFor(song: Song): String? =
-        song.streamUrl?.takeIf { it.isNotBlank() } ?: remoteAudioRepository.getStreamUrl(song.id)
+    private suspend fun remoteStreamUrlFor(song: Song): String? {
+        val currentQuality = sessionManager.getAudioQuality()
+        val qualityInt = when (currentQuality) {
+            com.suvojeet.suvmusic.core.model.AudioQuality.LOW -> 96
+            com.suvojeet.suvmusic.core.model.AudioQuality.MEDIUM -> 160
+            com.suvojeet.suvmusic.core.model.AudioQuality.HIGH -> 320
+            com.suvojeet.suvmusic.core.model.AudioQuality.AUTO -> 160
+        }
+        return remoteAudioRepository.getStreamUrl(song.id, qualityInt)
+            ?: song.streamUrl?.takeIf { it.isNotBlank() }
+    }
 
     /**
      * Picks the most likely RemoteAudio equivalent of a YouTube [song]. Requires a

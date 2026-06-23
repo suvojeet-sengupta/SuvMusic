@@ -23,14 +23,17 @@ import com.suvojeet.suvmusic.core.model.AppResult
 import com.suvojeet.suvmusic.core.model.getOrDefault
 import com.suvojeet.suvmusic.data.error.toAppError
 import com.suvojeet.suvmusic.telemetry.Telemetry
-import com.suvojeet.suvmusic.cache.OfflineCache
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.core.model.AudioQuality
+import kotlinx.coroutines.runBlocking
 
 /** Repository for fetching tracks from the remote HQ audio backend. */
 @Singleton
 class RemoteAudioRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson,
-    private val apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService
+    private val apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService,
+    private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     // In-memory caches to reduce server load and improve performance.
     // Bounded (LRU) so a long session can't leak memory by growing forever; the
@@ -421,7 +424,15 @@ class RemoteAudioRepository @Inject constructor(
             val started = System.currentTimeMillis()
             try {
                 val song = getSongDetails(songId)
-                val streamUrl = song?.streamUrl
+                val downloadUrls = song?.remoteAudioMetadata?.downloadUrls ?: emptyMap()
+                val targetQuality = "${quality}kbps"
+                val streamUrl = downloadUrls[targetQuality]
+                    ?: downloadUrls["320kbps"]
+                    ?: downloadUrls["160kbps"]
+                    ?: downloadUrls["96kbps"]
+                    ?: downloadUrls["48kbps"]
+                    ?: downloadUrls["12kbps"]
+                    ?: song?.streamUrl
                 val ms = System.currentTimeMillis() - started
 
                 if (streamUrl.isNullOrBlank()) {
@@ -1183,10 +1194,34 @@ class RemoteAudioRepository @Inject constructor(
     
     private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioSongDto): Song? {
         return try {
-            val downloadUrls = dto.downloadUrl ?: emptyList()
-            val streamUrl = downloadUrls
-                .firstOrNull { it.quality == "320kbps" }?.url
-                ?: downloadUrls.lastOrNull()?.url
+            val downloadUrlsMap = dto.downloadUrl?.mapNotNull { item ->
+                val q = item.quality ?: return@mapNotNull null
+                val u = item.url ?: return@mapNotNull null
+                q to u
+            }?.toMap() ?: emptyMap()
+
+            val audioQuality = runBlocking {
+                try {
+                    sessionManager.getAudioQuality()
+                } catch (e: Exception) {
+                    AudioQuality.HIGH
+                }
+            }
+
+            val targetQuality = when (audioQuality) {
+                AudioQuality.LOW -> "96kbps"
+                AudioQuality.MEDIUM -> "160kbps"
+                AudioQuality.HIGH -> "320kbps"
+                AudioQuality.AUTO -> "160kbps"
+            }
+
+            val streamUrl = downloadUrlsMap[targetQuality]
+                ?: downloadUrlsMap["320kbps"]
+                ?: downloadUrlsMap["160kbps"]
+                ?: downloadUrlsMap["96kbps"]
+                ?: downloadUrlsMap["48kbps"]
+                ?: downloadUrlsMap["12kbps"]
+                ?: dto.downloadUrl?.lastOrNull()?.url
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = dto.label?.decodeHtml(),
@@ -1205,7 +1240,8 @@ class RemoteAudioRepository @Inject constructor(
                         thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
                     )
-                } ?: emptyList()
+                } ?: emptyList(),
+                downloadUrls = downloadUrlsMap
             )
 
             Song.fromRemoteAudio(
@@ -1288,9 +1324,38 @@ class RemoteAudioRepository @Inject constructor(
                 )
             } ?: emptyList()
 
-            val streamUrl = json.getAsJsonArray("downloadUrl")?.lastOrNull { 
-                it.asJsonObject.get("quality")?.asString == "320kbps" 
-            }?.asJsonObject?.get("url")?.asString ?: json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
+            val downloadUrlsMap = mutableMapOf<String, String>()
+            json.getAsJsonArray("downloadUrl")?.forEach { element ->
+                val obj = element.asJsonObject
+                val q = obj.get("quality")?.asString
+                val u = obj.get("url")?.asString
+                if (q != null && u != null) {
+                    downloadUrlsMap[q] = u
+                }
+            }
+
+            val audioQuality = runBlocking {
+                try {
+                    sessionManager.getAudioQuality()
+                } catch (e: Exception) {
+                    AudioQuality.HIGH
+                }
+            }
+
+            val targetQuality = when (audioQuality) {
+                AudioQuality.LOW -> "96kbps"
+                AudioQuality.MEDIUM -> "160kbps"
+                AudioQuality.HIGH -> "320kbps"
+                AudioQuality.AUTO -> "160kbps"
+            }
+
+            val streamUrl = downloadUrlsMap[targetQuality]
+                ?: downloadUrlsMap["320kbps"]
+                ?: downloadUrlsMap["160kbps"]
+                ?: downloadUrlsMap["96kbps"]
+                ?: downloadUrlsMap["48kbps"]
+                ?: downloadUrlsMap["12kbps"]
+                ?: json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = json.get("label")?.asString?.decodeHtml(),
@@ -1301,7 +1366,8 @@ class RemoteAudioRepository @Inject constructor(
                 hasLyrics = json.get("hasLyrics")?.asBoolean,
                 year = json.get("year")?.asString,
                 releaseDate = releaseDate,
-                artists = allArtists
+                artists = allArtists,
+                downloadUrls = downloadUrlsMap
             )
 
             Song.fromRemoteAudio(

@@ -193,6 +193,16 @@ class LyricsRepository @Inject constructor(
             return@withContext lyrics
         }
         
+        // 0.5. For Remote songs with native lyrics, prioritize original source (RemoteAudio)
+        if (song.source == SongSource.REMOTE && song.remoteAudioMetadata?.hasLyrics == true) {
+            val sourceLyrics = fetchFromSource(song)
+            if (sourceLyrics != null) {
+                cacheBoth(song.id, sourceLyrics.provider, sourceLyrics)
+                persist(song.id, sourceLyrics)
+                return@withContext sourceLyrics
+            }
+        }
+        
         // 1. Try external providers (BetterLyrics, SimpMusic)
         for (provider in getLyricsProviders()) {
             try {

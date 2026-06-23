@@ -132,9 +132,10 @@ object AppModule {
     fun provideRemoteAudioRepository(
         okHttpClient: OkHttpClient,
         gson: Gson,
-        apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService
+        apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService,
+        sessionManager: SessionManager
     ): RemoteAudioRepository {
-        return RemoteAudioRepository(okHttpClient, gson, apiService)
+        return RemoteAudioRepository(okHttpClient, gson, apiService, sessionManager)
     }
     
     @Provides
