@@ -705,7 +705,6 @@ class RecommendationEngine @Inject constructor(
         seenIds.add(currentSong.id)
         val seenFingerprints = currentQueue.map { getSongFingerprint(it) }.toMutableSet()
         seenFingerprints.add(getSongFingerprint(currentSong))
-
         // RemoteAudio source: continue the queue natively with RemoteAudio related/reco songs.
         if (isRemoteAudioSource()) {
             val jioCandidates = mutableListOf<Song>()
@@ -713,12 +712,28 @@ class RecommendationEngine @Inject constructor(
             if (jioCandidates.size < count) {
                 jioCandidates.addAll(remoteAudioRepository.getRecommendations(recentRemoteAudioSeedIds(5)))
             }
+            // Supplement with YouTube / YT Music related songs and recommendations to ensure a full queue
+            if (jioCandidates.size < count) {
+                try {
+                    val ytRelated = youTubeRepository.getRelatedSongs(currentSong.id)
+                    jioCandidates.addAll(ytRelated)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to supplement remote up-next with YT related songs", e)
+                }
+            }
+            if (jioCandidates.size < count) {
+                try {
+                    val ytRecs = youTubeRepository.getRecommendations()
+                    jioCandidates.addAll(ytRecs)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to supplement remote up-next with YT recommendations", e)
+                }
+            }
             val unique = deduplicate(jioCandidates, seenIds, seenFingerprints)
             return@withContext scoreAndRank(unique, profile).take(count)
         }
 
         val candidates = mutableListOf<Song>()
-
         // 1. YT Music related songs
         try {
             val cached = cache.getRelatedSongs(currentSong.id)
@@ -781,6 +796,23 @@ class RecommendationEngine @Inject constructor(
             candidates.addAll(deduplicate(remoteAudioRepository.getRelatedSongs(seedSongId), seenIds, seenFingerprints))
             if (candidates.size < count * 2) {
                 candidates.addAll(deduplicate(remoteAudioRepository.getRecommendations(recentRemoteAudioSeedIds(5)), seenIds, seenFingerprints))
+            }
+            // Supplement with YouTube / YT Music related songs and recommendations to keep radio going
+            if (candidates.size < count * 2) {
+                try {
+                    val ytRelated = youTubeRepository.getRelatedSongs(seedSongId)
+                    candidates.addAll(deduplicate(ytRelated, seenIds, seenFingerprints))
+                } catch (e: Exception) {
+                    Log.w(TAG, "Radio: failed to supplement remote radio with YT related songs", e)
+                }
+            }
+            if (candidates.size < count * 2) {
+                try {
+                    val personalRecs = getPersonalizedRecommendations(count * 2)
+                    candidates.addAll(deduplicate(personalRecs, seenIds, seenFingerprints))
+                } catch (e: Exception) {
+                    Log.w(TAG, "Radio: failed to supplement remote radio with personalized recs", e)
+                }
             }
             return@withContext scoreAndRank(candidates, profile).take(count)
         }
