@@ -437,7 +437,12 @@ class HomeViewModel @Inject constructor(
                 val recommendations = recommendationEngine.getPersonalizedRecommendations(50)
                 if (recommendations.isNotEmpty()) {
                     val shuffled = recommendations.shuffled()
-                    musicPlayer.playSong(shuffled[0], shuffled, 0)
+                    // Take only 3 or 4 songs total (current song + 2 or 3 next queue songs)
+                    val limit = if (shuffled.size >= 4) kotlin.random.Random.nextInt(3, 5) else shuffled.size
+                    val limitedList = shuffled.take(limit)
+                    if (limitedList.isNotEmpty()) {
+                        musicPlayer.playSong(limitedList[0], limitedList, 0)
+                    }
                 } else {
                     _uiState.update { it.copy(error = "No recommendations available for a random mix") }
                 }

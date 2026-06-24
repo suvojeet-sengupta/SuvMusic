@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
 import com.suvojeet.suvmusic.core.model.RemoteAudioMetadata
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.async
@@ -21,7 +22,8 @@ import javax.inject.Inject
  */
 class SongInfoViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
-    private val remoteAudioRepository: RemoteAudioRepository
+    private val remoteAudioRepository: RemoteAudioRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
     
     private val _artistCredits = MutableStateFlow<List<ArtistCreditInfo>>(emptyList())
@@ -33,14 +35,22 @@ class SongInfoViewModel @Inject constructor(
     private val _remoteAudioMetadata = MutableStateFlow<RemoteAudioMetadata?>(null)
     val remoteAudioMetadata: StateFlow<RemoteAudioMetadata?> = _remoteAudioMetadata.asStateFlow()
     
+    private val _matchedRemoteId = MutableStateFlow<String?>(null)
+    val matchedRemoteId: StateFlow<String?> = _matchedRemoteId.asStateFlow()
+
     private var lastArtistString: String? = null
     private var lastSongId: String? = null
     
+    fun getMatchedRemoteId(songId: String): String? {
+        return sessionManager.getMatchedRemoteSongId(songId)
+    }
+
     fun fetchSongDetails(songId: String, source: SongSource, originalSource: SongSource? = null) {
         if (songId == lastSongId) return
         lastSongId = songId
         _releaseDate.value = null
         _remoteAudioMetadata.value = null
+        _matchedRemoteId.value = sessionManager.getMatchedRemoteSongId(songId)
         
         viewModelScope.launch {
             try {
@@ -51,10 +61,17 @@ class SongInfoViewModel @Inject constructor(
                     source
                 }
 
-                val song = if (effectiveSource == SongSource.YOUTUBE) {
-                    youTubeRepository.getSongDetails(songId)
-                } else if (effectiveSource == SongSource.REMOTE) {
-                    remoteAudioRepository.getSongDetails(songId)
+                val matchedRemoteId = sessionManager.getMatchedRemoteSongId(songId)
+                val (fetchId, fetchSource) = if (matchedRemoteId != null) {
+                    Pair(matchedRemoteId, SongSource.REMOTE)
+                } else {
+                    Pair(songId, effectiveSource)
+                }
+
+                val song = if (fetchSource == SongSource.YOUTUBE) {
+                    youTubeRepository.getSongDetails(fetchId)
+                } else if (fetchSource == SongSource.REMOTE) {
+                    remoteAudioRepository.getSongDetails(fetchId)
                 } else {
                     null
                 }

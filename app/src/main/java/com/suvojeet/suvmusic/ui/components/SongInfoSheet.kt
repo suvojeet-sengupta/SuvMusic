@@ -56,6 +56,7 @@ fun SongInfoSheet(
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
     val remoteAudioMetadata by viewModel.remoteAudioMetadata.collectAsState()
+    val matchedRemoteId by viewModel.matchedRemoteId.collectAsState()
     
     // Get high resolution thumbnail URL
     val highResThumbnail = remember(song.thumbnailUrl, song.id) {
@@ -67,9 +68,12 @@ fun SongInfoSheet(
     
     LaunchedEffect(isVisible, song.artist, song.id) {
         if (isVisible) {
+            val matchedId = viewModel.getMatchedRemoteId(song.id)
+            val effectiveSource = if (matchedId != null) SongSource.REMOTE else song.source
+            
             // First fetch basic artist credits (will be overridden if detailed metadata is found)
             if (artistCredits.isEmpty() || song.artist != (viewModel.artistCredits.value.firstOrNull()?.name ?: "")) {
-                viewModel.fetchArtistCredits(song.artist, song.source)
+                viewModel.fetchArtistCredits(song.artist, effectiveSource)
             }
             viewModel.fetchSongDetails(song.id, song.source, song.originalSource)
         }
@@ -176,10 +180,12 @@ fun SongInfoSheet(
                         border = BorderStroke(1.dp, (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            val stats = remember(song.id, song.source, audioCodec, audioBitrate, song.duration, remoteAudioMetadata) {
+                            val stats = remember(song.id, song.source, audioCodec, audioBitrate, song.duration, remoteAudioMetadata, matchedRemoteId) {
+                                val displayId = matchedRemoteId ?: song.id
+                                val displaySource = if (matchedRemoteId != null) "HQ Audio Source" else song.source.name
                                 val list = mutableListOf(
-                                    "Content ID" to song.id,
-                                    "Source" to song.source.name,
+                                    "Content ID" to displayId,
+                                    "Source" to displaySource,
                                     "Codec" to (audioCodec ?: "Opus"),
                                     "Bitrate" to (audioBitrate?.let { "${it} kbps" } ?: "Variable"),
                                     "Duration" to formatDurationForCredits(song.duration)
