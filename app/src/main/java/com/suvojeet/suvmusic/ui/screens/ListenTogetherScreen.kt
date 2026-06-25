@@ -195,13 +195,17 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Listen Together",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Listen Together",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp
+                    )
                 )
-            )
+                Spacer(modifier = Modifier.width(8.dp))
+                BetaBadge()
+            }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                 Box(
                     modifier = Modifier
@@ -289,13 +293,17 @@ fun ConnectToServerContent(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        Text(
-            text = "Listen Together",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            letterSpacing = (-0.5).sp
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Listen Together",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                letterSpacing = (-0.5).sp
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            BetaBadge()
+        }
 
         Text(
             text = "Play the same song, at the same moment, with your friends.",
@@ -1633,6 +1641,26 @@ fun BlockedUsersSheet(
                 Text("Close", fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+@Composable
+fun BetaBadge(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+    ) {
+        Text(
+            text = "BETA",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                fontSize = 10.sp
+            ),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
     }
 }
 
