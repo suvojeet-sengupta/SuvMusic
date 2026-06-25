@@ -40,6 +40,9 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherUiState
+import com.suvojeet.suvmusic.ui.viewmodel.LISTEN_TOGETHER_MAX_USERNAME
+import com.suvojeet.suvmusic.ui.viewmodel.LISTEN_TOGETHER_ROOM_CODE_LENGTH
+import com.suvojeet.suvmusic.ui.viewmodel.validateListenTogetherUsername
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
@@ -64,17 +67,29 @@ fun ListenTogetherScreen(
     val context = LocalContext.current
     
     val savedUsername by viewModel.savedUsername.collectAsState()
-    val serverUrl by viewModel.serverUrl.collectAsState()
-    
+    val serverInfo by viewModel.serverInfo.collectAsState()
+    val serverHealth by viewModel.serverHealth.collectAsState()
+    val isCheckingHealth by viewModel.isCheckingHealth.collectAsState()
+
     val autoApproval by viewModel.autoApproval.collectAsState()
     val syncVolume by viewModel.syncVolume.collectAsState()
     val muteHost by viewModel.muteHost.collectAsState()
-    
+
     var username by remember { mutableStateOf("") }
-    
+
     LaunchedEffect(savedUsername) {
         if (username.isEmpty() && savedUsername.isNotEmpty()) {
             username = savedUsername
+        }
+    }
+
+    // Keep the server health indicator fresh while the user is outside a room.
+    LaunchedEffect(uiState.isInRoom) {
+        if (!uiState.isInRoom) {
+            while (true) {
+                viewModel.refreshServerHealth()
+                delay(20000)
+            }
         }
     }
 
@@ -135,8 +150,10 @@ fun ListenTogetherScreen(
                                 onJoinRoom = { code -> viewModel.joinRoom(code, username) },
                                 connectionState = connectionState,
                                 onDisconnect = { viewModel.disconnectFromServer() },
-                                serverUrl = serverUrl,
-                                onServerUrlChange = { viewModel.updateServerUrl(it) },
+                                serverInfo = serverInfo,
+                                serverHealth = serverHealth,
+                                isCheckingHealth = isCheckingHealth,
+                                onRefreshHealth = { viewModel.refreshServerHealth() },
                                 autoApproval = autoApproval,
                                 onAutoApprovalChange = { viewModel.updateAutoApproval(it) },
                                 syncVolume = syncVolume,
@@ -154,8 +171,10 @@ fun ListenTogetherScreen(
                             "connect" -> ConnectToServerContent(
                                 connectionState = connectionState,
                                 onConnect = { viewModel.connectToServer() },
-                                serverUrl = serverUrl,
-                                onServerUrlChange = { viewModel.updateServerUrl(it) },
+                                serverInfo = serverInfo,
+                                serverHealth = serverHealth,
+                                isCheckingHealth = isCheckingHealth,
+                                onRefreshHealth = { viewModel.refreshServerHealth() },
                                 dominantColors = dominantColors
                             )
                         }
@@ -231,11 +250,12 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
 fun ConnectToServerContent(
     connectionState: ConnectionState,
     onConnect: () -> Unit,
-    serverUrl: String,
-    onServerUrlChange: (String) -> Unit,
+    serverInfo: ListenTogetherServer?,
+    serverHealth: ListenTogetherClient.ServerHealth?,
+    isCheckingHealth: Boolean,
+    onRefreshHealth: () -> Unit,
     dominantColors: DominantColors
 ) {
-    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -244,31 +264,31 @@ fun ConnectToServerContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Surface(
             modifier = Modifier.size(100.dp),
             shape = SquircleShape,
-            color = if (connectionState == ConnectionState.ERROR) 
+            color = if (connectionState == ConnectionState.ERROR)
                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-            else 
+            else
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
             shadowElevation = 12.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = if (connectionState == ConnectionState.ERROR) Icons.Default.WifiOff else Icons.Default.Public,
+                    imageVector = if (connectionState == ConnectionState.ERROR) Icons.Default.WifiOff else Icons.Default.Headphones,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = if (connectionState == ConnectionState.ERROR) 
-                        MaterialTheme.colorScheme.error 
-                    else 
+                    tint = if (connectionState == ConnectionState.ERROR)
+                        MaterialTheme.colorScheme.error
+                    else
                         MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
+
+        Spacer(modifier = Modifier.height(28.dp))
+
         Text(
             text = "Listen Together",
             style = MaterialTheme.typography.headlineMedium,
@@ -276,125 +296,182 @@ fun ConnectToServerContent(
             textAlign = TextAlign.Center,
             letterSpacing = (-0.5).sp
         )
-        
+
         Text(
-            text = "Experience music with friends in perfect sync, no matter where they are.",
+            text = "Play the same song, at the same moment, with your friends.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 12.dp, bottom = 40.dp),
+            modifier = Modifier.padding(top = 12.dp, bottom = 32.dp),
             lineHeight = 24.sp
         )
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
+        // Read-only server status (no manual URL entry — the app uses its own server).
+        ServerStatusCard(
+            serverInfo = serverInfo,
+            health = serverHealth,
+            isChecking = isCheckingHealth,
+            onRefresh = onRefreshHealth
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = onConnect,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .dpadFocusable(onClick = onConnect, shape = SquircleShape),
             shape = SquircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-            tonalElevation = 1.dp
+            enabled = connectionState != ConnectionState.CONNECTING,
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
+            if (connectionState == ConnectionState.CONNECTING) {
+                LoadingIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
                 Text(
-                    text = "Server Configuration",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.2.sp
+                    "Connect",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-                
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = serverUrl,
-                    onValueChange = onServerUrlChange,
-                    placeholder = { Text("https://your-server.com") },
-                    leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = SquircleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onConnect,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .dpadFocusable(onClick = onConnect, shape = SquircleShape),
-                    shape = SquircleShape,
-                    enabled = connectionState != ConnectionState.CONNECTING && serverUrl.isNotBlank(),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                ) {
-                    if (connectionState == ConnectionState.CONNECTING) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(24.dp), 
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            "Connect to Server", 
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                }
-                
-                if (connectionState == ConnectionState.ERROR) {
-                    Text(
-                        text = "Could not connect to the server. Please check the URL and your connection.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp).fillMaxWidth(),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
             }
         }
-        
+
+        if (connectionState == ConnectionState.ERROR) {
+            Text(
+                text = "Couldn't reach the server. Check your internet connection and try again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 16.dp).fillMaxWidth(),
+                fontWeight = FontWeight.Medium
+            )
+        }
+
         Spacer(modifier = Modifier.height(40.dp))
-        
-        // How it works section
-        Text(
-            text = "HOW IT WORKS",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            letterSpacing = 1.5.sp
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             FeatureItem(
                 icon = Icons.Default.Sync,
-                title = "Live Sync",
-                desc = "Sub-millisecond latency for perfect timing.",
+                title = "In sync",
+                desc = "Everyone hears the same moment together.",
                 modifier = Modifier.weight(1f)
             )
             FeatureItem(
                 icon = Icons.Default.Group,
-                title = "Groups",
-                desc = "Host rooms or join friends instantly.",
+                title = "Host or join",
+                desc = "Start a room or join one with a code.",
                 modifier = Modifier.weight(1f)
             )
         }
-        
-        Spacer(modifier = Modifier.height(40.dp))
-        
-        NyxCredit(onClick = {
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
-            context.startActivity(intent)
-        })
-        
+
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+/**
+ * Read-only card showing which server the app is using and whether it is reachable.
+ * There is intentionally no field to change the server URL — the app ships with its
+ * own sync server.
+ */
+@Composable
+fun ServerStatusCard(
+    serverInfo: ListenTogetherServer?,
+    health: ListenTogetherClient.ServerHealth?,
+    isChecking: Boolean,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val online = health?.online == true
+    val statusColor = when {
+        health == null -> MaterialTheme.colorScheme.outline
+        online -> Color(0xFF4CAF50)
+        else -> MaterialTheme.colorScheme.error
+    }
+    val statusText = when {
+        isChecking && health == null -> "Checking…"
+        health == null -> "Status unknown"
+        online -> "Online"
+        else -> "Offline"
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = SquircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        tonalElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Dns,
+                    null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = serverInfo?.name ?: "Sync Server",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = serverInfo?.location ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                IconButton(
+                    onClick = onRefresh,
+                    enabled = !isChecking,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    if (isChecking) {
+                        LoadingIndicator(modifier = Modifier.size(18.dp))
+                    } else {
+                        Icon(Icons.Default.Refresh, "Refresh status", modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            M3HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(statusColor, CircleShape)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
+                if (online) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "${health?.activeRooms ?: 0} active rooms",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -434,8 +511,10 @@ fun SetupContent(
     onJoinRoom: (String) -> Unit,
     connectionState: ConnectionState,
     onDisconnect: () -> Unit,
-    serverUrl: String,
-    onServerUrlChange: (String) -> Unit,
+    serverInfo: ListenTogetherServer?,
+    serverHealth: ListenTogetherClient.ServerHealth?,
+    isCheckingHealth: Boolean,
+    onRefreshHealth: () -> Unit,
     autoApproval: Boolean,
     onAutoApprovalChange: (Boolean) -> Unit,
     syncVolume: Boolean,
@@ -450,12 +529,16 @@ fun SetupContent(
     onUnblockUser: (String) -> Unit,
     dominantColors: DominantColors
 ) {
-    val context = LocalContext.current
     var roomCode by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     var showLogs by remember { mutableStateOf(false) }
     var showBlockedUsers by remember { mutableStateOf(false) }
-    
+    var nameTouched by remember { mutableStateOf(false) }
+
+    val usernameError = validateListenTogetherUsername(username)
+    val isNameValid = usernameError == null
+    val isCodeComplete = roomCode.length == LISTEN_TOGETHER_ROOM_CODE_LENGTH
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -464,7 +547,7 @@ fun SetupContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Identity Card
+        // ── Your name ───────────────────────────────────────────────
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = SquircleShape,
@@ -472,27 +555,31 @@ fun SetupContent(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
             tonalElevation = 1.dp
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Your Profile Name",
+                    text = "YOUR NAME",
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.5.sp
                     ),
                     color = MaterialTheme.colorScheme.primary
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = username,
-                    onValueChange = onUsernameChange,
-                    placeholder = { Text("Enter your name") },
+                    onValueChange = {
+                        nameTouched = true
+                        onUsernameChange(it.take(LISTEN_TOGETHER_MAX_USERNAME))
+                    },
+                    placeholder = { Text("e.g. Alex") },
                     leadingIcon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(20.dp)) },
                     singleLine = true,
+                    isError = nameTouched && !isNameValid,
+                    supportingText = if (nameTouched && usernameError != null) {
+                        { Text(usernameError) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = SquircleShape,
                     textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -505,103 +592,131 @@ fun SetupContent(
             }
         }
 
-        // Action Cards
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Host Card
-            Surface(
+        // ── Host a room ─────────────────────────────────────────────
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onCreateRoom,
+                enabled = isNameValid,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(150.dp)
-                    .dpadFocusable(onClick = { if (username.isNotBlank()) onCreateRoom() }, shape = SquircleShape),
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .then(if (isNameValid) Modifier.dpadFocusable(onClick = onCreateRoom, shape = SquircleShape) else Modifier),
                 shape = SquircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shadowElevation = 8.dp
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(20.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.AddCircle, null, modifier = Modifier.size(24.dp))
-                    }
-                    Column {
-                        Text(
-                            "Host",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black)
-                        )
-                        Text(
-                            "Start a room",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                Icon(Icons.Default.AddCircle, null, modifier = Modifier.size(22.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "Host a new room",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
             }
+            Text(
+                text = if (isNameValid) "You'll get a code to share with friends"
+                       else "Enter your name above to host a room",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isNameValid) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-            // Join Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(150.dp),
-                shape = SquircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                tonalElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = roomCode,
-                        onValueChange = { if (it.length <= 8) roomCode = it.uppercase() },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { 
-                            Text(
-                                "CODE", 
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
-                            ) 
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Black, 
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 2.sp
-                        ),
-                        shape = SquircleShape,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Transparent,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+        // ── OR divider ──────────────────────────────────────────────
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            M3HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            Text(
+                "OR",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 2.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            M3HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        }
+
+        // ── Join a room ─────────────────────────────────────────────
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = SquircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            tonalElevation = 1.dp
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "JOIN WITH A CODE",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.5.sp
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                OutlinedTextField(
+                    value = roomCode,
+                    onValueChange = { input ->
+                        // Only the 6 uppercase alphanumeric characters a room code can contain.
+                        roomCode = input.uppercase()
+                            .filter { it.isLetterOrDigit() }
+                            .take(LISTEN_TOGETHER_ROOM_CODE_LENGTH)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Room code") },
+                    placeholder = {
+                        Text(
+                            "6-character code",
+                            style = MaterialTheme.typography.bodyMedium
                         )
+                    },
+                    leadingIcon = { Icon(Icons.Default.Tag, null, modifier = Modifier.size(20.dp)) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 4.sp
+                    ),
+                    shape = SquircleShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                     )
-                    
-                    Button(
-                        onClick = { onJoinRoom(roomCode) },
-                        enabled = username.isNotBlank() && roomCode.length >= 4,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .dpadFocusable(onClick = { onJoinRoom(roomCode) }, shape = SquircleShape),
-                        shape = SquircleShape,
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Text("JOIN ROOM", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-                    }
+                )
+
+                Button(
+                    onClick = { onJoinRoom(roomCode) },
+                    enabled = isNameValid && isCodeComplete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .then(if (isNameValid && isCodeComplete) Modifier.dpadFocusable(onClick = { onJoinRoom(roomCode) }, shape = SquircleShape) else Modifier),
+                    shape = SquircleShape
+                ) {
+                    Icon(Icons.Default.Login, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Join room", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                }
+
+                if (!isNameValid) {
+                    Text(
+                        text = "Enter your name above first",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
+
+        // ── Server status (read-only) ───────────────────────────────
+        ServerStatusCard(
+            serverInfo = serverInfo,
+            health = serverHealth,
+            isChecking = isCheckingHealth,
+            onRefresh = onRefreshHealth
+        )
 
         // Settings and more
         SettingsSection(
@@ -617,8 +732,6 @@ fun SetupContent(
             onSyncVolumeChange = onSyncVolumeChange,
             muteHost = muteHost,
             onMuteHostChange = onMuteHostChange,
-            serverUrl = serverUrl,
-            onServerUrlChange = onServerUrlChange,
             onDisconnect = onDisconnect,
             isLogActive = isLogActive,
             onLogActiveChange = onLogActiveChange,
@@ -628,14 +741,7 @@ fun SetupContent(
             onUnblockUser = onUnblockUser,
             dominantColors = dominantColors
         )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        NyxCredit(onClick = {
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
-            context.startActivity(intent)
-        })
-        
+
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -654,8 +760,6 @@ fun SettingsSection(
     onSyncVolumeChange: (Boolean) -> Unit,
     muteHost: Boolean,
     onMuteHostChange: (Boolean) -> Unit,
-    serverUrl: String,
-    onServerUrlChange: (String) -> Unit,
     onDisconnect: () -> Unit,
     isLogActive: Boolean,
     onLogActiveChange: (Boolean) -> Unit,
@@ -711,21 +815,9 @@ fun SettingsSection(
                         onCheckedChange = onMuteHostChange,
                         dominantColors = dominantColors
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    OutlinedTextField(
-                        value = serverUrl,
-                        onValueChange = onServerUrlChange,
-                        label = { Text("Server URL") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = SquircleShape,
-                        textStyle = MaterialTheme.typography.bodySmall,
-                        singleLine = true
-                    )
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
-                    
+
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilledTonalButton(
@@ -1118,17 +1210,10 @@ fun RoomContent(
                     Icon(Icons.Default.Logout, null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "Leave Session", 
+                        "Leave Session",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                NyxCredit(onClick = {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://nyx.meowery.eu/"))
-                    context.startActivity(intent)
-                })
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -1548,30 +1633,6 @@ fun BlockedUsersSheet(
                 Text("Close", fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Composable
-fun NyxCredit(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Row(
-        modifier = modifier
-            .clip(CircleShape)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Integration by ",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = "Nyx",
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-        )
     }
 }
 

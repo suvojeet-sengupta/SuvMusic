@@ -1045,7 +1045,8 @@ class ListenTogetherManager @Inject constructor(
 
     suspend fun getServerUrl() = client.getServerUrl()
     suspend fun setServerUrl(url: String) = client.setServerUrl(url)
-    
+    suspend fun checkServerHealth() = client.checkServerHealth()
+
     suspend fun getAutoApproval() = client.getAutoApproval()
     suspend fun setAutoApproval(enabled: Boolean) = client.setAutoApproval(enabled)
     

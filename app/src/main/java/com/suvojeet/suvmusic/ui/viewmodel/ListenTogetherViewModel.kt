@@ -3,16 +3,35 @@ package com.suvojeet.suvmusic.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.shareplay.ConnectionState
+import com.suvojeet.suvmusic.shareplay.ListenTogetherClient
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
+import com.suvojeet.suvmusic.shareplay.ListenTogetherServer
+import com.suvojeet.suvmusic.shareplay.ListenTogetherServers
 import com.suvojeet.suvmusic.shareplay.RoomRole
 import com.suvojeet.suvmusic.shareplay.RoomState
 import com.suvojeet.suvmusic.shareplay.TrackInfo
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** Maximum username length accepted when hosting/joining a room. */
+const val LISTEN_TOGETHER_MAX_USERNAME = 24
+/** Room codes are 6-character uppercase alphanumeric (see server `generate_room_code`). */
+const val LISTEN_TOGETHER_ROOM_CODE_LENGTH = 6
+
+/** Validate a profile name. Returns null when valid, otherwise a user-facing reason. */
+fun validateListenTogetherUsername(name: String): String? {
+    val trimmed = name.trim()
+    return when {
+        trimmed.isEmpty() -> "Enter a name so others can recognize you"
+        trimmed.length > LISTEN_TOGETHER_MAX_USERNAME -> "Name must be $LISTEN_TOGETHER_MAX_USERNAME characters or fewer"
+        else -> null
+    }
+}
 
 class ListenTogetherViewModel @Inject constructor(
     private val manager: ListenTogetherManager
@@ -36,7 +55,18 @@ class ListenTogetherViewModel @Inject constructor(
     
     private val _serverUrl = kotlinx.coroutines.flow.MutableStateFlow("")
     val serverUrl: StateFlow<String> = _serverUrl
-    
+
+    /** Descriptor (name/location/operator) of the currently configured server, if known. */
+    val serverInfo: StateFlow<ListenTogetherServer?> = serverUrl
+        .map { ListenTogetherServers.findByUrl(it) ?: ListenTogetherServers.servers.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _serverHealth = kotlinx.coroutines.flow.MutableStateFlow<ListenTogetherClient.ServerHealth?>(null)
+    val serverHealth: StateFlow<ListenTogetherClient.ServerHealth?> = _serverHealth
+
+    private val _isCheckingHealth = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isCheckingHealth: StateFlow<Boolean> = _isCheckingHealth
+
     private val _autoApproval = kotlinx.coroutines.flow.MutableStateFlow(false)
     val autoApproval: StateFlow<Boolean> = _autoApproval
     
@@ -88,10 +118,16 @@ class ListenTogetherViewModel @Inject constructor(
         }
     }
 
-    fun updateServerUrl(url: String) {
-        _serverUrl.value = url
+    /** Probe the configured server's /health endpoint and publish the result. */
+    fun refreshServerHealth() {
+        if (_isCheckingHealth.value) return
         viewModelScope.launch {
-            manager.setServerUrl(url)
+            _isCheckingHealth.value = true
+            try {
+                _serverHealth.value = manager.checkServerHealth()
+            } finally {
+                _isCheckingHealth.value = false
+            }
         }
     }
     
@@ -135,14 +171,22 @@ class ListenTogetherViewModel @Inject constructor(
         initialValue = ListenTogetherUiState()
     )
     fun createRoom(username: String) {
+        val name = username.trim()
+        // Defensive guard: the UI disables Host until the name is valid, but never
+        // let a blank/oversized name reach the server.
+        if (validateListenTogetherUsername(name) != null) return
         viewModelScope.launch {
-            manager.createRoom(username)
+            manager.createRoom(name)
         }
     }
 
     fun joinRoom(roomCode: String, username: String) {
+        val name = username.trim()
+        val code = roomCode.trim().uppercase()
+        if (validateListenTogetherUsername(name) != null) return
+        if (code.length != LISTEN_TOGETHER_ROOM_CODE_LENGTH) return
         viewModelScope.launch {
-            manager.joinRoom(roomCode, username)
+            manager.joinRoom(code, name)
         }
     }
 

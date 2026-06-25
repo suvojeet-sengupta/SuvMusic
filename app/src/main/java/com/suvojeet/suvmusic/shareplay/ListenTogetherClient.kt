@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -113,7 +114,6 @@ class ListenTogetherClient @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ListenTogether"
-        // Server provided by: https://nyx.meowery.eu/
         private val DEFAULT_SERVER_URL = ListenTogetherServers.defaultServerUrl
         private const val MAX_RECONNECT_ATTEMPTS = 15
         private const val INITIAL_RECONNECT_DELAY_MS = 1000L
@@ -358,6 +358,53 @@ class ListenTogetherClient @Inject constructor(
 
     private fun isSecureWsUrl(url: String): Boolean =
         url.startsWith("wss://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true)
+
+    /**
+     * Result of a server health probe against the `/health` endpoint.
+     */
+    data class ServerHealth(
+        val online: Boolean,
+        val activeRooms: Int = 0,
+        val activeSessions: Int = 0,
+        val uptimeSeconds: Long = 0L,
+        val version: String = ""
+    )
+
+    /**
+     * Probe the current server's `/health` endpoint (the WebSocket URL with the
+     * `wss://…/ws` swapped for `https://…/health`). Returns an offline result on any
+     * failure rather than throwing, so the UI can always render a status.
+     */
+    suspend fun checkServerHealth(): ServerHealth = withContext(Dispatchers.IO) {
+        val wsUrl = getServerUrl()
+        val healthUrl = wsUrl
+            .replaceFirst("wss://", "https://", ignoreCase = true)
+            .replaceFirst("ws://", "http://", ignoreCase = true)
+            .let { base ->
+                when {
+                    base.endsWith("/ws") -> base.dropLast(3) + "/health"
+                    else -> base.trimEnd('/') + "/health"
+                }
+            }
+        try {
+            val request = Request.Builder().url(healthUrl).get().build()
+            client.newCall(request).execute().use { resp ->
+                if (!resp.isSuccessful) return@withContext ServerHealth(online = false)
+                val body = resp.body?.string().orEmpty()
+                val json = org.json.JSONObject(body)
+                ServerHealth(
+                    online = json.optString("status") == "ok",
+                    activeRooms = json.optInt("active_rooms"),
+                    activeSessions = json.optInt("active_sessions"),
+                    uptimeSeconds = json.optLong("uptime_seconds"),
+                    version = json.optString("version")
+                )
+            }
+        } catch (e: Exception) {
+            log(LogLevel.WARNING, "Server health check failed", e.message)
+            ServerHealth(online = false)
+        }
+    }
     
     private fun calculateBackoffDelay(attempt: Int): Long {
         // 1 shl n == 2^n. (Previously used `2 shl n` == 2^(n+1), doubling every delay.)
