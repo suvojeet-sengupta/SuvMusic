@@ -58,8 +58,12 @@ class ListenTogetherManager @Inject constructor(
     @Volatile
     private var lastSyncedTrackId: String? = null
     
-    // Cache for resolved stream URLs to avoid repeating slow network requests
-    private val streamUrlCache = android.util.LruCache<String, String>(50)
+    // Cache for resolved stream URLs to avoid repeating slow network requests.
+    // Entries carry a timestamp because stream URLs (especially YouTube's) expire
+    // after a few hours — serving a stale cached URL would fail to play.
+    private data class CachedStreamUrl(val url: String, val resolvedAt: Long)
+    private val streamUrlCache = android.util.LruCache<String, CachedStreamUrl>(50)
+    private val streamUrlTtlMs = 60 * 60 * 1000L // 1 hour
     
     // Track ID being buffered
     @Volatile
@@ -494,14 +498,19 @@ class ListenTogetherManager @Inject constructor(
 
                 // Drift thresholds
                 when {
-                    kotlin.math.abs(drift) > 1000 -> {
-                        // Strict sync requirement: Guest detects > 1000ms drift
-                        Log.w(TAG, "Strict match failed ($drift ms drift), forcing global sync pause!")
-                        p.pause()
-                        client.sendPlaybackAction(PlaybackActions.FORCE_SYNC, position = expectedPosition, trackId = anchorTrackId)
+                    kotlin.math.abs(drift) > 1500 -> {
+                        // Large drift: silently hard-seek THIS guest back into sync. We
+                        // deliberately do NOT broadcast FORCE_SYNC here: that paused and
+                        // re-buffered the ENTIRE room whenever any single guest drifted,
+                        // so one guest on a slow connection could make everyone stutter.
+                        // Correct only ourselves.
+                        Log.w(TAG, "Large drift ($drift ms), self-correcting with local seek")
+                        if (p.playbackParameters.speed != 1.0f) {
+                            p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
+                        }
+                        p.seekTo(expectedPosition)
                         anchorPosition = expectedPosition
                         anchorTime = System.currentTimeMillis()
-                        p.seekTo(expectedPosition)
                     }
                     drift < -150 -> {
                         // Behind by > 150ms: Speed up slightly (1.05x). Pitch pinned to 1.0
@@ -512,7 +521,7 @@ class ListenTogetherManager @Inject constructor(
                          // Ahead by > 150ms: Slow down slightly (0.95x), pitch preserved.
                          p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f, 1.0f)
                     }
-                    kotlin.math.abs(drift) <= 150 -> {
+                    else -> {
                         // Within 150ms: Sync is good, reset to normal speed
                          if (p.playbackParameters.speed != 1.0f) {
                              p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
@@ -785,8 +794,11 @@ class ListenTogetherManager @Inject constructor(
                 // 1. Determine track source based on ID characteristics (YouTube IDs are always 11 chars)
                 val isYouTube = track.id.length == 11 && track.id.matches(Regex("[a-zA-Z0-9_-]{11}"))
                 
-                // 2. Resolve stream URL from cache or direct fetch
-                val cachedUrl = streamUrlCache.get(track.id)
+                // 2. Resolve stream URL from cache (if not expired) or direct fetch
+                val cached = streamUrlCache.get(track.id)
+                val cachedUrl = cached?.takeIf {
+                    System.currentTimeMillis() - it.resolvedAt < streamUrlTtlMs
+                }?.url
                 val streamUrl = if (cachedUrl != null) {
                     cachedUrl
                 } else {
@@ -800,15 +812,23 @@ class ListenTogetherManager @Inject constructor(
                             ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
                     }
                     if (resolved != null) {
-                        streamUrlCache.put(track.id, resolved)
+                        streamUrlCache.put(track.id, CachedStreamUrl(resolved, System.currentTimeMillis()))
                     }
                     resolved
                 }
-                
+
                 if (streamUrl == null) {
                     Log.e(TAG, "Failed to resolve stream URL for ${track.id}")
-                    // Optionally notify user
+                    // Surface the failure to the user instead of silently leaving the
+                    // guest stuck on a "Loading…" placeholder, and clear buffer/sync
+                    // state so the room isn't held waiting on a track we can't play.
                     launch(Dispatchers.Main) {
+                        val title = track.title.takeIf { it.isNotBlank() && it != "Loading..." } ?: "this track"
+                        com.suvojeet.suvmusic.util.SnackbarUtil.showError(
+                            "Couldn't load \"$title\" to sync with the room"
+                        )
+                        if (bufferingTrackId == track.id) bufferingTrackId = null
+                        pendingBufferReadyTrackId = null
                         isSyncing = false
                     }
                     return@launch
@@ -820,32 +840,19 @@ class ListenTogetherManager @Inject constructor(
                 launch(Dispatchers.Main) {
                     val p = player ?: return@launch
                     isSyncing = true
-                    
-                    if (queue != null && queue.isNotEmpty()) {
-                        // Queue Sync Logic
-                        val mediaItems = queue.map { qTrack ->
-                            if (qTrack.id == track.id) {
-                                currentMediaItem
-                            } else {
-                                // Create placeholder for other tracks
-                                createMediaItem(qTrack, null)
-                            }
-                        }
-                        
-                        val startIndex = queue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
-                        
-                        p.setMediaItems(mediaItems, startIndex, position)
-                        p.prepare() // Prepare is needed after setMediaItems
-                    } else {
-                        // Single Track Logic
-                        p.setMediaItem(currentMediaItem)
-                        p.prepare()
-                        p.seekTo(position)
-                    }
-                    
+
+                    // A guest's player only ever needs the single track the host is
+                    // currently playing. We deliberately do NOT load the rest of the
+                    // queue as placeholder MediaItems with empty URIs: if ExoPlayer
+                    // auto-advanced into one of those it would hit Uri.EMPTY and error
+                    // out. The shared queue is shown in the UI from the room state, and
+                    // when the host changes track we receive a fresh CHANGE_TRACK and
+                    // load that single track here.
+                    p.setMediaItem(currentMediaItem)
+                    p.prepare()
+                    p.seekTo(position)
+
                     if (bypassBuffer) {
-                        if (queue == null) p.seekTo(position) // Already set in setMediaItems if queue present
-                        
                         // CRITICAL FIX: We must anchor drift correction when switching tracks!
                         anchorPosition = position
                         anchorTime = System.currentTimeMillis()
