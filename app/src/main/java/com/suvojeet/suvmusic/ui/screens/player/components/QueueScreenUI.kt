@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,7 +116,12 @@ fun ModernQueueView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (modalMode) Modifier else Modifier.statusBarsPadding())
+                // Apply status-bar padding except while the modal sheet is only partially
+                // expanded (Material positions that itself). When fully expanded the sheet
+                // reaches the top of the screen, so we MUST pad to keep the status bar
+                // visible and content beneath it — `nowPlayingHeaderOverride != null` is the
+                // "fully expanded" signal (set by the caller only in that state).
+                .then(if (modalMode && nowPlayingHeaderOverride == null) Modifier else Modifier.statusBarsPadding())
                 .navigationBarsPadding()
         ) {
             // Full player header pinned at the top when the sheet is fully expanded.
@@ -306,11 +312,66 @@ fun ModernQueueView(
                 }
             }
 
+            // Already-played songs (everything before the current track), shown dimmed
+            // above the current item — YouTube-Music-style history. Keyed by occurrence
+            // like keyedUpNext so duplicates don't collide.
+            val keyedHistory = remember(queue, currentIndex) {
+                val end = currentIndex.coerceIn(0, queue.size)
+                val seen = HashMap<String, Int>(end)
+                (0 until end).map { idx ->
+                    val song = queue[idx]
+                    val occ = seen.getOrDefault(song.id, 0)
+                    seen[song.id] = occ + 1
+                    Triple(song, idx, "hist_${song.id}#$occ")
+                }
+            }
+            val historyContentColor = contentColor.copy(alpha = 0.55f)
+            val historySecondaryColor = secondaryContentColor.copy(alpha = 0.75f)
+
+            // Open with the current track pinned at the top; history sits above it (scroll
+            // up to reveal). Re-centers on track change, matching YouTube Music.
+            LaunchedEffect(currentSong?.id, keyedHistory.size) {
+                listState.scrollToItem(if (keyedHistory.isNotEmpty()) keyedHistory.size + 1 else 0)
+            }
+
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(bottom = 24.dp),
                 modifier = Modifier.weight(1f)
             ) {
+                if (keyedHistory.isNotEmpty()) {
+                    item(key = "history_label", contentType = "label") {
+                        Text(
+                            text = "Previously played",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = historySecondaryColor,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    itemsIndexed(
+                        keyedHistory,
+                        key = { _, t -> t.third },
+                        contentType = { _, _ -> "queue_item" }
+                    ) { _, (song, histIndex, _) ->
+                        ModernQueueListItem(
+                            song = song,
+                            isCurrent = false,
+                            isPlaying = false,
+                            isSelected = selectedQueueIndices.contains(histIndex),
+                            isSelectionMode = isSelectionMode,
+                            onClick = { if (isSelectionMode) onToggleSelection(histIndex) else onSongClick(histIndex) },
+                            onLongPressEnterSelection = { onToggleSelection(histIndex) },
+                            onMoreClick = { onMoreClick(song) },
+                            onDragMove = { from, to -> onMoveItem(from, to) },
+                            itemIndex = histIndex,
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = historyContentColor,
+                            secondaryContentColor = historySecondaryColor
+                        )
+                    }
+                }
+
                 if (currentSong != null) {
                     item(key = "current_${currentSong.id}", contentType = "queue_item") {
                         ModernQueueListItem(

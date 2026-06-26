@@ -67,6 +67,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.suvojeet.suvmusic.ui.viewmodel.BackupViewModel
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +90,9 @@ fun MiscScreen(
     val uiState by viewModel.uiState.collectAsState()
     val backupState by backupViewModel.uiState.collectAsState()
     val snackbarHostState = externalSnackbarHostState ?: remember { SnackbarHostState() }
+    // Bug-reporting session dialog state (moved here from the main Settings screen).
+    var bugDescription by remember { mutableStateOf("") }
+    var showBugDescriptionDialog by remember { mutableStateOf(false) }
 
     val createBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
@@ -120,7 +133,7 @@ fun MiscScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text("Misc", fontWeight = FontWeight.Bold) },
+                title = { Text("Advanced", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     Box(
                         modifier = Modifier
@@ -147,6 +160,81 @@ fun MiscScreen(
             contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp)
         ) {
             item {
+                SettingsSectionTitle("Diagnostics")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    MiscSwitchItem(
+                        icon = Icons.Default.Warning,
+                        title = "Crash Reporting & Logging",
+                        subtitle = "Help the developer fix issues by sharing logs",
+                        checked = uiState.loggingEnabled,
+                        onCheckedChange = { viewModel.setLoggingEnabled(it) }
+                    )
+
+                    if (uiState.loggingEnabled) {
+                        HorizontalDivider()
+                        MiscNavigationItem(
+                            icon = Icons.Default.Info,
+                            title = "Share App Logs",
+                            subtitle = "Export the current log file",
+                            onClick = { viewModel.sharePersistentLogs() }
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    ListItem(
+                        headlineContent = { Text("SuvMusic Session", fontWeight = FontWeight.SemiBold) },
+                        supportingContent = {
+                            Text(
+                                if (uiState.isBugReportingSessionActive) "Recording logs... Reproduce the bug now"
+                                else "Start a session to capture logs for debugging"
+                            )
+                        },
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(SquircleShape)
+                                    .background(
+                                        if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.errorContainer
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (uiState.isBugReportingSessionActive) Icons.Default.GraphicEq else Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        },
+                        trailingContent = {
+                            TextButton(
+                                onClick = {
+                                    if (uiState.isBugReportingSessionActive) {
+                                        viewModel.stopBugReportingSession { file ->
+                                            viewModel.shareBugReport(file)
+                                        }
+                                    } else {
+                                        bugDescription = ""
+                                        showBugDescriptionDialog = true
+                                    }
+                                },
+                                colors = if (uiState.isBugReportingSessionActive) {
+                                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                } else {
+                                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                                }
+                            ) {
+                                Text(if (uiState.isBugReportingSessionActive) "Stop & Share" else "Start")
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
                 SettingsSectionTitle("Advanced & Experimental")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MiscSwitchItem(
@@ -265,6 +353,48 @@ fun MiscScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
+    }
+
+    // Bug Description Dialog (moved here from the main Settings screen).
+    if (showBugDescriptionDialog) {
+        AlertDialog(
+            onDismissRequest = { showBugDescriptionDialog = false },
+            title = { Text("Report an Issue") },
+            text = {
+                Column {
+                    Text(
+                        text = "Briefly describe what's wrong. This will be included in the log file.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    OutlinedTextField(
+                        value = bugDescription,
+                        onValueChange = { bugDescription = it },
+                        placeholder = { Text("e.g. App crashes when I skip songs...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 5,
+                        shape = SquircleShape
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.startBugReportingSession(bugDescription)
+                        showBugDescriptionDialog = false
+                    }
+                ) {
+                    Text("Start Recording")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBugDescriptionDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = SquircleShape
+        )
     }
 }
 

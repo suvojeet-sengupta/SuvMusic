@@ -289,7 +289,7 @@ private fun YTMusicPortraitContent(
                 isAIEnabled = isAIEnabled,
                 aiStatus = aiStatus,
                 showInlineLikeCapsule = false,
-                showTitleArrow = true,
+                showTitleArrow = false,
                 onTitleArrowClick = actions.onNext
             )
 
@@ -444,7 +444,7 @@ private fun YTMusicLandscapeContent(
                 isAIEnabled = isAIEnabled,
                 aiStatus = aiStatus,
                 showInlineLikeCapsule = false,
-                showTitleArrow = true,
+                showTitleArrow = false,
                 onTitleArrowClick = actions.onNext
             )
             Spacer(modifier = Modifier.height(12.dp))

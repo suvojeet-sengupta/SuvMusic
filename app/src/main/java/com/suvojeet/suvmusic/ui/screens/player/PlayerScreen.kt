@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.media3.common.Player
@@ -276,6 +277,10 @@ fun PlayerScreen(
         val insetsController = WindowCompat.getInsetsController(window, view)
         val previousLightStatusBars = insetsController.isAppearanceLightStatusBars
         insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme
+        // Defensive: make sure the status bar is visible whenever the player screen is
+        // shown. A prior full-screen video session uses immersive mode and could leave the
+        // bars hidden if its restore was interrupted — this guarantees they come back.
+        insetsController.show(WindowInsetsCompat.Type.systemBars())
         onDispose { insetsController.isAppearanceLightStatusBars = previousLightStatusBars }
     }
     
@@ -549,7 +554,9 @@ fun PlayerScreen(
                     visible = listenTogetherRole != com.suvojeet.suvmusic.shareplay.RoomRole.NONE,
                     enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
                     exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }),
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 54.dp)
+                    // Sit just below the top bar (status-bar aware) so the pill never
+                    // overlaps the centered audio/video toggle.
+                    modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp)
                 ) {
                     val code = listenTogetherRoomState?.roomCode ?: ""
                     val userCount = listenTogetherRoomState?.users?.size ?: 1
@@ -569,12 +576,12 @@ fun PlayerScreen(
                             .clickable {
                                 activeOverlay = PlayerOverlay.ListenTogether
                             }
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)
                         ) {
                             // Connection indicator dot
                             val dotColor = when (listenTogetherConnectionState) {
@@ -586,7 +593,7 @@ fun PlayerScreen(
                             
                             Box(
                                 modifier = Modifier
-                                    .size(8.dp)
+                                    .size(6.dp)
                                     .background(dotColor, CircleShape)
                             )
                             
@@ -594,16 +601,16 @@ fun PlayerScreen(
                             val statusText = when {
                                 listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.CONNECTING || 
                                 listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING -> "Reconnecting..."
-                                isBuffering -> "Syncing (${state.listenTogetherBufferingUsers.size} buffering)..."
-                                listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.HOST -> "Room: $code • Host • $userCount listening"
-                                else -> "Room: $code • Guest • $userCount listening"
+                                isBuffering -> "Syncing… (${state.listenTogetherBufferingUsers.size})"
+                                listenTogetherRole == com.suvojeet.suvmusic.shareplay.RoomRole.HOST -> "$code • Host • $userCount"
+                                else -> "$code • $userCount"
                             }
-                            
+
                             Text(
                                 text = statusText,
                                 color = Color.White,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                             )
                             
                             if (isBuffering || 
@@ -611,8 +618,8 @@ fun PlayerScreen(
                                 listenTogetherConnectionState == com.suvojeet.suvmusic.shareplay.ConnectionState.RECONNECTING) {
                                 androidx.compose.material3.CircularProgressIndicator(
                                     color = dominantColors.primary,
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp
+                                    modifier = Modifier.size(11.dp),
+                                    strokeWidth = 1.5.dp
                                 )
                             }
                         }
@@ -764,7 +771,9 @@ fun BoxScope.OverlaysContent(
                 sheetState = queueSheetState,
                 containerColor = if (isAppInDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface,
                 contentWindowInsets = { WindowInsets(0) },
-                dragHandle = { BottomSheetDefaults.DragHandle() },
+                // Hide the top "pull" handle once fully expanded so the queue reads as a
+                // standalone screen; it reappears when partially expanded for dragging.
+                dragHandle = if (isQueueExpanded) null else ({ BottomSheetDefaults.DragHandle() }),
                 scrimColor = Color.Black.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 modifier = Modifier.fillMaxHeight()

@@ -126,8 +126,6 @@ fun SettingsScreen(
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showAccountsSheet by remember { mutableStateOf(false) }
     var showUpdateChannelSheet by remember { mutableStateOf(false) }
-    var bugDescription by remember { mutableStateOf("") }
-    var showBugDescriptionDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     
     // Floating Player
@@ -322,83 +320,6 @@ fun SettingsScreen(
                             scope.launch { viewModel.setDynamicIslandEnabled(enabled) }
                         }
                     )
-
-                    HorizontalDivider()
-
-                    SettingsSwitchItem(
-                        icon = Icons.Default.Warning,
-                        title = "Crash Reporting & Logging",
-                        subtitle = "Help developer fix issues by sharing logs",
-                        checked = uiState.loggingEnabled,
-                        onCheckedChange = { viewModel.setLoggingEnabled(it) }
-                    )
-                    
-                    if (uiState.loggingEnabled) {
-                        HorizontalDivider()
-                        SettingsActionItem(
-                            icon = Icons.Default.Info,
-                            title = "Share App Logs",
-                            onClick = { viewModel.sharePersistentLogs() }
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // --- Bug Reproduction Section ---
-            item {
-                SettingsSectionTitle("Bug Reproduction")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    ListItem(
-                        headlineContent = { Text("SuvMusic Session", fontWeight = FontWeight.SemiBold) },
-                        supportingContent = { 
-                            Text(
-                                if (uiState.isBugReportingSessionActive) "Recording logs... Reproduce the bug now" 
-                                else "Start a session to capture logs for debugging"
-                            ) 
-                        },
-                        leadingContent = {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(SquircleShape)
-                                    .background(
-                                        if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.errorContainer
-                                        else MaterialTheme.colorScheme.primaryContainer
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (uiState.isBugReportingSessionActive) Icons.Default.GraphicEq else Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = if (uiState.isBugReportingSessionActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        },
-                        trailingContent = {
-                            TextButton(
-                                onClick = {
-                                    if (uiState.isBugReportingSessionActive) {
-                                        viewModel.stopBugReportingSession { file ->
-                                            viewModel.shareBugReport(file)
-                                        }
-                                    } else {
-                                        bugDescription = ""
-                                        showBugDescriptionDialog = true
-                                    }
-                                },
-                                colors = if (uiState.isBugReportingSessionActive) {
-                                    androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                } else {
-                                    androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                                }
-                            ) {
-                                Text(if (uiState.isBugReportingSessionActive) "Stop & Share" else "Start")
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -533,12 +454,12 @@ fun SettingsScreen(
 
             // --- Misc Section ---
             item {
-                SettingsSectionTitle("Misc")
+                SettingsSectionTitle("Advanced")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.Tune,
-                        title = "Misc Settings",
-                        subtitle = "Advanced & experimental features",
+                        title = "Advanced",
+                        subtitle = "Diagnostics, experimental & extra options",
                         onClick = onMiscClick
                     )
                 }
@@ -838,47 +759,6 @@ fun SettingsScreen(
         }
     }
 
-    // Bug Description Dialog
-    if (showBugDescriptionDialog) {
-        AlertDialog(
-            onDismissRequest = { showBugDescriptionDialog = false },
-            title = { Text("Report an Issue") },
-            text = {
-                Column {
-                    Text(
-                        text = "Briefly describe what's wrong. This will be included in the log file.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    OutlinedTextField(
-                        value = bugDescription,
-                        onValueChange = { bugDescription = it },
-                        placeholder = { Text("e.g. App crashes when I skip songs...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 5,
-                        shape = SquircleShape
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.startBugReportingSession(bugDescription)
-                        showBugDescriptionDialog = false
-                    }
-                ) {
-                    Text("Start Recording")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBugDescriptionDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = SquircleShape
-        )
-    }
 
     // Update Channel Bottom Sheet
     if (showUpdateChannelSheet) {

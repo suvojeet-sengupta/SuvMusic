@@ -107,6 +107,10 @@ fun SongInfoSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Keep content clear of the status bar when the sheet grows tall —
+                        // contentWindowInsets is zeroed above, so without this the header
+                        // ran under / disturbed the status bar.
+                        .statusBarsPadding()
                         .verticalScroll(rememberScrollState())
                         .navigationBarsPadding()
                         .padding(bottom = 32.dp)
