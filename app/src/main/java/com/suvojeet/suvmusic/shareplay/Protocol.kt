@@ -77,7 +77,15 @@ data class TrackInfo(
     val album: String? = null,
     val duration: Long, // milliseconds
     val thumbnail: String? = null,
-    @SerialName("suggested_by") val suggestedBy: String? = null
+    @SerialName("suggested_by") val suggestedBy: String? = null,
+    // --- Listen Together HQ-audio support ---
+    // Backend the host resolved from: "youtube" or "remote_audio" (HQ).
+    // null/blank = unknown (old host) -> guest falls back to id-length heuristic.
+    @SerialName("audio_source") val audioSource: String? = null,
+    // Backend-specific id guests should resolve with (null -> use [id]).
+    @SerialName("source_track_id") val sourceTrackId: String? = null,
+    // Host's selected audio quality: "auto"/"low"/"medium"/"high".
+    @SerialName("audio_quality") val audioQuality: String? = null
 )
 
 /**

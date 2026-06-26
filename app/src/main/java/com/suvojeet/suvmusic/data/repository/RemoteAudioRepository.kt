@@ -96,6 +96,13 @@ class RemoteAudioRepository @Inject constructor(
         return System.currentTimeMillis() < rateLimitedUntilMs
     }
 
+    /**
+     * True when the shared 429 backoff gate is currently active. Lets callers (e.g. a
+     * Listen Together guest) skip a doomed HQ resolve and fall straight to YouTube so
+     * the room stays in sync instead of stalling on a rate-limited backend.
+     */
+    fun isInBackoff(): Boolean = isRateLimited()
+
     @Synchronized
     private fun noteRateLimited() {
         rateLimitStreak = (rateLimitStreak + 1).coerceAtMost(6)

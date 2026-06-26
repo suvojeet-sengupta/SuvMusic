@@ -1709,6 +1709,20 @@ class MusicPlayer @Inject constructor(
                 // Remote HQ CDN requires Referer + User-Agent to avoid 403.
                 val isRemoteAudioSource = song.source == SongSource.REMOTE || (streamUrl != null && streamUrl.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST))
 
+                // --- Listen Together: record what this song *actually* resolved to so a
+                // host can tell guests the real backend + quality. This is the truth (it
+                // reflects the hybrid race / fallback outcome), not the user's preference:
+                // if HQ fell back to YouTube here, guests are told "youtube" and skip a
+                // pointless RemoteAudio attempt (and the shared 429 storm it would cause).
+                run {
+                    val ltSource = if (isRemoteAudioSource) "remote_audio" else "youtube"
+                    val ltSourceId = if (isRemoteAudioSource)
+                        (sessionManager.getMatchedRemoteSongId(song.id) ?: song.id)
+                    else song.id
+                    val ltQuality = sessionManager.getAudioQuality().name.lowercase()
+                    sessionManager.putResolvedPlaybackInfo(song.id, ltSource, ltSourceId, ltQuality)
+                }
+
                 if (isRemoteAudioSource) {
                     android.util.Log.i("SuvMusicRemote", "Applying mandatory playback headers for: ${song.title}")
                     mediaItemBuilder.setRequestMetadata(

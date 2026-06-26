@@ -34,6 +34,16 @@ class ListenTogetherManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ListenTogetherManager"
+
+        // --- HQ (RemoteAudio) staggered resolution across the room ---
+        // The RemoteAudio backend rate-limits hard and shares one backoff gate, so N
+        // guests resolving the same HQ track at once = an instant 429 storm. Each guest
+        // waits (its slot * STAGGER_MS) before hitting the backend, fanning the requests
+        // out. The cap stays under the 5s buffer timeout so a staggered guest never
+        // misses its buffer-ready window.
+        private const val STAGGER_MS = 400L
+        private const val STAGGER_MAX_MS = 3200L
+        private const val STAGGER_SLOTS = 8
     }
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -778,9 +788,92 @@ class ListenTogetherManager @Inject constructor(
         }
     }
 
+    /**
+     * Resolve a playable stream URL for a Listen Together track, honoring the host's
+     * audio source + quality so HQ (RemoteAudio) stays HQ on guests.
+     *
+     *  - The host stamps each track with [TrackInfo.audioSource] / [TrackInfo.sourceTrackId]
+     *    / [TrackInfo.audioQuality]. When present we resolve from exactly that backend
+     *    instead of guessing from the id format (the old 11-char heuristic mislabeled HQ
+     *    tracks that carry a YouTube id as YouTube, silently dropping HQ on guests).
+     *  - For HQ we stagger the request across the room (see [resolveHqStaggered]).
+     *  - A YouTube/RemoteAudio cross-fallback ensures a guest never stalls the room on an
+     *    unresolvable track.
+     */
+    private suspend fun resolveStreamUrlForRoom(track: TrackInfo): String? {
+        val source = track.audioSource?.takeIf { it.isNotBlank() } ?: legacySourceGuess(track.id)
+        val resolveId = track.sourceTrackId?.takeIf { it.isNotBlank() } ?: track.id
+        val qualityInt = remoteQualityToInt(track.audioQuality)
+
+        // Cache key includes quality so a re-resolve at a different quality isn't served a
+        // stale URL; keyed by the backend-specific id we actually resolve with.
+        val cacheKey = "$resolveId|${track.audioQuality ?: ""}"
+        streamUrlCache.get(cacheKey)?.takeIf {
+            System.currentTimeMillis() - it.resolvedAt < streamUrlTtlMs
+        }?.let { return it.url }
+
+        val resolved = if (source == "remote_audio") {
+            resolveHqStaggered(resolveId, qualityInt)
+                ?: youTubeRepository.getStreamUrl(track.id)
+                ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+        } else {
+            youTubeRepository.getStreamUrl(track.id)
+                ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                ?: remoteAudioRepository.getStreamUrl(resolveId, qualityInt)
+        }
+        if (resolved != null) {
+            streamUrlCache.put(cacheKey, CachedStreamUrl(resolved, System.currentTimeMillis()))
+        }
+        return resolved
+    }
+
+    /** Old id-format heuristic, used only when the host didn't stamp an audio source. */
+    private fun legacySourceGuess(id: String): String =
+        if (id.length == 11 && id.matches(Regex("[a-zA-Z0-9_-]{11}"))) "youtube" else "remote_audio"
+
+    private fun remoteQualityToInt(quality: String?): Int = when (quality?.lowercase()) {
+        "low" -> 96
+        "high" -> 320
+        else -> 160 // medium / auto / unknown
+    }
+
+    /**
+     * Resolve an HQ (RemoteAudio) stream, staggered across the room so guests don't all
+     * hit the rate-limited backend at once. Returns null when HQ can't be obtained — the
+     * caller then falls back to YouTube to keep this guest in sync with the room.
+     */
+    private suspend fun resolveHqStaggered(remoteId: String, qualityInt: Int): String? {
+        // Already backing off? Don't wait — fall back to YouTube now so this guest doesn't
+        // drift while the whole room's HQ is gated.
+        if (remoteAudioRepository.isInBackoff()) {
+            Log.d(TAG, "HQ backoff active — skipping HQ for $remoteId, using YouTube")
+            return null
+        }
+        // Deterministic per-guest slot: position in the buffer-coordination waiting list,
+        // else a stable hash of our user id. Slot 0 fires immediately, others fan out.
+        val me = userId.value
+        val waiting = bufferingUsers.value
+        val slot = when {
+            me != null && waiting.contains(me) -> waiting.indexOf(me)
+            me != null -> ((me.hashCode().toLong() and 0x7fffffffL) % STAGGER_SLOTS).toInt()
+            else -> 0
+        }
+        val delayMs = (slot.toLong() * STAGGER_MS).coerceAtMost(STAGGER_MAX_MS)
+        if (delayMs > 0) {
+            Log.d(TAG, "HQ stagger: slot=$slot delay=${delayMs}ms for $remoteId")
+            delay(delayMs)
+            // An earlier guest may have tripped a 429 while we waited.
+            if (remoteAudioRepository.isInBackoff()) {
+                Log.d(TAG, "HQ backoff tripped during stagger — using YouTube for $remoteId")
+                return null
+            }
+        }
+        return remoteAudioRepository.getStreamUrl(remoteId, qualityInt)
+    }
+
     private fun syncToTrack(
-        track: TrackInfo, 
-        shouldPlay: Boolean, 
+        track: TrackInfo,
+        shouldPlay: Boolean,
         position: Long, 
         bypassBuffer: Boolean = false,
         queue: List<TrackInfo>? = null
@@ -791,31 +884,10 @@ class ListenTogetherManager @Inject constructor(
         
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
-                // 1. Determine track source based on ID characteristics (YouTube IDs are always 11 chars)
-                val isYouTube = track.id.length == 11 && track.id.matches(Regex("[a-zA-Z0-9_-]{11}"))
-                
-                // 2. Resolve stream URL from cache (if not expired) or direct fetch
-                val cached = streamUrlCache.get(track.id)
-                val cachedUrl = cached?.takeIf {
-                    System.currentTimeMillis() - it.resolvedAt < streamUrlTtlMs
-                }?.url
-                val streamUrl = if (cachedUrl != null) {
-                    cachedUrl
-                } else {
-                    val resolved = if (isYouTube) {
-                        youTubeRepository.getStreamUrl(track.id)
-                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
-                            ?: remoteAudioRepository.getStreamUrl(track.id)
-                    } else {
-                        remoteAudioRepository.getStreamUrl(track.id)
-                            ?: youTubeRepository.getStreamUrl(track.id)
-                            ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
-                    }
-                    if (resolved != null) {
-                        streamUrlCache.put(track.id, CachedStreamUrl(resolved, System.currentTimeMillis()))
-                    }
-                    resolved
-                }
+                // Resolve from the SAME backend + quality the host used (see
+                // resolveStreamUrlForRoom) instead of guessing from the id format —
+                // this is what keeps an HQ host's audio HQ on every guest.
+                val streamUrl = resolveStreamUrlForRoom(track)
 
                 if (streamUrl == null) {
                     Log.e(TAG, "Failed to resolve stream URL for ${track.id}")
@@ -1000,13 +1072,21 @@ class ListenTogetherManager @Inject constructor(
                 if (d != androidx.media3.common.C.TIME_UNSET && d > 0) d else 0L
             } else 0L
         } ?: 0L
+        // Tell guests which backend + quality this track actually played from on the
+        // host, so they resolve identically (HQ stays HQ) instead of guessing from the
+        // id format. Null when unknown (e.g. track never went through MusicPlayer) —
+        // guests then fall back to the legacy id-length heuristic.
+        val resolved = sessionManager.getResolvedPlaybackInfo(mediaItem.mediaId)
         return TrackInfo(
             id = mediaItem.mediaId,
             title = metadata.title?.toString() ?: "Unknown",
             artist = metadata.artist?.toString() ?: "Unknown",
             album = metadata.albumTitle?.toString(),
             duration = realDuration,
-            thumbnail = metadata.artworkUri?.toString()
+            thumbnail = metadata.artworkUri?.toString(),
+            audioSource = resolved?.source,
+            sourceTrackId = resolved?.sourceTrackId,
+            audioQuality = resolved?.quality
         )
     }
     

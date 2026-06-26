@@ -23,6 +23,18 @@ message TrackInfo {
   int64 duration = 5;
   string thumbnail = 6;
   string suggested_by = 7;
+  // --- Listen Together HQ-audio support (relayed verbatim by the server) ---
+  // Which backend the host actually resolved this track from: "youtube" or
+  // "remote_audio" (HQ). Empty = unknown (old host) -> client falls back to
+  // its id-length heuristic.
+  string audio_source = 8;
+  // The backend-specific identifier guests should resolve with (RemoteAudio
+  // catalog id for HQ, YouTube video id otherwise). Avoids guessing the source
+  // from id format. Empty -> use `id`.
+  string source_track_id = 9;
+  // Host's selected audio quality ("auto"/"low"/"medium"/"high") so guests
+  // target the same bitrate. Empty -> client default.
+  string audio_quality = 10;
 }
 
 // User information

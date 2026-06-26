@@ -347,6 +347,9 @@ class MessageCodec(
             .setDuration(track.duration)
             .setThumbnail(track.thumbnail ?: "")
             .setSuggestedBy(track.suggestedBy ?: "")
+            .setAudioSource(track.audioSource ?: "")
+            .setSourceTrackId(track.sourceTrackId ?: "")
+            .setAudioQuality(track.audioQuality ?: "")
             .build()
     }
     
@@ -358,7 +361,10 @@ class MessageCodec(
             album = proto.album.takeIf { it.isNotEmpty() },
             duration = proto.duration,
             thumbnail = proto.thumbnail.takeIf { it.isNotEmpty() },
-            suggestedBy = proto.suggestedBy.takeIf { it.isNotEmpty() }
+            suggestedBy = proto.suggestedBy.takeIf { it.isNotEmpty() },
+            audioSource = proto.audioSource.takeIf { it.isNotEmpty() },
+            sourceTrackId = proto.sourceTrackId.takeIf { it.isNotEmpty() },
+            audioQuality = proto.audioQuality.takeIf { it.isNotEmpty() }
         )
     }
     

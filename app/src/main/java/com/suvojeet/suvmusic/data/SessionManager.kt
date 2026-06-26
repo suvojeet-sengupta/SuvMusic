@@ -3215,7 +3215,35 @@ class SessionManager @Inject constructor(
         return matchedRemoteSongIds[ytSongId]
     }
 
+    // --- Listen Together: what a song actually resolved to at play time ---
+    // When this device hosts a Listen Together room, guests must resolve the same
+    // track from the same backend (and quality) as the host instead of guessing
+    // from the id format — otherwise an HQ (RemoteAudio) host silently degrades to
+    // YouTube on guests. MusicPlayer records the real outcome here after each
+    // resolve; ListenTogetherManager reads it when broadcasting the track.
+    private val resolvedPlaybackInfo = java.util.Collections.synchronizedMap(
+        object : java.util.LinkedHashMap<String, ResolvedPlaybackInfo>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ResolvedPlaybackInfo>): Boolean = size > 200
+        }
+    )
+
+    fun putResolvedPlaybackInfo(songId: String, source: String, sourceTrackId: String, quality: String) {
+        resolvedPlaybackInfo[songId] = ResolvedPlaybackInfo(source, sourceTrackId, quality)
+    }
+
+    fun getResolvedPlaybackInfo(songId: String): ResolvedPlaybackInfo? = resolvedPlaybackInfo[songId]
+
 }
+
+/**
+ * The backend + quality a song actually resolved to at play time, used to keep
+ * Listen Together guests on the same audio source as the host.
+ */
+data class ResolvedPlaybackInfo(
+    val source: String,        // "remote_audio" (HQ) or "youtube"
+    val sourceTrackId: String, // backend-specific id guests should resolve with
+    val quality: String        // "auto" / "low" / "medium" / "high"
+)
 
 /**
  * Data class for last playback state.
