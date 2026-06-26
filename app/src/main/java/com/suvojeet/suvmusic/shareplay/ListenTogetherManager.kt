@@ -814,8 +814,12 @@ class ListenTogetherManager @Inject constructor(
 
         val resolved = if (source == "remote_audio") {
             resolveHqStaggered(resolveId, qualityInt)
+                // Fallback when HQ is unreachable (rate-limited). For a hybrid track [track.id]
+                // is a YouTube id and resolves directly; for a pure-HQ track it isn't, so we
+                // also search YouTube by name — that way no HQ track can stall the room.
                 ?: youTubeRepository.getStreamUrl(track.id)
                 ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
+                ?: resolveYouTubeByName(track)
         } else {
             youTubeRepository.getStreamUrl(track.id)
                 ?: youTubeRepository.getStreamUrlForDownload(track.id)?.first
@@ -825,6 +829,28 @@ class ListenTogetherManager @Inject constructor(
             streamUrlCache.put(cacheKey, CachedStreamUrl(resolved, System.currentTimeMillis()))
         }
         return resolved
+    }
+
+    /**
+     * Last-ditch fallback: find the song on YouTube by title + artist when its native
+     * backend can't serve a stream. Mirrors MusicPlayer's cross-source fallback so a
+     * guest on a pure-HQ track — which has no YouTube id to fall back to — still stays in
+     * the room when the RemoteAudio backend is rate-limited.
+     */
+    private suspend fun resolveYouTubeByName(track: TrackInfo): String? {
+        val query = "${track.title} ${track.artist}".trim()
+        if (query.isBlank()) return null
+        return try {
+            val ytId = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
+                youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS).firstOrNull()?.id
+            }
+            ytId?.let { id ->
+                youTubeRepository.getStreamUrl(id) ?: youTubeRepository.getStreamUrlForDownload(id)?.first
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "YouTube name fallback failed for ${track.title}: ${e.message}")
+            null
+        }
     }
 
     /** Old id-format heuristic, used only when the host didn't stamp an audio source. */
