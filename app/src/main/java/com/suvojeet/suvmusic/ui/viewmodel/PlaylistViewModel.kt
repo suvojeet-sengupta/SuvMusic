@@ -214,9 +214,8 @@ class PlaylistViewModel @Inject constructor(
         }
 
         try {
-            val currentSource = sessionManager.getMusicSource()
-            
-            // Smart loading based on source preference
+            // Smart loading based on the playlist's OWN origin (its id), not the playback
+            // source preference — HQ Audio only swaps playback, not where listings load from.
             val playlist = if (playlistId == "LM") {
                 // Liked Songs - Load from local library (already handled above but for consistency)
                 val songs = libraryRepository.getCachedPlaylistSongs("LM")
@@ -265,8 +264,12 @@ class PlaylistViewModel @Inject constructor(
                     songs = songs
                 )
             } else {
-                val isRemoteSource = currentSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE
-                if (isRemoteSource) {
+                // Route by the playlist's OWN id: RemoteAudio (HQ) playlist ids are numeric,
+                // YouTube ids are alphanumeric. A YouTube playlist must keep loading from
+                // YouTube even under HQ Audio source — otherwise RemoteAudio can't resolve
+                // it and the playlist shows 0 songs.
+                val isRemotePlaylist = playlistId.toLongOrNull() != null
+                if (isRemotePlaylist) {
                     remoteAudioRepository.getPlaylist(playlistId) ?: throw Exception("Failed to load playlist from REMOTE")
                 } else {
                     // Playlists always load from YouTube — HQ Audio source only swaps playback.

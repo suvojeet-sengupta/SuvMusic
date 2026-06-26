@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Album
-import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.SessionManager
@@ -106,9 +105,13 @@ class AlbumViewModel @Inject constructor(
                     }
                 } else null
 
-                // If it is Remote source (HQ Audio), load from RemoteAudioRepository. Otherwise from YouTubeRepository.
-                val isRemoteSource = sessionManager.getMusicSource() == MusicSource.REMOTE
-                val album = localAlbum ?: if (isRemoteSource) {
+                // Route by the album's OWN id, not the playback-source preference. `isLocal`
+                // here just means "numeric id"; a real local album was already resolved
+                // above, so a numeric id that fell through is a RemoteAudio (HQ) album.
+                // Alphanumeric YouTube ids always load from YouTube — HQ Audio source only
+                // swaps the audio stream, so it must not reroute YouTube album listings to
+                // RemoteAudio (which can't resolve them and showed 0 songs).
+                val album = localAlbum ?: if (isLocal) {
                     remoteAudioRepository.getAlbum(albumId)?.let { playlist ->
                         Album(
                             id = playlist.id,
