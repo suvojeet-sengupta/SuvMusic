@@ -300,13 +300,18 @@ fun SearchScreen(
                         }
                     }
 
-                    // Tab Selection (YouTube / HQ Audio / Local). When the user has
-                    // picked HQ Audio as the primary source, hide the YouTube Music
-                    // tab so search stays on-source.
+                    // Tab Selection (YouTube / HQ Audio / Local). Both YouTube Music and
+                    // HQ Audio tabs are always available regardless of the active source,
+                    // so the user can always cross-search the other catalogue.
                     val visibleTabs = remember(uiState.currentSource) {
                         buildList {
-                            if (uiState.currentSource != MusicSource.REMOTE) add(SearchTab.YOUTUBE_MUSIC)
-                            add(SearchTab.REMOTE)
+                            if (uiState.currentSource == MusicSource.REMOTE) {
+                                add(SearchTab.REMOTE)
+                                add(SearchTab.YOUTUBE_MUSIC)
+                            } else {
+                                add(SearchTab.YOUTUBE_MUSIC)
+                                add(SearchTab.REMOTE)
+                            }
                             add(SearchTab.YOUR_LIBRARY)
                         }
                     }
@@ -326,23 +331,18 @@ fun SearchScreen(
                         },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        if (uiState.currentSource != MusicSource.REMOTE) {
+                        visibleTabs.forEach { tab ->
+                            val label = when (tab) {
+                                SearchTab.YOUTUBE_MUSIC -> "YouTube Music"
+                                SearchTab.REMOTE -> "HQ Audio"
+                                SearchTab.YOUR_LIBRARY -> "Local Library"
+                            }
                             Tab(
-                                selected = uiState.selectedTab == SearchTab.YOUTUBE_MUSIC,
-                                onClick = { viewModel.onTabChange(SearchTab.YOUTUBE_MUSIC) },
-                                text = { Text("YouTube Music", style = MaterialTheme.typography.titleSmall) }
+                                selected = uiState.selectedTab == tab,
+                                onClick = { viewModel.onTabChange(tab) },
+                                text = { Text(label, style = MaterialTheme.typography.titleSmall) }
                             )
                         }
-                        Tab(
-                            selected = uiState.selectedTab == SearchTab.REMOTE,
-                            onClick = { viewModel.onTabChange(SearchTab.REMOTE) },
-                            text = { Text("HQ Audio", style = MaterialTheme.typography.titleSmall) }
-                        )
-                        Tab(
-                            selected = uiState.selectedTab == SearchTab.YOUR_LIBRARY,
-                            onClick = { viewModel.onTabChange(SearchTab.YOUR_LIBRARY) },
-                            text = { Text("Local Library", style = MaterialTheme.typography.titleSmall) }
-                        )
                     }
                     
                     // Category Chips for YouTube / REMOTE Tab

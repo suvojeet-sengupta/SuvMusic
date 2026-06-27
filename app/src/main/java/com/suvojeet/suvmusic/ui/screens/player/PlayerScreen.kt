@@ -42,7 +42,6 @@ import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.screens.player.components.M3ELoadingOverlay
-import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.screens.LyricsScreen
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.core.model.ArtworkShape
@@ -366,17 +365,15 @@ fun PlayerScreen(
         com.suvojeet.suvmusic.ui.screens.player.components.LocalCurrentDownloadProgress provides currentDownloadProgress
       ) {
         Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
-            // Background is style-specific:
-            //  • LIQUID_GLASS draws its own full-screen blurred backdrop — skip here.
-            //  • YT_MUSIC now uses the transparent "liquid glass" backdrop: the blurred album
-            //    art shows prominently through a translucent scrim (the look that used to be a
-            //    separate Liquid Glass style, now merged into the default).
-            //  • CLASSIC keeps the original animated mesh / vertical color gradient.
+            // Background: every player style now shares the transparent "liquid glass"
+            // backdrop — the blurred album art shows prominently through a translucent
+            // scrim. LIQUID_GLASS (unreachable, migrated to YT_MUSIC) still draws its own
+            // full-screen backdrop, so it's skipped here.
             when (playerStyle) {
                 PlayerStyle.LIQUID_GLASS -> {
                     // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
                 }
-                PlayerStyle.YT_MUSIC -> {
+                PlayerStyle.YT_MUSIC, PlayerStyle.CLASSIC -> {
                     com.suvojeet.suvmusic.ui.screens.player.components.GlassArtBackground(
                         thumbnailUrl = song?.thumbnailUrl,
                         isDarkTheme = isAppInDarkTheme,
@@ -385,13 +382,6 @@ fun PlayerScreen(
                         blurRadius = playerGlassBlur,
                         intensity = playerGlassIntensity
                     )
-                }
-                PlayerStyle.CLASSIC -> {
-                    if (animatedBackgroundEnabled && !playerState.isVideoMode) {
-                        MeshGradientBackground(dominantColors = dominantColors, backgroundColor = playerBackgroundColor)
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(dominantColors.secondary, dominantColors.primary, playerBackgroundColor))))
-                    }
                 }
             }
 

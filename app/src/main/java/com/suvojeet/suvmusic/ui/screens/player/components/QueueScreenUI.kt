@@ -168,27 +168,13 @@ fun ModernQueueView(
                             Icon(Icons.Default.PlaylistPlay, null, tint = contentColor)
                         }
 
-                        IconButton(onClick = { 
+                        IconButton(onClick = {
                             val selectedSongs = selectedQueueIndices.mapNotNull { index ->
                                 // Guard both ends: a stale selection can hold an index
                                 // that's now negative or past the end after a queue edit.
                                 queue.getOrNull(index)
                             }
-                            if (selectedSongs.isNotEmpty()) {
-                                onAddToQueue(selectedSongs)
-                                onClearSelection()
-                            }
-                        }) {
-                            Icon(Icons.Default.AddToQueue, null, tint = contentColor)
-                        }
-
-                        IconButton(onClick = { 
-                            val selectedSongs = selectedQueueIndices.mapNotNull { index ->
-                                // Guard both ends: a stale selection can hold an index
-                                // that's now negative or past the end after a queue edit.
-                                queue.getOrNull(index)
-                            }
-                            onAddToPlaylistClick(selectedSongs) 
+                            onAddToPlaylistClick(selectedSongs)
                         }) {
                             Icon(Icons.Default.PlaylistAdd, null, tint = contentColor)
                         }
