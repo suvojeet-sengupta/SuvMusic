@@ -40,13 +40,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -54,16 +54,19 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.ui.components.DominantColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 import com.suvojeet.suvmusic.ui.components.player.miniplayer.LiquidGlassMiniPlayer
@@ -155,29 +158,31 @@ fun ExpandablePlayerSheet(
         }
     }
 
-    // Panel height: lerp from mini player (+ padding) to full screen
-    val panelHeightPx = (miniPlayerHeightPx + bottomPadding) + (dragRange * expansion.value.coerceAtLeast(0f))
-    val panelHeightDp = with(density) { panelHeightPx.toDp() }
-
-    // The entire expandable panel
+    // The entire expandable panel. Height / alpha / offset all interpolate with the
+    // drag `expansion`, but we read `expansion.value` ONLY inside layout/draw-phase
+    // lambdas (.layout{}, .graphicsLayer{}, .offset{}) — never in the composition
+    // scope. That keeps this sheet (and the heavy expandedContent / PlayerScreen it
+    // hosts) from recomposing on every animation frame; the interpolation still runs
+    // smoothly because layout/draw re-read the value each frame without recomposing.
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(panelHeightDp)
+            // Panel height: lerp from mini player (+ padding) to full screen, measured
+            // in the layout phase so a height change doesn't trigger recomposition.
+            .layout { measurable, constraints ->
+                val h = ((miniPlayerHeightPx + bottomPadding) +
+                    dragRange * expansion.value.coerceAtLeast(0f)).roundToInt()
+                val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                layout(placeable.width, h) { placeable.place(0, 0) }
+            }
             // Removed pointerInput from here to allow clicks to pass through to Nav Bar in the transparent area
     ) {
         // ── Collapsed Mini Player Row ──
-        // Visible when expansion < ~0.4, fades out as expansion increases
-        val miniPlayerAlpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
-        if (miniPlayerAlpha > 0f) {
-            // When collapsed (expansion=0), offset the mini player down to close the gap
-            // Using a more stable calculation to prevent jumping
-            val collapsedOffsetPx = if (expansion.value >= 0f) {
-                (bottomPadding - adjustedBottomPadding) * (1f - expansion.value)
-            } else {
-                0f
-            }
-            
+        // Visible when expansion < ~0.4 (fades out as it expands) or while it's being
+        // swipe-dismissed (expansion < 0). Gated by a derivedStateOf boolean so this
+        // block is added/removed at most once per transition, not every frame.
+        val showMiniPlayer by remember { derivedStateOf { expansion.value < 0.4f } }
+        if (showMiniPlayer) {
             CollapsedMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
@@ -205,10 +210,17 @@ fun ExpandablePlayerSheet(
                 modifier = Modifier
                      .fillMaxWidth()
                      .height(MiniPlayerHeight)
-                     .alpha(miniPlayerAlpha)
                      .align(Alignment.TopCenter)
-                     .offset(y = with(density) { collapsedOffsetPx.toDp() })
+                     // When collapsed (expansion≈0), offset the mini player down to
+                     // close the gap. Read in the layout phase to avoid recomposition.
+                     .offset {
+                         val e = expansion.value
+                         val px = if (e >= 0f) (bottomPadding - adjustedBottomPadding) * (1f - e) else 0f
+                         IntOffset(0, px.roundToInt())
+                     }
                      .graphicsLayer {
+                         // Base fade: the mini player fades out as the panel expands.
+                         alpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
                          // Visual feedback for swipe down to dismiss. Use a
                          // 1:1 mapping (drag distance → translation) so the
                          // mini player follows the finger naturally, and
@@ -289,13 +301,15 @@ fun ExpandablePlayerSheet(
         }
 
         // ── Expanded Full Player ──
-        // Visible when expansion > ~0.3, fades out as expansion increases
-        val fullPlayerAlpha = ((expansion.value - 0.3f) / 0.7f).coerceIn(0f, 1f)
-        if (fullPlayerAlpha > 0f) {
+        // Composed only once expansion crosses ~0.3. Gated by a derivedStateOf so the
+        // heavy expandedContent (full PlayerScreen) is added at most once per
+        // transition rather than re-invoked on every animation frame.
+        val showFullPlayer by remember { derivedStateOf { expansion.value > 0.3f } }
+        if (showFullPlayer) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(fullPlayerAlpha)
+                    .graphicsLayer { alpha = ((expansion.value - 0.3f) / 0.7f).coerceIn(0f, 1f) }
                     .zIndex(if (isExpanded) 1f else 0f)
                     // Add gesture detection to Full Player
                     .pointerInput(Unit) {
