@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.5.7.0",
+      "versionCode": 36,
+      "date": "June 27, 2026",
+      "description": "• HQ Audio is now the default: SuvMusic now streams in high-quality 320 kbps audio out of the box, hosted on our own VPS for fast, reliable playback. Both Wi-Fi and mobile streaming default to 320 kbps. Prefer YouTube Music? You can switch back anytime in Playback settings. Existing users get a one-time welcome to the new HQ experience.\n• Cross-Search YouTube Music: Even with HQ Audio selected, the YouTube Music tab is now always available in Search, so you can find anything from either catalogue. Playback tries HQ first and gracefully falls back to YouTube when no HQ match exists, with a clear on-screen notice.\n• Unified Liquid-Glass Player: The transparent frosted-glass backdrop — blurred album art behind a soft scrim — now applies across all player styles, including Classic. The standalone iOS Liquid Glass style has been merged into the default look, and anyone using it is moved over automatically.\n• Smoother Player Transitions: Eliminated per-frame UI recompositions when expanding and collapsing between the mini player and the full player, so the animation is noticeably smoother and lighter on the battery.\n• Queue & UI Cleanup: Trimmed redundant actions from the queue's long-press selection bar and polished several screens.\n• Bug Fixes & Performance: General stability and performance improvements, including a fix for albums and playlists showing 0 songs under the HQ Audio source.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.5.5.0",
       "versionCode": 34,
       "date": "June 17, 2026",

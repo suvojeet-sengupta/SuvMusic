@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.5.7.0] - 2026-06-27
+
+### Changed
+- **HQ Audio is now the default source**: New installs and users without a saved preference now stream 320 kbps HQ Audio (VPS-hosted) out of the box. Both Wi-Fi and mobile audio-quality defaults raised to HIGH (320 kbps). YouTube Music remains fully switchable in Playback settings. Existing users see a one-time HQ Audio announcement on update.
+- **Unified liquid-glass player look**: The transparent frosted-glass backdrop (blurred album art behind a soft scrim) now applies to all player styles, including Classic. The standalone Liquid Glass (iOS) player/mini-player style was removed and existing users migrated to YT Music.
+
+### Added
+- **Cross-search YouTube Music in HQ mode**: The YouTube Music tab is always available in Search even when HQ Audio is the active source. Playback tries HQ first and falls back to YouTube with an on-screen notice.
+
+### Improved
+- **Smoother mini-player ↔ player transition**: Deferred the expand/collapse `Animatable` reads in `ExpandablePlayerSheet` to the layout/draw phase so the whole sheet (and the full `PlayerScreen`) no longer recomposes on every animation frame — eliminating per-frame recomposition jank during the transition.
+- **Queue selection cleanup**: Removed the redundant "Add to Queue" action from the queue's long-press selection bar.
+
+### Fixed
+- Albums and playlists no longer show 0 songs under the HQ Audio source.
+- Removed the NYX / Listen Together card from the Credits screen.
+- General bug fixes and performance improvements.
+
 ## [2.5.4.0] - 2026-06-10
 
 ### Fixed
