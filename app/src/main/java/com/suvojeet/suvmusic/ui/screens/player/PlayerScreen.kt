@@ -368,18 +368,22 @@ fun PlayerScreen(
         Box(modifier = Modifier.fillMaxSize().background(playerBackgroundColor).graphicsLayer { alpha = bgLoadingAlpha }) {
             // Background is style-specific:
             //  • LIQUID_GLASS draws its own full-screen blurred backdrop — skip here.
-            //  • YT_MUSIC uses the flat YouTube-Music look: solid surface + a subtle blurred
-            //    album-art wash, no decorative gradients (app-wide default).
+            //  • YT_MUSIC now uses the transparent "liquid glass" backdrop: the blurred album
+            //    art shows prominently through a translucent scrim (the look that used to be a
+            //    separate Liquid Glass style, now merged into the default).
             //  • CLASSIC keeps the original animated mesh / vertical color gradient.
             when (playerStyle) {
                 PlayerStyle.LIQUID_GLASS -> {
                     // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
                 }
                 PlayerStyle.YT_MUSIC -> {
-                    com.suvojeet.suvmusic.ui.screens.player.components.FlatArtTintBackground(
+                    com.suvojeet.suvmusic.ui.screens.player.components.GlassArtBackground(
                         thumbnailUrl = song?.thumbnailUrl,
                         isDarkTheme = isAppInDarkTheme,
-                        isVideoMode = playerState.isVideoMode
+                        isVideoMode = playerState.isVideoMode,
+                        dominantColors = dominantColors,
+                        blurRadius = playerGlassBlur,
+                        intensity = playerGlassIntensity
                     )
                 }
                 PlayerStyle.CLASSIC -> {
