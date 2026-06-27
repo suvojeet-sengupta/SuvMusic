@@ -748,14 +748,22 @@ fun SuvMusicApp(
     // Welcome Dialog State
     val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
     var showWelcomeDialog by remember { mutableStateOf(false) }
-    
+    // One-time "HQ Audio is ready" announcement for existing users updating in.
+    var showHqAudioAnnouncement by remember { mutableStateOf(false) }
+
     // Check actual onboarding status on launch
     LaunchedEffect(Unit) {
         if (!sessionManager.isOnboardingCompleted()) {
             showWelcomeDialog = true
+            // Brand-new installs already get HQ Audio by default + the welcome
+            // flow, so they shouldn't also see the update announcement.
+            sessionManager.setHqAudioAnnouncementSeen(true)
+        } else if (!sessionManager.isHqAudioAnnouncementSeen()) {
+            // Existing user who just updated to the HQ-Audio-default build.
+            showHqAudioAnnouncement = true
         }
     }
-    
+
     // Determine device form factor for adaptive layouts
     val formFactor = LocalDeviceFormFactor.current
 
@@ -770,6 +778,20 @@ fun SuvMusicApp(
                 scope.launch {
                     sessionManager.setOnboardingCompleted(true)
                 }
+            }
+        )
+    }
+
+    if (showHqAudioAnnouncement) {
+        com.suvojeet.suvmusic.ui.components.HqAudioAnnouncementDialog(
+            onDismiss = {
+                showHqAudioAnnouncement = false
+                scope.launch { sessionManager.setHqAudioAnnouncementSeen(true) }
+            },
+            onSupportClick = {
+                showHqAudioAnnouncement = false
+                scope.launch { sessionManager.setHqAudioAnnouncementSeen(true) }
+                navController.navigate(Destination.Support)
             }
         )
     }

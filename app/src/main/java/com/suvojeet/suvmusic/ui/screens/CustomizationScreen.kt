@@ -101,8 +101,6 @@ fun CustomizationScreen(
 
     val miniPlayerAlpha = uiState.miniPlayerAlpha
     val navBarAlpha = uiState.navBarAlpha
-    val navBarBlur = uiState.navBarBlur
-    val iosLiquidGlassEnabled = uiState.iosLiquidGlassEnabled
     val currentMiniPlayerStyle = uiState.miniPlayerStyle
     val homeSectionsVisibility = uiState.homeSectionsVisibility
 
@@ -206,16 +204,6 @@ fun CustomizationScreen(
                         subtitle = "Configure visible sections",
                         onClick = { showHomeSectionsSheet = true }
                     )
-                    
-                    HorizontalDivider()
-
-                    CustomizationSwitchItem(
-                        icon = Icons.Default.BlurOn,
-                        title = "iOS Liquid Glass",
-                        subtitle = "Frosted glass across nav bar, top bar & sheets",
-                        checked = iosLiquidGlassEnabled,
-                        onCheckedChange = { viewModel.setIosLiquidGlassEnabled(it) }
-                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -240,16 +228,6 @@ fun CustomizationScreen(
                         onAlphaChange = { viewModel.setNavBarAlpha(it) }
                     )
 
-                    if (iosLiquidGlassEnabled) {
-                        HorizontalDivider()
-                        
-                        BlurSliderItem(
-                            title = "iOS NavBar Blur",
-                            icon = Icons.Default.BlurOn,
-                            blur = navBarBlur,
-                            onBlurChange = { viewModel.setNavBarBlur(it) }
-                        )
-                    }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -272,7 +250,7 @@ fun CustomizationScreen(
                     modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
                 )
                 
-                MiniPlayerStyle.entries.forEach { style ->
+                MiniPlayerStyle.entries.filter { it != MiniPlayerStyle.LIQUID_GLASS }.forEach { style ->
                     ListItem(
                         headlineContent = { Text(style.label) },
                         leadingContent = {

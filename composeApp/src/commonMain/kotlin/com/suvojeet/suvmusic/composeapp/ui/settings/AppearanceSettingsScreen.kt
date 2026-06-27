@@ -370,7 +370,9 @@ fun AppearanceSettingsScreen(
     if (showPlayerStyleSheet) {
         EnumPickerSheet(
             title = "Player Style",
-            entries = PlayerStyle.entries,
+            // Liquid Glass (iOS) has been retired — only YT Music and Classic
+            // remain selectable; users on Liquid Glass are migrated to YT Music.
+            entries = PlayerStyle.entries.filter { it != PlayerStyle.LIQUID_GLASS },
             selected = playerStyle,
             label = { it.label },
             onSelect = { style ->

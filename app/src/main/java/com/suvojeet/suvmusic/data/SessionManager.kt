@@ -87,6 +87,7 @@ class SessionManager @Inject constructor(
         private val VIDEO_QUALITY_KEY = stringPreferencesKey("video_quality")
         private val PREFER_VIDEO_MODE_KEY = booleanPreferencesKey("prefer_video_mode")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
+        private val HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("hq_audio_announcement_seen")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
         
@@ -802,16 +803,21 @@ class SessionManager @Inject constructor(
         }
     }
     
+    // Liquid Glass mini-player style is retired — migrate any stored value to
+    // YT Music so existing users land on the supported style.
+    private fun MiniPlayerStyle.migrated(): MiniPlayerStyle =
+        if (this == MiniPlayerStyle.LIQUID_GLASS) MiniPlayerStyle.YT_MUSIC else this
+
     suspend fun getMiniPlayerStyle(): MiniPlayerStyle {
         val styleName = context.dataStore.data.first()[MINI_PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
+            try { MiniPlayerStyle.valueOf(it).migrated() } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
         } ?: MiniPlayerStyle.YT_MUSIC
     }
-    
+
     val miniPlayerStyleFlow: Flow<MiniPlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[MINI_PLAYER_STYLE_KEY]?.let {
-            try { MiniPlayerStyle.valueOf(it) } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
+            try { MiniPlayerStyle.valueOf(it).migrated() } catch (e: Exception) { MiniPlayerStyle.YT_MUSIC }
         } ?: MiniPlayerStyle.YT_MUSIC
     }
     
@@ -821,16 +827,22 @@ class SessionManager @Inject constructor(
         }
     }
 
+    // The Liquid Glass (iOS) player style has been retired — anyone still on it
+    // is transparently migrated to the YT Music style.
+    private fun com.suvojeet.suvmusic.core.model.PlayerStyle.migrated(): com.suvojeet.suvmusic.core.model.PlayerStyle =
+        if (this == com.suvojeet.suvmusic.core.model.PlayerStyle.LIQUID_GLASS)
+            com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC else this
+
     suspend fun getPlayerStyle(): com.suvojeet.suvmusic.core.model.PlayerStyle {
         val styleName = context.dataStore.data.first()[PLAYER_STYLE_KEY]
         return styleName?.let {
-            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
+            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it).migrated() } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
         } ?: com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC
     }
 
     val playerStyleFlow: Flow<com.suvojeet.suvmusic.core.model.PlayerStyle> = context.dataStore.data.map { preferences ->
         preferences[PLAYER_STYLE_KEY]?.let {
-            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it) } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
+            try { com.suvojeet.suvmusic.core.model.PlayerStyle.valueOf(it).migrated() } catch (e: Exception) { com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC }
         } ?: com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC
     }
 
@@ -1582,12 +1594,12 @@ class SessionManager @Inject constructor(
         }
     }
 
-    val iosLiquidGlassEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
-    }
+    // iOS Liquid Glass has been retired from Appearance. The frosted-glass nav
+    // bar / sheets effect is now always off regardless of any stored value, so
+    // existing users who had it enabled fall back to the standard YT Music chrome.
+    val iosLiquidGlassEnabledFlow: Flow<Boolean> = context.dataStore.data.map { false }
 
-    suspend fun isIosLiquidGlassEnabled(): Boolean =
-        context.dataStore.data.first()[IOS_LIQUID_GLASS_ENABLED_KEY] ?: false
+    suspend fun isIosLiquidGlassEnabled(): Boolean = false
 
     suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
@@ -2133,19 +2145,22 @@ class SessionManager @Inject constructor(
         }
     }
 
+    // Default mobile streaming quality is High (320 kbps under HQ Audio) — the
+    // same default as Wi-Fi, so both networks stream at the highest quality
+    // out of the box.
     suspend fun getMobileAudioQuality(): AudioQuality {
         val qualityName = context.dataStore.data.first()[MOBILE_AUDIO_QUALITY_KEY]
             ?: context.dataStore.data.first()[AUDIO_QUALITY_KEY]
         return qualityName?.let {
-            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.MEDIUM }
-        } ?: AudioQuality.MEDIUM
+            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
+        } ?: AudioQuality.HIGH
     }
 
     val mobileAudioQualityFlow: Flow<AudioQuality> = context.dataStore.data.map { preferences ->
         val qualityName = preferences[MOBILE_AUDIO_QUALITY_KEY] ?: preferences[AUDIO_QUALITY_KEY]
         qualityName?.let {
-            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.MEDIUM }
-        } ?: AudioQuality.MEDIUM
+            try { AudioQuality.valueOf(it) } catch (e: Exception) { AudioQuality.HIGH }
+        } ?: AudioQuality.HIGH
     }
 
     suspend fun setMobileAudioQuality(quality: AudioQuality) {
@@ -2363,7 +2378,18 @@ class SessionManager @Inject constructor(
             preferences[ONBOARDING_COMPLETED_KEY] = completed
         }
     }
-    
+
+    // One-time "HQ Audio is ready" announcement shown to existing users after
+    // they update to the build that ships HQ Audio as the default source.
+    suspend fun isHqAudioAnnouncementSeen(): Boolean =
+        context.dataStore.data.first()[HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY] ?: false
+
+    suspend fun setHqAudioAnnouncementSeen(seen: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY] = seen
+        }
+    }
+
     suspend fun getThemeMode(): ThemeMode {
         val modeName = context.dataStore.data.first()[THEME_MODE_KEY]
         return modeName?.let { 
@@ -2568,17 +2594,20 @@ class SessionManager @Inject constructor(
         }
     }
     
+    // Default source is HQ Audio (RemoteAudio, 320 kbps) — the VPS-hosted
+    // catalogue is the out-of-the-box experience. Users who prefer YouTube
+    // Music can switch back in Playback settings at any time.
     suspend fun getMusicSource(): MusicSource {
         val sourceName = context.dataStore.data.first()[MUSIC_SOURCE_KEY]
-        return sourceName?.let { 
-            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.YOUTUBE }
-        } ?: MusicSource.YOUTUBE
+        return sourceName?.let {
+            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.REMOTE }
+        } ?: MusicSource.REMOTE
     }
-    
+
     val musicSourceFlow: Flow<MusicSource> = context.dataStore.data.map { preferences ->
         preferences[MUSIC_SOURCE_KEY]?.let {
-            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.YOUTUBE }
-        } ?: MusicSource.YOUTUBE
+            try { MusicSource.valueOf(it) } catch (e: Exception) { MusicSource.REMOTE }
+        } ?: MusicSource.REMOTE
     }
     
     suspend fun setMusicSource(source: MusicSource) {

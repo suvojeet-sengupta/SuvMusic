@@ -118,12 +118,6 @@ fun CreditsScreen(
                     onClick = { onOpenUri("https://sponsor.ajay.app/") },
                 )
                 LibraryCard(
-                    name = "NYX / Listen Together",
-                    description = "Owner of the Listen Together infrastructure (metroserver.meowery.eu). Special thanks for the server support.",
-                    isSpecial = true,
-                    onClick = { onOpenUri("https://nyx.meowery.eu/") },
-                )
-                LibraryCard(
                     name = "Discord integration",
                     description = "For the Rich Presence support allowing users to share what they are listening to on their profile.",
                     isSpecial = true,
