@@ -182,7 +182,7 @@ As an open-source project committed to transparency, SuvMusic discloses the foll
 
 SuvMusic is engineered using modern Android development standards.
 
-- **Frontend**: 100% **Compose Multiplatform (KMP)** for a reactive, fluid, and multiplatform-ready user interface.
+- **Frontend**: 100% **Jetpack Compose** for a reactive and fluid user interface with optimized list rendering for large datasets (currently migrating to Compose Multiplatform).
 - **Architecture**: Clean Architecture with MVVM, **Koin / Hilt Dependency Injection**, Room Database, and Kotlin Coroutines.
 - **Images & Caching**: Powered by **Coil 3** with aggressive disk/memory caching policies for offline-ready image loading.
 - **Audio Core**: Custom C23 Native Engine via JNI for high-performance DSP (Limiter, Soft Clipping, EQ).
