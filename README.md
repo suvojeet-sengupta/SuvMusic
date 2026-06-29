@@ -2,7 +2,6 @@
   SEO METADATA
   Keywords: SuvMusic, Suvojeet Sengupta, Music Streaming, Android, Jetpack Compose, Native Audio Engine, High-Resolution Audio, Open Source, C++ JNI, WSOLA, Parametric EQ, Spatial Audio, Material 3, Listen Together, Spotify Migration, ACRA, NewPipe Extractor
   Description: SuvMusic is a premium, open-source high-fidelity music streaming application for Android by Suvojeet Sengupta.
--->
 
 <script type="application/ld+json">
 {
@@ -32,6 +31,7 @@
   }
 }
 </script>
+-->
 
 <div align="center">
   <img src="screenshots/suvmusic_banner.png" alt="SuvMusic Banner" width="100%" />
