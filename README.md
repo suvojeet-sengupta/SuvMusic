@@ -14,7 +14,7 @@
   "description": "High-Fidelity Music Streaming for Android with Native C++ Audio Engine.",
   "url": "https://github.com/suvojeet-sengupta/SuvMusic",
   "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases",
-  "softwareVersion": "2.5.1.0",
+  "softwareVersion": "2.5.7.0",
   "author": {
     "@type": "Person",
     "name": "Suvojeet Sengupta",
@@ -43,7 +43,7 @@
   <h3>High-Fidelity Music Streaming for Android</h3>
 
   <p align="center">
-    <strong>SuvMusic</strong> is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with <strong>Jetpack Compose</strong> and a custom <strong>C++ Native Audio Engine</strong>, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback.
+    <strong>SuvMusic</strong> is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with <strong>Jetpack Compose Multiplatform</strong> and a custom <strong>C++ Native Audio Engine</strong>, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback. Now featuring <strong>HQ Audio (320 kbps)</strong> as the default streaming source.
   </p>
 
   <!-- Status Badges -->
@@ -129,23 +129,24 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Audio Engineering & Performance
 - **Native Audio Engine**: High-fidelity playback powered by a custom C++ JNI layer for low-latency digital signal processing.
-- **WSOLA Time-Stretching**: High-quality pitch and speed adjustments without digital artifacts or distortion.
-- **Parametric EQ & Spatial Audio**: 10-band ISO standard equalizer and real-time 3D sound positioning with ITD/ILD head shadowing models.
-- **High-Resolution Streaming**: Stream Opus audio up to 256kbps with dual-source resolution for consistent quality.
+- **High-Quality (HQ) Audio by Default**: Stream pristine 320 kbps audio instantly. YouTube Music remains available as a secondary source.
+- **Spotify-Style Volume Normalization**: Intelligent loudness matching ensures consistent perceived volume across all tracks.
+- **WSOLA Time-Stretching**: High-quality pitch and speed adjustments (up to 5x) without digital artifacts or distortion.
+- **Parametric EQ & Spatial Audio**: 10-band ISO standard equalizer and real-time 3D sound positioning with adjustable spatial intensity.
 
 ### UI & User Experience
-- **Material 3 Interface**: Dynamic theming engine that adjusts system-wide colors based on album artwork.
-- **Dynamic Island Mini-Player**: Interactive, floating overlay for background playback control.
+- **Material 3 Expressive**: Dynamic, premium "liquid glass" UI with custom squircle shapes and silky-smooth animations.
+- **Dynamic Floating Player**: Interactive, system-wide overlay for background playback control.
 - **Gesture Controls**: Integrated video player gestures—Double tap to seek, Vertical swipes for volume/brightness, and Pinch-to-zoom for fill/fit modes.
-- **Synchronized Lyrics**: Real-time, word-by-word lyrics integration from LRCLIB, Kugou, and SimpMusic providers.
+- **Synchronized Lyrics**: Real-time, word-by-word lyrics integration from multiple providers with sticky headers and blur customization.
 
 ### Advanced Functionality
-- **Listen Together**: Real-time synchronized listening rooms with low-latency network protocols.
+- **Listen Together 3.0**: Real-time synchronized listening rooms powered by a custom ultra-low latency Protobuf-based in-house backend.
+- **Comprehensive Cloud Backup**: Securely back up and restore your entire library, settings, and cache using the high-performance `.suv` format.
+- **Spotify Pro Import**: Direct playlist, album, and artist importing from Spotify accounts.
 - **Music Haptics**: Beat-synchronized tactile feedback for immersive listening.
-- **Spotify Migration**: Direct playlist importing from Spotify accounts.
-- **Persistent Logging & Diagnostics**: Integrated file-based logging system with startup log capture and built-in bug reporting for advanced troubleshooting.
 - **Smart Asset Management**: Batch download capabilities with background service support and persistent caching.
-- **ACRA Crash Reporting**: Automated, detailed crash reports with notification and logcat integration for faster debugging.
+- **Persistent Logging & Diagnostics**: Integrated file-based logging system with startup log capture and ACRA automated crash reporting.
 
 ---
 
@@ -181,11 +182,11 @@ As an open-source project committed to transparency, SuvMusic discloses the foll
 
 SuvMusic is engineered using modern Android development standards.
 
-- **Frontend**: 100% Jetpack Compose for a reactive and fluid user interface with optimized list rendering for large datasets.
-- **Architecture**: Clean Architecture with MVVM, Hilt Dependency Injection, Room Database, and Kotlin Coroutines.
-- **Images & Caching**: Powered by **Coil** with aggressive disk/memory caching policies for offline-ready image loading.
+- **Frontend**: 100% **Compose Multiplatform (KMP)** for a reactive, fluid, and multiplatform-ready user interface.
+- **Architecture**: Clean Architecture with MVVM, **Koin / Hilt Dependency Injection**, Room Database, and Kotlin Coroutines.
+- **Images & Caching**: Powered by **Coil 3** with aggressive disk/memory caching policies for offline-ready image loading.
 - **Audio Core**: Custom C23 Native Engine via JNI for high-performance DSP (Limiter, Soft Clipping, EQ).
-- **Networking**: Retrofit & OkHttp with custom extractors for high-fidelity stream resolution.
+- **Networking**: Ktor and OkHttp with custom extractors for high-fidelity stream resolution.
 - **Error Reporting**: **ACRA (Application Crash Reports for Android)** for automated diagnostic collection.
 
 ---
@@ -202,7 +203,6 @@ SuvMusic is engineered using modern Android development standards.
 
 SuvMusic is an independent project featuring original UI/UX and a custom audio engine. The project utilizes specific core logic from the following open-source resources to maintain compatibility:
 
-- **[Metrolist](https://github.com/MetrolistGroup/Metrolist)**: Core logic for the 'Listen Together' protocol.
 - **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
 - **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
 - **[kaif-00z](mailto:kaif-00z@proton.me)**: Original concept and architectural logic for the high-performance `.suv` native playlist format.
