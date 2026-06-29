@@ -1451,35 +1451,58 @@ class MusicPlayer @Inject constructor(
         for (c in candidates) {
             val cTitle = normalize(c.title)
             if (cTitle.isEmpty()) continue
-            val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
-            // Title gate: require at least half the (noise-stripped) title tokens to
-            // overlap. Tighter than before — the confidence floor below leans on this.
-            if (titleOverlap < 0.5) continue
+
+            // Bidirectional title check. `recall` = how much of OUR title the candidate
+            // covers; `precision` = how much of the CANDIDATE'S title is actually ours.
+            // The old code only looked at recall, so "Tum Hi Ho" happily matched a
+            // different, padded song like "Tum Hi Ho Bandhu" (recall 1.0). Requiring
+            // precision too rejects candidates stuffed with extra, unrelated words.
+            val inter = targetTitle.intersect(cTitle).size.toDouble()
+            val titleRecall = inter / targetTitle.size
+            val titlePrecision = inter / cTitle.size
+            if (titleRecall < 0.5 || titlePrecision < 0.5) continue
+            // Harmonic mean (F1) of the two — penalises a lopsided match where one side
+            // is strong but the other is weak.
+            val titleF1 = 2.0 * titleRecall * titlePrecision / (titleRecall + titlePrecision)
 
             // Duration gate (only when both are known): reject anything beyond ±15s to
             // tolerate intros/outros while filtering remixes / live / extended cuts.
             // A closer duration earns a small bonus that breaks ties toward the right take.
             var durBonus = 0.0
+            var durationKnown = false
             if (song.duration > 0 && c.duration > 0) {
+                durationKnown = true
                 val diff = kotlin.math.abs(song.duration - c.duration)
                 if (diff > 15_000L) continue
                 durBonus = (1.0 - diff / 15_000.0) * 0.15
             }
 
             val cArtist = normalize(c.artist)
-            val artistOverlap = if (targetArtist.isEmpty() || cArtist.isEmpty()) 0.0
+            val artistKnown = targetArtist.isNotEmpty() && cArtist.isNotEmpty()
+            val artistOverlap = if (!artistKnown) 0.0
                 else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
 
-            val score = titleOverlap + artistOverlap * 0.5 + durBonus
+            // Artist gate: when BOTH artists are known but share no tokens at all, this
+            // is almost always a cover / re-sing / wrong rendition. Only let it through
+            // if the title is a near-exact match *and* the duration confirms it.
+            if (artistKnown && artistOverlap == 0.0 && !(titleF1 >= 0.95 && durationKnown)) continue
+
+            val score = titleF1 + artistOverlap * 0.5 + durBonus
+
+            // Per-candidate confidence floor. When NOTHING corroborates the title
+            // (no shared artist AND no usable duration) a title-only match is the easiest
+            // way to land on the wrong song, so demand a much higher bar (0.85). With any
+            // corroboration the normal 0.6 floor applies.
+            val hasCorroboration = (artistKnown && artistOverlap > 0.0) || durationKnown
+            val requiredFloor = if (hasCorroboration) 0.60 else 0.85
+            if (score < requiredFloor) continue
+
             if (score > bestScore) {
                 bestScore = score
                 best = c
             }
         }
-        // Confidence floor: never swap in a weakly-matched (likely wrong) song. A bare
-        // half-title overlap with no artist/duration support scores ~0.5 and is rejected;
-        // a strong title, or a decent title backed by artist/duration, clears 0.6.
-        return if (bestScore >= 0.6) best else null
+        return best
     }
 
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
@@ -1659,8 +1682,11 @@ class MusicPlayer @Inject constructor(
                             SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> {
                                 // YouTube failed -> resolve via RemoteAudio by name,
                                 // using the stream URL embedded in the search result.
+                                // Run results through the same confidence matcher rather
+                                // than blindly taking the first hit — otherwise this
+                                // last-resort path can play a completely unrelated song.
                                 val match = kotlinx.coroutines.withTimeoutOrNull(8_000L) {
-                                    remoteAudioRepository.search(matchQuery).firstOrNull()
+                                    pickBestRemoteMatch(song, remoteAudioRepository.search(matchQuery))
                                 }
                                 streamUrl = match?.let { remoteStreamUrlFor(it) }
                                 android.util.Log.w("MusicPlayer", "YouTube->RemoteAudio fallback: jsId=${match?.id}, resolved=${streamUrl != null}")
