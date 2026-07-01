@@ -754,19 +754,20 @@ fun SuvMusicApp(
     // Welcome Dialog State
     val onboardingCompleted by sessionManager.onboardingCompletedFlow.collectAsStateWithLifecycle(initialValue = true) // Start assuming true to avoid flicker if already done
     var showWelcomeDialog by remember { mutableStateOf(false) }
-    // One-time "HQ Audio is ready" announcement for existing users updating in.
-    var showHqAudioAnnouncement by remember { mutableStateOf(false) }
+    // One-time "What's new" screen for existing users after an update.
+    var showWhatsNew by remember { mutableStateOf(false) }
 
     // Check actual onboarding status on launch
     LaunchedEffect(Unit) {
+        val currentVersion = com.suvojeet.suvmusic.BuildConfig.VERSION_CODE
         if (!sessionManager.isOnboardingCompleted()) {
             showWelcomeDialog = true
-            // Brand-new installs already get HQ Audio by default + the welcome
-            // flow, so they shouldn't also see the update announcement.
-            sessionManager.setHqAudioAnnouncementSeen(true)
-        } else if (!sessionManager.isHqAudioAnnouncementSeen()) {
-            // Existing user who just updated to the HQ-Audio-default build.
-            showHqAudioAnnouncement = true
+            // Brand-new installs start on the current build, so they've effectively
+            // seen everything up to now — don't also surface the What's New screen.
+            sessionManager.setWhatsNewSeenVersion(currentVersion)
+        } else if (sessionManager.getWhatsNewSeenVersion() < currentVersion) {
+            // Existing user who just updated — show the one-time What's New screen.
+            showWhatsNew = true
         }
     }
 
@@ -788,16 +789,14 @@ fun SuvMusicApp(
         )
     }
 
-    if (showHqAudioAnnouncement) {
-        com.suvojeet.suvmusic.ui.components.HqAudioAnnouncementDialog(
+    if (showWhatsNew) {
+        com.suvojeet.suvmusic.ui.components.WhatsNewDialog(
+            versionLabel = "Version ${com.suvojeet.suvmusic.BuildConfig.VERSION_NAME}",
             onDismiss = {
-                showHqAudioAnnouncement = false
-                scope.launch { sessionManager.setHqAudioAnnouncementSeen(true) }
-            },
-            onSupportClick = {
-                showHqAudioAnnouncement = false
-                scope.launch { sessionManager.setHqAudioAnnouncementSeen(true) }
-                navController.navigate(Destination.Support)
+                showWhatsNew = false
+                scope.launch {
+                    sessionManager.setWhatsNewSeenVersion(com.suvojeet.suvmusic.BuildConfig.VERSION_CODE)
+                }
             }
         )
     }

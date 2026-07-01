@@ -87,7 +87,8 @@ class SessionManager @Inject constructor(
         private val VIDEO_QUALITY_KEY = stringPreferencesKey("video_quality")
         private val PREFER_VIDEO_MODE_KEY = booleanPreferencesKey("prefer_video_mode")
         private val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
-        private val HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY = booleanPreferencesKey("hq_audio_announcement_seen")
+        // Highest app versionCode for which the one-time "What's new" screen has been shown.
+        private val WHATS_NEW_SEEN_VERSION_KEY = intPreferencesKey("whats_new_seen_version")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
         
@@ -2379,14 +2380,14 @@ class SessionManager @Inject constructor(
         }
     }
 
-    // One-time "HQ Audio is ready" announcement shown to existing users after
-    // they update to the build that ships HQ Audio as the default source.
-    suspend fun isHqAudioAnnouncementSeen(): Boolean =
-        context.dataStore.data.first()[HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY] ?: false
+    // One-time "What's new" screen: gated by app versionCode so it appears at most
+    // once per release. Returns the highest version already acknowledged (0 if never).
+    suspend fun getWhatsNewSeenVersion(): Int =
+        context.dataStore.data.first()[WHATS_NEW_SEEN_VERSION_KEY] ?: 0
 
-    suspend fun setHqAudioAnnouncementSeen(seen: Boolean) {
+    suspend fun setWhatsNewSeenVersion(versionCode: Int) {
         context.dataStore.edit { preferences ->
-            preferences[HQ_AUDIO_ANNOUNCEMENT_SEEN_KEY] = seen
+            preferences[WHATS_NEW_SEEN_VERSION_KEY] = versionCode
         }
     }
 

@@ -458,6 +458,10 @@ fun DownloadsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Memoize tab counts so we don't re-filter the list on every recomposition.
+                    val songsCount = remember(downloadedSongs) { downloadedSongs.count { !it.isVideo } }
+                    val videosCount = downloadedVideos.size
+
                     // Songs / Videos tab strip
                     TabRow(
                         selectedTabIndex = selectedTab,
@@ -472,7 +476,7 @@ fun DownloadsScreen(
                             onClick = { selectedTab = 0 },
                             text = {
                                 Text(
-                                    text = "Songs (${downloadedSongs.filter { !it.isVideo }.size})",
+                                    text = "Songs ($songsCount)",
                                     fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -489,7 +493,7 @@ fun DownloadsScreen(
                             onClick = { selectedTab = 1 },
                             text = {
                                 Text(
-                                    text = "Videos (${downloadedVideos.size})",
+                                    text = "Videos ($videosCount)",
                                     fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
                                 )
                             },

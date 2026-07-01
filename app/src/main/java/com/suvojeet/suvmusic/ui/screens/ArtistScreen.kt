@@ -887,6 +887,12 @@ fun ArtistVideoCard(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    // Hoist the constant-color gradient so it isn't reallocated on every recomposition.
+    val playOverlayGradient = remember {
+        Brush.verticalGradient(
+            listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))
+        )
+    }
     Column(
         modifier = Modifier
             .width(260.dp)
@@ -915,11 +921,7 @@ fun ArtistVideoCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f))
-                            )
-                        ),
+                        .background(playOverlayGradient),
                     contentAlignment = Alignment.Center
                 ) {
                      Icon(

@@ -33,7 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -154,6 +154,14 @@ private fun LiquidGlassNavBar(
     // Inner tint – subtle color wash from primary/accent
     val innerTintColor = primaryColor.copy(alpha = (if (isDarkTheme) 0.08f else 0.04f) * glassIntensity)
 
+    // Pre-generate the 1000 grain point coordinates once (deterministic seed 42) as normalized
+    // 0..1 fractions, so the RNG isn't re-run on every draw frame. They're scaled to the actual
+    // layout size inside drawWithCache below (rebuilt only when size changes, not every frame).
+    val grainFractions = remember {
+        val rand = Random(42)
+        FloatArray(1000 * 2) { rand.nextFloat() }
+    }
+
     val selectedItemIndex = navItems
         .indexOfFirst { it.destination == currentDestination }
         .coerceAtLeast(0)
@@ -211,24 +219,35 @@ private fun LiquidGlassNavBar(
                         Modifier
                     }
                 )
-                .drawWithContent {
-                    // Draw frosted background
-                    drawRect(color = glassBaseColor)
-                    
-                    // Draw noise/grain texture for realistic glass
-                    drawIntoCanvas { canvas ->
-                        val paint = android.graphics.Paint().apply {
-                            this.alpha = if (isDarkTheme) 8 else 5
-                        }
-                        val random = Random(42)
-                        for (i in 0 until 1000) {
-                            val x = random.nextFloat() * size.width
-                            val y = random.nextFloat() * size.height
-                            canvas.nativeCanvas.drawPoint(x, y, paint)
-                        }
+                .drawWithCache {
+                    // Scale the pre-generated grain fractions to the current size once per size
+                    // change (drawWithCache re-runs this block only when size/inputs change),
+                    // instead of re-seeding the RNG and recomputing coordinates every frame.
+                    val scaledPoints = FloatArray(grainFractions.size)
+                    var idx = 0
+                    while (idx < grainFractions.size) {
+                        scaledPoints[idx] = grainFractions[idx] * size.width
+                        scaledPoints[idx + 1] = grainFractions[idx + 1] * size.height
+                        idx += 2
                     }
-                    
-                    drawContent()
+                    val grainPaint = android.graphics.Paint().apply {
+                        this.alpha = if (isDarkTheme) 8 else 5
+                    }
+                    onDrawWithContent {
+                        // Draw frosted background
+                        drawRect(color = glassBaseColor)
+
+                        // Draw noise/grain texture for realistic glass
+                        drawIntoCanvas { canvas ->
+                            var i = 0
+                            while (i < scaledPoints.size) {
+                                canvas.nativeCanvas.drawPoint(scaledPoints[i], scaledPoints[i + 1], grainPaint)
+                                i += 2
+                            }
+                        }
+
+                        drawContent()
+                    }
                 }
         )
 
