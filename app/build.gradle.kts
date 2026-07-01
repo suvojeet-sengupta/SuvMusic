@@ -19,8 +19,8 @@ android {
         applicationId = "com.suvojeet.suvmusic"
         minSdk = 26
         targetSdk = 37
-        versionCode = 36
-        versionName = "2.5.7.0"
+        versionCode = 37
+        versionName = "2.5.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

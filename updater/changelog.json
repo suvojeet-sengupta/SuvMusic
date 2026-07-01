@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.5.8.0",
+      "versionCode": 37,
+      "date": "July 01, 2026",
+      "description": "• General bug fixes and performance improvements.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.5.7.0",
       "versionCode": 36,
       "date": "June 27, 2026",
