@@ -1009,6 +1009,13 @@ private fun ShuffleTile(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(14.dp)
+    // Constant-color scrim gradient — remembered so it isn't reallocated on
+    // every recomposition.
+    val scrimBrush = remember {
+        Brush.verticalGradient(
+            listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+        )
+    }
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -1027,11 +1034,7 @@ private fun ShuffleTile(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
-                    )
-                )
+                .background(scrimBrush)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(
@@ -1058,6 +1061,13 @@ private fun SpeedDialTile(
     val thumb = remember(song.thumbnailUrl) {
         ImageUtils.getHighResThumbnailUrl(song.thumbnailUrl) ?: song.thumbnailUrl
     }
+    // Constant-color scrim gradient — remembered so it isn't reallocated on
+    // every recomposition of each tile.
+    val scrimBrush = remember {
+        Brush.verticalGradient(
+            listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
+        )
+    }
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -1078,11 +1088,7 @@ private fun SpeedDialTile(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))
-                    )
-                )
+                .background(scrimBrush)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(

@@ -7,10 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -63,42 +64,61 @@ fun LiquidGlassSurface(
         }
     }
 
-    val specularHighlight = Brush.verticalGradient(
-        colors = if (isDarkTheme) listOf(
-            Color.White.copy(alpha = 0.20f * i),
-            Color.White.copy(alpha = 0.07f * i),
-            Color.Transparent,
-            Color.Transparent,
-            Color.Black.copy(alpha = 0.10f * i)
-        ) else listOf(
-            Color.White.copy(alpha = 0.28f * i),
-            Color.White.copy(alpha = 0.09f * i),
-            Color.Transparent,
-            Color.Transparent,
-            Color.Black.copy(alpha = 0.05f * i)
+    // These gradient brushes use fractional stops only (size-independent), so they can be
+    // built once per (isDarkTheme, intensity) rather than on every recomposition/frame.
+    val specularHighlight = remember(isDarkTheme, i) {
+        Brush.verticalGradient(
+            colors = if (isDarkTheme) listOf(
+                Color.White.copy(alpha = 0.20f * i),
+                Color.White.copy(alpha = 0.07f * i),
+                Color.Transparent,
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.10f * i)
+            ) else listOf(
+                Color.White.copy(alpha = 0.28f * i),
+                Color.White.copy(alpha = 0.09f * i),
+                Color.Transparent,
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.05f * i)
+            )
         )
-    )
+    }
 
     // Crisp glint along the very top lip of the glass — the single detail that most
     // sells the "polished pane" look. Concentrated in the top ~12% then gone.
-    val topSheen = Brush.verticalGradient(
-        0.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.30f else 0.42f) * i),
-        0.12f to Color.Transparent
-    )
-
-    val borderBrush = Brush.verticalGradient(
-        colors = if (isDarkTheme) listOf(
-            Color.White.copy(alpha = 0.42f * i),
-            Color.White.copy(alpha = 0.12f * i),
-            Color.White.copy(alpha = 0.05f * i),
-            Color.White.copy(alpha = 0.22f * i)
-        ) else listOf(
-            Color.White.copy(alpha = 0.55f * i),
-            Color.White.copy(alpha = 0.18f * i),
-            Color.Black.copy(alpha = 0.03f * i),
-            Color.Black.copy(alpha = 0.10f * i)
+    val topSheen = remember(isDarkTheme, i) {
+        Brush.verticalGradient(
+            0.0f to Color.White.copy(alpha = (if (isDarkTheme) 0.30f else 0.42f) * i),
+            0.12f to Color.Transparent
         )
-    )
+    }
+
+    val borderBrush = remember(isDarkTheme, i) {
+        Brush.verticalGradient(
+            colors = if (isDarkTheme) listOf(
+                Color.White.copy(alpha = 0.42f * i),
+                Color.White.copy(alpha = 0.12f * i),
+                Color.White.copy(alpha = 0.05f * i),
+                Color.White.copy(alpha = 0.22f * i)
+            ) else listOf(
+                Color.White.copy(alpha = 0.55f * i),
+                Color.White.copy(alpha = 0.18f * i),
+                Color.Black.copy(alpha = 0.03f * i),
+                Color.Black.copy(alpha = 0.10f * i)
+            )
+        )
+    }
+
+    // Pre-generate the 800 grain fractions once (deterministic seed 42). Kept as normalized
+    // 0..1 coordinates so they can be scaled to the actual layout size inside drawWithCache
+    // without re-running the RNG every frame.
+    val grainFractions = remember {
+        val rand = Random(42)
+        FloatArray(800 * 2) { rand.nextFloat() }
+    }
+    val grainColor = remember(isDarkTheme) {
+        Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.02f)
+    }
 
     Box(modifier = modifier) {
         // Layer 1: Shadow
@@ -131,23 +151,35 @@ fun LiquidGlassSurface(
                             ).asComposeRenderEffect()
                         }
                     } else if (blurAmount > 0.5f) {
-                        Modifier.blur((blurAmount / 2).dp)
+                        Modifier.blur((blurAmount / 1.5f).dp)
                     } else Modifier
                 )
-                .drawWithContent {
-                    drawRect(color = effectiveTint)
-                    // Subtle grain for realism
-                    val rand = Random(42)
-                    val grainPoints = List(800) {
-                        Offset(rand.nextFloat() * size.width, rand.nextFloat() * size.height)
+                .drawWithCache {
+                    // Scale the pre-generated grain fractions to the current size once per size
+                    // change (drawWithCache re-runs this block only when size/inputs change),
+                    // instead of re-running the RNG and rebuilding the list every frame.
+                    val grainPoints = ArrayList<Offset>(grainFractions.size / 2)
+                    var idx = 0
+                    while (idx < grainFractions.size) {
+                        grainPoints.add(
+                            Offset(
+                                grainFractions[idx] * size.width,
+                                grainFractions[idx + 1] * size.height
+                            )
+                        )
+                        idx += 2
                     }
-                    drawPoints(
-                        points = grainPoints,
-                        pointMode = PointMode.Points,
-                        color = Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.02f),
-                        strokeWidth = 1f
-                    )
-                    drawContent()
+                    onDrawWithContent {
+                        drawRect(color = effectiveTint)
+                        // Subtle grain for realism
+                        drawPoints(
+                            points = grainPoints,
+                            pointMode = PointMode.Points,
+                            color = grainColor,
+                            strokeWidth = 1f
+                        )
+                        drawContent()
+                    }
                 }
         )
 

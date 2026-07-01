@@ -6,6 +6,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,13 +46,26 @@ private val shimmerColors = listOf(
 )
 
 /**
- * Modifier that applies a shimmer effect background without triggering recomposition.
+ * Shared shimmer progress (0f..1000f). When a group of skeletons is wrapped in
+ * [ShimmerContainer], they all read from a single [rememberInfiniteTransition]
+ * instead of each allocating their own. `null` means no shared container is present,
+ * in which case [shimmerBackground] falls back to a per-box transition (unchanged
+ * standalone behavior).
  */
-fun Modifier.shimmerBackground(
-    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(0.dp)
-): Modifier = composed {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim = transition.animateFloat(
+private val LocalShimmerProgress = compositionLocalOf<State<Float>?> { null }
+
+/**
+ * Provides a single shared shimmer animation for all descendant skeletons.
+ * Wrap large clusters of shimmering placeholders (e.g. the home loading grid) with
+ * this so ~12 boxes share one infinite transition rather than one each.
+ */
+@Composable
+fun ShimmerContainer(content: @Composable () -> Unit) {
+    val transition = rememberInfiniteTransition(label = "shimmer_shared")
+    // Keep this as a State<Float> (no `by`) so it can be provided down and read in the
+    // DRAW phase (state.value) without a composable context — reading it there animates
+    // the shimmer without recomposing any descendant.
+    val translateAnim: State<Float> = transition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -59,12 +75,46 @@ fun Modifier.shimmerBackground(
             ),
             repeatMode = RepeatMode.Restart
         ),
-        label = "shimmer"
+        label = "shimmer_shared"
     )
+    CompositionLocalProvider(LocalShimmerProgress provides translateAnim) {
+        content()
+    }
+}
+
+/**
+ * Modifier that applies a shimmer effect background without triggering recomposition.
+ *
+ * If rendered inside a [ShimmerContainer] it consumes the shared animation value;
+ * otherwise it spins up its own transition (preserving prior standalone behavior).
+ */
+fun Modifier.shimmerBackground(
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(0.dp)
+): Modifier = composed {
+    val shared = LocalShimmerProgress.current
+    // Whether a shared container is present is stable for a given call-site instance,
+    // so branching on it here does not violate the rules of composition. Either way we end
+    // up with a State<Float> that is read in the DRAW phase (progress.value) — never at
+    // composition — so the animation drives redraws without recomposition.
+    val progress: State<Float> = shared ?: run {
+        val transition = rememberInfiniteTransition(label = "shimmer")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = 1200,
+                    easing = FastOutSlowInEasing
+                ),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "shimmer"
+        )
+    }
 
     this.clip(shape).drawWithCache {
         onDrawBehind {
-            val translate = translateAnim.value
+            val translate = progress.value
             drawRect(
                 brush = Brush.linearGradient(
                     colors = shimmerColors,
@@ -243,34 +293,38 @@ fun HomeCardSkeleton() {
  */
 @Composable
 fun HomeLoadingSkeleton() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
-        // Greeting Header
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    // All shimmering placeholders below share a single infinite transition instead of
+    // each allocating their own (previously ~12+ concurrent transitions during home load).
+    ShimmerContainer {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
-            ShimmerBox(width = 200.dp, height = 32.dp)
-        }
-        
-        // Simulate 3 sections
-        repeat(3) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Section Title
-                SectionHeaderSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
-                
-                // Horizontal List
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    userScrollEnabled = false
-                ) {
-                    items(4) {
-                        HomeCardSkeleton()
+            // Greeting Header
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ShimmerBox(width = 200.dp, height = 32.dp)
+            }
+
+            // Simulate 3 sections
+            repeat(3) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Section Title
+                    SectionHeaderSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
+
+                    // Horizontal List
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        userScrollEnabled = false
+                    ) {
+                        items(4) {
+                            HomeCardSkeleton()
+                        }
                     }
                 }
             }

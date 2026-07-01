@@ -30,6 +30,20 @@ data class DominantColors(
 )
 
 /**
+ * Process-level LRU cache of extracted colors keyed by "url|isDarkTheme".
+ * Switching back to a previously seen artwork skips the Coil decode + pixel
+ * sampling entirely. Bounded (LRU, 100) and thread-safe since it's read from
+ * composition (Main) and written from Dispatchers.IO. Same idiom as
+ * PlayerViewModel.lyricsProviderBySong.
+ */
+private val dominantColorsCache: MutableMap<String, DominantColors> =
+    java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, DominantColors>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, DominantColors>): Boolean = size > 100
+        }
+    )
+
+/**
  * Extracts dominant colors from an image URL
  */
 @Composable
@@ -55,15 +69,28 @@ fun rememberDominantColors(
         )
     }
     
-    var colors by remember { mutableStateOf(themeAwareDefaults) }
+    // Seed initial state from the cache so revisiting a known artwork shows the
+    // final colors immediately (no flicker through defaults on recomposition).
+    var colors by remember(imageUrl, isDarkTheme) {
+        val seeded = imageUrl?.let { dominantColorsCache["$it|$isDarkTheme"] } ?: themeAwareDefaults
+        mutableStateOf(seeded)
+    }
     val context = LocalContext.current
-    
+
     LaunchedEffect(imageUrl, isDarkTheme) {
         if (imageUrl == null) {
             colors = themeAwareDefaults
             return@LaunchedEffect
         }
-        
+
+        // Fast path: previously extracted colors for this (url, theme) — set
+        // synchronously and skip all decode + sampling work.
+        val cacheKey = "$imageUrl|$isDarkTheme"
+        dominantColorsCache[cacheKey]?.let { cached ->
+            colors = cached
+            return@LaunchedEffect
+        }
+
         withContext(Dispatchers.IO) {
             try {
                 val loader = context.imageLoader
@@ -72,11 +99,12 @@ fun rememberDominantColors(
                     .allowHardware(false)
                     .size(100) // Small size for faster processing
                     .build()
-                
+
                 val result = loader.execute(request)
                 if (result is SuccessResult) {
                     val bitmap = result.image.toBitmap()
                     val newColors = extractColorsFromBitmap(bitmap, isDarkTheme)
+                    dominantColorsCache[cacheKey] = newColors
                     withContext(Dispatchers.Main) {
                         colors = newColors
                     }
@@ -86,7 +114,7 @@ fun rememberDominantColors(
             }
         }
     }
-    
+
     return colors
 }
 

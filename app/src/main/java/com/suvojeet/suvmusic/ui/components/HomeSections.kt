@@ -4,11 +4,9 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 import com.suvojeet.suvmusic.ui.utils.SharedTransitionKeys
 import com.suvojeet.suvmusic.ui.theme.NewReleaseCardShape
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -455,12 +453,12 @@ fun GridSection(
     modifier: Modifier = Modifier
 ) {
     // Pre-chunk items into columns of 2 for a grid layout.
-    // Using a regular Row + horizontalScroll instead of LazyHorizontalGrid
-    // to avoid nested lazy layout conflicts with the parent LazyColumn.
+    // A single-axis LazyRow (not LazyHorizontalGrid) virtualizes the horizontal
+    // scroll while avoiding nested-lazy conflicts with the parent LazyColumn.
     val isLandscape = com.suvojeet.suvmusic.ui.utils.isLandscape()
     val chunkCount = if (isLandscape) 1 else 2
     val chunkedItems = remember(section.items, isLandscape) { section.items.chunked(chunkCount) }
-    val scrollState = rememberScrollState()
+    val gridListState = rememberLazyListState()
 
     Column(
         modifier = modifier,
@@ -468,14 +466,23 @@ fun GridSection(
     ) {
         HomeSectionHeader(title = section.title)
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState)
-                .padding(horizontal = 16.dp),
+        // LazyRow virtualizes the outer horizontal axis so off-screen columns
+        // aren't composed up-front. contentPadding + spacedBy reproduce the
+        // previous Row(padding/horizontalScroll) layout exactly.
+        LazyRow(
+            state = gridListState,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            chunkedItems.forEach { columnItems ->
+            items(
+                count = chunkedItems.size,
+                key = { columnIndex ->
+                    chunkedItems[columnIndex].firstOrNull()?.id ?: "grid_col_$columnIndex"
+                },
+                contentType = { "grid_column" }
+            ) { columnIndex ->
+                val columnItems = chunkedItems[columnIndex]
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -775,7 +782,8 @@ fun CommunityCarouselSection(
             val items = section.items.filterIsInstance<HomeItem.PlaylistItem>().distinctBy { it.playlist.id }
             items(
                 items = items,
-                key = { it.playlist.id }
+                key = { it.playlist.id },
+                contentType = { "community_playlist" }
             ) { item ->
                 CommunityPlaylistCard(
                     item = item,
@@ -800,7 +808,20 @@ fun CommunityPlaylistCard(
     var isSaved by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    // Cassette-leader gradient depends on theme colors — remembered keyed on
+    // those so it isn't rebuilt on every recomposition.
+    val leaderBrush = remember(primaryColor, tertiaryColor) {
+        Brush.horizontalGradient(
+            listOf(
+                primaryColor.copy(alpha = 0.28f),
+                tertiaryColor.copy(alpha = 0.28f),
+                primaryColor.copy(alpha = 0.28f)
+            )
+        )
+    }
+
     Box(
         modifier = Modifier
             .width(320.dp)
@@ -815,15 +836,7 @@ fun CommunityPlaylistCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.28f),
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
-                        )
-                    )
-                )
+                .background(leaderBrush)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)

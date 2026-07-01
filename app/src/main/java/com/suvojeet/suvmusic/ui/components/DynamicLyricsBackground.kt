@@ -63,7 +63,7 @@ fun DynamicLyricsBackground(
                 .size(400.dp)
                 .offset(x = blob1Offset, y = blob2Offset)
                 .alpha(0.4f)
-                .blur(100.dp)
+                .blur(40.dp)
                 .background(
                     when(style) {
                         LyricsStyle.Romantic -> Color(0xFFE91E63)
@@ -82,7 +82,7 @@ fun DynamicLyricsBackground(
                 .size(300.dp)
                 .offset(x = blob2Offset, y = blob1Offset)
                 .alpha(0.3f)
-                .blur(80.dp)
+                .blur(32.dp)
                 .background(
                     when(style) {
                         LyricsStyle.Romantic -> Color(0xFFFF80AB)
@@ -102,7 +102,7 @@ fun DynamicLyricsBackground(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(if (style is LyricsStyle.Chill) 120.dp else 100.dp)
+                    .blur(if (style is LyricsStyle.Chill) 48.dp else 40.dp)
                     .alpha(if (isDarkTheme) 0.5f else 0.3f),
                 contentScale = ContentScale.Crop
             )

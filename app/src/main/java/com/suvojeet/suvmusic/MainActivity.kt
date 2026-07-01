@@ -515,9 +515,15 @@ fun SuvMusicApp(
             playlistManagementViewModel.clearMessages()
         }
     }
-    // Optimized states to reduce recompositions
+    // Optimized states to reduce recompositions.
+    // `playbackInfo` is a position/buffer-filtered view of the player state, so it only
+    // emits when a meaningful field changes (song, play/pause, shuffle, etc.) — safe to
+    // read at this top scope. The RAW `playerState` (which ticks ~every 400ms with the
+    // current position) is intentionally NOT collected here anymore: collecting it at this
+    // scope forced the whole app (nav host + mini player + current screen) to recompose on
+    // every position tick during playback. It is now collected only inside the expanded
+    // player content below, which is composed solely while the player is open.
     val playbackInfo by playerViewModel.playbackInfo.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
-    val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
     // Stable progress provider for the mini player. Derived from a distinct progress
     // flow and read only inside the progress bar's draw scope, so neither this scope
     // nor the mini player recomposes on the ~400ms position tick.
@@ -690,7 +696,7 @@ fun SuvMusicApp(
     LaunchedEffect(Unit) {
         if (!restoreAttempted && intent?.data == null) {
             restoreAttempted = true
-            if (playerState.currentSong == null) {
+            if (playbackInfo.currentSong == null) {
                 playerViewModel.restoreLastPlayback()
             }
         }
@@ -1013,6 +1019,11 @@ fun SuvMusicApp(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
             expandedContent = { onCollapse ->
+                // Collected HERE (not at the top scope) so the raw, ~400ms-ticking player
+                // state only recomposes the open player screen — never the nav host, mini
+                // player, or the underlying browse screen. This lambda is composed solely
+                // while the player is expanded (see ExpandablePlayerSheet.showFullPlayer).
+                val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
                 val playerScreenState = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenState(
                     playbackInfo = playbackInfo,
                     playerState = playerState,

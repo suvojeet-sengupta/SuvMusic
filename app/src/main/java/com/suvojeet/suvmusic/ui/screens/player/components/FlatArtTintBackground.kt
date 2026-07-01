@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
@@ -43,6 +44,20 @@ fun FlatArtTintBackground(
     val base = if (isDarkTheme) YtFlatBackground else Color.White
     val artAlpha = if (isDarkTheme) 0.18f else 0.10f
 
+    // Cache the blur RenderEffect so it is not recreated on every recomposition. The wash is
+    // almost invisible (alpha ~0.10-0.18), so a smaller radius is more than enough.
+    val blurEffect = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            android.graphics.RenderEffect.createBlurEffect(
+                40f,
+                40f,
+                android.graphics.Shader.TileMode.CLAMP
+            ).asComposeRenderEffect()
+        } else {
+            null
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(base)) {
         // Layer 2 — subtle blurred album-art wash (audio-only).
         if (!thumbnailUrl.isNullOrBlank() && !isVideoMode) {
@@ -50,13 +65,9 @@ fun FlatArtTintBackground(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurEffect != null) {
                             Modifier.graphicsLayer {
-                                renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                    80f,
-                                    80f,
-                                    android.graphics.Shader.TileMode.CLAMP
-                                ).asComposeRenderEffect()
+                                renderEffect = blurEffect
                             }
                         } else {
                             Modifier.blur(40.dp)

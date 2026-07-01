@@ -31,22 +31,25 @@ fun M3ESeekbarShimmer(
     dominantColors: DominantColors,
     modifier: Modifier = Modifier
 ) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerX by transition.animateFloat(
-        initialValue = -1f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerX"
-    )
-
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(spring(Spring.DampingRatioNoBouncy)),
         exit = fadeOut(),
         modifier = modifier
     ) {
+        // Create the infinite transition INSIDE the visible branch so it only
+        // runs while the shimmer is actually shown. AnimatedVisibility does not
+        // compose its content once hidden, so the transition stops when gone.
+        val transition = rememberInfiniteTransition(label = "shimmer")
+        val shimmerX by transition.animateFloat(
+            initialValue = -1f, targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "shimmerX"
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()

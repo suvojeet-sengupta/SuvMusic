@@ -462,9 +462,15 @@ fun TimeLabelsWithQuality(
     durationProvider: () -> Long,
     dominantColors: DominantColors
 ) {
-    val currentPosition = currentPositionProvider()
-    val duration = durationProvider()
-    
+    // Derive the formatted strings so recomposition only happens when the
+    // second-resolution text actually changes, not every ~400ms position tick.
+    val posText by remember {
+        derivedStateOf { formatDuration(currentPositionProvider()) }
+    }
+    val remainingText by remember {
+        derivedStateOf { "-${formatDuration(durationProvider() - currentPositionProvider())}" }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -474,13 +480,13 @@ fun TimeLabelsWithQuality(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = formatDuration(currentPosition),
+            text = posText,
             style = MaterialTheme.typography.labelMedium,
             color = dominantColors.onBackground.copy(alpha = 0.7f)
         )
 
         Text(
-            text = "-${formatDuration(duration - currentPosition)}",
+            text = remainingText,
             style = MaterialTheme.typography.labelMedium,
             color = dominantColors.onBackground.copy(alpha = 0.7f)
         )

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +47,22 @@ fun GlassArtBackground(
     val scrimAlpha = if (isDarkTheme) 0.55f else 0.40f
     val i = intensity.coerceIn(0.3f, 1.5f)
 
+    // Cap and cache the effective blur radius + the ComposeRenderEffect so they are not
+    // recomputed on every recomposition (RenderEffect creation is expensive).
+    val r = remember(blurRadius) { (blurRadius * 1.4f).coerceAtMost(80f) }
+    val fallbackBlurDp = remember(blurRadius) { (blurRadius * 0.9f) }
+    val blurEffect = remember(r) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            android.graphics.RenderEffect.createBlurEffect(
+                r,
+                r,
+                android.graphics.Shader.TileMode.CLAMP
+            ).asComposeRenderEffect()
+        } else {
+            null
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (!thumbnailUrl.isNullOrBlank() && !isVideoMode) {
             // Layer 1 — blurred album artwork as the entire backdrop.
@@ -53,16 +70,12 @@ fun GlassArtBackground(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurEffect != null) {
                             Modifier.graphicsLayer {
-                                renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                    blurRadius * 1.8f,
-                                    blurRadius * 1.8f,
-                                    android.graphics.Shader.TileMode.CLAMP
-                                ).asComposeRenderEffect()
+                                renderEffect = blurEffect
                             }
                         } else {
-                            Modifier.blur((blurRadius * 0.9f).dp)
+                            Modifier.blur(fallbackBlurDp.dp)
                         }
                     )
             ) {

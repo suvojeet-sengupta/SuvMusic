@@ -110,26 +110,30 @@ fun AlbumArtwork(
 
     // Slow, breathing color pulse — peaceful, not strobing.
     // Cycles through primary → accent → secondary so the glow shifts hue gently.
-    val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.75f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulse_alpha",
-    )
-    val hueShift by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulse_hue",
-    )
-    val glowColor = if (colorFlashingEnabled && isPlaying) {
+    // Only spin up the always-on infinite transition when the glow is actually
+    // shown (feature enabled AND playing); otherwise the animated values aren't
+    // consumed and the transition would just burn frames.
+    val glowActive = colorFlashingEnabled && isPlaying
+    val glowColor = if (glowActive) {
+        val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
+        val pulseAlpha by pulseTransition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 0.75f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse_alpha",
+        )
+        val hueShift by pulseTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse_hue",
+        )
         androidx.compose.ui.graphics.lerp(
             dominantColors.primary,
             dominantColors.accent,

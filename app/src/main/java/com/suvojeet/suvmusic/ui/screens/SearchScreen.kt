@@ -240,7 +240,11 @@ fun SearchScreen(
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             if (uiState.showSuggestions && uiState.query.isNotBlank() && uiState.suggestions.isNotEmpty()) {
-                                items(uiState.suggestions.take(5)) { suggestion ->
+                                items(
+                                    items = uiState.suggestions.take(5),
+                                    key = { it },
+                                    contentType = { "suggestion" }
+                                ) { suggestion ->
                                     SuggestionItem(
                                         suggestion = suggestion,
                                         accentColor = accentColor,
