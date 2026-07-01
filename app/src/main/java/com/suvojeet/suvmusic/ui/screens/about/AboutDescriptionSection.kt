@@ -19,7 +19,7 @@ internal fun AboutDescriptionSection() {
     AboutCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Suvmusic is the indian music streaming app (YT Music Client) that provides best UI unique features that not present anywhere and full control and better implementation.",
+                text = "SuvMusic is a client for YouTube Music with a clean, ad-free interface and fine-grained playback control.",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     lineHeight = 24.sp,
                     fontWeight = FontWeight.SemiBold
@@ -28,7 +28,7 @@ internal fun AboutDescriptionSection() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Built with a vision to provide a seamless, high-fidelity auditory journey, SuvMusic bridges the gap between massive content availability and a truly personalized user experience.",
+                text = "It focuses on a responsive listening experience, giving you quick access to a large catalogue while keeping the app simple to use.",
                 style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
                 color = onSurfaceVariant
             )

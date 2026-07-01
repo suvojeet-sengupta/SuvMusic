@@ -16,7 +16,7 @@ internal fun AboutFooterSection() {
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Made with ❤️ in India",
+            text = "Made in India",
             style = MaterialTheme.typography.bodySmall,
             color = onSurfaceVariant.copy(alpha = 0.6f)
         )

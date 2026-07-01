@@ -43,12 +43,12 @@ import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PictureInPicture
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
@@ -80,13 +80,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
@@ -153,11 +151,11 @@ fun SettingsScreen(
             item {
                 Text(
                     text = "Settings",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
-                        .padding(horizontal = 24.dp)
+                        .padding(horizontal = 16.dp)
                         .padding(top = 24.dp, bottom = 16.dp)
                 )
             }
@@ -171,11 +169,10 @@ fun SettingsScreen(
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    text = uiState.userName ?: "Signed In",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    letterSpacing = (-0.5).sp
+                                    text = uiState.userName ?: "Signed in",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             supportingContent = {
@@ -183,16 +180,14 @@ fun SettingsScreen(
                                 if (email != null) {
                                     Text(
                                         text = email,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 } else {
                                     Text(
-                                        text = "YouTube Music Connected",
-                                        color = MaterialTheme.colorScheme.primary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        text = "YouTube Music connected",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
                             },
@@ -208,7 +203,7 @@ fun SettingsScreen(
                                             modifier = Modifier
                                                 .size(56.dp)
                                                 .clip(SquircleShape)
-                                                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), SquircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, SquircleShape)
                                         )
                                     } else {
                                         Surface(
@@ -405,9 +400,9 @@ fun SettingsScreen(
                     HorizontalDivider()
 
                     SettingsNavigationItem(
-                        icon = Icons.Default.AutoAwesome,
+                        icon = Icons.Default.Psychology,
                         title = "AI Assistant",
-                        subtitle = "OpenAI, Anthropic, Gemini config",
+                        subtitle = "OpenAI, Anthropic, Gemini",
                         badge = { BetaBadge() },
                         onClick = onAISettingsClick
                     )
@@ -445,7 +440,7 @@ fun SettingsScreen(
                     SettingsNavigationItem(
                         icon = Icons.Default.MusicNote,
                         title = "Last.fm",
-                        subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your music hits",
+                        subtitle = if (isLastFmConnected) "Connected as ${uiState.lastFmUsername}" else "Scrobble your listening history",
                         onClick = onLastFmClick
                     )
                 }
@@ -481,8 +476,8 @@ fun SettingsScreen(
                     
                     SettingsNavigationItem(
                         icon = Icons.Default.Info,
-                        title = "Listening Stats",
-                        subtitle = "Your music habits",
+                        title = "Listening stats",
+                        subtitle = "Your listening activity",
                         onClick = onStatsClick
                     )
                 }
@@ -495,8 +490,8 @@ fun SettingsScreen(
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.Favorite,
-                        title = "Support Project",
-                        subtitle = "Your support keeps SuvMusic alive! 💖",
+                        title = "Support the project",
+                        subtitle = "Donate to help development",
                         onClick = onSupportClick
                     )
                     
@@ -814,10 +809,10 @@ fun SettingsScreen(
 private fun SettingsSectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 6.dp)
     )
 }
 
@@ -829,13 +824,9 @@ private fun SettingsCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 8.dp)

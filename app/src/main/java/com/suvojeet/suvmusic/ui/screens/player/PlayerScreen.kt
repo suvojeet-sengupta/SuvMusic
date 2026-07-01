@@ -217,7 +217,7 @@ fun PlayerScreen(
     val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
     val currentArtworkShapeName by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = ArtworkShape.ROUNDED_SQUARE.name)
     val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)
-    val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.MATERIAL.name)
+    val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.M3E_WAVY.name)
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerGlassBlur by sessionManager.playerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 60f)
     val playerGlassIntensity by sessionManager.playerGlassIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)

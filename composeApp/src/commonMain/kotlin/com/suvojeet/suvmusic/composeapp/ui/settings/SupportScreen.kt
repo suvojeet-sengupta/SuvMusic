@@ -2,11 +2,9 @@ package com.suvojeet.suvmusic.composeapp.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -148,43 +145,36 @@ fun SupportScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(80.dp)
                     .clip(SquircleShape)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                primaryColor.copy(alpha = 0.3f),
-                                primaryColor.copy(alpha = 0.05f),
-                            ),
-                        ),
-                    ),
+                    .background(colorScheme.surfaceContainerHighest),
             ) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = null,
                     tint = primaryColor,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(40.dp),
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Support SuvMusic",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "SuvMusic is an ad-free, open-source project created with passion. Your support helps keep this project alive and thriving!",
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
+                text = "SuvMusic is an ad-free, open-source music player. If it's useful to you, there are a few ways to help it keep going.",
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                 color = onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp),
@@ -200,7 +190,7 @@ fun SupportScreen(
                     icon = Icons.Default.AttachMoney,
                     title = "Donate via Coindrop",
                     subtitle = "Support the project directly",
-                    accentColor = Color(0xFF007BFF),
+                    accentColor = primaryColor,
                     onClick = { onOpenUri("https://coindrop.to/suvojeet_sengupta") },
                 )
                 ThinDivider()
@@ -208,7 +198,7 @@ fun SupportScreen(
                     icon = Icons.Default.AccountBalance,
                     title = "Pay via UPI",
                     subtitle = "suvojitsengupta21-3@okicici",
-                    accentColor = Color(0xFF097969),
+                    accentColor = primaryColor,
                     onClick = {
                         onCopyText("suvojitsengupta21-3@okicici", "UPI ID")
                         onOpenUri("upi://pay?pa=suvojitsengupta21-3@okicici&pn=Suvojeet%20Sengupta")
@@ -218,19 +208,19 @@ fun SupportScreen(
                 SupportListItem(
                     icon = Icons.Default.Star,
                     title = "Star on GitHub",
-                    subtitle = "Show love on our repository",
-                    accentColor = Color(0xFF4CAF50),
+                    subtitle = "Star the repository",
+                    accentColor = primaryColor,
                     onClick = { onOpenUri("https://github.com/suvojeet-sengupta/SuvMusic") },
                 )
                 ThinDivider()
                 SupportListItem(
                     icon = Icons.Default.Share,
                     title = "Share SuvMusic",
-                    subtitle = "Spread the word with friends",
-                    accentColor = Color(0xFF2196F3),
+                    subtitle = "Tell others about the app",
+                    accentColor = primaryColor,
                     onClick = {
                         onShareText(
-                            "Check out SuvMusic - The best open source music player! \n\n" +
+                            "SuvMusic - an ad-free, open-source music player.\n\n" +
                                 "Download: https://github.com/suvojeet-sengupta/SuvMusic/releases",
                         )
                     },
@@ -245,16 +235,16 @@ fun SupportScreen(
                 SupportListItem(
                     icon = Icons.Default.Send,
                     title = "Join Telegram",
-                    subtitle = "Channel & Support Group",
-                    accentColor = Color(0xFF0088CC),
+                    subtitle = "Channel and support group",
+                    accentColor = primaryColor,
                     onClick = { showTelegramOptions = true },
                 )
                 ThinDivider()
                 SupportListItem(
                     icon = Icons.Default.BugReport,
                     title = "Report a Bug",
-                    subtitle = "Help us fix issues",
-                    accentColor = Color(0xFFE53935),
+                    subtitle = "Open an issue on GitHub",
+                    accentColor = primaryColor,
                     onClick = {
                         onOpenUri("https://github.com/suvojeet-sengupta/SuvMusic/issues/new?template=bug_report.md")
                     },
@@ -263,8 +253,8 @@ fun SupportScreen(
                 SupportListItem(
                     icon = Icons.Default.Lightbulb,
                     title = "Request a Feature",
-                    subtitle = "Share your ideas with us",
-                    accentColor = Color(0xFFFFC107),
+                    subtitle = "Suggest an improvement",
+                    accentColor = primaryColor,
                     onClick = {
                         onOpenUri("https://github.com/suvojeet-sengupta/SuvMusic/issues/new?template=feature_request.md")
                     },
@@ -274,7 +264,7 @@ fun SupportScreen(
                     icon = Icons.Default.Security,
                     title = "Privacy Policy",
                     subtitle = "How SuvMusic handles your data",
-                    accentColor = Color(0xFF9C27B0),
+                    accentColor = primaryColor,
                     onClick = {
                         onOpenUri("https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html")
                     },
@@ -298,7 +288,7 @@ fun SupportScreen(
                     icon = Icons.Default.Send,
                     title = "Telegram DM",
                     subtitle = "@suvojeet_sengupta",
-                    accentColor = Color(0xFF0088CC),
+                    accentColor = primaryColor,
                     onClick = { onOpenUri("https://t.me/suvojeet_sengupta") },
                 )
             }
@@ -306,24 +296,12 @@ fun SupportScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Made with ",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onSurfaceVariant.copy(alpha = 0.6f),
-                )
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = Color(0xFFFF4081),
-                    modifier = Modifier.size(14.dp),
-                )
-                Text(
-                    text = " in India",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
+            Text(
+                text = "Made in India",
+                style = MaterialTheme.typography.bodySmall,
+                color = onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -334,10 +312,10 @@ private fun SectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .padding(start = 28.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
             .fillMaxWidth(),
         textAlign = TextAlign.Start,
     )
@@ -351,15 +329,10 @@ private fun SettingsCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-        ),
-        tonalElevation = 1.dp,
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) { content() }
+        Column(modifier = Modifier.padding(vertical = 4.dp)) { content() }
     }
 }
 

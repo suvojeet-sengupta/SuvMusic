@@ -1,8 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens.about
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -22,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,50 +51,36 @@ internal fun AboutDeveloperSection(onOpenUri: (String) -> Unit) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            AsyncImage(
+                model = "https://avatars.githubusercontent.com/u/107928380?v=4",
+                contentDescription = "Suvojeet Sengupta",
                 modifier = Modifier
-                    .size(110.dp)
-                    .clip(SquircleShape)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(primaryColor, colorScheme.tertiary)
-                        )
-                    )
-                    .padding(3.dp)
-                    .background(colorScheme.surface, SquircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = "https://avatars.githubusercontent.com/u/107928380?v=4",
-                    contentDescription = "Suvojeet Sengupta",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(SquircleShape),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(id = logoVariant.drawableRes())
-                )
-            }
+                    .size(100.dp)
+                    .clip(SquircleShape),
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = logoVariant.drawableRes())
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Suvojeet Sengupta",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 color = colorScheme.onSurface
             )
 
             Text(
-                text = "Vibe Coder",
+                text = "Developer",
                 style = MaterialTheme.typography.titleMedium,
                 color = primaryColor,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Thinking matters. I'm a self-taught Kotlin learner who believes architecture and creativity are my true + points. Delivering what AI can't—human touch in code.",
+                text = "A self-taught Kotlin developer focused on clean architecture and thoughtful app design.",
                 style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
                 color = onSurfaceVariant,
                 textAlign = TextAlign.Center,

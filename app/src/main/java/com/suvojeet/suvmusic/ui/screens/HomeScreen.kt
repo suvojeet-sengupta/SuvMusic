@@ -29,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
@@ -439,7 +438,7 @@ fun HomeScreen(
 
                     // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
                         if (uiState.personalizedSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("personalized")) {
-                            // Personalized section header with sparkle
+                            // Personalized section header
                             item(key = "personalized_header", contentType = "personalized_header") {
                                 PersonalizedSectionHeader(
                                     modifier = Modifier
@@ -1216,40 +1215,12 @@ private fun EndOfFeedCard(
     onStartRadio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Confetti palette + deterministic positions so the splash doesn't
-    // reflow across recompositions.
-    val confettiColors = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-        MaterialTheme.colorScheme.secondary,
-        Color(0xFFFFB347),
-        Color(0xFFFF5E62)
-    )
-    val confettiSpec = remember {
-        listOf(
-            Triple(0.08f, 0.18f, 0), Triple(0.18f, 0.62f, 1), Triple(0.27f, 0.32f, 2),
-            Triple(0.42f, 0.78f, 3), Triple(0.55f, 0.14f, 4), Triple(0.68f, 0.55f, 0),
-            Triple(0.78f, 0.22f, 1), Triple(0.86f, 0.72f, 2), Triple(0.94f, 0.30f, 3)
-        )
-    }
-
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Confetti backdrop — fixed-position dots scattered behind the card.
-            confettiSpec.forEach { (x, y, ci) ->
-                Box(
-                    modifier = Modifier
-                        .padding(start = (x * 320).dp, top = (y * 200).dp)
-                        .size(if (ci % 2 == 0) 8.dp else 6.dp)
-                        .clip(if (ci == 3) RoundedCornerShape(2.dp) else CircleShape)
-                        .background(confettiColors[ci % confettiColors.size].copy(alpha = 0.65f))
-                )
-            }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -1473,7 +1444,7 @@ private fun DetectedMoodBanner(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Tap to explore this vibe",
+                    text = "Tap to explore",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1784,11 +1755,6 @@ private fun ForYouBanner(
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Drifting-sparkle backdrop — six deterministically-placed dots
-            // gently float up and fade. Adds the "personalized magic" feel
-            // without any per-item layout cost.
-            DriftingSparkles()
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1805,7 +1771,7 @@ private fun ForYouBanner(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.Radio,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
@@ -1878,41 +1844,19 @@ private fun ForYouBanner(
 }
 
 /**
- * Personalized section header with sparkle icon, visually separates
- * AI-powered recommendations from standard YouTube home sections.
+ * Personalized section header — a clean bold title that separates
+ * recommendation rows from standard YouTube home sections.
  */
 @Composable
 private fun PersonalizedSectionHeader(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .background(
-                    MaterialTheme.colorScheme.primaryContainer,
-                    RoundedCornerShape(7.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.AutoAwesome,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(14.dp)
-            )
-        }
-
-        Text(
-            text = "Personalized for you",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            letterSpacing = (-0.3).sp
-        )
-    }
+    Text(
+        text = "Made for you",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+        letterSpacing = (-0.3).sp,
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -2164,53 +2108,3 @@ private fun EqualizerGlyph(
     }
 }
 
-/**
- * Six deterministically-placed sparkle dots that drift up + fade across the
- * For-You banner. Backdrop only — sits behind the banner content. No layout
- * cost because each dot is just a styled Box.
- */
-@Composable
-private fun DriftingSparkles(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "sparkles")
-    // Each sparkle: (x-fraction, base y-fraction, period-ms, size-dp, alpha-mul).
-    val sparks = remember {
-        listOf(
-            Triple(0.12f, 0.65f, 2400),
-            Triple(0.28f, 0.20f, 3100),
-            Triple(0.46f, 0.78f, 2700),
-            Triple(0.62f, 0.32f, 2950),
-            Triple(0.78f, 0.70f, 2300),
-            Triple(0.90f, 0.18f, 3300)
-        )
-    }
-    val tint = MaterialTheme.colorScheme.primary
-    Box(modifier = modifier.fillMaxSize()) {
-        sparks.forEachIndexed { idx, (x, y, ms) ->
-            val drift by transition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = ms,
-                        easing = LinearEasing,
-                        delayMillis = (idx * 240) % ms
-                    ),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "spark$idx"
-            )
-            // Drift upward by ~14dp and fade out as it nears the top.
-            val verticalOffset = (-14f * drift).dp
-            val alpha = (1f - drift).coerceAtLeast(0f) * 0.55f
-            val size = (3 + (idx % 3)).dp
-            Box(
-                modifier = Modifier
-                    .padding(start = (x * 320).dp, top = (y * 80).dp)
-                    .offset(y = verticalOffset)
-                    .size(size)
-                    .clip(CircleShape)
-                    .background(tint.copy(alpha = alpha))
-            )
-        }
-    }
-}

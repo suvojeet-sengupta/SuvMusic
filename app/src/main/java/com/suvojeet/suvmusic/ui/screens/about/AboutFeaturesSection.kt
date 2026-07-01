@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -21,26 +21,26 @@ internal fun AboutFeaturesSection() {
     AboutCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         FeatureListItem(
             icon = Icons.Outlined.Palette,
-            title = "Best-in-Class UI",
-            subtitle = "Unique and fluid Material 3 Experience"
+            title = "Material 3 Interface",
+            subtitle = "Clean, responsive design"
         )
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = dividerColor)
         FeatureListItem(
             icon = Icons.Outlined.Block,
-            title = "100% Ad-Free",
-            subtitle = "Zero interruptions, complete focus"
+            title = "Ad-Free Playback",
+            subtitle = "No interruptions while you listen"
         )
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = dividerColor)
         FeatureListItem(
             icon = Icons.Default.HighQuality,
-            title = "High Fidelity",
-            subtitle = "Premium audio quality and full control"
+            title = "High-Quality Audio",
+            subtitle = "Detailed playback controls"
         )
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = dividerColor)
         FeatureListItem(
-            icon = Icons.Default.AutoAwesome,
-            title = "AI Equalizer",
-            subtitle = "Neural processing for perfect sound"
+            icon = Icons.Outlined.Tune,
+            title = "Equalizer",
+            subtitle = "Adjust sound to your preference"
         )
     }
     Spacer(modifier = Modifier.height(24.dp))
