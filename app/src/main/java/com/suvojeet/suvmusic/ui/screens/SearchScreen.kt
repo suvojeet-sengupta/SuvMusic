@@ -305,9 +305,9 @@ fun SearchScreen(
                         }
                     }
 
-                    // Tab Selection (YouTube / HQ Audio / Local). Both YouTube Music and
-                    // HQ Audio tabs are always available regardless of the active source,
-                    // so the user can always cross-search the other catalogue.
+                    // Tab Selection (YouTube Music / HQ Audio). Both tabs are always available
+                    // regardless of the active source, so the user can always cross-search the
+                    // other catalogue.
                     val visibleTabs = remember(uiState.currentSource) {
                         buildList {
                             if (uiState.currentSource == MusicSource.REMOTE) {
@@ -317,7 +317,6 @@ fun SearchScreen(
                                 add(SearchTab.YOUTUBE_MUSIC)
                                 add(SearchTab.REMOTE)
                             }
-                            add(SearchTab.YOUR_LIBRARY)
                         }
                     }
                     val visibleSelectedIdx = visibleTabs.indexOf(uiState.selectedTab).coerceAtLeast(0)
@@ -340,7 +339,6 @@ fun SearchScreen(
                             val label = when (tab) {
                                 SearchTab.YOUTUBE_MUSIC -> "YouTube Music"
                                 SearchTab.REMOTE -> "HQ Audio"
-                                SearchTab.YOUR_LIBRARY -> "Local Library"
                             }
                             Tab(
                                 selected = uiState.selectedTab == tab,
@@ -570,44 +568,8 @@ fun SearchScreen(
                             }
                         }
                     }
-                } else if (uiState.selectedTab == SearchTab.YOUR_LIBRARY) {
-                    // Local Search results
-                    if (!uiState.isLoading && uiState.query.isNotBlank()) {
-                        if (uiState.artistResults.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                Column {
-                                    Text("Artists", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
-                                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                                        items(uiState.artistResults, key = { it.id }) { artist -> ArtistSearchCard(artist = artist, onClick = { onArtistClick(artist.id) }) }
-                                    }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                                }
-                            }
-                        }
-                        if (uiState.albumResults.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                Column {
-                                    Text("Albums", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
-                                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                                        items(uiState.albumResults, key = { it.id }) { album -> AlbumSearchCard(album = album, onClick = { onAlbumClick(album) }) }
-                                    }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                                }
-                            }
-                        }
-                        if (uiState.results.isNotEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("Songs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)) }
-                            itemsIndexed(uiState.results, key = { _, song -> "local_${song.id}" }) { index, song ->
-                                SearchResultItem(song = song, onClick = { onSongClick(uiState.results, index) }, onArtistClick = onArtistClick, onMoreClick = { selectedSong = song; showSongMenu = true })
-                            }
-                        }
-                        
-                        if (uiState.results.isEmpty() && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty()) {
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No local results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(20.dp)) }
-                        }
-                    }
                 }
-                
+
                 if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC && uiState.query.isNotBlank() && uiState.results.isEmpty() && !uiState.isLoading && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp)) }
                 }

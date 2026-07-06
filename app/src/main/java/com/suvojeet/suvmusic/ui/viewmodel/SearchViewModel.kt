@@ -11,7 +11,6 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.RecentSearchItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
-import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.player.MusicPlayer
@@ -39,8 +38,7 @@ sealed class SearchEvent {
 
 enum class SearchTab {
     YOUTUBE_MUSIC,
-    REMOTE,
-    YOUR_LIBRARY
+    REMOTE
 }
 
 enum class ResultFilter {
@@ -88,7 +86,6 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val remoteAudioRepository: RemoteAudioRepository,
-    private val localAudioRepository: LocalAudioRepository,
     private val sessionManager: SessionManager,
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository
@@ -481,26 +478,6 @@ class SearchViewModel @Inject constructor(
                                     val results = remoteAudioRepository.searchPlaylists(query)
                                     _uiState.update { it.copy(playlistResults = results, isLoading = false) }
                                 }
-                            }
-                        }
-                    }
-                    SearchTab.YOUR_LIBRARY -> {
-                        coroutineScope {
-                            val resultsDeferred = async { localAudioRepository.searchLocalSongs(query) }
-                            val albumsDeferred = async { localAudioRepository.searchLocalAlbums(query) }
-                            val artistsDeferred = async { localAudioRepository.searchLocalArtists(query) }
-                            
-                            val results = resultsDeferred.await()
-                            val albums = albumsDeferred.await()
-                            val artists = artistsDeferred.await()
-                            
-                            _uiState.update { 
-                                it.copy(
-                                    results = results,
-                                    albumResults = albums,
-                                    artistResults = artists,
-                                    isLoading = false
-                                )
                             }
                         }
                     }
