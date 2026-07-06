@@ -51,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import android.content.Intent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -112,10 +113,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val sessionManager = remember { com.suvojeet.suvmusic.data.SessionManager(context) }
-    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsState(initial = true)
+    val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
     
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
@@ -129,8 +130,8 @@ fun HomeScreen(
         }
     }
     
-    val playlistMgmtState by playlistViewModel.uiState.collectAsState()
-    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsState(initial = true)
+    val playlistMgmtState by playlistViewModel.uiState.collectAsStateWithLifecycle()
+    val isAlbumArtDynamicColorsEnabled by sessionManager.albumArtDynamicColorsEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val lazyListState = rememberLazyListState()
 
@@ -652,7 +653,7 @@ fun HomeScreen(
         }
 
         // Add to Playlist Sheet
-        val playlistUiState by playlistViewModel.uiState.collectAsState()
+        val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
         
         if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSongs.isNotEmpty()) {
             AddToPlaylistSheet(
