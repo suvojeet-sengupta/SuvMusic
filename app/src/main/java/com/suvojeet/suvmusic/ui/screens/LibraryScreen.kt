@@ -99,6 +99,7 @@ import com.suvojeet.suvmusic.ui.components.RenamePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.DeletePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
+import com.suvojeet.suvmusic.ui.components.stylishScrollbar
 import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryFilter
 import com.suvojeet.suvmusic.ui.viewmodel.LibrarySortOption
@@ -639,8 +640,11 @@ fun PlaylistsGrid(
         com.suvojeet.suvmusic.ui.utils.WindowSize.Compact -> 2
     }
 
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(gridColumns),
+        modifier = Modifier.stylishScrollbar(gridState, MaterialTheme.colorScheme.onSurface),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 160.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
