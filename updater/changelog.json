@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.5.9.0",
+      "versionCode": 38,
+      "date": "July 06, 2026",
+      "description": "• Translucent Bottom Nav: Made bottom navigation bar Spotify-style translucent with a darkened top edge for improved visual contrast.\n• Search Category Grid: Added a Spotify-style 'Start browsing' category grid to search and removed the redundant Local Library tab.\n• Library Grid Scrollbar: Added a fading overlay scrollbar to the library grid.\n• Lifecycle-Aware Home Screen: Made Home screen flow collection lifecycle-aware to optimize resource usage.\n• Android Auto Pagination: Paginated Android Auto browse/search results to avoid Binder transaction overflow.\n• Tablet Player Layout: Fixed player layout on tablet portrait — no longer uses landscape layout for non-landscape screens.\n• Spotify Import Fix: Fixed Spotify playlist import capping at 100 tracks with TOTP-based token auth.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.5.8.0",
       "versionCode": 37,
       "date": "July 01, 2026",

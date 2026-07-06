@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.5.9.0] - 2026-07-06
+
+### Added
+- **Spotify-style 'Start browsing' category grid**: Added a category grid to the search screen to mirror Spotify's browse experience.
+- **Library grid scrollbar**: Added a fading overlay scrollbar to the library grid.
+
+### Changed
+- **Translucent bottom navigation**: Made the bottom navigation bar Spotify-style translucent and darkened its top edge for better contrast.
+- **Search screen cleanups**: Removed the redundant "Local Library" tab from the search screen.
+
+### Improved
+- **Lifecycle-aware Home screen**: Made the Home screen flow collection lifecycle-aware to optimize resource usage.
+- **Robust Android Auto integration**: Paginated Android Auto browse/search results to prevent Binder transaction limit overflow.
+
+### Fixed
+- **Spotify playlist import limit**: Fixed Spotify playlist import capping at 100 tracks when using TOTP-based token authentication.
+- **Tablet player layout**: Fixed player layout on tablet portrait orientation to ensure it does not use the landscape layout.
+
+## [2.5.8.0] - 2026-07-01
+
+### Added
+- **Onboarding and What's New screens**: Redesigned the onboarding experience and added a "What's New" screen to showcase new updates.
+
+### Improved
+- **Jank-free UI performance**: Significantly optimized playback, the player screen, and scrolling to eliminate UI lag/jank.
+- **M3 Expressive seekbar**: Set the Material 3 Expressive seekbar as the default, along with a professional UI pass.
+- **Robust remote track matching**: Made the remote song matching algorithm more robust to reduce incorrect match results.
+
 ## [2.5.7.0] - 2026-06-27
 
 ### Changed
