@@ -393,16 +393,23 @@ private fun StandardNavBar(
     alpha: Float = 1.0f,
     backgroundColor: Color? = null
 ) {
-    val containerColor = if (alpha >= 1.0f && backgroundColor != null) {
-        backgroundColor
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = alpha)
-    }
+    // Spotify-style translucent bar: transparent at the very top edge so the
+    // scrolling content behind bleeds through faintly, deepening to a mostly-
+    // opaque tint at the bottom. The base hue still follows the theme / dominant
+    // colour, and the user's navBarAlpha slider acts as an overall opacity
+    // multiplier (so it can be made fully solid again if desired).
+    val base = backgroundColor ?: MaterialTheme.colorScheme.surface
+    val a = alpha.coerceIn(0f, 1f)
+    val scrimBrush = Brush.verticalGradient(
+        0.0f to base.copy(alpha = 0.0f),
+        0.45f to base.copy(alpha = 0.60f * a),
+        1.0f to base.copy(alpha = 0.90f * a)
+    )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(containerColor)
+            .background(scrimBrush)
             .navigationBarsPadding()
             // Consume taps that miss individual items so clicks don't pass through
             // to controls rendered behind a translucent navigation bar.
