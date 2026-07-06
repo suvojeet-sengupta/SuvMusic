@@ -176,24 +176,106 @@ class SpotifyImportHelper @Inject constructor(
         return null
     }
 
+    /**
+     * Fetches an anonymous web-player access token.
+     *
+     * Spotify now requires the token request to carry a TOTP code derived from a
+     * rotating secret. Without it the endpoint returns an error and the whole
+     * import silently falls back to the embed scraper, which is capped at 100
+     * tracks. We generate the TOTP the same way the web player does.
+     *
+     * If Spotify rotates the secret/version and this stops working, update
+     * [TOTP_SECRET_CIPHER] and [TOTP_VERSION] to the current web-player values.
+     */
     private fun fetchAnonymousSpotifyToken(): String? {
-        val request = Request.Builder()
-            .url("https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .addHeader("Accept", "application/json")
-            .addHeader("Referer", "https://open.spotify.com/")
-            .addHeader("Origin", "https://open.spotify.com")
-            .build()
+        val serverTime = fetchServerTimeSeconds()
+        val totp = generateTotp(serverTime)
 
-        val response = okHttpClient.newCall(request).execute()
-        return try {
-            if (response.isSuccessful) {
-                val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
-                jsonObj.get("accessToken")?.asString
-            } else null
-        } finally {
-            response.close()
+        // Endpoints Spotify has used for the anonymous web token. Try both.
+        val urls = listOf(
+            "https://open.spotify.com/get_access_token?reason=transport&productType=web_player&totp=$totp&totpVer=$TOTP_VERSION&ts=$serverTime",
+            "https://open.spotify.com/api/token?reason=transport&productType=web_player&totp=$totp&totpVer=$TOTP_VERSION&ts=$serverTime"
+        )
+
+        for (url in urls) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("App-Platform", "WebPlayer")
+                    .addHeader("Referer", "https://open.spotify.com/")
+                    .addHeader("Origin", "https://open.spotify.com")
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                val token = try {
+                    if (response.isSuccessful) {
+                        val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
+                        jsonObj.get("accessToken")?.takeIf { !it.isJsonNull }?.asString
+                    } else null
+                } finally {
+                    response.close()
+                }
+                if (!token.isNullOrBlank()) return token
+            } catch (e: Exception) {
+                Log.w("SpotifyImportHelper", "Token request failed for $url", e)
+            }
         }
+        return null
+    }
+
+    /**
+     * Returns Spotify's server time in seconds. TOTP validation is time-based, so
+     * we prefer the server clock; if unreachable we fall back to the device clock.
+     */
+    private fun fetchServerTimeSeconds(): Long {
+        try {
+            val request = Request.Builder()
+                .url("https://open.spotify.com/server-time")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .addHeader("Referer", "https://open.spotify.com/")
+                .build()
+            val response = okHttpClient.newCall(request).execute()
+            val serverTime = try {
+                if (response.isSuccessful) {
+                    val jsonObj = gson.fromJson(response.body.string(), JsonObject::class.java)
+                    jsonObj.get("serverTime")?.takeIf { !it.isJsonNull }?.asLong
+                } else null
+            } finally {
+                response.close()
+            }
+            if (serverTime != null && serverTime > 0) return serverTime
+        } catch (e: Exception) {
+            Log.w("SpotifyImportHelper", "Failed to fetch server time, using device clock", e)
+        }
+        return System.currentTimeMillis() / 1000
+    }
+
+    /**
+     * Generates a 6-digit TOTP (SHA1, 30s period) using the web-player secret,
+     * matching the algorithm the Spotify web client uses to sign token requests.
+     */
+    private fun generateTotp(timeSeconds: Long): String {
+        // Decode the rotating cipher into the raw HMAC key the web player derives.
+        val transformed = TOTP_SECRET_CIPHER.mapIndexed { i, n -> n xor ((i % 33) + 9) }
+        val key = transformed.joinToString("").toByteArray(Charsets.UTF_8)
+
+        val counter = timeSeconds / 30
+        val msg = java.nio.ByteBuffer.allocate(8).putLong(counter).array()
+
+        val mac = javax.crypto.Mac.getInstance("HmacSHA1")
+        mac.init(javax.crypto.spec.SecretKeySpec(key, "HmacSHA1"))
+        val hash = mac.doFinal(msg)
+
+        val offset = (hash[hash.size - 1].toInt() and 0x0f)
+        val binary = ((hash[offset].toInt() and 0x7f) shl 24) or
+            ((hash[offset + 1].toInt() and 0xff) shl 16) or
+            ((hash[offset + 2].toInt() and 0xff) shl 8) or
+            (hash[offset + 3].toInt() and 0xff)
+
+        val otp = binary % 1_000_000
+        return otp.toString().padStart(6, '0')
     }
 
     private fun extractAccessTokenFromPage(url: String): String? {
@@ -348,5 +430,19 @@ class SpotifyImportHelper @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+
+    companion object {
+        /**
+         * Rotating cipher used by Spotify's web player to derive the TOTP secret.
+         * If token fetching starts failing again (imports capped at 100), replace
+         * these with the current values from the web player.
+         */
+        private val TOTP_SECRET_CIPHER = intArrayOf(
+            12, 56, 76, 33, 88, 44, 88, 33, 78, 78, 11, 66, 22, 22, 55, 69, 54
+        )
+
+        /** TOTP version Spotify expects alongside the code. */
+        private const val TOTP_VERSION = 5
     }
 }
