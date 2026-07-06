@@ -1234,7 +1234,18 @@ class MusicPlayerService : MediaLibraryService() {
                                 }
                             }
                         }
-                        future.set(LibraryResult.ofItemList(ImmutableList.copyOf(children), params))
+                        // Honour the controller's pagination request. Returning the whole
+                        // list (liked songs / downloads / large playlists can be thousands of
+                        // items) overflows the Binder ~1MB transaction limit and Android Auto
+                        // renders an empty node or disconnects. Slice to the requested page.
+                        val paged = if (pageSize > 0 && pageSize < children.size) {
+                            val from = (page.toLong() * pageSize).coerceIn(0L, children.size.toLong()).toInt()
+                            val to = (from + pageSize).coerceAtMost(children.size)
+                            if (from >= to) emptyList() else children.subList(from, to)
+                        } else {
+                            children
+                        }
+                        future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
                     } catch (e: Exception) {
                         android.util.Log.e("MusicPlayerService", "onGetChildren failed for $parentId", e)
                         future.set(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
@@ -1279,7 +1290,14 @@ class MusicPlayerService : MediaLibraryService() {
                              playlistContextCache[song.id] = results
                          }
                          val mediaItems = results.map { createPlayableMediaItem(it) }
-                         future.set(LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params))
+                         val paged = if (pageSize > 0 && pageSize < mediaItems.size) {
+                             val from = (page.toLong() * pageSize).coerceIn(0L, mediaItems.size.toLong()).toInt()
+                             val to = (from + pageSize).coerceAtMost(mediaItems.size)
+                             if (from >= to) emptyList() else mediaItems.subList(from, to)
+                         } else {
+                             mediaItems
+                         }
+                         future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
                      } catch(e: Exception) {
                          android.util.Log.e("MusicPlayerService", "onGetSearchResult failed for '$query'", e)
                          future.set(LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN))
