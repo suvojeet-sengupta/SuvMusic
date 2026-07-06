@@ -400,10 +400,15 @@ private fun StandardNavBar(
     // multiplier (so it can be made fully solid again if desired).
     val base = backgroundColor ?: MaterialTheme.colorScheme.surface
     val a = alpha.coerceIn(0f, 1f)
+    // Darker, denser bottom edge: blend the base toward black on the way down and
+    // ramp opacity to near-solid at the very bottom, while the top edge stays
+    // clear so scrolling content still bleeds through faintly.
+    val bottomColor = androidx.compose.ui.graphics.lerp(base, Color.Black, 0.55f)
     val scrimBrush = Brush.verticalGradient(
         0.0f to base.copy(alpha = 0.0f),
-        0.45f to base.copy(alpha = 0.60f * a),
-        1.0f to base.copy(alpha = 0.90f * a)
+        0.35f to base.copy(alpha = 0.55f * a),
+        0.70f to bottomColor.copy(alpha = 0.85f * a),
+        1.0f to bottomColor.copy(alpha = 0.98f * a)
     )
 
     Box(
