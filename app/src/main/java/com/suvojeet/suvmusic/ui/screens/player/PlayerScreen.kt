@@ -387,7 +387,11 @@ fun PlayerScreen(
 
             val playerMainContent: @Composable () -> Unit = {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val useWideLayout = maxWidth > 520.dp
+                    // Only use the side-by-side (artwork left / controls right) layout when the
+                    // screen is actually landscape. A tablet held in portrait is wide enough to
+                    // pass a plain width threshold, which squished the controls into a narrow
+                    // right column and left a large empty vertical gap below.
+                    val useWideLayout = maxWidth > 520.dp && maxWidth > maxHeight
                     val isCompactHeight = maxHeight < 600.dp
 
                     when (playerStyle) {
