@@ -574,6 +574,33 @@ fun SearchScreen(
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp)) }
                 }
                 
+                // "Start browsing" — Spotify-style colored category tiles laid out two
+                // per row. Categories come from getMoodsAndGenres() (see SearchViewModel),
+                // so nothing here is hardcoded; clicking one runs onCategoryClick().
+                if (uiState.query.isBlank() && uiState.selectedTab == SearchTab.YOUTUBE_MUSIC && uiState.browseCategories.isNotEmpty()) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+                            Text("Start browsing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 12.dp))
+                            uiState.browseCategories.chunked(2).forEach { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowItems.forEach { category ->
+                                        BrowseCategoryCard(
+                                            category = category,
+                                            onClick = { viewModel.onCategoryClick(category) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    // Keep a lone trailing tile half-width instead of stretched.
+                                    if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (uiState.query.isBlank() && uiState.recentSearches.isEmpty() && uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -623,6 +650,52 @@ fun SearchScreen(
         }        
         if (playlistMgmtState.showCreatePlaylistDialog) {
              CreatePlaylistDialog(isVisible = playlistMgmtState.showCreatePlaylistDialog, isCreating = playlistMgmtState.isCreatingPlaylist, onDismiss = { playlistViewModel.hideCreatePlaylistDialog() }, onCreate = { title, description, isPrivate, syncWithYt -> playlistViewModel.createPlaylist(title, description, isPrivate, syncWithYt) }, isLoggedIn = true)
+        }
+    }
+}
+
+/**
+ * Spotify-style "Browse all" tile: a coloured rounded card with the category
+ * title and, when available, a small artwork tucked into the bottom-right.
+ * The fill colour uses [BrowseCategory.color] when the catalogue provides one,
+ * otherwise a stable hue derived from the title hash — never a hardcoded map.
+ */
+@Composable
+private fun BrowseCategoryCard(
+    category: com.suvojeet.suvmusic.core.model.BrowseCategory,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val baseColor = category.color?.let { Color(it) } ?: run {
+        val hue = (((category.title.hashCode() % 360) + 360) % 360).toFloat()
+        Color.hsv(hue, 0.5f, 0.62f)
+    }
+    Box(
+        modifier = modifier
+            .height(96.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(baseColor)
+            .clickable(onClick = onClick)
+    ) {
+        Text(
+            text = category.title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(12.dp).align(Alignment.TopStart)
+        )
+        if (!category.thumbnailUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = category.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(topStart = 10.dp))
+            )
         }
     }
 }
