@@ -95,6 +95,7 @@ private val MiniPlayerHeight = 64.dp
 fun ExpandablePlayerSheet(
     currentSong: Song?,
     isPlaying: Boolean,
+    isLoading: Boolean = false,
     progressProvider: () -> Float,
     dominantColors: DominantColors,
     onPlayPause: () -> Unit,
@@ -186,6 +187,7 @@ fun ExpandablePlayerSheet(
             CollapsedMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
+                isLoading = isLoading,
                 dominantColors = dominantColors,
                 progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
@@ -380,6 +382,7 @@ fun ExpandablePlayerSheet(
 private fun CollapsedMiniPlayer(
     song: Song,
     isPlaying: Boolean,
+    isLoading: Boolean = false,
     dominantColors: DominantColors,
     progressProvider: () -> Float,
     onPlayPause: () -> Unit,
@@ -397,6 +400,7 @@ private fun CollapsedMiniPlayer(
             LiquidGlassMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
+                isLoading = isLoading,
                 dominantColors = dominantColors,
                 progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
@@ -413,6 +417,7 @@ private fun CollapsedMiniPlayer(
             PillMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
+                isLoading = isLoading,
                 dominantColors = dominantColors,
                 progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
@@ -428,6 +433,7 @@ private fun CollapsedMiniPlayer(
             YTMusicMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
+                isLoading = isLoading,
                 dominantColors = dominantColors,
                 progressProvider = progressProvider,
                 onPlayPause = onPlayPause,
@@ -443,6 +449,7 @@ private fun CollapsedMiniPlayer(
             StandardMiniPlayer(
                 song = song,
                 isPlaying = isPlaying,
+                isLoading = isLoading,
                 dominantColors = dominantColors,
                 progressProvider = progressProvider,
                 onPlayPause = onPlayPause,

@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.util
+package com.suvojeet.suvmusic.core.model
 
 /**
  * Cleans raw YouTube video titles into music-app friendly song titles and

@@ -61,6 +61,7 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 fun PillMiniPlayer(
     song: Song,
     isPlaying: Boolean,
+    isLoading: Boolean = false,
     dominantColors: DominantColors,
     progressProvider: () -> Float,
     onPlayPause: () -> Unit,
@@ -242,20 +243,28 @@ fun PillMiniPlayer(
                 }
 
                 MiniPlayerButton(onClick = onPlayPause) {
-                    AnimatedContent(
-                        targetState = isPlaying,
-                        transitionSpec = {
-                            (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
-                            (scaleOut() + fadeOut())
-                        },
-                        label = "miniPlayPause"
-                    ) { playing ->
-                        Icon(
-                            imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playing) "Pause" else "Play",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(24.dp)
+                    if (isLoading) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = dominantColors.onBackground,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
                         )
+                    } else {
+                        AnimatedContent(
+                            targetState = isPlaying,
+                            transitionSpec = {
+                                (scaleIn(spring(Spring.DampingRatioMediumBouncy)) + fadeIn()) togetherWith
+                                (scaleOut() + fadeOut())
+                            },
+                            label = "miniPlayPause"
+                        ) { playing ->
+                            Icon(
+                                imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (playing) "Pause" else "Play",
+                                tint = dominantColors.onBackground,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
 

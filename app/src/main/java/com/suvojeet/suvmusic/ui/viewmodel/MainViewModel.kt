@@ -17,7 +17,9 @@ import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.stateIn
 
 sealed class MainEvent {
     data class PlayFromDeepLink(val videoId: String) : MainEvent()
@@ -39,11 +41,16 @@ class MainViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val lastFmRepository: LastFmRepository,
     private val playerCache: () -> androidx.media3.datasource.cache.Cache,
+    networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    /** Live connectivity for the app shell's offline banner. */
+    val isOnline: StateFlow<Boolean> = networkMonitor.isConnected
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _events = MutableSharedFlow<MainEvent>()
     val events: SharedFlow<MainEvent> = _events.asSharedFlow()

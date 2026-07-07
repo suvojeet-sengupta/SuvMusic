@@ -571,7 +571,28 @@ fun SearchScreen(
                 }
 
                 if (uiState.selectedTab == SearchTab.YOUTUBE_MUSIC && uiState.query.isNotBlank() && uiState.results.isEmpty() && !uiState.isLoading && uiState.artistResults.isEmpty() && uiState.albumResults.isEmpty() && uiState.playlistResults.isEmpty()) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { Text("No results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp)) }
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        // A failed search and a genuinely empty result set are different
+                        // states — show the reason and a retry when we know it failed.
+                        if (uiState.error != null) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = uiState.error ?: "Something went wrong",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(onClick = { viewModel.search(saveToHistory = false) }) {
+                                    Text("Retry")
+                                }
+                            }
+                        } else {
+                            Text("No results found for \"${uiState.query}\"", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 32.dp))
+                        }
+                    }
                 }
                 
                 // "Start browsing" — Spotify-style colored category tiles laid out two

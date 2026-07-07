@@ -54,6 +54,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
@@ -989,6 +991,46 @@ fun SuvMusicApp(
             }
         }
 
+    // Offline banner — slides in under the status bar whenever connectivity drops,
+    // so failures elsewhere in the app have visible context.
+    val isOnline by mainViewModel.isOnline.collectAsStateWithLifecycle()
+    androidx.compose.animation.AnimatedVisibility(
+        visible = !isOnline,
+        enter = androidx.compose.animation.slideInVertically { -it } + fadeIn(),
+        exit = androidx.compose.animation.slideOutVertically { -it } + fadeOut(),
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .zIndex(10f)
+    ) {
+        androidx.compose.material3.Surface(
+            color = androidx.compose.material3.MaterialTheme.colorScheme.inverseSurface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Filled.CloudOff,
+                    contentDescription = null,
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface,
+                    modifier = Modifier.size(16.dp)
+                )
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
+                androidx.compose.material3.Text(
+                    text = "You're offline — downloads and cached music still play",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface
+                )
+            }
+        }
+    }
+
     // Expandable Player Sheet - Overlay
     // Sits above Scaffold, aligned to bottom
     if (showMiniPlayer) {
@@ -1000,6 +1042,7 @@ fun SuvMusicApp(
         ExpandablePlayerSheet(
             currentSong = playbackInfo.currentSong,
             isPlaying = playbackInfo.isPlaying,
+            isLoading = playbackInfo.isLoading,
             progressProvider = miniPlayerProgressProvider,
             dominantColors = currentDominantColors,
             onPlayPause = { playerViewModel.togglePlayPause() },

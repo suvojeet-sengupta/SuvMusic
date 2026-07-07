@@ -48,6 +48,7 @@ import com.suvojeet.suvmusic.ui.components.DominantColors
 fun YTMusicMiniPlayer(
     song: Song,
     isPlaying: Boolean,
+    isLoading: Boolean = false,
     dominantColors: DominantColors,
     progressProvider: () -> Float,
     onPlayPause: () -> Unit,
@@ -161,12 +162,20 @@ fun YTMusicMiniPlayer(
                         onClick = onPlayPause,
                         modifier = Modifier.size(44.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = dominantColors.onBackground,
-                            modifier = Modifier.size(30.dp)
-                        )
+                        if (isLoading) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = dominantColors.onBackground,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = dominantColors.onBackground,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
                     }
 
                     IconButton(

@@ -69,6 +69,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -119,7 +120,14 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    
+
+    // Surface load/sync failures instead of silently showing stale content
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     // Dialog States
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var isCreatingPlaylist by remember { mutableStateOf(false) }

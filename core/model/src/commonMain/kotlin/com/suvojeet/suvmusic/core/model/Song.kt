@@ -54,7 +54,9 @@ data class Song(
             if (videoId.isBlank()) return null
             return Song(
                 id = videoId,
-                title = title,
+                // Strip upload noise ("Official Video", "|| Movie ||", …) once at the
+                // source so every screen shows a music-app friendly title.
+                title = TitleSanitizer.clean(title, artist),
                 artist = artist,
                 album = album,
                 duration = duration,

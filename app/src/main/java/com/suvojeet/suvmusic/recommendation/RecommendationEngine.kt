@@ -112,7 +112,7 @@ class RecommendationEngine @Inject constructor(
      * field is deliberately excluded — duplicate uploads carry different channel names.
      */
     private fun getSongFingerprint(song: Song): String {
-        return com.suvojeet.suvmusic.util.TitleSanitizer.fingerprint(song.title)
+        return com.suvojeet.suvmusic.core.model.TitleSanitizer.fingerprint(song.title)
     }
 
     /**
