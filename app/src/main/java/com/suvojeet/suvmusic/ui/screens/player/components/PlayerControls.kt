@@ -49,6 +49,7 @@ fun PlaybackControls(
     dominantColors: DominantColors,
     compact: Boolean = false
 ) {
+    val haptics = com.suvojeet.suvmusic.ui.utils.rememberHaptics()
     // YT Music style sizes — icon kept proportionally smaller so it reads as a
     // play triangle inside the solid white circle rather than filling it.
     val playSize = if (compact) 64.dp else 84.dp
@@ -66,7 +67,7 @@ fun PlaybackControls(
             icon = Icons.Default.Shuffle,
             contentDescription = "Shuffle",
             tint = if (shuffleEnabled) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.6f),
-            onClick = onShuffleToggle,
+            onClick = { haptics.tick(); onShuffleToggle() },
             size = 48.dp,
             iconSize = secondaryIconSize
         )
@@ -76,7 +77,7 @@ fun PlaybackControls(
             icon = Icons.Default.SkipPrevious,
             contentDescription = "Previous",
             tint = dominantColors.onBackground,
-            onClick = onPrevious,
+            onClick = { haptics.tick(); onPrevious() },
             size = 56.dp,
             iconSize = skipIconSize
         )
@@ -88,7 +89,7 @@ fun PlaybackControls(
         Box(
             modifier = Modifier
                 .size(playSize)
-                .bounceClick(onClick = onPlayPause),
+                .bounceClick(onClick = { haptics.tick(); onPlayPause() }),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -121,7 +122,7 @@ fun PlaybackControls(
             icon = Icons.Default.SkipNext,
             contentDescription = "Next",
             tint = dominantColors.onBackground,
-            onClick = onNext,
+            onClick = { haptics.tick(); onNext() },
             size = 56.dp,
             iconSize = skipIconSize
         )
@@ -130,7 +131,7 @@ fun PlaybackControls(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .bounceClick(onClick = onRepeatToggle),
+                .bounceClick(onClick = { haptics.tick(); onRepeatToggle() }),
             contentAlignment = Alignment.Center
         ) {
             AnimatedContent(

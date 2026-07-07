@@ -67,9 +67,6 @@ class RecommendationEngine @Inject constructor(
     /** Semaphore to rate-limit parallel YouTube API calls */
     private val apiSemaphore = Semaphore(MAX_CONCURRENT_API_CALLS)
 
-    /** Pre-compiled regex for song fingerprinting to avoid per-call allocation */
-    private val fingerprintRegex = Regex("[^a-z0-9]")
-
     /**
      * In-memory set of disliked song IDs (synced with DB).
      * Thread-safe: uses ConcurrentHashMap-backed set.
@@ -110,13 +107,12 @@ class RecommendationEngine @Inject constructor(
 
     /**
      * Generate a unique fingerprint for a song to catch duplicates with different IDs.
-     * Normalized "Title | Artist"
+     * Uses the sanitized core song name (upload noise like "| BORDER 2 | Full Video"
+     * stripped) so different uploads of the same song collapse into one. The artist
+     * field is deliberately excluded — duplicate uploads carry different channel names.
      */
     private fun getSongFingerprint(song: Song): String {
-        // Use pre-compiled regex and single lowercase call per field
-        val title = song.title.lowercase().replace(fingerprintRegex, "")
-        val artist = song.artist.lowercase().replace(fingerprintRegex, "")
-        return "$title|$artist"
+        return com.suvojeet.suvmusic.util.TitleSanitizer.fingerprint(song.title)
     }
 
     /**

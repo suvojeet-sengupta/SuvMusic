@@ -197,8 +197,7 @@ private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true)
     ColorUtils.RGBToHSL(avgR, avgG, avgB, hsl)
     hsl[1] = minOf(1f, hsl[1] * 1.2f) // Reduced boost (was 1.5f)
     hsl[2] = if (isDarkTheme) 0.6f else 0.5f // Slightly darker accent for light theme
-    val accentInt = ColorUtils.HSLToColor(hsl)
-    val accent = Color(accentInt)
+    val accent = ensureContrast(hsl, background = primary, lightenToPass = isDarkTheme)
     
     return DominantColors(
         primary = primary,
@@ -206,4 +205,29 @@ private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true)
         accent = accent,
         onBackground = onBackground
     )
+}
+
+/**
+ * WCAG guard: nudge the accent's lightness until it reaches at least 3:1 contrast
+ * (large text / UI component minimum) against the background it is drawn on.
+ * Busy or very bright artwork can otherwise produce accent tints that vanish
+ * into the derived background.
+ */
+private const val MIN_ACCENT_CONTRAST = 3.0
+
+private fun ensureContrast(accentHsl: FloatArray, background: Color, lightenToPass: Boolean): Color {
+    val backgroundInt = android.graphics.Color.rgb(
+        (background.red * 255).toInt(),
+        (background.green * 255).toInt(),
+        (background.blue * 255).toInt()
+    )
+    val hsl = accentHsl.copyOf()
+    var candidate = ColorUtils.HSLToColor(hsl)
+    var iterations = 0
+    while (ColorUtils.calculateContrast(candidate, backgroundInt) < MIN_ACCENT_CONTRAST && iterations < 20) {
+        hsl[2] = if (lightenToPass) minOf(1f, hsl[2] + 0.05f) else maxOf(0f, hsl[2] - 0.05f)
+        candidate = ColorUtils.HSLToColor(hsl)
+        iterations++
+    }
+    return Color(candidate)
 }

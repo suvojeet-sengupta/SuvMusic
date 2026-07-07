@@ -68,6 +68,7 @@ fun PlayerActionChips(
     dominantColors: DominantColors,
     modifier: Modifier = Modifier
 ) {
+    val haptics = com.suvojeet.suvmusic.ui.utils.rememberHaptics()
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -87,7 +88,7 @@ fun PlayerActionChips(
                 icon = if (isFavorite) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                 tint = if (isFavorite) dominantColors.accent else dominantColors.onBackground.copy(alpha = 0.9f),
                 contentDescription = "Like",
-                onClick = onToggleLike
+                onClick = { haptics.thump(); onToggleLike() }
             )
             Box(
                 modifier = Modifier

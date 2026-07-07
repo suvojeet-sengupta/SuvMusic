@@ -895,13 +895,15 @@ fun CommunityPlaylistCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                     Text(
-                        text = "${item.playlist.songCount} songs",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = onSurfaceVariant.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                     if (item.playlist.songCount > 0) {
+                         Text(
+                            text = "${item.playlist.songCount} songs",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                     }
                 }
             }
             

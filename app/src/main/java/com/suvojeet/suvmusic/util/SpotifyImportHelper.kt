@@ -38,7 +38,8 @@ class SpotifyImportHelper @Inject constructor(
         onTrackFetch: (Int) -> Unit = {}
     ): Pair<String, List<SpotifyTrack>> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<SpotifyTrack>()
-        var playlistName = "Spotify Import ${System.currentTimeMillis() / 1000}"
+        // Human-readable fallback; the real playlist name replaces this whenever any fetch succeeds
+        var playlistName = "Spotify import · " + java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date())
 
         try {
             val finalUrl = if (url.contains("spotify.link") || (url.contains("open.spotify.com") && !url.contains("/playlist/") && !url.contains("/album/") && !url.contains("/artist/"))) {

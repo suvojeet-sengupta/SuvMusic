@@ -346,7 +346,7 @@ fun LibraryScreen(
             isVisible = showPlaylistMenu,
             onDismiss = { showPlaylistMenu = false },
             title = playlist.name,
-            subtitle = "${playlist.songCount} songs",
+            subtitle = if (playlist.songCount > 0) "${playlist.songCount} songs" else "Playlist",
             thumbnailUrl = playlist.thumbnailUrl,
             onShuffle = { viewModel.shufflePlay(playlist.id) },
             onStartRadio = { viewModel.shufflePlay(playlist.id) }, // You might want a real radio here
@@ -941,7 +941,11 @@ fun PlaylistsList(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(playlist.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Playlist • ${playlist.songCount} songs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = if (playlist.songCount > 0) "Playlist • ${playlist.songCount} songs" else "Playlist",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 IconButton(onClick = { onMoreClick(playlist) }) {
                     Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

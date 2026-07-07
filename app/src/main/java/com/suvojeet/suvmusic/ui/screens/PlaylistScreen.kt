@@ -70,6 +70,7 @@ fun PlaylistScreen(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlayAll: (List<Song>) -> Unit = {},
     onShufflePlay: (List<Song>) -> Unit = {},
+    onAddSongsClick: () -> Unit = {},
     currentSong: Song? = null,
     viewModel: PlaylistViewModel = koinViewModel(),
     playlistMgmtViewModel: com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel = koinViewModel()
@@ -332,7 +333,7 @@ fun PlaylistScreen(
                             )
                             
                             Button(
-                                onClick = { /* Open search or add songs */ },
+                                onClick = onAddSongsClick,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 ),

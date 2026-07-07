@@ -632,10 +632,25 @@ fun DownloadsScreen(
                             .padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Icon(
+                            imageVector = Icons.Filled.DownloadDone,
+                            contentDescription = null,
+                            tint = dominantColors.onBackground.copy(alpha = 0.4f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No downloaded songs yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = dominantColors.onBackground.copy(alpha = 0.7f)
+                            color = dominantColors.onBackground.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Downloaded songs play without internet.\nOpen any song's menu and tap Download to save it here.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = dominantColors.onBackground.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }

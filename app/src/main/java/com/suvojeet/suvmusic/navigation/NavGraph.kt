@@ -614,6 +614,7 @@ fun NavGraph(
                          onPlaySong(shuffled, 0)
                      }
                 },
+                onAddSongsClick = { navController.navigate(Destination.Search) },
                 currentSong = playbackInfo.currentSong
             )
         }
