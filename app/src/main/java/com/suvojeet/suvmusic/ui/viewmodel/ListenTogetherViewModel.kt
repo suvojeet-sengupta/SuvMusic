@@ -77,6 +77,9 @@ class ListenTogetherViewModel @Inject constructor(
     private val _muteHost = kotlinx.coroutines.flow.MutableStateFlow(false)
     val muteHost: StateFlow<Boolean> = _muteHost
 
+    /** Exact-sync toggle (default on). Off = faster song switches, looser sync. */
+    val exactSyncEnabled: StateFlow<Boolean> = manager.exactSyncEnabled
+
     init {
         manager.initialize()
         viewModelScope.launch {
@@ -151,6 +154,10 @@ class ListenTogetherViewModel @Inject constructor(
         viewModelScope.launch {
             manager.setMuteHost(enabled)
         }
+    }
+
+    fun updateExactSync(enabled: Boolean) {
+        manager.setExactSync(enabled)
     }
 
     val uiState: StateFlow<ListenTogetherUiState> = combine(

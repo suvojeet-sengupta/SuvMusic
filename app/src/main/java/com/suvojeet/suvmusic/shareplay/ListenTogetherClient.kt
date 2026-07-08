@@ -61,6 +61,10 @@ val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedU
 // Jam permissions the user prefers when hosting; re-applied to every room they create.
 val ListenTogetherGuestsCanQueueKey = booleanPreferencesKey("listenTogetherGuestsCanQueue")
 val ListenTogetherGuestsCanControlKey = booleanPreferencesKey("listenTogetherGuestsCanControl")
+// When false, skip the strict buffer-coordination handshake on track change:
+// each device plays as soon as its own stream is ready instead of waiting for
+// every member to report ready. Trades perfect sync for faster song switches.
+val ListenTogetherExactSyncKey = booleanPreferencesKey("listenTogetherExactSync")
 
 
 /**
@@ -164,6 +168,8 @@ class ListenTogetherClient @Inject constructor(
             val isHost = prefs[ListenTogetherIsHostKey] ?: false
             val timestamp = prefs[ListenTogetherSessionTimestampKey] ?: 0L
             val blocked = prefs[ListenTogetherBlockedUsersKey] ?: ""
+
+            _exactSyncEnabled.value = prefs[ListenTogetherExactSyncKey] ?: true
 
             if (blocked.isNotEmpty()) {
                 _blockedUsers.value = blocked.split(",").toSet()
@@ -295,6 +301,24 @@ class ListenTogetherClient @Inject constructor(
 
     private val _blockedUsers = MutableStateFlow<Set<String>>(emptySet())
     val blockedUsers: StateFlow<Set<String>> = _blockedUsers.asStateFlow()
+
+    // Exact-sync toggle. Default ON (strict buffer coordination). Kept as a hot
+    // StateFlow so the manager can read it synchronously on the playback-sync path.
+    private val _exactSyncEnabled = MutableStateFlow(true)
+    val exactSyncEnabled: StateFlow<Boolean> = _exactSyncEnabled.asStateFlow()
+
+    fun setExactSync(enabled: Boolean) {
+        _exactSyncEnabled.value = enabled
+        scope.launch {
+            try {
+                context.dataStore.edit { preferences ->
+                    preferences[ListenTogetherExactSyncKey] = enabled
+                }
+            } catch (e: Exception) {
+                log(LogLevel.ERROR, "Failed to save exact-sync preference", e.message)
+            }
+        }
+    }
 
     // Second init: runs AFTER all MutableStateFlow fields above are initialized,
     // so the IO coroutine cannot race ahead and hit a null _userId/_blockedUsers.

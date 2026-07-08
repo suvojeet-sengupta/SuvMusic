@@ -80,6 +80,20 @@ class ListenTogetherManager @Inject constructor(
     private var bufferingTrackId: String? = null
     @Volatile
     private var pendingBufferReadyTrackId: String? = null
+
+    // Track a syncToTrack load that is genuinely in flight (stream resolving /
+    // MediaItem loading). This is DISTINCT from bufferingTrackId, which BufferWait
+    // also sets before any load starts. The track-mismatch guard must key off THIS
+    // field — keying off bufferingTrackId made a BufferWait (which arrives before
+    // change_track) permanently block the change_track from ever loading the new
+    // track, stranding the guest on the previous song until the server's 12s
+    // buffer timeout.
+    @Volatile
+    private var loadingTrackId: String? = null
+
+    // Synchronous mirror of client.exactSyncEnabled for the hot playback-sync path.
+    @Volatile
+    private var exactSyncOn: Boolean = true
     
     // Track active sync job to cancel it if a better update arrives
     @Volatile
@@ -128,6 +142,11 @@ class ListenTogetherManager @Inject constructor(
     val canControlPlayback: Boolean get() = client.canControlPlayback
     /** Host-only: change the room's Jam permissions. */
     fun setRoomSettings(settings: RoomSettings) = client.setRoomSettings(settings)
+
+    /** Whether strict buffer coordination is used on track change. */
+    val exactSyncEnabled: kotlinx.coroutines.flow.StateFlow<Boolean> get() = client.exactSyncEnabled
+    /** Toggle exact sync. Off = faster song switches, looser cross-device sync. */
+    fun setExactSync(enabled: Boolean) = client.setExactSync(enabled)
 
     /**
      * Whether this device should broadcast its local player actions to the room:
@@ -299,6 +318,11 @@ class ListenTogetherManager @Inject constructor(
             }
         }
         
+        // Keep the synchronous exact-sync mirror current.
+        scope.launch {
+            client.exactSyncEnabled.collect { exactSyncOn = it }
+        }
+
         // Monitor Incognito Mode
         scope.launch {
             sessionManager.incognitoModeEnabledFlow.collect { incognitoEnabled ->
@@ -373,7 +397,19 @@ class ListenTogetherManager @Inject constructor(
                     }
                 }
             }
-            is ListenTogetherEvent.BufferWait -> {
+            is ListenTogetherEvent.BufferWait -> if (!exactSyncOn) {
+                // Fast mode: never freeze the room waiting for every member to buffer.
+                // The host keeps playing; a guest just pauses briefly to cut the old
+                // track and the following change_track load (bypassBuffer) resumes the
+                // new one the instant this device's own stream is ready. The server's
+                // buffer coordination still runs but times out harmlessly, unwaited-on.
+                if (!isHost) {
+                    isSyncing = true
+                    stopDriftCorrection()
+                    player?.pause()
+                    endSyncAfter(300)
+                }
+            } else {
                 isSyncing = true
                 player?.pause()
                 if (!isHost) {
@@ -513,6 +549,7 @@ class ListenTogetherManager @Inject constructor(
         lastSyncedIsPlaying = null
         lastSyncedTrackId = null
         bufferingTrackId = null
+        loadingTrackId = null
         pendingBufferReadyTrackId = null
         isSyncing = false
         bufferCompleteReceivedForTrack = null
@@ -643,11 +680,14 @@ class ListenTogetherManager @Inject constructor(
 
         // If we have a target track but guest has nothing loaded, or it's a different track
         if (!isQueueOp && targetTrackId != null && targetTrackId != currentTrackId) {
-            // If this track is already being buffered (e.g., from JoinApproved flow that started
-            // syncToTrack but hasn't finished loading the stream yet), DON'T start a new syncToTrack.
-            // That would cancel the in-progress one and skip buffer_ready, leaving the server stuck.
-            if (bufferingTrackId == targetTrackId) {
-                Log.d(TAG, "Track $targetTrackId already being buffered, skipping mismatch handling for ${action.action}")
+            // Only bail if a syncToTrack load for this exact track is genuinely in
+            // flight — otherwise we'd cancel the in-progress load and skip buffer_ready.
+            // We key off loadingTrackId, NOT bufferingTrackId: BufferWait sets
+            // bufferingTrackId before any load starts, and keying off it here made the
+            // guest permanently skip loading the new track (stuck on the old song until
+            // the server's 12s buffer timeout).
+            if (loadingTrackId == targetTrackId) {
+                Log.d(TAG, "Track $targetTrackId already loading, skipping mismatch handling for ${action.action}")
                 // For FORCE_SYNC, just update the position we'll seek to when ready
                 if (action.action == PlaybackActions.FORCE_SYNC) {
                     val pos = action.position ?: 0L
@@ -661,8 +701,23 @@ class ListenTogetherManager @Inject constructor(
                 return
             }
             Log.d(TAG, "Guest track mismatch: current=$currentTrackId, target=$targetTrackId. Switching...")
+            // A CHANGE_TRACK under exact sync must go through buffer coordination
+            // (bypassBuffer=false) so we send buffer_ready the instant our stream is
+            // ready and the room resumes together — instead of the host waiting out the
+            // full 12s timeout. In fast mode (exact sync off), or for a PLAY/SEEK
+            // catch-up, load and play immediately.
+            val isChange = action.action == PlaybackActions.CHANGE_TRACK
+            val bypass = !(isChange && exactSyncOn)
+            // Whether to start playing once loaded. In exact mode a change loads
+            // paused and the host's post-BufferComplete PLAY resumes everyone. In
+            // fast mode there is no BufferComplete step and the host's initial PLAY
+            // may arrive while we're still resolving the stream (then dropped by the
+            // guard above), so a change must play on load or the guest would stall
+            // paused until the next heartbeat. A genuine paused-change is corrected
+            // by the host's following PAUSE.
+            val shouldPlay = action.action == PlaybackActions.PLAY || (isChange && !exactSyncOn)
             action.trackInfo?.let { track ->
-                syncToTrack(track, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
+                syncToTrack(track, shouldPlay, action.position ?: 0L, bypassBuffer = bypass)
             } ?: run {
                 // If trackInfo missing but we have ID, try to resolve it
                 Log.d(TAG, "Track info missing, resolving from ID: $targetTrackId")
@@ -672,7 +727,7 @@ class ListenTogetherManager @Inject constructor(
                     artist = "Please wait...",
                     duration = 0L
                 )
-                syncToTrack(placeholderTrack, action.action == PlaybackActions.PLAY, action.position ?: 0L, bypassBuffer = true)
+                syncToTrack(placeholderTrack, shouldPlay, action.position ?: 0L, bypassBuffer = bypass)
             }
             return
         }
@@ -1064,9 +1119,10 @@ class ListenTogetherManager @Inject constructor(
         queue: List<TrackInfo>? = null
     ) {
         bufferingTrackId = track.id
+        loadingTrackId = track.id
         pendingBufferReadyTrackId = null
         activeSyncJob?.cancel()
-        
+
         activeSyncJob = scope.launch(Dispatchers.IO) {
             try {
                 // Resolve from the SAME backend + quality the host used (see
@@ -1085,6 +1141,7 @@ class ListenTogetherManager @Inject constructor(
                             "Couldn't load \"$title\" to sync with the room"
                         )
                         if (bufferingTrackId == track.id) bufferingTrackId = null
+                        if (loadingTrackId == track.id) loadingTrackId = null
                         pendingBufferReadyTrackId = null
                         isSyncing = false
                     }
@@ -1093,9 +1150,13 @@ class ListenTogetherManager @Inject constructor(
 
                 // 3. Create MediaItem using the available track info metadata (no need for slow details endpoint)
                 val currentMediaItem = createMediaItem(track, streamUrl)
-                
+
                 launch(Dispatchers.Main) {
                     val p = player ?: return@launch
+                    // The stream is resolved and the MediaItem is built — the load is no
+                    // longer "in flight", so release the mismatch guard. (bufferingTrackId
+                    // stays set until buffer coordination completes.)
+                    if (loadingTrackId == track.id) loadingTrackId = null
                     isSyncing = true
 
                     // A guest's player only ever needs the single track the host is

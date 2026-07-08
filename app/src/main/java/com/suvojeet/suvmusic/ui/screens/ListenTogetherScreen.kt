@@ -74,6 +74,7 @@ fun ListenTogetherScreen(
     val autoApproval by viewModel.autoApproval.collectAsState()
     val syncVolume by viewModel.syncVolume.collectAsState()
     val muteHost by viewModel.muteHost.collectAsState()
+    val exactSync by viewModel.exactSyncEnabled.collectAsState()
 
     var username by remember { mutableStateOf("") }
 
@@ -160,6 +161,8 @@ fun ListenTogetherScreen(
                                 onSyncVolumeChange = { viewModel.updateSyncVolume(it) },
                                 muteHost = muteHost,
                                 onMuteHostChange = { viewModel.updateMuteHost(it) },
+                                exactSync = exactSync,
+                                onExactSyncChange = { viewModel.updateExactSync(it) },
                                 isLogActive = isLogActive,
                                 onLogActiveChange = { viewModel.setLogActive(it) },
                                 logs = logs,
@@ -529,6 +532,8 @@ fun SetupContent(
     onSyncVolumeChange: (Boolean) -> Unit,
     muteHost: Boolean,
     onMuteHostChange: (Boolean) -> Unit,
+    exactSync: Boolean,
+    onExactSyncChange: (Boolean) -> Unit,
     isLogActive: Boolean,
     onLogActiveChange: (Boolean) -> Unit,
     logs: List<LogEntry>,
@@ -740,6 +745,8 @@ fun SetupContent(
             onSyncVolumeChange = onSyncVolumeChange,
             muteHost = muteHost,
             onMuteHostChange = onMuteHostChange,
+            exactSync = exactSync,
+            onExactSyncChange = onExactSyncChange,
             onDisconnect = onDisconnect,
             isLogActive = isLogActive,
             onLogActiveChange = onLogActiveChange,
@@ -768,6 +775,8 @@ fun SettingsSection(
     onSyncVolumeChange: (Boolean) -> Unit,
     muteHost: Boolean,
     onMuteHostChange: (Boolean) -> Unit,
+    exactSync: Boolean,
+    onExactSyncChange: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
     isLogActive: Boolean,
     onLogActiveChange: (Boolean) -> Unit,
@@ -821,6 +830,14 @@ fun SettingsSection(
                         subtitle = "Useful for local syncing",
                         checked = muteHost,
                         onCheckedChange = onMuteHostChange,
+                        dominantColors = dominantColors
+                    )
+                    M3HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    SettingsToggleItem(
+                        title = "Exact sync",
+                        subtitle = "Off = faster song changes, slightly looser sync",
+                        checked = exactSync,
+                        onCheckedChange = onExactSyncChange,
                         dominantColors = dominantColors
                     )
 
