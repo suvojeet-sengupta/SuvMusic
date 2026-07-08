@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.composeapp.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -505,13 +506,18 @@ private fun FeedbackDialog(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         for (i in 1..5) {
+                            val interactionSource = remember { MutableInteractionSource() }
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "$i Stars",
                                 tint = if (i <= rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .clickable(enabled = !isSubmitting) { rating = i }
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        enabled = !isSubmitting
+                                    ) { rating = i }
                                     .padding(4.dp)
                             )
                         }
@@ -565,11 +571,11 @@ private fun FeedbackDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Optional User Info (Name & Email)
+                    // Required User Info (Name & Email)
                     OutlinedTextField(
                         value = userName,
                         onValueChange = { userName = it },
-                        label = { Text("Name (Optional)") },
+                        label = { Text("Name (Required)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !isSubmitting
@@ -580,8 +586,8 @@ private fun FeedbackDialog(
                     OutlinedTextField(
                         value = userEmail,
                         onValueChange = { userEmail = it },
-                        label = { Text("Email (Optional)") },
-                        placeholder = { Text("If you want us to reply...") },
+                        label = { Text("Email (Required)") },
+                        placeholder = { Text("Enter your email address...") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !isSubmitting
@@ -642,14 +648,27 @@ private fun FeedbackDialog(
                             errorMessage = "Please enter a message"
                             return@Button
                         }
+                        if (userName.isBlank()) {
+                            errorMessage = "Please enter your name"
+                            return@Button
+                        }
+                        if (userEmail.isBlank()) {
+                            errorMessage = "Please enter your email address"
+                            return@Button
+                        }
+                        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$"
+                        if (!userEmail.matches(emailRegex.toRegex())) {
+                            errorMessage = "Please enter a valid email address"
+                            return@Button
+                        }
                         isSubmitting = true
                         errorMessage = null
                         onSubmit(
                             rating,
                             category,
                             message,
-                            userName.ifBlank { null },
-                            userEmail.ifBlank { null },
+                            userName,
+                            userEmail,
                             /* onSuccess = */ {
                                 isSubmitting = false
                                 successMessage = "Your feedback has been submitted successfully!"
@@ -660,7 +679,7 @@ private fun FeedbackDialog(
                             }
                         )
                     },
-                    enabled = !isSubmitting && message.isNotBlank()
+                    enabled = !isSubmitting && message.isNotBlank() && userName.isNotBlank() && userEmail.isNotBlank()
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(
