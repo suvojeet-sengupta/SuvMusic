@@ -496,7 +496,16 @@ class ListenTogetherManager @Inject constructor(
                     )
                 }
             }
-            is ListenTogetherEvent.Kicked -> cleanup()
+            is ListenTogetherEvent.Kicked -> {
+                // Covers being kicked by the host, the host ending the session
+                // (room disbanded), and being dropped for a dead/stuck app — the
+                // server sends the reason, so surface it instead of silently exiting.
+                cleanup()
+                val reason = event.reason.takeIf { it.isNotBlank() } ?: "You left the session"
+                scope.launch(Dispatchers.Main) {
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(reason)
+                }
+            }
             is ListenTogetherEvent.Disconnected -> { /* handled by client mostly */ }
             is ListenTogetherEvent.Reconnected -> {
                 player?.let { p ->
@@ -1340,6 +1349,9 @@ class ListenTogetherManager @Inject constructor(
     
     fun requestSync() = client.requestSync()
     fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
+
+    /** This device's display name in the room (null before joining). */
+    val currentUsername: String? get() = client.currentUsername
 
     /**
      * Route an "add to queue" (or "play next") while in a Listen Together room —

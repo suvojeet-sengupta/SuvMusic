@@ -35,7 +35,8 @@ fun validateListenTogetherUsername(name: String): String? {
 }
 
 class ListenTogetherViewModel @Inject constructor(
-    private val manager: ListenTogetherManager
+    private val manager: ListenTogetherManager,
+    private val youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = manager.connectionState
@@ -271,6 +272,70 @@ class ListenTogetherViewModel @Inject constructor(
     fun requestSync() {
         manager.requestSync()
     }
+
+    // ─── Song suggestions ────────────────────────────────────────────────────
+    // A guest searches here and taps a song; it's sent to the host who can play
+    // it whenever they approve. The host sees pending suggestions via
+    // `pendingSuggestions`.
+
+    private val _suggestQuery = kotlinx.coroutines.flow.MutableStateFlow("")
+    val suggestQuery: StateFlow<String> = _suggestQuery
+
+    private val _suggestResults = kotlinx.coroutines.flow.MutableStateFlow<List<com.suvojeet.suvmusic.core.model.Song>>(emptyList())
+    val suggestResults: StateFlow<List<com.suvojeet.suvmusic.core.model.Song>> = _suggestResults
+
+    private val _isSearchingSuggest = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isSearchingSuggest: StateFlow<Boolean> = _isSearchingSuggest
+
+    private var suggestSearchJob: kotlinx.coroutines.Job? = null
+
+    fun onSuggestQueryChange(query: String) {
+        _suggestQuery.value = query
+        suggestSearchJob?.cancel()
+        if (query.isBlank()) {
+            _suggestResults.value = emptyList()
+            _isSearchingSuggest.value = false
+            return
+        }
+        suggestSearchJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(350)  // debounce keystrokes
+            _isSearchingSuggest.value = true
+            try {
+                _suggestResults.value = youTubeRepository.search(query.trim())
+            } catch (e: Exception) {
+                _suggestResults.value = emptyList()
+            } finally {
+                _isSearchingSuggest.value = false
+            }
+        }
+    }
+
+    fun clearSuggestSearch() {
+        suggestSearchJob?.cancel()
+        _suggestQuery.value = ""
+        _suggestResults.value = emptyList()
+        _isSearchingSuggest.value = false
+    }
+
+    /** Guest taps a search result — send it to the host as a suggestion. */
+    fun suggestSong(song: com.suvojeet.suvmusic.core.model.Song) {
+        val addedBy = manager.currentUsername
+        manager.suggestTrack(
+            TrackInfo(
+                id = song.id,
+                title = song.title,
+                artist = song.artist,
+                album = song.album.takeIf { it.isNotBlank() },
+                duration = song.duration,
+                thumbnail = song.thumbnailUrl,
+                suggestedBy = addedBy
+            )
+        )
+        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Suggested \"${song.title}\" — the host can play it once approved")
+    }
+
+    fun approveSuggestion(id: String) = manager.approveSuggestion(id)
+    fun rejectSuggestion(id: String) = manager.rejectSuggestion(id)
 }
 
 data class ListenTogetherUiState(

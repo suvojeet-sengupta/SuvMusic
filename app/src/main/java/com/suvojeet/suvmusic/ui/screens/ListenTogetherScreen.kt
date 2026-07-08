@@ -921,10 +921,22 @@ fun RoomContent(
     val context = LocalContext.current
     val pendingRequests by viewModel.pendingJoinRequests.collectAsState()
     val roomSettings by viewModel.roomSettings.collectAsState()
-    
+    val pendingSuggestions by viewModel.pendingSuggestions.collectAsState()
+    var showSuggestSheet by remember { mutableStateOf(false) }
+
+    // The mini player (64dp) floats over this screen with no bottom nav bar, so the
+    // list must reserve room below the system nav inset for it — otherwise the
+    // "Leave Session" button at the very bottom sits under the mini player.
+    val systemBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            top = 8.dp,
+            bottom = systemBottomInset + 88.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Pending Requests Banner
@@ -1318,6 +1330,74 @@ fun RoomContent(
             }
         }
 
+        // Guest: suggest a song. Guests without direct queue rights can still
+        // propose songs; the host decides whether to play them.
+        if (uiState.role != RoomRole.HOST) {
+            item {
+                Surface(
+                    onClick = { showSuggestSheet = true },
+                    shape = SquircleShape,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Suggest a song",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "Search and send a song for the host to play",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.Default.Search,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Host: pending song suggestions to approve (approving plays/queues them).
+        if (uiState.role == RoomRole.HOST && pendingSuggestions.isNotEmpty()) {
+            item {
+                Text(
+                    "Song Suggestions (${pendingSuggestions.size})",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            items(pendingSuggestions) { suggestion ->
+                SuggestionCard(
+                    suggestion = suggestion,
+                    onApprove = { viewModel.approveSuggestion(suggestion.suggestionId) },
+                    onReject = { viewModel.rejectSuggestion(suggestion.suggestionId) }
+                )
+            }
+        }
+
         // Listeners List
         item {
             Text(
@@ -1403,7 +1483,225 @@ fun RoomContent(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+
+    if (showSuggestSheet) {
+        SuggestSongSheet(
+            viewModel = viewModel,
+            onDismiss = {
+                showSuggestSheet = false
+                viewModel.clearSuggestSearch()
+            }
+        )
+    }
+}
+
+/** Host-facing card for a pending song suggestion, with approve / reject actions. */
+@Composable
+fun SuggestionCard(
+    suggestion: SuggestionReceivedPayload,
+    onApprove: () -> Unit,
+    onReject: () -> Unit
+) {
+    val track = suggestion.trackInfo
+    Surface(
+        shape = SquircleShape,
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (track.thumbnail != null) {
+                coil3.compose.AsyncImage(
+                    model = track.thumbnail,
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp).clip(SquircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Surface(modifier = Modifier.size(44.dp), shape = SquircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(20.dp)) }
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    track.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    track.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Suggested by ${suggestion.fromUsername}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    maxLines = 1
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            FilledTonalIconButton(
+                onClick = onReject,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(Icons.Default.Close, "Reject", modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            FilledIconButton(
+                onClick = onApprove,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = Color(0xFF4CAF50)
+                )
+            ) {
+                Icon(Icons.Default.Check, "Approve & play", modifier = Modifier.size(20.dp), tint = Color.White)
+            }
+        }
+    }
+}
+
+/** Bottom sheet where a guest searches for and suggests a song to the host. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SuggestSongSheet(
+    viewModel: ListenTogetherViewModel,
+    onDismiss: () -> Unit
+) {
+    val query by viewModel.suggestQuery.collectAsState()
+    val results by viewModel.suggestResults.collectAsState()
+    val isSearching by viewModel.isSearchingSuggest.collectAsState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Text("Suggest a song", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "The host can play your pick anytime once they approve it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { viewModel.onSuggestQueryChange(it) },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search songs…") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.clearSuggestSearch() }) {
+                            Icon(Icons.Default.Close, "Clear")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = SquircleShape
+            )
+            Spacer(Modifier.height(12.dp))
+            when {
+                isSearching -> Box(
+                    Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) { LoadingIndicator() }
+                query.isNotBlank() && results.isEmpty() -> Box(
+                    Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No songs found",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(results) { song ->
+                        SuggestSongRow(
+                            song = song,
+                            onClick = {
+                                viewModel.suggestSong(song)
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A single search result row in the suggest-song sheet. */
+@Composable
+fun SuggestSongRow(song: com.suvojeet.suvmusic.core.model.Song, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = SquircleShape,
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (song.thumbnailUrl != null) {
+                coil3.compose.AsyncImage(
+                    model = song.thumbnailUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp).clip(SquircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Surface(modifier = Modifier.size(44.dp), shape = SquircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(20.dp)) }
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    song.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                Icons.Default.Add,
+                "Suggest",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
