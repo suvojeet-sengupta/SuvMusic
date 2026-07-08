@@ -342,6 +342,16 @@ class MessageCodec(
                     changedBy = pb.changedBy.takeIf { it.isNotEmpty() }
                 )
             }
+            MessageTypes.PONG -> {
+                // Old servers send an empty PONG; parseFrom on empty bytes yields
+                // all-zero defaults, so this is safe either way.
+                val pb = SharePlay.PongPayload.parseFrom(payloadBytes)
+                PongPayload(
+                    activeRooms = pb.activeRooms,
+                    activeConnections = pb.activeConnections,
+                    uptimeSeconds = pb.uptimeSeconds
+                )
+            }
             else -> null
         }
     }

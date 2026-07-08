@@ -62,8 +62,33 @@ class ListenTogetherViewModel @Inject constructor(
         .map { ListenTogetherServers.findByUrl(it) ?: ListenTogetherServers.servers.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    // HTTP /health poll result — used before we're connected (or as a fallback).
     private val _serverHealth = kotlinx.coroutines.flow.MutableStateFlow<ListenTogetherClient.ServerHealth?>(null)
-    val serverHealth: StateFlow<ListenTogetherClient.ServerHealth?> = _serverHealth
+
+    /** Live server stats over the WebSocket (PONG). Null until the first pong. */
+    val serverStats: StateFlow<ListenTogetherClient.ServerStats?> = manager.serverStats
+
+    /**
+     * The status shown in the UI. While connected we prefer the live WebSocket
+     * stats (always fresh, and from the exact server process the user is on) so the
+     * figures can't go stale like the one-shot HTTP poll did; otherwise we fall back
+     * to the /health poll.
+     */
+    val serverHealth: StateFlow<ListenTogetherClient.ServerHealth?> = combine(
+        _serverHealth, manager.serverStats, connectionState
+    ) { http, live, conn ->
+        if (conn == ConnectionState.CONNECTED && live != null) {
+            ListenTogetherClient.ServerHealth(
+                online = true,
+                activeRooms = live.activeRooms,
+                activeSessions = live.activeConnections,
+                uptimeSeconds = live.uptimeSeconds,
+                version = http?.version ?: ""
+            )
+        } else {
+            http
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _isCheckingHealth = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isCheckingHealth: StateFlow<Boolean> = _isCheckingHealth

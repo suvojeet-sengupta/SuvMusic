@@ -242,6 +242,15 @@ message RoomSettingsChangedPayload {
   string changed_by = 2;
 }
 
+// Live server stats piggybacked on the PONG keep-alive so the client can show
+// accurate, always-fresh figures over the WebSocket it is already on — instead
+// of a stale, separate HTTP /health poll.
+message PongPayload {
+  int32 active_rooms = 1;
+  int32 active_connections = 2;
+  int64 uptime_seconds = 3;
+}
+
 // Capability negotiation (first message from client)
 message ClientCapabilities {
   bool supports_protobuf = 1;

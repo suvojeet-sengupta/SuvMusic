@@ -474,8 +474,13 @@ fun ServerStatusCard(
                 )
                 if (online) {
                     Spacer(modifier = Modifier.weight(1f))
+                    val rooms = health?.activeRooms ?: 0
+                    val listeners = health?.activeSessions ?: 0
                     Text(
-                        text = "${health?.activeRooms ?: 0} active rooms",
+                        text = buildString {
+                            append("$rooms ${if (rooms == 1) "room" else "rooms"}")
+                            if (listeners > 0) append(" · $listeners online")
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium

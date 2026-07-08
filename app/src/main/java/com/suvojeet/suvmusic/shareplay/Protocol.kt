@@ -288,6 +288,14 @@ data class BufferCompletePayload(
     @SerialName("track_id") val trackId: String
 )
 
+/** Live server stats carried on the PONG keep-alive (WebSocket, always fresh). */
+@Serializable
+data class PongPayload(
+    @SerialName("active_rooms") val activeRooms: Int = 0,
+    @SerialName("active_connections") val activeConnections: Int = 0,
+    @SerialName("uptime_seconds") val uptimeSeconds: Long = 0L
+)
+
 @Serializable
 data class ErrorPayload(
     val code: String,

@@ -130,6 +130,8 @@ class ListenTogetherManager @Inject constructor(
     val events = client.events
     val pendingSuggestions = client.pendingSuggestions
     val blockedUsers = client.blockedUsers
+    /** Live server stats over the WebSocket (PONG keep-alive). */
+    val serverStats = client.serverStats
 
     val isInRoom: Boolean get() = client.isInRoom
     val isHost: Boolean get() = client.isHost

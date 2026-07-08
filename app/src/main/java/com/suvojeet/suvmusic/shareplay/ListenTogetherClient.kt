@@ -302,6 +302,11 @@ class ListenTogetherClient @Inject constructor(
     private val _blockedUsers = MutableStateFlow<Set<String>>(emptySet())
     val blockedUsers: StateFlow<Set<String>> = _blockedUsers.asStateFlow()
 
+    // Live server stats from the PONG keep-alive (WebSocket). Refreshed every ping
+    // (~25s) while connected, so the UI never shows a stale HTTP-poll figure.
+    private val _serverStats = MutableStateFlow<ServerStats?>(null)
+    val serverStats: StateFlow<ServerStats?> = _serverStats.asStateFlow()
+
     // Exact-sync toggle. Default ON (strict buffer coordination). Kept as a hot
     // StateFlow so the manager can read it synchronously on the playback-sync path.
     private val _exactSyncEnabled = MutableStateFlow(true)
@@ -395,6 +400,13 @@ class ListenTogetherClient @Inject constructor(
         val activeSessions: Int = 0,
         val uptimeSeconds: Long = 0L,
         val version: String = ""
+    )
+
+    /** Live stats delivered over the WebSocket via the PONG keep-alive. */
+    data class ServerStats(
+        val activeRooms: Int,
+        val activeConnections: Int,
+        val uptimeSeconds: Long
     )
 
     /**
@@ -622,6 +634,10 @@ class ListenTogetherClient @Inject constructor(
     private fun startPingJob() {
         pingJob?.cancel()
         pingJob = scope.launch {
+            // Ping once right away so the live server stats (carried on the PONG)
+            // populate within moments of connecting instead of after the first
+            // 25s interval.
+            sendMessageNoPayload(MessageTypes.PING)
             while (true) {
                 delay(PING_INTERVAL_MS)
                 sendMessageNoPayload(MessageTypes.PING)
@@ -762,7 +778,8 @@ class ListenTogetherClient @Inject constructor(
         _connectionState.value = ConnectionState.DISCONNECTED
         _pendingJoinRequests.value = emptyList()
         _bufferingUsers.value = emptyList()
-        
+        _serverStats.value = null  // drop stale stats until the next connection's pong
+
         if (sessionToken != null && _roomState.value != null) {
             log(LogLevel.INFO, "Connection lost, will attempt to reconnect")
             handleConnectionFailure(Exception("Connection lost"))
@@ -1116,6 +1133,18 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.PONG -> {
+                    // Newer servers piggyback live stats; older ones send an empty
+                    // PONG (all-zero defaults). Only publish when there's real data so
+                    // we don't blank out the display talking to an old server.
+                    (payloadObj as? PongPayload)?.let { pong ->
+                        if (pong.activeConnections > 0 || pong.activeRooms > 0 || pong.uptimeSeconds > 0) {
+                            _serverStats.value = ServerStats(
+                                activeRooms = pong.activeRooms,
+                                activeConnections = pong.activeConnections,
+                                uptimeSeconds = pong.uptimeSeconds
+                            )
+                        }
+                    }
                     log(LogLevel.DEBUG, "Pong received")
                 }
                 
