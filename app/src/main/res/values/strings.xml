@@ -45,6 +45,59 @@
 
     <string name="listen_together">Listen Together</string>
 
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_library">Your Library</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Common actions & labels (i18n foundation — adopt in screens incrementally) -->
+    <string name="action_pause">Pause</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_like">Like</string>
+    <string name="action_dislike">Dislike</string>
+    <string name="action_download">Download</string>
+    <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="action_add_to_queue">Add to queue</string>
+    <string name="action_play_next">Play next</string>
+    <string name="action_share">Share</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+    <string name="action_skip">Skip for now</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_add_songs">Add Songs</string>
+
+    <string name="label_playlist">Playlist</string>
+    <string name="label_playlists">Playlists</string>
+    <string name="label_songs">Songs</string>
+    <string name="label_albums">Albums</string>
+    <string name="label_artists">Artists</string>
+    <string name="label_lyrics">Lyrics</string>
+    <string name="label_related">Related</string>
+    <string name="label_sleep_timer">Sleep timer</string>
+    <string name="label_playback_speed">Playback speed</string>
+    <string name="label_your_queue">Your queue</string>
+    <string name="label_recently_searched">Recently Searched</string>
+    <string name="label_browse_by_mood">Browse by mood</string>
+    <string name="label_start_browsing">Start browsing</string>
+    <string name="label_liked_songs">Liked Songs</string>
+    <string name="label_downloaded">Downloaded</string>
+    <string name="label_device_files">Device files</string>
+
+    <string name="msg_offline_banner">You\'re offline — downloads and cached music still play</string>
+    <string name="msg_no_results">No results found for \"%1$s\"</string>
+    <string name="msg_no_songs_yet">No songs yet</string>
+    <string name="msg_add_songs_hint">Add songs to this playlist to start listening</string>
+    <string name="msg_no_downloads">No downloaded songs yet</string>
+    <string name="msg_downloads_hint">Downloaded songs play without internet.\nOpen any song\'s menu and tap Download to save it here.</string>
+    <string name="msg_search_settings">Search settings</string>
+    <string name="msg_search_playlists">Search your playlists</string>
+
+    <string name="count_songs">%1$d songs</string>
+
     <!-- Notification Actions -->
     <string name="notification_action_like">Like</string>
     <string name="notification_action_repeat">Repeat</string>

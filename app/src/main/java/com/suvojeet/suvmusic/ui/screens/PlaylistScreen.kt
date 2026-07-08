@@ -317,7 +317,7 @@ fun PlaylistScreen(
                             Spacer(modifier = Modifier.height(20.dp))
                             
                             Text(
-                                text = "No songs yet",
+                                text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.msg_no_songs_yet),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = contentColor,
@@ -325,7 +325,7 @@ fun PlaylistScreen(
                             )
                             
                             Text(
-                                text = "Add songs to this playlist to start listening",
+                                text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.msg_add_songs_hint),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = secondaryContentColor,
                                 textAlign = TextAlign.Center,
@@ -347,7 +347,7 @@ fun PlaylistScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Add Songs",
+                                    text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.action_add_songs),
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }

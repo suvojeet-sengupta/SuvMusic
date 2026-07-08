@@ -782,9 +782,12 @@ fun SuvMusicApp(
                 showWelcomeDialog = false
                 navController.navigate(Destination.YouTubeLogin)
             },
-            onContinueAsGuest = {
+            onContinueAsGuest = { languages ->
                 showWelcomeDialog = false
                 scope.launch {
+                    if (languages.isNotEmpty()) {
+                        sessionManager.setPreferredLanguages(languages)
+                    }
                     sessionManager.setOnboardingCompleted(true)
                 }
             }
@@ -1023,7 +1026,7 @@ fun SuvMusicApp(
                 )
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
                 androidx.compose.material3.Text(
-                    text = "You're offline — downloads and cached music still play",
+                    text = androidx.compose.ui.res.stringResource(R.string.msg_offline_banner),
                     style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface
                 )

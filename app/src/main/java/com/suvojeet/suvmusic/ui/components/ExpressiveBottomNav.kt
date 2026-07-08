@@ -80,10 +80,10 @@ fun ExpressiveBottomNav(
     iosNavBarBlur: Float = 60f
 ) {
     val navItems = listOf(
-        BottomNavItem(Destination.Home, "Home", Icons.Outlined.Home, Icons.Filled.Home),
-        BottomNavItem(Destination.Search, "Search", Icons.Outlined.Search, Icons.Filled.Search),
-        BottomNavItem(Destination.Library, "Your Library", Icons.Outlined.ViewWeek, Icons.Filled.ViewWeek),
-        BottomNavItem(Destination.Settings, "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+        BottomNavItem(Destination.Home, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_home), Icons.Outlined.Home, Icons.Filled.Home),
+        BottomNavItem(Destination.Search, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_search), Icons.Outlined.Search, Icons.Filled.Search),
+        BottomNavItem(Destination.Library, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_library), Icons.Outlined.ViewWeek, Icons.Filled.ViewWeek),
+        BottomNavItem(Destination.Settings, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_settings), Icons.Outlined.Settings, Icons.Filled.Settings)
     )
 
     if (iosLiquidGlassEnabled) {

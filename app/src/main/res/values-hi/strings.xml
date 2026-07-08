@@ -1,0 +1,105 @@
+<resources>
+    <!-- General Actions -->
+    <string name="action_play">चलाएँ</string>
+    <string name="action_shuffle">शफ़ल</string>
+    <string name="action_retry">फिर कोशिश करें</string>
+    <string name="action_see_all">सभी देखें</string>
+    <string name="action_show_less">कम दिखाएँ</string>
+    <string name="action_read_more">और पढ़ें</string>
+
+    <!-- Content Descriptions (Accessibility) -->
+    <string name="cd_subscribe">सब्सक्राइब करें</string>
+    <string name="cd_back">वापस</string>
+    <string name="cd_more_options">अधिक विकल्प</string>
+    <string name="cd_album_art">एल्बम आर्ट</string>
+
+    <!-- Artist Screen Headers & Badges -->
+    <string name="header_latest_release">नई रिलीज़</string>
+    <string name="badge_single">सिंगल</string>
+    <string name="badge_album">एल्बम</string>
+    <string name="header_top_songs">टॉप गाने</string>
+    <string name="header_albums">एल्बम</string>
+    <string name="header_singles_eps">सिंगल्स और EPs</string>
+    <string name="header_about_artist">%1$s के बारे में</string>
+    <string name="header_videos">वीडियो</string>
+    <string name="header_featured_on">इनमें शामिल</string>
+    <string name="header_fans_also_like">फ़ैन्स को ये भी पसंद है</string>
+    <string name="header_related_artists">मिलते-जुलते कलाकार</string>
+    <string name="action_follow">फ़ॉलो करें</string>
+    <string name="action_following">फ़ॉलो कर रहे हैं</string>
+    <string name="action_start_radio">रेडियो शुरू करें</string>
+    <string name="action_visit_artist">कलाकार देखें</string>
+
+    <!-- Error Messages -->
+    <string name="error_restricted_title">प्रतिबंधित सामग्री</string>
+    <string name="error_restricted_message">इस कलाकार के लिए YouTube Music लॉगिन ज़रूरी है। कृपया सेटिंग्स से साइन इन करें।</string>
+    <string name="error_connection_title">कनेक्शन त्रुटि</string>
+    <string name="error_connection_message">कलाकार का डेटा लोड नहीं हो सका। कृपया इंटरनेट कनेक्शन जाँचें और फिर कोशिश करें।</string>
+    <string name="error_generic_title">कुछ गड़बड़ हो गई</string>
+    <string name="error_generic_message">कलाकार पेज लोड करते समय कोई अज्ञात त्रुटि हुई।</string>
+    <string name="error_loading">लोड हो रहा है…</string>
+
+    <string name="listen_together">साथ में सुनें</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">होम</string>
+    <string name="nav_search">खोजें</string>
+    <string name="nav_library">आपकी लाइब्रेरी</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Common actions & labels -->
+    <string name="action_pause">रोकें</string>
+    <string name="action_next">अगला</string>
+    <string name="action_previous">पिछला</string>
+    <string name="action_like">पसंद</string>
+    <string name="action_dislike">नापसंद</string>
+    <string name="action_download">डाउनलोड</string>
+    <string name="action_add_to_playlist">प्लेलिस्ट में जोड़ें</string>
+    <string name="action_add_to_queue">कतार में जोड़ें</string>
+    <string name="action_play_next">इसके बाद चलाएँ</string>
+    <string name="action_share">शेयर करें</string>
+    <string name="action_remove">हटाएँ</string>
+    <string name="action_rename">नाम बदलें</string>
+    <string name="action_delete">डिलीट करें</string>
+    <string name="action_done">हो गया</string>
+    <string name="action_skip">अभी छोड़ें</string>
+    <string name="action_clear">साफ़ करें</string>
+    <string name="action_add_songs">गाने जोड़ें</string>
+
+    <string name="label_playlist">प्लेलिस्ट</string>
+    <string name="label_playlists">प्लेलिस्ट्स</string>
+    <string name="label_songs">गाने</string>
+    <string name="label_albums">एल्बम</string>
+    <string name="label_artists">कलाकार</string>
+    <string name="label_lyrics">बोल</string>
+    <string name="label_related">मिलते-जुलते</string>
+    <string name="label_sleep_timer">स्लीप टाइमर</string>
+    <string name="label_playback_speed">प्लेबैक स्पीड</string>
+    <string name="label_your_queue">आपकी कतार</string>
+    <string name="label_recently_searched">हाल की खोजें</string>
+    <string name="label_browse_by_mood">मूड के हिसाब से देखें</string>
+    <string name="label_start_browsing">ब्राउज़ करना शुरू करें</string>
+    <string name="label_liked_songs">पसंद किए गाने</string>
+    <string name="label_downloaded">डाउनलोड किए गए</string>
+    <string name="label_device_files">डिवाइस फ़ाइलें</string>
+
+    <string name="msg_offline_banner">आप ऑफ़लाइन हैं — डाउनलोड और कैश किया संगीत अब भी चलेगा</string>
+    <string name="msg_no_results">\"%1$s\" के लिए कोई परिणाम नहीं मिला</string>
+    <string name="msg_no_songs_yet">अभी कोई गाना नहीं</string>
+    <string name="msg_add_songs_hint">सुनना शुरू करने के लिए इस प्लेलिस्ट में गाने जोड़ें</string>
+    <string name="msg_no_downloads">अभी कोई डाउनलोड किया गाना नहीं</string>
+    <string name="msg_downloads_hint">डाउनलोड किए गाने बिना इंटरनेट के चलते हैं।\nकिसी भी गाने का मेन्यू खोलकर डाउनलोड दबाएँ।</string>
+    <string name="msg_search_settings">सेटिंग्स खोजें</string>
+    <string name="msg_search_playlists">अपनी प्लेलिस्ट खोजें</string>
+
+    <string name="count_songs">%1$d गाने</string>
+
+    <!-- Notification Actions -->
+    <string name="notification_action_like">पसंद</string>
+    <string name="notification_action_repeat">दोहराएँ</string>
+    <string name="notification_action_shuffle">शफ़ल</string>
+
+    <!-- ACRA Crash Reporting -->
+    <string name="acra_crash_title">SuvMusic क्रैश हो गया</string>
+    <string name="acra_crash_text">SuvMusic क्रैश हो गया। क्रैश लॉग Telegram से शेयर करने या सेव करने के लिए टैप करें।</string>
+</resources>

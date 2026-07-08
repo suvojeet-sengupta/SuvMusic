@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
@@ -125,6 +126,27 @@ fun SettingsScreen(
     var showAccountsSheet by remember { mutableStateOf(false) }
     var showUpdateChannelSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+
+    // Flat search index over every reachable setting so "crossfade" or "seekbar"
+    // deep-links to its screen instead of a guessing game through sub-menus.
+    var settingsQuery by remember { mutableStateOf("") }
+    val settingsSearchIndex = remember {
+        listOf(
+            SettingsSearchEntry("Appearance", "Theme, dark mode, colors", "theme dark mode light colors dynamic material amoled gradient", Icons.Default.DarkMode, onAppearanceClick),
+            SettingsSearchEntry("Playback", "Audio quality, gapless, equalizer", "audio quality bitrate gapless equalizer eq crossfade normalization loudness spatial pitch speed preload", Icons.Default.GraphicEq, onPlaybackClick),
+            SettingsSearchEntry("Customization", "Player UI, artwork style", "player ui artwork shape size seekbar style mini player vinyl glass", Icons.Default.Tune, onCustomizationClick),
+            SettingsSearchEntry("AI Assistant", "OpenAI, Anthropic, Gemini", "ai assistant openai anthropic gemini equalizer smart", Icons.Default.Psychology, onAISettingsClick),
+            SettingsSearchEntry("SponsorBlock", "Skip non-music segments", "sponsorblock skip segments intro outro sponsor", Icons.Default.FastForward, onSponsorBlockClick),
+            SettingsSearchEntry("Last.fm", "Scrobbling", "lastfm last.fm scrobble scrobbling", Icons.Default.MusicNote, onLastFmClick),
+            SettingsSearchEntry("Advanced", "Diagnostics, experimental & extra options", "advanced misc diagnostics experimental logs developer", Icons.Default.Tune, onMiscClick),
+            SettingsSearchEntry("Storage Manager", "Manage downloads & cache", "storage downloads cache clear space data", Icons.Default.Storage, onStorageClick),
+            SettingsSearchEntry("Listening stats", "Your listening activity", "stats statistics listening history wrapped activity", Icons.Default.Info, onStatsClick),
+            SettingsSearchEntry("Support the project", "Donate to help development", "support donate sponsor project", Icons.Default.Favorite, onSupportClick),
+            SettingsSearchEntry("Credits", "Developers & Libraries", "credits developers libraries licenses", Icons.Default.Person, onCreditsClick),
+            SettingsSearchEntry("About SuvMusic", "Version & app info", "about version app info changelog", Icons.Default.Album, onAboutClick),
+            SettingsSearchEntry("Check for Updates", "App updates and changelogs", "update updates ota check changelog", Icons.Default.SystemUpdate, onUpdaterClick)
+        )
+    }
     
     // Floating Player
     val scope = rememberCoroutineScope()
@@ -159,6 +181,50 @@ fun SettingsScreen(
                         .padding(top = 24.dp, bottom = 16.dp)
                 )
             }
+
+            item {
+                OutlinedTextField(
+                    value = settingsQuery,
+                    onValueChange = { settingsQuery = it },
+                    placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.msg_search_settings)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 8.dp)
+                )
+            }
+
+            if (settingsQuery.isNotBlank()) {
+                val q = settingsQuery.trim().lowercase()
+                val matches = settingsSearchIndex.filter {
+                    it.title.lowercase().contains(q) || it.subtitle.lowercase().contains(q) || it.keywords.contains(q)
+                }
+                item {
+                    if (matches.isEmpty()) {
+                        Text(
+                            text = "No settings match \"$settingsQuery\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+                        )
+                    } else {
+                        SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            matches.forEachIndexed { index, entry ->
+                                if (index > 0) HorizontalDivider()
+                                SettingsNavigationItem(
+                                    icon = entry.icon,
+                                    title = entry.title,
+                                    subtitle = entry.subtitle,
+                                    onClick = entry.onClick
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
 
             // --- Account Section ---
             item {
@@ -544,6 +610,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
+            } // end of settingsQuery.isBlank() sections
         }
         }
     }
@@ -1032,3 +1099,14 @@ private fun SettingsSliderItem(
         )
     }
 }
+/**
+ * One row of the flat settings search index: a destination plus the keywords
+ * users actually type for the options living inside it.
+ */
+private data class SettingsSearchEntry(
+    val title: String,
+    val subtitle: String,
+    val keywords: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)

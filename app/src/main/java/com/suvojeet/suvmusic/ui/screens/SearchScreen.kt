@@ -263,7 +263,7 @@ fun SearchScreen(
                                 item {
                                     Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                                         Text(
-                                            text = "Browse by mood",
+                                            text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.label_browse_by_mood),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -609,7 +609,7 @@ fun SearchScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Button(onClick = { viewModel.search(saveToHistory = false) }) {
-                                    Text("Retry")
+                                    Text(androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.action_retry))
                                 }
                             }
                         } else {

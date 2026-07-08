@@ -670,7 +670,7 @@ private fun LazyItemScope.ModernQueueListItem(
         
         if (!isSelectionMode) {
             IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreVert, null, tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = secondaryContentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             }
         }
     }

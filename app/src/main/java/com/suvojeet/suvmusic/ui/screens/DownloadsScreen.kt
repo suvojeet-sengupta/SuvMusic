@@ -640,14 +640,14 @@ fun DownloadsScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No downloaded songs yet",
+                            text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.msg_no_downloads),
                             style = MaterialTheme.typography.titleMedium,
                             color = dominantColors.onBackground.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Downloaded songs play without internet.\nOpen any song's menu and tap Download to save it here.",
+                            text = androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.msg_downloads_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = dominantColors.onBackground.copy(alpha = 0.5f),
                             textAlign = TextAlign.Center

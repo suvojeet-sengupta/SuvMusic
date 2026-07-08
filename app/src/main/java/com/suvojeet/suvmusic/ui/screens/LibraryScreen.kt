@@ -670,7 +670,7 @@ fun LibraryControlBar(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = { Text("Search your playlists") },
+                placeholder = { Text(androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.msg_search_playlists)) },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
@@ -1010,7 +1010,7 @@ fun PlaylistsList(
                     )
                 }
                 IconButton(onClick = { onMoreClick(playlist) }) {
-                    Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
