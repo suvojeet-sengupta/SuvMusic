@@ -58,6 +58,9 @@ val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApp
 val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
 val ListenTogetherMuteHostKey = booleanPreferencesKey("listenTogetherMuteHost")
 val ListenTogetherBlockedUsersKey = stringPreferencesKey("listenTogetherBlockedUsers") // JSON list of userIds
+// Jam permissions the user prefers when hosting; re-applied to every room they create.
+val ListenTogetherGuestsCanQueueKey = booleanPreferencesKey("listenTogetherGuestsCanQueue")
+val ListenTogetherGuestsCanControlKey = booleanPreferencesKey("listenTogetherGuestsCanControl")
 
 
 /**
@@ -451,10 +454,29 @@ class ListenTogetherClient @Inject constructor(
         val prefs = context.dataStore.data.first()
         return prefs[ListenTogetherMuteHostKey] ?: false
     }
-    
+
     suspend fun setMuteHost(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ListenTogetherMuteHostKey] = enabled
+        }
+    }
+
+    /**
+     * The Jam permissions this user prefers when hosting. Guest queueing defaults to
+     * ON (Spotify-Jam-like: everyone can add songs), guest playback control to OFF.
+     */
+    suspend fun getPreferredRoomSettings(): RoomSettings {
+        val prefs = context.dataStore.data.first()
+        return RoomSettings(
+            guestsCanQueue = prefs[ListenTogetherGuestsCanQueueKey] ?: true,
+            guestsCanControl = prefs[ListenTogetherGuestsCanControlKey] ?: false
+        )
+    }
+
+    private suspend fun savePreferredRoomSettings(settings: RoomSettings) {
+        context.dataStore.edit { preferences ->
+            preferences[ListenTogetherGuestsCanQueueKey] = settings.guestsCanQueue
+            preferences[ListenTogetherGuestsCanControlKey] = settings.guestsCanControl
         }
     }
 
@@ -806,6 +828,12 @@ class ListenTogetherClient @Inject constructor(
                     savePersistedSession()
                     acquireWakeLock()
                     log(LogLevel.INFO, "Room created", "Code: ${payload.roomCode}")
+                    // Apply this host's preferred Jam permissions to the fresh room so
+                    // guests can (by default) add songs to the queue, like a Spotify Jam.
+                    scope.launch {
+                        val preferred = getPreferredRoomSettings()
+                        setRoomSettings(preferred)
+                    }
                     scope.launch { _events.emit(ListenTogetherEvent.RoomCreated(payload.roomCode, payload.userId)) }
                 }
                 
@@ -1017,9 +1045,21 @@ class ListenTogetherClient @Inject constructor(
                 MessageTypes.SUGGESTION_REJECTED -> {
                     val payload = payloadObj as SuggestionRejectedPayload
                     log(LogLevel.WARNING, "Suggestion rejected", payload.reason ?: "")
-                    
+
                     suggestionNotifications.remove(payload.suggestionId)?.let { notifId ->
                         NotificationManagerCompat.from(context).cancel(notifId)
+                    }
+                }
+
+                MessageTypes.ROOM_SETTINGS_CHANGED -> {
+                    val payload = payloadObj as RoomSettingsChangedPayload
+                    _roomState.value = _roomState.value?.copy(settings = payload.settings)
+                    log(
+                        LogLevel.INFO, "Room settings changed",
+                        "guestsCanQueue=${payload.settings.guestsCanQueue}, guestsCanControl=${payload.settings.guestsCanControl}"
+                    )
+                    scope.launch {
+                        _events.emit(ListenTogetherEvent.RoomSettingsChanged(payload.settings, payload.changedBy))
                     }
                 }
                 
@@ -1215,18 +1255,74 @@ class ListenTogetherClient @Inject constructor(
         }
     }
 
+    /** Current Jam permissions of the room (defaults when not in a room). */
+    val roomSettings: RoomSettings
+        get() = _roomState.value?.settings ?: RoomSettings()
+
+    /** True when this user may add tracks to the shared queue. */
+    val canQueue: Boolean
+        get() = _role.value == RoomRole.HOST || (_role.value == RoomRole.GUEST && roomSettings.guestsCanQueue)
+
+    /** True when this user may control playback (play/pause/seek/skip/change track). */
+    val canControlPlayback: Boolean
+        get() = _role.value == RoomRole.HOST || (_role.value == RoomRole.GUEST && roomSettings.guestsCanControl)
+
+    /**
+     * Host-only: change the room's Jam permissions. Optimistically applied locally;
+     * the server re-broadcasts room_settings_changed to everyone (including us).
+     * Also remembered as this user's preferred settings for future rooms.
+     */
+    fun setRoomSettings(settings: RoomSettings) {
+        if (_role.value != RoomRole.HOST) return
+        sendMessage(MessageTypes.SET_ROOM_SETTINGS, SetRoomSettingsPayload(settings))
+        _roomState.value = _roomState.value?.copy(settings = settings)
+        scope.launch { savePreferredRoomSettings(settings) }
+    }
+
+    /** Whether [action] is permitted for the current role under the room's Jam settings. */
+    private fun isActionPermitted(action: String): Boolean = when (_role.value) {
+        RoomRole.HOST -> true
+        RoomRole.GUEST -> when (action) {
+            PlaybackActions.FORCE_SYNC -> true
+            PlaybackActions.QUEUE_ADD, PlaybackActions.QUEUE_REMOVE -> roomSettings.guestsCanQueue
+            PlaybackActions.PLAY, PlaybackActions.PAUSE, PlaybackActions.SEEK,
+            PlaybackActions.SKIP_NEXT, PlaybackActions.SKIP_PREV,
+            PlaybackActions.CHANGE_TRACK -> roomSettings.guestsCanControl
+            else -> false
+        }
+        RoomRole.NONE -> false
+    }
+
     fun sendPlaybackAction(
-        action: String, 
-        trackId: String? = null, 
-        position: Long? = null, 
-        trackInfo: TrackInfo? = null, 
-        insertNext: Boolean? = null, 
+        action: String,
+        trackId: String? = null,
+        position: Long? = null,
+        trackInfo: TrackInfo? = null,
+        insertNext: Boolean? = null,
         queue: List<TrackInfo>? = null,
         queueTitle: String? = null,
         volume: Float? = null
     ) {
-        if (_role.value == RoomRole.HOST) {
-            sendMessage(MessageTypes.PLAYBACK_ACTION, PlaybackActionPayload(action, trackId, position, trackInfo, insertNext, queue, queueTitle, volume))
+        if (!isActionPermitted(action)) return
+        sendMessage(MessageTypes.PLAYBACK_ACTION, PlaybackActionPayload(action, trackId, position, trackInfo, insertNext, queue, queueTitle, volume))
+
+        // The server broadcasts sync_playback to everyone EXCEPT the sender, so
+        // mirror queue changes into our own room state for the UI.
+        val currentState = _roomState.value
+        if (currentState != null) {
+            when (action) {
+                PlaybackActions.QUEUE_ADD -> trackInfo?.let { ti ->
+                    _roomState.value = currentState.copy(
+                        queue = if (insertNext == true) listOf(ti) + currentState.queue else currentState.queue + ti
+                    )
+                }
+                PlaybackActions.QUEUE_REMOVE -> trackId?.let { id ->
+                    _roomState.value = currentState.copy(queue = currentState.queue.filter { it.id != id })
+                }
+                PlaybackActions.QUEUE_CLEAR -> {
+                    _roomState.value = currentState.copy(queue = emptyList())
+                }
+            }
         }
     }
 
@@ -1271,6 +1367,10 @@ class ListenTogetherClient @Inject constructor(
 
     val isHost: Boolean
         get() = _role.value == RoomRole.HOST
+
+    /** The display name this user entered when hosting/joining the current room. */
+    val currentUsername: String?
+        get() = storedUsername
     
     fun forceReconnect() {
         log(LogLevel.INFO, "Forcing reconnection to server")

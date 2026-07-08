@@ -185,19 +185,34 @@ fun PlayerScreen(
     val listenTogetherConnectionState by playerViewModel.listenTogetherManager.connectionState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.shareplay.ConnectionState.DISCONNECTED)
     val listenTogetherRoomState by playerViewModel.listenTogetherManager.roomState.collectAsStateWithLifecycle(initialValue = null)
     
-    val actions = remember(originalActions, isGuest) {
+    // Jam mode: when the host allows guest control, guests keep play/pause/seek on
+    // their local player (the manager broadcasts them to the room) and skips are
+    // sent to the host, whose player performs them for everyone.
+    val guestCanControl = isGuest && listenTogetherRoomState?.settings?.guestsCanControl == true
+    val actions = remember(originalActions, isGuest, guestCanControl) {
         if (isGuest) {
             val blockedMsg = { com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Host has controls in Listen Together!") }
-            originalActions.copy(
-                onPlayPause = blockedMsg,
-                onNext = blockedMsg,
-                onPrevious = blockedMsg,
-                onSeekTo = { _ -> blockedMsg() },
-                onPlayFromQueue = { blockedMsg() },
-                onShuffleToggle = blockedMsg,
-                onRepeatToggle = blockedMsg,
-                onToggleAutoplay = blockedMsg
-            )
+            if (guestCanControl) {
+                originalActions.copy(
+                    onNext = { playerViewModel.listenTogetherManager.sendGuestSkip(next = true) },
+                    onPrevious = { playerViewModel.listenTogetherManager.sendGuestSkip(next = false) },
+                    onPlayFromQueue = { blockedMsg() },
+                    onShuffleToggle = blockedMsg,
+                    onRepeatToggle = blockedMsg,
+                    onToggleAutoplay = blockedMsg
+                )
+            } else {
+                originalActions.copy(
+                    onPlayPause = blockedMsg,
+                    onNext = blockedMsg,
+                    onPrevious = blockedMsg,
+                    onSeekTo = { _ -> blockedMsg() },
+                    onPlayFromQueue = { blockedMsg() },
+                    onShuffleToggle = blockedMsg,
+                    onRepeatToggle = blockedMsg,
+                    onToggleAutoplay = blockedMsg
+                )
+            }
         } else originalActions
     }
     

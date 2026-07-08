@@ -574,18 +574,22 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun playNext(song: Song) {
-        musicPlayer.playNext(listOf(song))
+        playNext(listOf(song))
     }
 
     fun playNext(songs: List<Song>) {
+        // In a Listen Together room the shared queue takes the songs (Jam-style):
+        // guests send/suggest them to the room; the host also broadcasts them.
+        if (listenTogetherManager.addSongsToRoomQueue(songs, insertNext = true)) return
         musicPlayer.playNext(songs)
     }
-    
+
     fun addToQueue(song: Song) {
-        musicPlayer.addToQueue(listOf(song))
+        addToQueue(listOf(song))
     }
 
     fun addToQueue(songs: List<Song>) {
+        if (listenTogetherManager.addSongsToRoomQueue(songs)) return
         musicPlayer.addToQueue(songs)
     }
     

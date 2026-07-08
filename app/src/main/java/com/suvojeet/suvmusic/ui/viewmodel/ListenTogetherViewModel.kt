@@ -8,6 +8,7 @@ import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.shareplay.ListenTogetherServer
 import com.suvojeet.suvmusic.shareplay.ListenTogetherServers
 import com.suvojeet.suvmusic.shareplay.RoomRole
+import com.suvojeet.suvmusic.shareplay.RoomSettings
 import com.suvojeet.suvmusic.shareplay.RoomState
 import com.suvojeet.suvmusic.shareplay.TrackInfo
 import kotlinx.coroutines.flow.SharingStarted
@@ -210,6 +211,21 @@ class ListenTogetherViewModel @Inject constructor(
     
     fun transferHost(newHostId: String) {
         manager.transferHost(newHostId)
+    }
+
+    /** Current Jam permissions of the room, live from the room state. */
+    val roomSettings: StateFlow<RoomSettings> = roomState
+        .map { it?.settings ?: RoomSettings() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RoomSettings())
+
+    /** Host-only: toggle whether guests can add songs to the shared queue. */
+    fun setGuestsCanQueue(enabled: Boolean) {
+        manager.setRoomSettings(roomSettings.value.copy(guestsCanQueue = enabled))
+    }
+
+    /** Host-only: toggle whether guests can control playback. */
+    fun setGuestsCanControl(enabled: Boolean) {
+        manager.setRoomSettings(roomSettings.value.copy(guestsCanControl = enabled))
     }
     
     fun forceReconnect() {

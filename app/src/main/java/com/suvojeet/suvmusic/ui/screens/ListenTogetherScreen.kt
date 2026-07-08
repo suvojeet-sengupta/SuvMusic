@@ -898,6 +898,7 @@ fun RoomContent(
     val room = uiState.roomState ?: return
     val context = LocalContext.current
     val pendingRequests by viewModel.pendingJoinRequests.collectAsState()
+    val roomSettings by viewModel.roomSettings.collectAsState()
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1138,10 +1139,167 @@ fun RoomContent(
             }
         }
 
+        // Jam permissions — what guests are allowed to do in this room.
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Guest Permissions",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Surface(
+                    shape = SquircleShape,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    tonalElevation = 1.dp
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        if (uiState.role == RoomRole.HOST) {
+                            SettingsToggleItem(
+                                title = "Guests can add songs",
+                                subtitle = "Anyone in the room can queue songs, like a Spotify Jam",
+                                checked = roomSettings.guestsCanQueue,
+                                onCheckedChange = { viewModel.setGuestsCanQueue(it) },
+                                dominantColors = dominantColors
+                            )
+                            SettingsToggleItem(
+                                title = "Guests can control playback",
+                                subtitle = "Play, pause, seek and skip for everyone",
+                                checked = roomSettings.guestsCanControl,
+                                onCheckedChange = { viewModel.setGuestsCanControl(it) },
+                                dominantColors = dominantColors
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.QueueMusic,
+                                    null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = if (roomSettings.guestsCanQueue) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    if (roomSettings.guestsCanQueue) "You can add songs to the queue"
+                                    else "Song requests need host approval",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Equalizer,
+                                    null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = if (roomSettings.guestsCanControl) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    if (roomSettings.guestsCanControl) "You can play, pause and skip"
+                                    else "Only the host controls playback",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Shared queue with Jam-style attribution
+        if (room.queue.isNotEmpty()) {
+            item {
+                Text(
+                    "Up Next (${room.queue.size})",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    ),
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            items(room.queue) { queued: TrackInfo ->
+                Surface(
+                    shape = SquircleShape,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (queued.thumbnail != null) {
+                            coil3.compose.AsyncImage(
+                                model = queued.thumbnail,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(SquircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Surface(
+                                modifier = Modifier.size(44.dp),
+                                shape = SquircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.MusicNote, null, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = queued.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = queued.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        queued.suggestedBy?.takeIf { it.isNotBlank() }?.let { addedBy ->
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "by $addedBy",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Listeners List
         item {
             Text(
-                "Listeners", 
+                "Listeners",
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.2.sp

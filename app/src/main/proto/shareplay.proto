@@ -45,6 +45,16 @@ message UserInfo {
   bool is_connected = 4;
 }
 
+// Jam-style room permissions (Spotify Jam parity). Both default to false so an
+// old host that never sends set_room_settings keeps the classic host-only model.
+message RoomSettings {
+  // Guests may add tracks to the shared queue directly; pending suggestions
+  // auto-approve while this is on.
+  bool guests_can_queue = 1;
+  // Guests may control playback: play / pause / seek / skip / change track.
+  bool guests_can_control = 2;
+}
+
 // Room state
 message RoomState {
   string room_code = 1;
@@ -56,6 +66,7 @@ message RoomState {
   int64 last_update = 7;
   float volume = 8;
   repeated TrackInfo queue = 9;
+  RoomSettings settings = 10;
 }
 
 // Client -> Server messages
@@ -118,6 +129,11 @@ message RejectSuggestionPayload {
 
 message ReconnectPayload {
   string session_token = 1;
+}
+
+// Host-only: update the room's Jam permissions.
+message SetRoomSettingsPayload {
+  RoomSettings settings = 1;
 }
 
 // Server -> Client messages
@@ -218,6 +234,12 @@ message SuggestionApprovedPayload {
 message SuggestionRejectedPayload {
   string suggestion_id = 1;
   string reason = 2;
+}
+
+// Broadcast to everyone whenever the host changes the room's Jam permissions.
+message RoomSettingsChangedPayload {
+  RoomSettings settings = 1;
+  string changed_by = 2;
 }
 
 // Capability negotiation (first message from client)

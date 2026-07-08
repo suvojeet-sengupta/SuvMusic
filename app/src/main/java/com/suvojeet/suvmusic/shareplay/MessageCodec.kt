@@ -202,6 +202,9 @@ class MessageCodec(
             is TransferHostPayload -> SharePlay.TransferHostPayload.newBuilder()
                 .setNewHostId(payload.newHostId)
                 .build()
+            is SetRoomSettingsPayload -> SharePlay.SetRoomSettingsPayload.newBuilder()
+                .setSettings(roomSettingsToProto(payload.settings))
+                .build()
             else -> throw IllegalArgumentException("Unsupported payload type: ${payload::class.simpleName}")
         }
     }
@@ -332,6 +335,13 @@ class MessageCodec(
                 val pb = SharePlay.SuggestionRejectedPayload.parseFrom(payloadBytes)
                 SuggestionRejectedPayload(pb.suggestionId, pb.reason.takeIf { it.isNotEmpty() })
             }
+            MessageTypes.ROOM_SETTINGS_CHANGED -> {
+                val pb = SharePlay.RoomSettingsChangedPayload.parseFrom(payloadBytes)
+                RoomSettingsChangedPayload(
+                    settings = protoToRoomSettings(pb.settings),
+                    changedBy = pb.changedBy.takeIf { it.isNotEmpty() }
+                )
+            }
             else -> null
         }
     }
@@ -387,7 +397,23 @@ class MessageCodec(
             position = proto.position,
             lastUpdate = proto.lastUpdate,
             volume = proto.volume,
-            queue = proto.queueList.map { protoToTrackInfo(it) }
+            queue = proto.queueList.map { protoToTrackInfo(it) },
+            settings = protoToRoomSettings(proto.settings)
+        )
+    }
+
+    private fun roomSettingsToProto(settings: RoomSettings): SharePlay.RoomSettings {
+        return SharePlay.RoomSettings.newBuilder()
+            .setGuestsCanQueue(settings.guestsCanQueue)
+            .setGuestsCanControl(settings.guestsCanControl)
+            .build()
+    }
+
+    private fun protoToRoomSettings(proto: SharePlay.RoomSettings?): RoomSettings {
+        if (proto == null) return RoomSettings()
+        return RoomSettings(
+            guestsCanQueue = proto.guestsCanQueue,
+            guestsCanControl = proto.guestsCanControl
         )
     }
 }

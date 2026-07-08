@@ -24,6 +24,7 @@ object MessageTypes {
     const val SUGGEST_TRACK = "suggest_track"
     const val APPROVE_SUGGESTION = "approve_suggestion"
     const val REJECT_SUGGESTION = "reject_suggestion"
+    const val SET_ROOM_SETTINGS = "set_room_settings"
 
     // Server -> Client
     const val ROOM_CREATED = "room_created"
@@ -46,6 +47,7 @@ object MessageTypes {
     const val SUGGESTION_RECEIVED = "suggestion_received"
     const val SUGGESTION_APPROVED = "suggestion_approved"
     const val SUGGESTION_REJECTED = "suggestion_rejected"
+    const val ROOM_SETTINGS_CHANGED = "room_settings_changed"
 }
 
 /**
@@ -100,6 +102,16 @@ data class UserInfo(
 )
 
 /**
+ * Jam-style room permissions (Spotify Jam parity). Both default to false, which
+ * preserves the classic host-only model for rooms hosted by older clients.
+ */
+@Serializable
+data class RoomSettings(
+    @SerialName("guests_can_queue") val guestsCanQueue: Boolean = false,
+    @SerialName("guests_can_control") val guestsCanControl: Boolean = false
+)
+
+/**
  * Room state
  */
 @Serializable
@@ -112,7 +124,8 @@ data class RoomState(
     val position: Long, // milliseconds
     @SerialName("last_update") val lastUpdate: Long, // unix timestamp ms
     val volume: Float = 1.0f,
-    val queue: List<TrackInfo> = emptyList()
+    val queue: List<TrackInfo> = emptyList(),
+    val settings: RoomSettings = RoomSettings()
 )
 
 // Request payloads
@@ -209,6 +222,19 @@ data class SuggestionApprovedPayload(
 data class SuggestionRejectedPayload(
     @SerialName("suggestion_id") val suggestionId: String,
     val reason: String? = null
+)
+
+/** Host-only: update the room's Jam permissions. */
+@Serializable
+data class SetRoomSettingsPayload(
+    val settings: RoomSettings
+)
+
+/** Broadcast to everyone when the host changes the room's Jam permissions. */
+@Serializable
+data class RoomSettingsChangedPayload(
+    val settings: RoomSettings,
+    @SerialName("changed_by") val changedBy: String? = null
 )
 
 // Response payloads

@@ -120,6 +120,20 @@ class ListenTogetherManager @Inject constructor(
     val isInRoom: Boolean get() = client.isInRoom
     val isHost: Boolean get() = client.isHost
     val hasPersistedSession: Boolean get() = client.hasPersistedSession
+
+    // --- Jam permissions (Spotify Jam parity) ---
+    /** True when this user may add tracks to the shared queue. */
+    val canQueue: Boolean get() = client.canQueue
+    /** True when this user may control playback (play/pause/seek/skip/change track). */
+    val canControlPlayback: Boolean get() = client.canControlPlayback
+    /** Host-only: change the room's Jam permissions. */
+    fun setRoomSettings(settings: RoomSettings) = client.setRoomSettings(settings)
+
+    /**
+     * Whether this device should broadcast its local player actions to the room:
+     * the host always does; a guest only when the host allowed guest control.
+     */
+    private val broadcastsControl: Boolean get() = isInRoom && client.canControlPlayback
     
     fun setLogActive(active: Boolean) = client.setLogActive(active)
     fun clearLogs() = client.clearLogs()
@@ -130,7 +144,7 @@ class ListenTogetherManager @Inject constructor(
     
     private val playerListener = object : Player.Listener {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-            if (isSyncing || !isHost || !isInRoom) return
+            if (isSyncing || !isInRoom || !broadcastsControl) return
             
             Log.d(TAG, "Play state changed: $playWhenReady (reason: $reason)")
             
@@ -161,9 +175,19 @@ class ListenTogetherManager @Inject constructor(
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            if (isSyncing || !isHost || !isInRoom) return
+            if (isSyncing || !isInRoom || !broadcastsControl) return
             if (mediaItem == null) return
-            
+
+            // A controlling guest only broadcasts deliberate track changes (playing a
+            // new song locally). Auto-advance/repeat transitions are the HOST's to
+            // announce — a guest echoing them would start a duplicate buffer
+            // coordination for a change the host is already broadcasting.
+            if (!isHost &&
+                (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                 reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)) {
+                return
+            }
+
             val trackId = mediaItem.mediaId
             if (trackId == lastSyncedTrackId) return
             
@@ -187,7 +211,7 @@ class ListenTogetherManager @Inject constructor(
             newPosition: Player.PositionInfo,
             reason: Int
         ) {
-            if (isSyncing || !isHost || !isInRoom) return
+            if (isSyncing || !isInRoom || !broadcastsControl) return
             
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 val trackId = player?.currentMediaItem?.mediaId
@@ -324,6 +348,11 @@ class ListenTogetherManager @Inject constructor(
             is ListenTogetherEvent.PlaybackSync -> {
                 if (!isHost) {
                     handlePlaybackSync(event.action)
+                } else {
+                    // Jam mode: a guest with permission acted — the server validated it
+                    // and relayed it here. Apply it to the host player, which is the
+                    // room's source of truth.
+                    handleGuestActionAsHost(event.action)
                 }
             }
             is ListenTogetherEvent.UserJoined -> {
@@ -360,6 +389,19 @@ class ListenTogetherManager @Inject constructor(
                             queue = emptyList(),
                             volume = 1f
                         )
+                    }
+                    // If we're already on the awaited track we never go through
+                    // syncToTrack (e.g. WE initiated this change as a controlling
+                    // guest), so report readiness here or the room waits on us
+                    // until the server's buffer timeout.
+                    val p = player
+                    if (p?.currentMediaItem?.mediaId == event.trackId &&
+                        pendingBufferReadyTrackId != event.trackId) {
+                        if (p.playbackState == Player.STATE_READY) {
+                            client.sendBufferReady(event.trackId)
+                        } else {
+                            pendingBufferReadyTrackId = event.trackId
+                        }
                     }
                 }
             }
@@ -586,13 +628,21 @@ class ListenTogetherManager @Inject constructor(
     private fun handlePlaybackSync(action: PlaybackActionPayload) {
         val p = player ?: return
 
+        // Queue edits reference the queued track, NOT the currently playing one — the
+        // track-mismatch handling below must never run for them, or a guest would
+        // switch playback to every track that gets added to the shared queue.
+        val isQueueOp = action.action in listOf(
+            PlaybackActions.QUEUE_ADD, PlaybackActions.QUEUE_REMOVE,
+            PlaybackActions.QUEUE_CLEAR, PlaybackActions.SYNC_QUEUE
+        )
+
         // Track checking: If action has a trackId, ensure we are on it
         // Treat empty string same as null (protobuf default for string is "")
         val targetTrackId = action.trackId?.takeIf { it.isNotEmpty() }
         val currentTrackId = p.currentMediaItem?.mediaId?.takeIf { it.isNotEmpty() }
-        
+
         // If we have a target track but guest has nothing loaded, or it's a different track
-        if (targetTrackId != null && targetTrackId != currentTrackId) {
+        if (!isQueueOp && targetTrackId != null && targetTrackId != currentTrackId) {
             // If this track is already being buffered (e.g., from JoinApproved flow that started
             // syncToTrack but hasn't finished loading the stream yet), DON'T start a new syncToTrack.
             // That would cancel the in-progress one and skip buffer_ready, leaving the server stuck.
@@ -702,9 +752,10 @@ class ListenTogetherManager @Inject constructor(
                     val track = action.trackInfo
                     if (track != null) {
                         scope.launch(Dispatchers.IO) {
-                            val streamResult = youTubeRepository.getStreamUrlForDownload(track.id)
-                            if (streamResult != null) {
-                                val (streamUrl, _) = streamResult
+                            // Resolve from the same backend + quality as the host so HQ
+                            // tracks queue correctly (plain YouTube lookup can't serve them).
+                            val streamUrl = resolveStreamUrlForRoom(track)
+                            if (streamUrl != null) {
                                 val mediaItem = createMediaItem(track, streamUrl)
                                 launch(Dispatchers.Main) {
                                     isSyncing = true // Prevent echo
@@ -756,6 +807,114 @@ class ListenTogetherManager @Inject constructor(
             }
         } finally {
             endSyncAfter(200)
+        }
+    }
+
+    /**
+     * Apply a guest-originated playback action on the HOST player (Jam mode). The
+     * server already validated the guest's permission and updated the room state;
+     * the host player is the room's source of truth, so it must follow.
+     *
+     * Play/pause/seek/queue edits are applied with echo suppression — the server
+     * already broadcast the action to the other guests. Skips are applied WITHOUT
+     * suppression so the resulting track transition re-broadcasts exactly as if
+     * the host had skipped locally.
+     */
+    private fun handleGuestActionAsHost(action: PlaybackActionPayload) {
+        val p = player ?: return
+        when (action.action) {
+            PlaybackActions.PLAY -> {
+                isSyncing = true
+                val pos = action.position
+                if (pos != null && kotlin.math.abs(p.currentPosition - pos) > 1000) p.seekTo(pos)
+                p.play()
+                lastSyncedIsPlaying = true
+                endSyncAfter(200)
+            }
+            PlaybackActions.PAUSE -> {
+                isSyncing = true
+                p.pause()
+                val pos = action.position
+                if (pos != null && kotlin.math.abs(p.currentPosition - pos) > 1000) p.seekTo(pos)
+                lastSyncedIsPlaying = false
+                endSyncAfter(200)
+            }
+            PlaybackActions.SEEK -> {
+                isSyncing = true
+                action.position?.let { p.seekTo(it) }
+                endSyncAfter(200)
+            }
+            PlaybackActions.SKIP_NEXT -> p.seekToNext()
+            PlaybackActions.SKIP_PREV -> p.seekToPrevious()
+            PlaybackActions.CHANGE_TRACK -> {
+                val track = action.trackInfo ?: return
+                if (p.currentMediaItem?.mediaId == track.id) return
+                // The server has already set the room's current track and started
+                // buffer coordination from the guest's message, so the load here is
+                // suppressed (no re-broadcast). BUFFER_COMPLETE resumes everyone.
+                lastSyncedTrackId = track.id
+                lastSyncedIsPlaying = false
+                var index = -1
+                for (i in 0 until p.mediaItemCount) {
+                    if (p.getMediaItemAt(i).mediaId == track.id) { index = i; break }
+                }
+                if (index >= 0) {
+                    isSyncing = true
+                    p.seekTo(index, 0)
+                    p.pause()
+                    endSyncAfter(300)
+                } else {
+                    scope.launch(Dispatchers.IO) {
+                        val streamUrl = resolveStreamUrlForRoom(track)
+                        if (streamUrl == null) {
+                            Log.e(TAG, "Host failed to resolve guest-requested track ${track.id}")
+                            return@launch
+                        }
+                        val mediaItem = createMediaItem(track, streamUrl)
+                        launch(Dispatchers.Main) {
+                            isSyncing = true
+                            // Insert next and jump so the host's queue survives the detour.
+                            val insertAt = (p.currentMediaItemIndex + 1).coerceAtMost(p.mediaItemCount)
+                            p.addMediaItem(insertAt, mediaItem)
+                            p.seekTo(insertAt, 0)
+                            p.pause()
+                            endSyncAfter(300)
+                        }
+                    }
+                }
+            }
+            PlaybackActions.QUEUE_ADD -> {
+                val track = action.trackInfo ?: return
+                scope.launch(Dispatchers.IO) {
+                    val streamUrl = resolveStreamUrlForRoom(track)
+                    if (streamUrl == null) {
+                        Log.e(TAG, "Host failed to resolve guest-queued track ${track.id}")
+                        return@launch
+                    }
+                    val mediaItem = createMediaItem(track, streamUrl)
+                    launch(Dispatchers.Main) {
+                        isSyncing = true
+                        if (action.insertNext == true) {
+                            p.addMediaItem(p.currentMediaItemIndex + 1, mediaItem)
+                        } else {
+                            p.addMediaItem(mediaItem)
+                        }
+                        endSyncAfter(200)
+                    }
+                }
+            }
+            PlaybackActions.QUEUE_REMOVE -> {
+                val id = action.trackId ?: return
+                for (i in 0 until p.mediaItemCount) {
+                    if (p.getMediaItemAt(i).mediaId == id) {
+                        isSyncing = true
+                        p.removeMediaItem(i)
+                        endSyncAfter(200)
+                        break
+                    }
+                }
+            }
+            else -> {}
         }
     }
 
@@ -1081,7 +1240,7 @@ class ListenTogetherManager @Inject constructor(
     fun transferHost(newHostId: String) = client.transferHost(newHostId)
     
     fun sendTrackChange(mediaItem: MediaItem) {
-        if (!isHost || isSyncing) return
+        if (isSyncing || !broadcastsControl) return
         
         val trackInfo = getTrackInfo(mediaItem)
         
@@ -1118,6 +1277,75 @@ class ListenTogetherManager @Inject constructor(
     
     fun requestSync() = client.requestSync()
     fun suggestTrack(track: TrackInfo) = client.suggestTrack(track)
+
+    /**
+     * Route an "add to queue" (or "play next") while in a Listen Together room —
+     * the Jam-style entry point for everyone adding songs to the shared session.
+     *
+     * Returns true when the room absorbed the request (guest paths) so the caller
+     * must NOT also add locally. The host returns false — it adds to its own
+     * player through the normal path — but the tracks are still broadcast so the
+     * shared room queue stays in sync on every device.
+     */
+    fun addSongsToRoomQueue(songs: List<Song>, insertNext: Boolean = false): Boolean {
+        if (!isInRoom || songs.isEmpty()) return false
+        val addedBy = client.currentUsername
+        val tracks = songs.map { song ->
+            TrackInfo(
+                id = song.id,
+                title = song.title,
+                artist = song.artist,
+                album = song.album.takeIf { it.isNotBlank() },
+                duration = song.duration,
+                thumbnail = song.thumbnailUrl,
+                suggestedBy = addedBy
+            )
+        }
+        return when {
+            isHost -> {
+                tracks.forEach { track ->
+                    client.sendPlaybackAction(
+                        PlaybackActions.QUEUE_ADD,
+                        trackId = track.id,
+                        trackInfo = track,
+                        insertNext = insertNext
+                    )
+                }
+                false
+            }
+            canQueue -> {
+                tracks.forEach { track ->
+                    client.sendPlaybackAction(
+                        PlaybackActions.QUEUE_ADD,
+                        trackId = track.id,
+                        trackInfo = track,
+                        insertNext = insertNext
+                    )
+                }
+                com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                    if (tracks.size == 1) "Added to the room queue" else "Added ${tracks.size} songs to the room queue"
+                )
+                true
+            }
+            else -> {
+                tracks.forEach { client.suggestTrack(it) }
+                com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                    if (tracks.size == 1) "Sent to host for approval" else "Sent ${tracks.size} songs to host for approval"
+                )
+                true
+            }
+        }
+    }
+
+    /**
+     * Guest-side skip. A guest's local player holds only the current track, so a
+     * local seekToNext() is a no-op — the skip must be sent to the room, where the
+     * host performs it and broadcasts the resulting track change.
+     */
+    fun sendGuestSkip(next: Boolean) {
+        if (!isInRoom || isHost || !canControlPlayback) return
+        client.sendPlaybackAction(if (next) PlaybackActions.SKIP_NEXT else PlaybackActions.SKIP_PREV)
+    }
     fun approveSuggestion(id: String) {
         // The host must enqueue the approved track into its own player: the server only
         // broadcasts queue_add to guests, and the host never processes its own sync echo.

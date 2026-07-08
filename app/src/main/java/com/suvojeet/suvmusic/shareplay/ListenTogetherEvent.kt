@@ -18,6 +18,7 @@ sealed class ListenTogetherEvent {
     data class UserJoined(val userId: String, val username: String) : ListenTogetherEvent()
     data class UserLeft(val userId: String, val username: String) : ListenTogetherEvent()
     data class HostChanged(val newHostId: String, val newHostName: String) : ListenTogetherEvent()
+    data class RoomSettingsChanged(val settings: RoomSettings, val changedBy: String?) : ListenTogetherEvent()
     data class Kicked(val reason: String) : ListenTogetherEvent()
     data class Reconnected(val roomCode: String, val userId: String, val state: RoomState, val isHost: Boolean) : ListenTogetherEvent()
     data class UserReconnected(val userId: String, val username: String) : ListenTogetherEvent()
