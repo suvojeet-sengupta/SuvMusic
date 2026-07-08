@@ -305,7 +305,11 @@ private fun YTMusicPortraitContent(
                 onRelatedClick = onShowRelated,
                 onDownloadClick = actions.onDownload,
                 downloadState = playerState.downloadState,
-                dominantColors = dominantColors
+                dominantColors = dominantColors,
+                onSleepTimerClick = onShowSleepTimer,
+                onSpeedClick = onShowPlaybackSpeed,
+                sleepTimerRemainingMs = sleepTimerRemainingMs,
+                playbackSpeed = playerState.playbackSpeed
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
@@ -457,7 +461,11 @@ private fun YTMusicLandscapeContent(
                 onRelatedClick = onShowRelated,
                 onDownloadClick = actions.onDownload,
                 downloadState = playerState.downloadState,
-                dominantColors = dominantColors
+                dominantColors = dominantColors,
+                onSleepTimerClick = onShowSleepTimer,
+                onSpeedClick = onShowPlaybackSpeed,
+                sleepTimerRemainingMs = sleepTimerRemainingMs,
+                playbackSpeed = playerState.playbackSpeed
             )
             Spacer(modifier = Modifier.height(16.dp))
 

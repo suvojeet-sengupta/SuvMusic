@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
@@ -64,6 +65,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -217,9 +219,16 @@ fun LibraryScreen(
                                 LibraryControlBar(
                                     sortOption = uiState.sortOption,
                                     viewMode = uiState.viewMode,
-                                    onSortClick = { /* Toggle Sort */ },
+                                    onSortClick = {
+                                        viewModel.setSortOption(
+                                            if (uiState.sortOption == LibrarySortOption.DATE_ADDED) LibrarySortOption.NAME
+                                            else LibrarySortOption.DATE_ADDED
+                                        )
+                                    },
                                     onViewModeClick = { viewModel.setViewMode(LibraryViewMode.LIST) },
-                                    itemCount = getCountForFilter(uiState)
+                                    itemCount = getCountForFilter(uiState),
+                                    searchQuery = uiState.librarySearchQuery,
+                                    onSearchQueryChange = { viewModel.setLibrarySearchQuery(it) }
                                 )
                             }
                         )
@@ -270,9 +279,16 @@ fun LibraryScreen(
                                 LibraryControlBar(
                                     sortOption = uiState.sortOption,
                                     viewMode = uiState.viewMode,
-                                    onSortClick = { /* Toggle Sort */ },
+                                    onSortClick = {
+                                        viewModel.setSortOption(
+                                            if (uiState.sortOption == LibrarySortOption.DATE_ADDED) LibrarySortOption.NAME
+                                            else LibrarySortOption.DATE_ADDED
+                                        )
+                                    },
                                     onViewModeClick = { viewModel.setViewMode(LibraryViewMode.GRID) },
-                                    itemCount = getCountForFilter(uiState)
+                                    itemCount = getCountForFilter(uiState),
+                                    searchQuery = uiState.librarySearchQuery,
+                                    onSearchQueryChange = { viewModel.setLibrarySearchQuery(it) }
                                 )
                             }
                         )
@@ -579,50 +595,88 @@ fun LibraryControlBar(
     viewMode: LibraryViewMode,
     onSortClick: () -> Unit,
     onViewModeClick: () -> Unit,
-    itemCount: String
+    itemCount: String,
+    searchQuery: String = "",
+    onSearchQueryChange: ((String) -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
+    var searchExpanded by remember { mutableStateOf(searchQuery.isNotEmpty()) }
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.clickable(onClick = onSortClick),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
         ) {
-            Text(
-                text = "Date added", // Dynamic based on sortOption
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Icon(
-                imageVector = Icons.Default.Sort,
-                contentDescription = "Sort",
-                modifier = Modifier.size(16.dp).padding(start = 4.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        
-        Row(verticalAlignment = Alignment.CenterVertically) {
-             Text(
-                text = itemCount, 
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            
-            IconButton(
-                onClick = onViewModeClick,
-                modifier = Modifier.size(24.dp)
+            Row(
+                modifier = Modifier.clickable(onClick = onSortClick),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = when (sortOption) {
+                        LibrarySortOption.DATE_ADDED -> "Date added"
+                        LibrarySortOption.NAME -> "Name"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Icon(
-                    imageVector = if (viewMode == LibraryViewMode.GRID) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
-                    contentDescription = "Toggle View",
+                    imageVector = Icons.Default.Sort,
+                    contentDescription = "Sort",
+                    modifier = Modifier.size(16.dp).padding(start = 4.dp),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                 Text(
+                    text = itemCount,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+
+                if (onSearchQueryChange != null) {
+                    IconButton(
+                        onClick = {
+                            if (searchExpanded) onSearchQueryChange("")
+                            searchExpanded = !searchExpanded
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = if (searchExpanded) "Close search" else "Search library",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
+
+                IconButton(
+                    onClick = onViewModeClick,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = if (viewMode == LibraryViewMode.GRID) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
+                        contentDescription = "Toggle View",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        if (searchExpanded && onSearchQueryChange != null) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Search your playlists") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            )
         }
     }
 }

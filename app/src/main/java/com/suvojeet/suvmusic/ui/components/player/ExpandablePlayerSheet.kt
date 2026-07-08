@@ -9,6 +9,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,6 +184,11 @@ fun ExpandablePlayerSheet(
         // swipe-dismissed (expansion < 0). Gated by a derivedStateOf boolean so this
         // block is added/removed at most once per transition, not every frame.
         val showMiniPlayer by remember { derivedStateOf { expansion.value < 0.4f } }
+        // Horizontal swipe on the mini player skips tracks (left = next, right =
+        // previous), matching the YT Music / Spotify convention. The row follows
+        // the finger and springs back after the skip fires.
+        val horizontalDrag = remember { Animatable(0f) }
+        val skipThresholdPx = with(density) { 96.dp.toPx() }
         if (showMiniPlayer) {
             CollapsedMiniPlayer(
                 song = song,
@@ -221,6 +227,8 @@ fun ExpandablePlayerSheet(
                          IntOffset(0, px.roundToInt())
                      }
                      .graphicsLayer {
+                         // Follow the finger during a horizontal skip swipe.
+                         translationX = horizontalDrag.value
                          // Base fade: the mini player fades out as the panel expands.
                          alpha = (1f - expansion.value * 2.5f).coerceIn(0f, 1f)
                          // Visual feedback for swipe down to dismiss. Use a
@@ -235,6 +243,32 @@ fun ExpandablePlayerSheet(
                          }
                      }
                      .zIndex(if (isExpanded) 0f else 1f)
+                     // Horizontal swipe → skip track (left = next, right = previous)
+                     .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                coroutineScope.launch {
+                                    val total = horizontalDrag.value
+                                    when {
+                                        total <= -skipThresholdPx -> onNext()
+                                        total >= skipThresholdPx -> onPrevious()
+                                    }
+                                    horizontalDrag.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
+                                }
+                            },
+                            onDragCancel = {
+                                coroutineScope.launch {
+                                    horizontalDrag.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
+                                }
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                coroutineScope.launch {
+                                    horizontalDrag.snapTo(horizontalDrag.value + dragAmount)
+                                }
+                            }
+                        )
+                    }
                      // Add gesture detection to MiniPlayer
                      .pointerInput(swipeDownToDismissEnabled) {
                         // Swipe-down-to-dismiss is gated on the user

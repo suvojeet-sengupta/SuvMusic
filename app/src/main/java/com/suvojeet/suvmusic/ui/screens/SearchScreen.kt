@@ -257,6 +257,29 @@ fun SearchScreen(
                                 }
                             }
                             
+                            // Zero-state mood row — fills the blank pre-typing screen with
+                            // one-tap searches instead of leaving it empty.
+                            if (uiState.query.isBlank() && uiState.selectedTab == SearchTab.YOUTUBE_MUSIC) {
+                                item {
+                                    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                        Text(
+                                            text = "Browse by mood",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                        )
+                                        MoodChipsSection(
+                                            selectedMood = null,
+                                            onMoodSelected = { mood ->
+                                                viewModel.onQueryChange("$mood songs")
+                                                viewModel.search(saveToHistory = false)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             if (uiState.query.isBlank() && uiState.recentSearches.isNotEmpty()) {
                                 item {
                                     Row(

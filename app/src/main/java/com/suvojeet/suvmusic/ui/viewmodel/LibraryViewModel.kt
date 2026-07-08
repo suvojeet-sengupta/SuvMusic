@@ -50,6 +50,7 @@ data class LibraryUiState(
     val isSyncingLikedSongs: Boolean = false,
     val viewMode: LibraryViewMode = LibraryViewMode.GRID,
     val sortOption: LibrarySortOption = LibrarySortOption.DATE_ADDED,
+    val librarySearchQuery: String = "",
     val selectedFilter: LibraryFilter = LibraryFilter.PLAYLISTS,
     val top50SongCount: Int = 0,
     val cachedSongCount: Int = 0
@@ -320,9 +321,40 @@ class LibraryViewModel @Inject constructor(
                     // Combined list should always be remote playlists + saved/local playlists from DB.
                     // This way, removing from DB correctly reflects in the UI.
                     val combined = (state.remotePlaylists + displayItems).distinctBy { it.id }
-                    state.copy(playlists = combined, userPlaylists = displayItems)
+                    rawPlaylists = combined
+                    state.copy(
+                        playlists = presentPlaylists(combined, state.sortOption, state.librarySearchQuery),
+                        userPlaylists = displayItems
+                    )
                 }
             }
+        }
+    }
+
+    /** Unsorted, unfiltered source list — sort/search are presentation-only. */
+    private var rawPlaylists: List<PlaylistDisplayItem> = emptyList()
+
+    private fun presentPlaylists(
+        list: List<PlaylistDisplayItem>,
+        sort: LibrarySortOption,
+        query: String
+    ): List<PlaylistDisplayItem> {
+        val q = query.trim().lowercase()
+        val filtered = if (q.isEmpty()) list else list.filter {
+            it.name.lowercase().contains(q) || it.uploaderName.lowercase().contains(q)
+        }
+        return when (sort) {
+            LibrarySortOption.NAME -> filtered.sortedBy { it.name.lowercase() }
+            LibrarySortOption.DATE_ADDED -> filtered
+        }
+    }
+
+    fun setLibrarySearchQuery(query: String) {
+        _uiState.update {
+            it.copy(
+                librarySearchQuery = query,
+                playlists = presentPlaylists(rawPlaylists, it.sortOption, query)
+            )
         }
     }
     
@@ -578,7 +610,12 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun setSortOption(option: LibrarySortOption) {
-        _uiState.update { it.copy(sortOption = option) }
+        _uiState.update {
+            it.copy(
+                sortOption = option,
+                playlists = presentPlaylists(rawPlaylists, option, it.librarySearchQuery)
+            )
+        }
     }
 
     fun setFilter(filter: LibraryFilter) {

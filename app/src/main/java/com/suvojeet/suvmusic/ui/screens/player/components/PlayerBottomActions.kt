@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Recommend
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbDown
@@ -66,7 +68,11 @@ fun PlayerActionChips(
     onDownloadClick: () -> Unit,
     downloadState: DownloadState,
     dominantColors: DominantColors,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSleepTimerClick: (() -> Unit)? = null,
+    onSpeedClick: (() -> Unit)? = null,
+    sleepTimerRemainingMs: Long? = null,
+    playbackSpeed: Float = 1f
 ) {
     val haptics = com.suvojeet.suvmusic.ui.utils.rememberHaptics()
     Row(
@@ -106,6 +112,20 @@ fun PlayerActionChips(
 
         BottomChip(label = "Lyrics", icon = Icons.Default.Lyrics, onClick = onLyricsClick, dominantColors = dominantColors)
         BottomChip(label = "Related", icon = Icons.Default.Recommend, onClick = onRelatedClick, dominantColors = dominantColors)
+
+        // Sleep timer & speed used to hide behind the overflow menu; as chips the
+        // nightly-ritual features are one tap away, with live state on the label.
+        if (onSleepTimerClick != null) {
+            val timerLabel = sleepTimerRemainingMs
+                ?.takeIf { it > 0 }
+                ?.let { ms -> "${(ms / 60000L) + 1} min" }
+                ?: "Sleep"
+            BottomChip(label = timerLabel, icon = Icons.Outlined.Bedtime, onClick = onSleepTimerClick, dominantColors = dominantColors)
+        }
+        if (onSpeedClick != null) {
+            val speedLabel = if (playbackSpeed % 1f == 0f) "${playbackSpeed.toInt()}x" else "${playbackSpeed}x"
+            BottomChip(label = speedLabel, icon = Icons.Default.Speed, onClick = onSpeedClick, dominantColors = dominantColors)
+        }
 
         // Download keeps its four-state animation, wrapped in a chip-shaped pill.
         Box(

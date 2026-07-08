@@ -386,22 +386,57 @@ fun ModernQueueView(
                         contentType = { _, _ -> "queue_item" }
                     ) { indexInList, (song, _) ->
                         val actualIndex = currentIndex + 1 + indexInList
-                        ModernQueueListItem(
-                            song = song,
-                            isCurrent = false,
-                            isPlaying = false,
-                            isSelected = selectedQueueIndices.contains(actualIndex),
-                            isSelectionMode = isSelectionMode,
-                            onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
-                            onLongPressEnterSelection = { onToggleSelection(actualIndex) },
-                            onMoreClick = { onMoreClick(song) },
-                            onDragMove = { from, to -> onMoveItem(from, to) },
-                            itemIndex = actualIndex,
-                            dominantColors = dominantColors,
-                            isDarkTheme = isDarkTheme,
-                            contentColor = contentColor,
-                            secondaryContentColor = secondaryContentColor
+                        // Swipe a row towards the start (left in LTR) to remove it from
+                        // the queue. Only up-next rows are removable — history and the
+                        // current track keep their existing interactions.
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    onRemoveItems(listOf(actualIndex))
+                                    true
+                                } else false
+                            }
                         )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            backgroundContent = {
+                                // Rows are transparent over the dynamic background, so
+                                // only draw the delete affordance mid-swipe.
+                                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f))
+                                            .padding(horizontal = 24.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = "Remove from queue",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            ModernQueueListItem(
+                                song = song,
+                                isCurrent = false,
+                                isPlaying = false,
+                                isSelected = selectedQueueIndices.contains(actualIndex),
+                                isSelectionMode = isSelectionMode,
+                                onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
+                                onLongPressEnterSelection = { onToggleSelection(actualIndex) },
+                                onMoreClick = { onMoreClick(song) },
+                                onDragMove = { from, to -> onMoveItem(from, to) },
+                                itemIndex = actualIndex,
+                                dominantColors = dominantColors,
+                                isDarkTheme = isDarkTheme,
+                                contentColor = contentColor,
+                                secondaryContentColor = secondaryContentColor
+                            )
+                        }
                     }
                 }
 
