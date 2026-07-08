@@ -2262,7 +2262,62 @@ class MusicPlayer @Inject constructor(
     
     private var playJob: Job? = null
 
+    // ─── Listen Together guest gating ────────────────────────────────────────
+    // Every UI surface (home screen, mini player, queue, search…) funnels into
+    // these transport methods, so the room permission check lives HERE instead of
+    // per-screen. Without it a guest could tap a song on the home screen or the
+    // mini player and locally diverge from the room while the host is paused.
+    // The manager drives the session player directly for sync, so room-initiated
+    // playback never passes through (and is never blocked by) this gate.
+
+    private val listenTogetherClient
+        get() = com.suvojeet.suvmusic.shareplay.ListenTogetherClient.getInstance()
+
+    /** Throttle for the "host has controls" warning so auto-callers can't spam it. */
+    private var lastGuestBlockToastAt = 0L
+
+    /**
+     * Returns true when a local transport command must NOT run because this device
+     * is a Listen Together guest without playback control. Shows a (throttled)
+     * warning so the tap doesn't feel dead.
+     */
+    private fun blockedForListenTogetherGuest(): Boolean {
+        val client = listenTogetherClient ?: return false
+        if (!client.isInRoom || client.isHost) return false
+        if (client.canControlPlayback) return false
+        val now = System.currentTimeMillis()
+        if (now - lastGuestBlockToastAt > 2000) {
+            lastGuestBlockToastAt = now
+            com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Host has controls in Listen Together!")
+        }
+        return true
+    }
+
+    /**
+     * Handles skips for Listen Together guests. A guest's player holds only the
+     * current track, so a local skip is a silent no-op — a permitted guest's skip
+     * must be sent to the room (the host performs it for everyone) and a
+     * non-permitted guest's skip is blocked. Returns true when handled.
+     */
+    private fun skipHandledByListenTogether(next: Boolean): Boolean {
+        val client = listenTogetherClient ?: return false
+        if (!client.isInRoom || client.isHost) return false
+        if (client.canControlPlayback) {
+            client.sendPlaybackAction(
+                if (next) com.suvojeet.suvmusic.shareplay.PlaybackActions.SKIP_NEXT
+                else com.suvojeet.suvmusic.shareplay.PlaybackActions.SKIP_PREV
+            )
+        } else {
+            blockedForListenTogetherGuest()
+        }
+        return true
+    }
+
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false) {
+        // A guest without control may not change what the room is playing. (A
+        // guest WITH control may: the track transition is broadcast to the room.)
+        if (blockedForListenTogetherGuest()) return
+
         // Cancel any pending play request
         playJob?.cancel()
         currentResolutionJob?.cancel()
@@ -2451,24 +2506,29 @@ class MusicPlayer @Inject constructor(
     }
 
     fun play() {
+        if (blockedForListenTogetherGuest()) return
         mediaController?.play()
     }
-    
+
     fun pause() {
+        if (blockedForListenTogetherGuest()) return
         mediaController?.pause()
     }
-    
+
     fun togglePlayPause() {
+        if (blockedForListenTogetherGuest()) return
         mediaController?.let { controller ->
             if (controller.isPlaying) pause() else play()
         }
     }
-    
+
     fun seekTo(position: Long) {
+        if (blockedForListenTogetherGuest()) return
         mediaController?.seekTo(position)
     }
-    
+
     fun seekToNext() {
+        if (skipHandledByListenTogether(next = true)) return
         currentResolutionJob?.cancel()
         // Bug Fix: Cancel any in-flight preload coroutine before we start our own resolution.
         // If preloadJob and our new coroutine both call replaceMediaItem(nextIndex, ...) concurrently,
@@ -2592,6 +2652,7 @@ class MusicPlayer @Inject constructor(
     }
     
     fun seekToPrevious() {
+        if (skipHandledByListenTogether(next = false)) return
         val state = _playerState.value
         // If played more than 3 seconds, restart current song
         if (state.currentPosition > 3000) {
