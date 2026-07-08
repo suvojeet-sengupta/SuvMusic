@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.shareplay.ConnectionState
 import com.suvojeet.suvmusic.shareplay.ListenTogetherClient
+import com.suvojeet.suvmusic.shareplay.ListenTogetherEvent
 import com.suvojeet.suvmusic.shareplay.ListenTogetherManager
 import com.suvojeet.suvmusic.shareplay.ListenTogetherServer
 import com.suvojeet.suvmusic.shareplay.ListenTogetherServers
@@ -106,6 +107,12 @@ class ListenTogetherViewModel @Inject constructor(
     /** Exact-sync toggle (default on). Off = faster song switches, looser sync. */
     val exactSyncEnabled: StateFlow<Boolean> = manager.exactSyncEnabled
 
+    // True from the moment a guest taps "Join" until the host approves/rejects, the
+    // room turns out not to exist, or the guest cancels. Drives the "waiting for the
+    // host" screen so a pending join no longer looks like nothing happened.
+    private val _joinInProgress = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val joinInProgress: StateFlow<Boolean> = _joinInProgress
+
     init {
         manager.initialize()
         viewModelScope.launch {
@@ -114,6 +121,42 @@ class ListenTogetherViewModel @Inject constructor(
             _autoApproval.value = manager.getAutoApproval()
             _syncVolume.value = manager.getSyncVolume()
             _muteHost.value = manager.getMuteHost()
+        }
+        // Drive the join flow off server events so a pending/failed join shows the
+        // right message instead of silently doing nothing.
+        viewModelScope.launch {
+            events.collect { event ->
+                when (event) {
+                    is ListenTogetherEvent.JoinApproved -> _joinInProgress.value = false
+                    is ListenTogetherEvent.JoinRejected -> {
+                        _joinInProgress.value = false
+                        com.suvojeet.suvmusic.util.SnackbarUtil.showWarning(
+                            event.reason.takeIf { it.isNotBlank() } ?: "The host declined your request to join"
+                        )
+                    }
+                    is ListenTogetherEvent.ServerError -> {
+                        // Surface join failures (room gone, full, backlog) as clear text.
+                        val joinMessage = when (event.code) {
+                            "room_not_found" -> "Room not found — check the code and try again"
+                            "room_full" -> "That room is full"
+                            "too_many_pending" -> "Too many people are waiting to join — try again in a moment"
+                            else -> null
+                        }
+                        if (joinMessage != null) {
+                            _joinInProgress.value = false
+                            com.suvojeet.suvmusic.util.SnackbarUtil.showError(joinMessage)
+                        }
+                    }
+                    is ListenTogetherEvent.Kicked -> _joinInProgress.value = false
+                    is ListenTogetherEvent.ConnectionError -> {
+                        if (_joinInProgress.value) {
+                            _joinInProgress.value = false
+                            com.suvojeet.suvmusic.util.SnackbarUtil.showError("Couldn't reach the server — check your connection")
+                        }
+                    }
+                    else -> {}
+                }
+            }
         }
     }
     
@@ -219,12 +262,22 @@ class ListenTogetherViewModel @Inject constructor(
         val code = roomCode.trim().uppercase()
         if (validateListenTogetherUsername(name) != null) return
         if (code.length != LISTEN_TOGETHER_ROOM_CODE_LENGTH) return
+        _joinInProgress.value = true
         viewModelScope.launch {
             manager.joinRoom(code, name)
         }
     }
 
+    /** Abandon a pending join (while waiting for host approval) and return to setup. */
+    fun cancelJoin() {
+        _joinInProgress.value = false
+        // Drop the socket so the server discards our pending request; the guest can
+        // reconnect and try again. (There's no room membership to leave yet.)
+        manager.disconnect()
+    }
+
     fun leaveRoom() {
+        _joinInProgress.value = false
         viewModelScope.launch {
             manager.leaveRoom()
         }

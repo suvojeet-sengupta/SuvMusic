@@ -486,6 +486,18 @@
                 <action android:name="com.suvojeet.suvmusic.pip.PREVIOUS" />
             </intent-filter>
         </receiver>
+
+        <!-- Listen Together notification Approve/Reject action receiver -->
+        <receiver
+            android:name=".shareplay.ListenTogetherActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.suvojeet.suvmusic.LISTEN_TOGETHER_APPROVE_JOIN" />
+                <action android:name="com.suvojeet.suvmusic.LISTEN_TOGETHER_REJECT_JOIN" />
+                <action android:name="com.suvojeet.suvmusic.LISTEN_TOGETHER_APPROVE_SUGGESTION" />
+                <action android:name="com.suvojeet.suvmusic.LISTEN_TOGETHER_REJECT_SUGGESTION" />
+            </intent-filter>
+        </receiver>
         <receiver
             android:name="androidx.media3.session.MediaButtonReceiver"
             android:exported="true">

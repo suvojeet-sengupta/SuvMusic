@@ -75,6 +75,7 @@ fun ListenTogetherScreen(
     val syncVolume by viewModel.syncVolume.collectAsState()
     val muteHost by viewModel.muteHost.collectAsState()
     val exactSync by viewModel.exactSyncEnabled.collectAsState()
+    val joinInProgress by viewModel.joinInProgress.collectAsState()
 
     var username by remember { mutableStateOf("") }
 
@@ -114,6 +115,7 @@ fun ListenTogetherScreen(
                     AnimatedContent(
                         targetState = when {
                             uiState.isInRoom -> "room"
+                            joinInProgress -> "waiting"
                             connectionState == ConnectionState.CONNECTED -> "setup"
                             else -> "connect"
                         },
@@ -179,6 +181,10 @@ fun ListenTogetherScreen(
                                 isCheckingHealth = isCheckingHealth,
                                 onRefreshHealth = { viewModel.refreshServerHealth() },
                                 dominantColors = dominantColors
+                            )
+                            "waiting" -> WaitingForApprovalContent(
+                                connectionState = connectionState,
+                                onCancel = { viewModel.cancelJoin() }
                             )
                         }
                     }
@@ -249,6 +255,69 @@ fun ListenTogetherHeader(onDismiss: () -> Unit, connectionState: ConnectionState
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Close, "Close", modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/**
+ * Shown to a guest between tapping "Join" and the host approving them — so a
+ * pending request no longer looks like a dead button. The message adapts while
+ * the socket is still connecting.
+ */
+@Composable
+fun WaitingForApprovalContent(
+    connectionState: ConnectionState,
+    onCancel: () -> Unit
+) {
+    val connecting = connectionState != ConnectionState.CONNECTED
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(96.dp),
+            shape = SquircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.GroupAdd,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(28.dp))
+        LoadingIndicator()
+        Spacer(Modifier.height(28.dp))
+        Text(
+            if (connecting) "Connecting…" else "Waiting for the host",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            if (connecting) "Reaching the session server…"
+            else "Your request to join has been sent. You'll join automatically as soon as the host lets you in.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(36.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            shape = SquircleShape,
+            modifier = Modifier.height(52.dp)
+        ) {
+            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Cancel", fontWeight = FontWeight.Bold)
         }
     }
 }
