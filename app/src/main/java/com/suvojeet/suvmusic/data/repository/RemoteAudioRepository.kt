@@ -34,6 +34,7 @@ class RemoteAudioRepository @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val gson: Gson,
     private val apiService: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService,
+    private val playlistApiService: com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistApiService,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager
 ) {
     // In-memory caches to reduce server load and improve performance.
@@ -287,18 +288,17 @@ class RemoteAudioRepository @Inject constructor(
             return@withContext emptyList()
         }
         try {
-            val response = apiService.searchPlaylists(query, limit = 20)
+            val response = playlistApiService.searchPlaylists(query)
             noteSuccess()
-            response.data?.results?.mapNotNull { dto ->
-                val id = dto.id ?: return@mapNotNull null
+            response.data.results.mapNotNull { dto ->
                 com.suvojeet.suvmusic.core.model.Playlist(
-                    id = id,
-                    title = (dto.name ?: "").decodeHtml(),
+                    id = dto.id,
+                    title = dto.title.decodeHtml(),
                     author = "Featured",
-                    thumbnailUrl = dto.image?.lastOrNull()?.url,
+                    thumbnailUrl = dto.image.lastOrNull()?.url,
                     songs = emptyList()
                 )
-            } ?: emptyList()
+            }
         } catch (e: Exception) {
             if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "searchPlaylists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
@@ -553,32 +553,20 @@ class RemoteAudioRepository @Inject constructor(
         }
 
         try {
-            val response = apiService.getPlaylist(playlistId)
+            val response = playlistApiService.getPlaylistDetails(playlistId)
             noteSuccess()
             val data = response.data
 
-            // In some wrapper versions, playlist info might be in 'playlists' or direct 'name/id' fields
-            val playlistObj = data?.playlists?.results?.firstOrNull()
-            
-            // Surface schema drift: empty-string/empty-list defaults above otherwise
-            // mask a backend response shape change as a benign "empty playlist".
-            if (data?.songs?.results == null && data?.results == null) {
-                android.util.Log.w("RemoteAudio", "getPlaylist($playlistId): no songs.results or results in response — possible schema drift")
-            }
-
-            val songs = data?.results?.mapNotNull { parseSongDto(it) }
-                ?: data?.songs?.results?.mapNotNull { parseSongDto(it) }
-                ?: emptyList()
+            val songs = data.songs?.mapNotNull { parseHqAudioPlaylistSong(it) } ?: emptyList()
 
             if (songs.isEmpty()) return@withContext null
 
-            val firstSong = songs.firstOrNull()
-            val title = playlistObj?.name ?: firstSong?.album?.takeIf { it.isNotBlank() } ?: "Playlist"
-            val image = playlistObj?.image?.lastOrNull()?.url ?: firstSong?.thumbnailUrl
+            val title = data.name.takeIf { it.isNotBlank() } ?: "Playlist"
+            val image = data.image.lastOrNull()?.url ?: songs.firstOrNull()?.thumbnailUrl
 
             val playlist = Playlist(
                 id = playlistId,
-                title = title.decodeHtml().ifBlank { "Playlist" },
+                title = title.decodeHtml(),
                 author = "",
                 thumbnailUrl = image,
                 songs = songs
@@ -1259,6 +1247,69 @@ class RemoteAudioRepository @Inject constructor(
                 album = dto.album?.name?.decodeHtml() ?: "",
                 duration = (dto.duration ?: 0L) * 1000,
                 thumbnailUrl = dto.image?.lastOrNull()?.url,
+                streamUrl = streamUrl,
+                releaseDate = dto.releaseDate,
+                remoteAudioMetadata = metadata
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun parseHqAudioPlaylistSong(dto: com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistSong): Song? {
+        return try {
+            val downloadUrlsMap = dto.downloadUrl.associate { it.quality to it.url }
+
+            val audioQuality = runBlocking {
+                try {
+                    sessionManager.getAudioQuality()
+                } catch (e: Exception) {
+                    AudioQuality.HIGH
+                }
+            }
+
+            val targetQuality = when (audioQuality) {
+                AudioQuality.LOW -> "96kbps"
+                AudioQuality.MEDIUM -> "160kbps"
+                AudioQuality.HIGH -> "320kbps"
+                AudioQuality.AUTO -> "160kbps"
+            }
+
+            val streamUrl = downloadUrlsMap[targetQuality]
+                ?: downloadUrlsMap["320kbps"]
+                ?: downloadUrlsMap["160kbps"]
+                ?: downloadUrlsMap["96kbps"]
+                ?: downloadUrlsMap["48kbps"]
+                ?: downloadUrlsMap["12kbps"]
+                ?: dto.downloadUrl.lastOrNull()?.url
+
+            val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
+                label = dto.label?.decodeHtml(),
+                playCount = dto.playCount,
+                language = dto.language,
+                explicitContent = dto.explicitContent,
+                copyright = dto.copyright?.decodeHtml(),
+                hasLyrics = dto.hasLyrics,
+                year = dto.year?.toString(),
+                releaseDate = dto.releaseDate,
+                artists = dto.artists.all.map { artist ->
+                    com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
+                        name = artist.name.decodeHtml(),
+                        role = artist.role.replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                        thumbnailUrl = artist.image.lastOrNull()?.url,
+                        artistId = artist.id
+                    )
+                },
+                downloadUrls = downloadUrlsMap
+            )
+
+            Song.fromRemoteAudio(
+                songId = dto.id,
+                title = dto.name.decodeHtml(),
+                artist = dto.artists.primary.joinToString { it.name }.decodeHtml().ifBlank { "Unknown Artist" },
+                album = (dto.album.name ?: "").decodeHtml(),
+                duration = (dto.duration?.toLong() ?: 0L) * 1000,
+                thumbnailUrl = dto.image.lastOrNull()?.url,
                 streamUrl = streamUrl,
                 releaseDate = dto.releaseDate,
                 remoteAudioMetadata = metadata
