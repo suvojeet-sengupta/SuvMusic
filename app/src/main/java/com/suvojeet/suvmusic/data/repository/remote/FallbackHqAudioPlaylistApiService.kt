@@ -13,8 +13,7 @@ class FallbackHqAudioPlaylistApiService(
         return try {
             val result = primaryService.block()
             val success = when (result) {
-                is SearchPlaylistsResponse -> result.success
-                is PlaylistDetailsResponse -> result.success
+                is ApiResponse<*> -> result.success
                 else -> true
             }
             if (success) {
