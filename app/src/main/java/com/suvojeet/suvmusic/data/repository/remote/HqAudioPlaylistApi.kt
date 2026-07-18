@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.data.repository.remote
 
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -19,7 +20,7 @@ data class DownloadLink(
 @Serializable
 data class PlaylistSearchItem(
     val id: String,
-    val title: String,
+    @SerializedName("name") val title: String,
     val image: List<DownloadLink>? = null,
     val url: String? = null,
     val language: String? = null,
