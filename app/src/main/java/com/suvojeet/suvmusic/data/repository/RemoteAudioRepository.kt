@@ -7,6 +7,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.crypto.Cipher
@@ -234,16 +235,15 @@ class RemoteAudioRepository @Inject constructor(
             return@withContext emptyList()
         }
         try {
-            val response = apiService.searchArtists(query, limit = 5)
+            val response = playlistApiService.searchArtists(query)
             noteSuccess()
-            response.data?.results?.mapNotNull { dto ->
-                val id = dto.id ?: return@mapNotNull null
+            response.data.results.mapNotNull { dto ->
                 com.suvojeet.suvmusic.core.model.Artist(
-                    id = id,
-                    name = (dto.name ?: "").decodeHtml(),
+                    id = dto.id,
+                    name = dto.name.decodeHtml(),
                     thumbnailUrl = dto.image?.lastOrNull()?.url
                 )
-            } ?: emptyList()
+            }
         } catch (e: Exception) {
             if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "searchArtists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
@@ -295,7 +295,7 @@ class RemoteAudioRepository @Inject constructor(
                     id = dto.id,
                     title = dto.title.decodeHtml(),
                     author = "Featured",
-                    thumbnailUrl = dto.image.lastOrNull()?.url,
+                    thumbnailUrl = dto.image?.lastOrNull()?.url,
                     songs = emptyList()
                 )
             }
@@ -1295,8 +1295,8 @@ class RemoteAudioRepository @Inject constructor(
                 artists = dto.artists.all.map { artist ->
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
                         name = artist.name.decodeHtml(),
-                        role = artist.role.replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
-                        thumbnailUrl = artist.image.lastOrNull()?.url,
+                        role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                        thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
                     )
                 },
@@ -1532,37 +1532,41 @@ class RemoteAudioRepository @Inject constructor(
             }
 
             // Parse Albums
-            val albums = data?.albums?.results?.mapNotNull { dto ->
-                val id = dto.id ?: return@mapNotNull null
-                com.suvojeet.suvmusic.core.model.Album(
-                    id = id,
-                    title = (dto.name ?: "Album").decodeHtml(),
-                    artist = "", // Album DTO in new API might not have direct artist string
-                    thumbnailUrl = dto.image?.lastOrNull()?.url,
-                    year = dto.year
-                )
-            } ?: emptyList()
+            val albums = emptyList<com.suvojeet.suvmusic.core.model.Album>()
             
-            // Parse Artists
-            val artists = data?.artists?.results?.mapNotNull { dto ->
-                com.suvojeet.suvmusic.core.model.Artist(
-                    id = dto.id ?: "",
-                    name = (dto.name ?: "Artist").decodeHtml(),
-                    thumbnailUrl = dto.image?.lastOrNull()?.url
-                )
-            } ?: emptyList()
+            // Parse Artists and Playlists using the new API concurrently
+            val artistsDeferred = async {
+                try {
+                    playlistApiService.searchArtists(query).data.results.mapNotNull { dto ->
+                        com.suvojeet.suvmusic.core.model.Artist(
+                            id = dto.id,
+                            name = dto.name.decodeHtml(),
+                            thumbnailUrl = dto.image?.lastOrNull()?.url
+                        )
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
 
-            // Parse Playlists
-            val playlists = data?.playlists?.results?.mapNotNull { dto ->
-                val id = dto.id ?: return@mapNotNull null
-                Playlist(
-                    id = id,
-                    title = (dto.name ?: "Playlist").decodeHtml(),
-                    author = "",
-                    thumbnailUrl = dto.image?.lastOrNull()?.url,
-                    songs = emptyList()
-                )
-            } ?: emptyList()
+            val playlistsDeferred = async {
+                try {
+                    playlistApiService.searchPlaylists(query).data.results.mapNotNull { dto ->
+                        Playlist(
+                            id = dto.id,
+                            title = dto.title.decodeHtml(),
+                            author = "",
+                            thumbnailUrl = dto.image?.lastOrNull()?.url,
+                            songs = emptyList()
+                        )
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+
+            val artists = artistsDeferred.await()
+            val playlists = playlistsDeferred.await()
             
             return@withContext SearchResults(songs, albums, artists, playlists)
 

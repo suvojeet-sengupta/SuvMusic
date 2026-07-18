@@ -41,6 +41,10 @@ class FallbackHqAudioPlaylistApiService(
         return executeWithFallback { searchPlaylists(query) }
     }
 
+    override suspend fun searchArtists(query: String): SearchArtistsResponse {
+        return executeWithFallback { searchArtists(query) }
+    }
+
     override suspend fun getPlaylistDetails(playlistId: String): PlaylistDetailsResponse {
         return executeWithFallback { getPlaylistDetails(playlistId) }
     }

@@ -20,21 +20,24 @@ data class DownloadLink(
 data class PlaylistSearchItem(
     val id: String,
     val title: String,
-    val image: List<DownloadLink>,
-    val url: String,
-    val language: String,
-    val type: String,
-    val description: String
+    val image: List<DownloadLink>? = null,
+    val url: String? = null,
+    val language: String? = null,
+    val type: String? = null,
+    val description: String? = null
 )
 
 @Serializable
 data class SearchResultCategory<T>(
     val results: List<T>,
-    val position: Int
+    val position: Int? = null
 )
 
 typealias SearchPlaylistsResponse =
     ApiResponse<SearchResultCategory<PlaylistSearchItem>>
+
+typealias SearchArtistsResponse =
+    ApiResponse<SearchResultCategory<Artist>>
 
 @Serializable
 data class AlbumInfo(
@@ -47,10 +50,10 @@ data class AlbumInfo(
 data class Artist(
     val id: String,
     val name: String,
-    val role: String,
-    val type: String,
-    val image: List<DownloadLink>,
-    val url: String
+    val role: String? = null,
+    val type: String? = null,
+    val image: List<DownloadLink>? = null,
+    val url: String? = null
 )
 
 @Serializable
@@ -122,6 +125,11 @@ interface HqAudioPlaylistApiService {
     suspend fun searchPlaylists(
         @Query("query") query: String
     ): SearchPlaylistsResponse
+
+    @GET("search/artists")
+    suspend fun searchArtists(
+        @Query("query") query: String
+    ): SearchArtistsResponse
 
     @GET("playlists")
     suspend fun getPlaylistDetails(
