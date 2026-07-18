@@ -237,10 +237,11 @@ class RemoteAudioRepository @Inject constructor(
         try {
             val response = playlistApiService.searchArtists(query)
             noteSuccess()
-            response.data.results.mapNotNull { dto ->
+            response.data?.results.orEmpty().mapNotNull { dto ->
+                val id = dto.id ?: return@mapNotNull null
                 com.suvojeet.suvmusic.core.model.Artist(
-                    id = dto.id,
-                    name = dto.name.decodeHtml(),
+                    id = id,
+                    name = dto.name.orEmpty().decodeHtml(),
                     thumbnailUrl = dto.image?.lastOrNull()?.url
                 )
             }
@@ -285,25 +286,30 @@ class RemoteAudioRepository @Inject constructor(
     suspend fun searchPlaylists(query: String): List<com.suvojeet.suvmusic.core.model.Playlist> = withContext(Dispatchers.IO) {
         if (isRateLimited()) {
             android.util.Log.w("RemoteAudio", "searchPlaylists('$query') SKIP backoff active")
-            return@withContext emptyList()
+            throw IllegalStateException("Too many requests — please try again in a moment.")
         }
         try {
             val response = playlistApiService.searchPlaylists(query)
             noteSuccess()
-            response.data.results.mapNotNull { dto ->
-                com.suvojeet.suvmusic.core.model.Playlist(
-                    id = dto.id,
-                    title = dto.title.decodeHtml(),
-                    author = "Featured",
-                    thumbnailUrl = dto.image?.lastOrNull()?.url,
-                    songs = emptyList()
-                )
-            }
+            response.data?.results.orEmpty().mapNotNull { dto -> dto.toPlaylist(author = "Featured") }
         } catch (e: Exception) {
             if (is429(e)) noteRateLimited()
             android.util.Log.e("RemoteAudio", "searchPlaylists('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
-            emptyList()
+            throw e
         }
+    }
+
+    private fun com.suvojeet.suvmusic.data.repository.remote.PlaylistSearchItem.toPlaylist(
+        author: String
+    ): Playlist? {
+        val id = id ?: return null
+        return Playlist(
+            id = id,
+            title = title.orEmpty().decodeHtml().ifBlank { "Playlist" },
+            author = author,
+            thumbnailUrl = image?.lastOrNull()?.url,
+            songs = emptyList()
+        )
     }
 
 
@@ -555,7 +561,7 @@ class RemoteAudioRepository @Inject constructor(
         try {
             val response = playlistApiService.getPlaylistDetails(playlistId)
             noteSuccess()
-            val data = response.data
+            val data = response.data ?: return@withContext null
 
             val songs = data.songs?.mapNotNull { parseHqAudioPlaylistSong(it) } ?: emptyList()
 
@@ -1294,7 +1300,7 @@ class RemoteAudioRepository @Inject constructor(
                 releaseDate = dto.releaseDate,
                 artists = dto.artists.all.map { artist ->
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
-                        name = artist.name.decodeHtml(),
+                        name = artist.name.orEmpty().decodeHtml(),
                         role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
                         thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
@@ -1306,7 +1312,7 @@ class RemoteAudioRepository @Inject constructor(
             Song.fromRemoteAudio(
                 songId = dto.id,
                 title = dto.name.decodeHtml(),
-                artist = dto.artists.primary.joinToString { it.name }.decodeHtml().ifBlank { "Unknown Artist" },
+                artist = dto.artists.primary.joinToString { it.name.orEmpty() }.decodeHtml().ifBlank { "Unknown Artist" },
                 album = (dto.album.name ?: "").decodeHtml(),
                 duration = (dto.duration?.toLong() ?: 0L) * 1000,
                 thumbnailUrl = dto.image.lastOrNull()?.url,
@@ -1537,30 +1543,28 @@ class RemoteAudioRepository @Inject constructor(
             // Parse Artists and Playlists using the new API concurrently
             val artistsDeferred = async {
                 try {
-                    playlistApiService.searchArtists(query).data.results.mapNotNull { dto ->
+                    playlistApiService.searchArtists(query).data?.results.orEmpty().mapNotNull { dto ->
+                        val id = dto.id ?: return@mapNotNull null
                         com.suvojeet.suvmusic.core.model.Artist(
-                            id = dto.id,
-                            name = dto.name.decodeHtml(),
+                            id = id,
+                            name = dto.name.orEmpty().decodeHtml(),
                             thumbnailUrl = dto.image?.lastOrNull()?.url
                         )
                     }
                 } catch (e: Exception) {
+                    if (is429(e)) noteRateLimited()
+                    android.util.Log.e("RemoteAudio", "searchAll('$query') artists failed: ${e.javaClass.simpleName}: ${e.message}")
                     emptyList()
                 }
             }
 
             val playlistsDeferred = async {
                 try {
-                    playlistApiService.searchPlaylists(query).data.results.mapNotNull { dto ->
-                        Playlist(
-                            id = dto.id,
-                            title = dto.title.decodeHtml(),
-                            author = "",
-                            thumbnailUrl = dto.image?.lastOrNull()?.url,
-                            songs = emptyList()
-                        )
-                    }
+                    playlistApiService.searchPlaylists(query).data?.results.orEmpty()
+                        .mapNotNull { dto -> dto.toPlaylist(author = "") }
                 } catch (e: Exception) {
+                    if (is429(e)) noteRateLimited()
+                    android.util.Log.e("RemoteAudio", "searchAll('$query') playlists failed: ${e.javaClass.simpleName}: ${e.message}")
                     emptyList()
                 }
             }

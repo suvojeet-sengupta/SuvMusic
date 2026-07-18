@@ -7,8 +7,8 @@ import retrofit2.http.Query
 
 @Serializable
 data class ApiResponse<T>(
-    val success: Boolean,
-    val data: T
+    val success: Boolean = false,
+    val data: T? = null
 )
 
 @Serializable
@@ -19,8 +19,8 @@ data class DownloadLink(
 
 @Serializable
 data class PlaylistSearchItem(
-    val id: String,
-    @SerializedName("name") val title: String,
+    val id: String? = null,
+    @SerializedName("name") val title: String? = null,
     val image: List<DownloadLink>? = null,
     val url: String? = null,
     val language: String? = null,
@@ -30,7 +30,7 @@ data class PlaylistSearchItem(
 
 @Serializable
 data class SearchResultCategory<T>(
-    val results: List<T>,
+    val results: List<T>? = null,
     val position: Int? = null
 )
 
@@ -49,8 +49,8 @@ data class AlbumInfo(
 
 @Serializable
 data class Artist(
-    val id: String,
-    val name: String,
+    val id: String? = null,
+    val name: String? = null,
     val role: String? = null,
     val type: String? = null,
     val image: List<DownloadLink>? = null,

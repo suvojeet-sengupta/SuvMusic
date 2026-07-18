@@ -338,7 +338,11 @@ class SearchViewModel @Inject constructor(
     }
     
     fun setResultFilter(filter: ResultFilter) {
-        _uiState.update { it.copy(resultFilter = filter) }
+        if (_uiState.value.resultFilter == filter) return
+        _uiState.update { it.copy(resultFilter = filter, error = null) }
+        if (_uiState.value.query.isNotBlank()) {
+            search(saveToHistory = false)
+        }
     }
     
     fun onTrendingSearchClick(query: String) {
@@ -374,8 +378,8 @@ class SearchViewModel @Inject constructor(
     private fun searchInternal(query: String) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
             try {
                 val currentTab = _uiState.value.selectedTab
                 

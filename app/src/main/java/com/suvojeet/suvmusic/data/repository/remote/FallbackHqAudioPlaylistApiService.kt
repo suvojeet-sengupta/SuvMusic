@@ -30,9 +30,15 @@ class FallbackHqAudioPlaylistApiService(
             if (isServerErrorOrNetwork) {
                 Log.e("FallbackHqAudioApi", "Primary HQ Audio Playlist API failed. Error: ${e.message}")
                 RemoteAudioApiStatus.setPrimaryApiWorking(false)
-            } else {
-                Log.w("FallbackHqAudioApi", "Primary HQ Audio Playlist API returned client error. Error: ${e.message}")
+                return try {
+                    fallbackService.block()
+                } catch (fallbackError: Exception) {
+                    Log.e("FallbackHqAudioApi", "Fallback HQ Audio Playlist API also failed. Error: ${fallbackError.message}")
+                    throw fallbackError
+                }
             }
+
+            Log.w("FallbackHqAudioApi", "Primary HQ Audio Playlist API returned client error. Error: ${e.message}")
             throw e
         }
     }

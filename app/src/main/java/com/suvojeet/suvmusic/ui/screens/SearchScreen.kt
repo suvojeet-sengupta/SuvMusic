@@ -545,6 +545,24 @@ fun SearchScreen(
                                 }
                                 else -> {}
                             }
+
+                            val activeResultsEmpty = when (uiState.resultFilter) {
+                                ResultFilter.SONGS, ResultFilter.VIDEOS -> uiState.results.isEmpty()
+                                ResultFilter.ARTISTS -> uiState.artistResults.isEmpty()
+                                ResultFilter.ALBUMS -> uiState.albumResults.isEmpty()
+                                ResultFilter.COMMUNITY_PLAYLISTS, ResultFilter.FEATURED_PLAYLISTS -> uiState.playlistResults.isEmpty()
+                                else -> false
+                            }
+                            if (activeResultsEmpty) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Text(
+                                        uiState.error ?: "No HQ Audio results found for \"${uiState.query}\"",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(20.dp)
+                                    )
+                                }
+                            }
                         } else {
                             if (uiState.artistResults.isNotEmpty()) {
                                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
