@@ -28,7 +28,6 @@ include(":core:model")
 include(":core:data")
 include(":core:domain")
 include(":core:db")
-include(":core:ui")
 // KMP migration (Phase 0): parallel desktop/multiplatform module. Does not yet
 // replace :app — Android APK still builds from :app unchanged.
 include(":composeApp")

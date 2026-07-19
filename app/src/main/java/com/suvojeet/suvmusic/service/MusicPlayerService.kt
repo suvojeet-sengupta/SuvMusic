@@ -122,11 +122,11 @@ class MusicPlayerService : MediaLibraryService() {
     private var cachedSearchResults: List<com.suvojeet.suvmusic.core.model.Song> = emptyList()
     
     // Browse-level song cache: videoId -> Song, populated by createPlayableMediaItem
-    private val cachedBrowseSongs: MutableMap<String, com.suvojeet.suvmusic.core.model.Song> = mutableMapOf()
+    private val cachedBrowseSongs: MutableMap<String, com.suvojeet.suvmusic.core.model.Song> = java.util.concurrent.ConcurrentHashMap()
 
     // Playlist context cache: songId -> ordered list of all songs in its parent playlist/section
     // Used by onAddMediaItems to queue up remaining songs for skip support in Android Auto
-    private val playlistContextCache: MutableMap<String, List<com.suvojeet.suvmusic.core.model.Song>> = mutableMapOf()
+    private val playlistContextCache: MutableMap<String, List<com.suvojeet.suvmusic.core.model.Song>> = java.util.concurrent.ConcurrentHashMap()
 
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         android.util.Log.e("MusicPlayerService", "Coroutine exception", throwable)
@@ -1726,6 +1726,7 @@ class MusicPlayerService : MediaLibraryService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         notificationManager.cancel(NOTIFICATION_ID_SLEEP_TIMER)
         audioARManager.setPlaying(false)
+        lastFmManager.setPlayer(null)
         listenTogetherManager.setPlayer(null)
         mediaLibrarySession?.run {
             playerListener?.let { player.removeListener(it) }

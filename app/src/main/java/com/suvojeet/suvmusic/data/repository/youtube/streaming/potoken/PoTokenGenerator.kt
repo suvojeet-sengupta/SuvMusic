@@ -91,6 +91,23 @@ class PoTokenGenerator @Inject constructor(
             null
         } catch (e: Exception) {
             Log.e(TAG, "poToken generation exception: ${e.javaClass.simpleName}: ${e.message}", e)
+            // A throw part-way through leaves the generator non-null but the pot null, which
+            // makes every later call skip recreation and hit the !! — reset like the timeout
+            // branch does so the next attempt starts clean.
+            runBlocking {
+                webPoTokenGenLock.withLock {
+                    try {
+                        withContext(Dispatchers.Main) {
+                            webPoTokenGenerator?.close()
+                        }
+                    } catch (closeEx: Exception) {
+                        Log.e(TAG, "Exception closing PoTokenWebView during error cleanup", closeEx)
+                    }
+                    webPoTokenGenerator = null
+                    webPoTokenStreamingPot = null
+                    webPoTokenSessionId = null
+                }
+            }
             when (e) {
                 is BadWebViewException -> {
                     Log.e(TAG, "Could not obtain poToken because WebView is broken", e)

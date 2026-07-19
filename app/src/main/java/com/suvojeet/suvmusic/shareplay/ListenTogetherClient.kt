@@ -261,10 +261,10 @@ class ListenTogetherClient @Inject constructor(
     private var wakeLock: PowerManager.WakeLock? = null
     
     // Track notification IDs for join requests to dismiss them from both UI and notification actions
-    private val joinRequestNotifications = mutableMapOf<String, Int>()
+    private val joinRequestNotifications = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     // Track notification IDs for suggestions to dismiss them similarly
-    private val suggestionNotifications = mutableMapOf<String, Int>()
+    private val suggestionNotifications = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     // State flows
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)

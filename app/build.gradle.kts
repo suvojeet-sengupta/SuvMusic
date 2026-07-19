@@ -285,7 +285,6 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:domain"))
     implementation(project(":core:db"))
-    implementation(project(":core:ui"))
     implementation(project(":scrobbler"))
     implementation(project(":lyric-simpmusic"))
     implementation(project(":lyric-lrclib"))

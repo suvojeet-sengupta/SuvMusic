@@ -964,7 +964,7 @@ fun SuvMusicApp(
                                     playerViewModel.startPersonalizedRadio()
                                 }
                             },
-                            onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                            onLoadMoreRadioSongs = { playerViewModel.loadMoreAutoplaySongs() },
                             isRadioMode = isRadioMode,
                             isLoadingMoreSongs = isLoadingMoreSongs,
                             onSwitchDevice = { playerViewModel.switchOutputDevice(it) },
@@ -1106,7 +1106,7 @@ fun SuvMusicApp(
                              playerViewModel.startRadio(it, null)
                          }
                     },
-                    onLoadMoreRadioSongs = { playerViewModel.loadMoreRadioSongs() },
+                    onLoadMoreRadioSongs = { playerViewModel.loadMoreAutoplaySongs() },
                     onPlayFromQueue = { index ->
                         if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
                             playerViewModel.playSong(playerState.queue[index], playerState.queue, index)

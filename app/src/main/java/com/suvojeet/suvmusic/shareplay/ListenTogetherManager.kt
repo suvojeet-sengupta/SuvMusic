@@ -557,6 +557,8 @@ class ListenTogetherManager @Inject constructor(
         }
         stopHeartbeat()
         stopDriftCorrection()
+        activeSyncJob?.cancel()
+        activeSyncJob = null
         lastSyncedIsPlaying = null
         lastSyncedTrackId = null
         bufferingTrackId = null

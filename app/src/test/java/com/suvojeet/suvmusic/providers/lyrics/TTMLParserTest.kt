@@ -1,4 +1,4 @@
-package com.suvojeet.suvmusic.data.repository.lyrics
+package com.suvojeet.suvmusic.providers.lyrics
 
 import org.junit.Assert.*
 import org.junit.Test

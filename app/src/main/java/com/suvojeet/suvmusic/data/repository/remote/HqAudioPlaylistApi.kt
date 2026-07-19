@@ -13,8 +13,8 @@ data class ApiResponse<T>(
 
 @Serializable
 data class DownloadLink(
-    val quality: String,
-    val url: String
+    val quality: String? = null,
+    val url: String? = null
 )
 
 @Serializable
@@ -59,16 +59,16 @@ data class Artist(
 
 @Serializable
 data class ArtistGroup(
-    val primary: List<Artist>,
-    val featured: List<Artist>,
-    val all: List<Artist>
+    val primary: List<Artist>? = null,
+    val featured: List<Artist>? = null,
+    val all: List<Artist>? = null
 )
 
 @Serializable
 data class HqAudioPlaylistSong(
-    val id: String,
-    val name: String,
-    val type: String,
+    val id: String? = null,
+    val name: String? = null,
+    val type: String? = null,
 
     val year: String? = null,
     val releaseDate: String? = null,
@@ -77,28 +77,28 @@ data class HqAudioPlaylistSong(
     val label: String? = null,
     val copyright: String? = null,
 
-    val explicitContent: Boolean,
+    val explicitContent: Boolean? = null,
     val playCount: Long? = null,
 
-    val language: String,
+    val language: String? = null,
 
-    val hasLyrics: Boolean,
+    val hasLyrics: Boolean? = null,
     val lyricsId: String? = null,
 
-    val url: String,
+    val url: String? = null,
 
-    val album: AlbumInfo,
-    val artists: ArtistGroup,
+    val album: AlbumInfo? = null,
+    val artists: ArtistGroup? = null,
 
-    val image: List<DownloadLink>,
-    val downloadUrl: List<DownloadLink>
+    val image: List<DownloadLink>? = null,
+    val downloadUrl: List<DownloadLink>? = null
 )
 
 @Serializable
 data class PlaylistDetail(
-    val id: String,
+    val id: String? = null,
 
-    val name: String,
+    val name: String? = null,
     val description: String? = null,
 
     val year: Int? = null,
@@ -110,9 +110,9 @@ data class PlaylistDetail(
     val language: String? = null,
     val explicitContent: Boolean? = null,
 
-    val url: String,
+    val url: String? = null,
 
-    val image: List<DownloadLink>,
+    val image: List<DownloadLink>? = null,
 
     val songs: List<HqAudioPlaylistSong>? = null
 )

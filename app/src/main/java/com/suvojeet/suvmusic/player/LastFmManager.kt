@@ -36,9 +36,11 @@ class LastFmManager @Inject constructor(
     // We need access to the player to check current position
     private var currentPlayer: Player? = null
     
-    fun setPlayer(player: Player) {
+    fun setPlayer(player: Player?) {
+        currentPlayer?.removeListener(this)
         currentPlayer = player
-        player.addListener(this)
+        player?.addListener(this)
+        if (player == null) scrobbleJob?.cancel()
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

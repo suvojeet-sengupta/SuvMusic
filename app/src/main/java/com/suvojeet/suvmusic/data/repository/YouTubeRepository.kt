@@ -1720,9 +1720,8 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            val responseBody = response.body.string()
-            
+            val responseBody = okHttpClient.newCall(request).execute().use { it.body.string() }
+
             // Parse the response to get playlist ID
             val jsonResponse = JSONObject(responseBody)
             jsonResponse.optString("playlistId").takeIf { it.isNotEmpty() }
@@ -1772,8 +1771,7 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            okHttpClient.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -1878,8 +1876,7 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            okHttpClient.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -1989,8 +1986,7 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            okHttpClient.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -2029,8 +2025,7 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            okHttpClient.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -2240,8 +2235,7 @@ class YouTubeRepository @Inject constructor(
                 .addYouTubeAuthHeaders(cookies, authUser)
                 .build()
             
-            val response = okHttpClient.newCall(request).execute()
-            response.isSuccessful
+            okHttpClient.newCall(request).execute().use { it.isSuccessful }
         } catch (e: Exception) {
             e.printStackTrace()
             false

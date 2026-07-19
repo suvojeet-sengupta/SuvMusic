@@ -168,7 +168,7 @@ fun CustomizationScreen(
                     CustomizationNavigationItem(
                         icon = Icons.Rounded.RoundedCorner,
                         title = "Artwork Shape",
-                        subtitle = currentArtworkShape.name.replace("_", " ").lowercase().capitalize(),
+                        subtitle = currentArtworkShape.name.replace("_", " ").lowercase().titlecaseFirst(),
                         onClick = onArtworkShapeClick
                     )
 
@@ -177,7 +177,7 @@ fun CustomizationScreen(
                     CustomizationNavigationItem(
                         icon = Icons.Default.PhotoSizeSelectActual,
                         title = "Artwork Size",
-                        subtitle = currentArtworkSize.name.lowercase().capitalize(),
+                        subtitle = currentArtworkSize.name.lowercase().titlecaseFirst(),
                         trailingContent = { ArtworkSizeIndicator(currentArtworkSize) },
                         onClick = onArtworkSizeClick
                     )
@@ -749,5 +749,8 @@ private fun MiniPlayerPreview(alpha: Float, style: MiniPlayerStyle) {
 }
 
 private fun formatSeekbarStyleName(style: SeekbarStyle): String {
-    return style.name.replace("_", " ").lowercase().split(" ").joinToString(" ") { it.capitalize() }
+    return style.name.replace("_", " ").lowercase().split(" ").joinToString(" ") { it.titlecaseFirst() }
 }
+
+private fun String.titlecaseFirst(): String =
+    replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }

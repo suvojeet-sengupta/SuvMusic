@@ -1480,7 +1480,7 @@ fun RoomContent(
             )
         }
 
-        items(room.users) { user: UserInfo ->
+        items(room.users, key = { it.userId }) { user: UserInfo ->
             val isBuffering = bufferingUsers.contains(user.userId)
             UserListItem(
                 user = user, 

@@ -91,11 +91,26 @@ class RemoteAudioRepository @Inject constructor(
     @Volatile private var rateLimitedUntilMs = 0L
     @Volatile private var rateLimitStreak = 0
 
-    private fun isRateLimited(): Boolean {
-        if (com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiStatus.isPrimaryApiWorking.value) {
-            return false
+    private fun isRateLimited(): Boolean = System.currentTimeMillis() < rateLimitedUntilMs
+
+    // TTL rather than audioQualityFlow: the flow only re-emits on DataStore writes, so it
+    // would miss the isOnWifi() switch that getAudioQuality() re-checks per call.
+    @Volatile private var cachedQuality: AudioQuality = AudioQuality.HIGH
+    @Volatile private var cachedQualityAtMs = 0L
+
+    private fun cachedAudioQuality(): AudioQuality {
+        val now = System.currentTimeMillis()
+        if (now - cachedQualityAtMs < 1_000L) return cachedQuality
+        return runBlocking {
+            try {
+                sessionManager.getAudioQuality()
+            } catch (e: Exception) {
+                AudioQuality.HIGH
+            }
+        }.also {
+            cachedQuality = it
+            cachedQualityAtMs = now
         }
-        return System.currentTimeMillis() < rateLimitedUntilMs
     }
 
     /**
@@ -563,12 +578,21 @@ class RemoteAudioRepository @Inject constructor(
             noteSuccess()
             val data = response.data ?: return@withContext null
 
-            val songs = data.songs?.mapNotNull { parseHqAudioPlaylistSong(it) } ?: emptyList()
+            val audioQuality = try {
+                sessionManager.getAudioQuality()
+            } catch (e: Exception) {
+                AudioQuality.HIGH
+            }
+            val rawSongs = data.songs.orEmpty()
+            val songs = rawSongs.mapNotNull { parseHqAudioPlaylistSong(it, audioQuality) }
 
-            if (songs.isEmpty()) return@withContext null
+            if (songs.isEmpty()) {
+                android.util.Log.w("RemoteAudio", "getPlaylist($playlistId): raw=${rawSongs.size} parsed=0")
+                return@withContext null
+            }
 
-            val title = data.name.takeIf { it.isNotBlank() } ?: "Playlist"
-            val image = data.image.lastOrNull()?.url ?: songs.firstOrNull()?.thumbnailUrl
+            val title = data.name?.takeIf { it.isNotBlank() } ?: "Playlist"
+            val image = data.image?.lastOrNull()?.url ?: songs.firstOrNull()?.thumbnailUrl
 
             val playlist = Playlist(
                 id = playlistId,
@@ -1202,13 +1226,7 @@ class RemoteAudioRepository @Inject constructor(
                 q to u
             }?.toMap() ?: emptyMap()
 
-            val audioQuality = runBlocking {
-                try {
-                    sessionManager.getAudioQuality()
-                } catch (e: Exception) {
-                    AudioQuality.HIGH
-                }
-            }
+            val audioQuality = cachedAudioQuality()
 
             val targetQuality = when (audioQuality) {
                 AudioQuality.LOW -> "96kbps"
@@ -1262,17 +1280,17 @@ class RemoteAudioRepository @Inject constructor(
         }
     }
 
-    private fun parseHqAudioPlaylistSong(dto: com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistSong): Song? {
+    private fun parseHqAudioPlaylistSong(
+        dto: com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistSong,
+        audioQuality: AudioQuality
+    ): Song? {
         return try {
-            val downloadUrlsMap = dto.downloadUrl.associate { it.quality to it.url }
-
-            val audioQuality = runBlocking {
-                try {
-                    sessionManager.getAudioQuality()
-                } catch (e: Exception) {
-                    AudioQuality.HIGH
-                }
-            }
+            val songId = dto.id ?: return null
+            val downloadUrlsMap = dto.downloadUrl.orEmpty().mapNotNull { link ->
+                val quality = link.quality ?: return@mapNotNull null
+                val url = link.url ?: return@mapNotNull null
+                quality to url
+            }.toMap()
 
             val targetQuality = when (audioQuality) {
                 AudioQuality.LOW -> "96kbps"
@@ -1287,7 +1305,7 @@ class RemoteAudioRepository @Inject constructor(
                 ?: downloadUrlsMap["96kbps"]
                 ?: downloadUrlsMap["48kbps"]
                 ?: downloadUrlsMap["12kbps"]
-                ?: dto.downloadUrl.lastOrNull()?.url
+                ?: dto.downloadUrl.orEmpty().lastOrNull()?.url
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = dto.label?.decodeHtml(),
@@ -1298,7 +1316,7 @@ class RemoteAudioRepository @Inject constructor(
                 hasLyrics = dto.hasLyrics,
                 year = dto.year?.toString(),
                 releaseDate = dto.releaseDate,
-                artists = dto.artists.all.map { artist ->
+                artists = dto.artists?.all.orEmpty().map { artist ->
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
                         name = artist.name.orEmpty().decodeHtml(),
                         role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
@@ -1310,17 +1328,18 @@ class RemoteAudioRepository @Inject constructor(
             )
 
             Song.fromRemoteAudio(
-                songId = dto.id,
-                title = dto.name.decodeHtml(),
-                artist = dto.artists.primary.joinToString { it.name.orEmpty() }.decodeHtml().ifBlank { "Unknown Artist" },
-                album = (dto.album.name ?: "").decodeHtml(),
+                songId = songId,
+                title = dto.name.orEmpty().decodeHtml(),
+                artist = dto.artists?.primary.orEmpty().joinToString { it.name.orEmpty() }.decodeHtml().ifBlank { "Unknown Artist" },
+                album = dto.album?.name.orEmpty().decodeHtml(),
                 duration = (dto.duration?.toLong() ?: 0L) * 1000,
-                thumbnailUrl = dto.image.lastOrNull()?.url,
+                thumbnailUrl = dto.image?.lastOrNull()?.url,
                 streamUrl = streamUrl,
                 releaseDate = dto.releaseDate,
                 remoteAudioMetadata = metadata
             )
         } catch (e: Exception) {
+            android.util.Log.e("RemoteAudio", "parseHqAudioPlaylistSong(${dto.id}) failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }
@@ -1399,13 +1418,7 @@ class RemoteAudioRepository @Inject constructor(
                 }
             }
 
-            val audioQuality = runBlocking {
-                try {
-                    sessionManager.getAudioQuality()
-                } catch (e: Exception) {
-                    AudioQuality.HIGH
-                }
-            }
+            val audioQuality = cachedAudioQuality()
 
             val targetQuality = when (audioQuality) {
                 AudioQuality.LOW -> "96kbps"

@@ -197,8 +197,8 @@ class RecommendationEngine @Inject constructor(
         if (topGenres.isEmpty()) return@coroutineScope emptyList()
 
         val sections = mutableListOf<HomeSection>()
-        val seenIds = mutableSetOf<String>()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenIds = ConcurrentHashMap.newKeySet<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         val deferredSections = topGenres.map { (genreName, _) ->
             async(Dispatchers.IO) {
@@ -245,8 +245,8 @@ class RecommendationEngine @Inject constructor(
         val isWeekend = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY
 
         val sections = mutableListOf<HomeSection>()
-        val seenIds = mutableSetOf<String>()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenIds = ConcurrentHashMap.newKeySet<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         // Context query pairs: (title, searchQuery)
         val contextQueries = mutableListOf<Pair<String, String>>()
@@ -343,8 +343,8 @@ class RecommendationEngine @Inject constructor(
         if (page > 6) return@coroutineScope emptyList()
 
         val profile = tasteProfileBuilder.getProfile()
-        val seenIds = mutableSetOf<String>()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenIds = ConcurrentHashMap.newKeySet<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         // Gather taste signals for query generation
         val topArtists = profile.artistAffinities.keys.toList()
@@ -489,8 +489,8 @@ class RecommendationEngine @Inject constructor(
         // triggered 429 rate-limiting, so that branch was removed.
         val profile = tasteProfileBuilder.getProfile()
         val sections = mutableListOf<HomeSection>()
-        val seenSongIds = mutableSetOf<String>()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenSongIds = ConcurrentHashMap.newKeySet<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         // Launch multiple recommendation sources in parallel
         val quickPicksDeferred = async { fetchQuickPicks(profile, seenSongIds, seenFingerprints) }
@@ -603,8 +603,8 @@ class RecommendationEngine @Inject constructor(
         // RemoteAudio is never used to build home/recommendation content.
         val profile = tasteProfileBuilder.getProfile()
         val candidates = mutableListOf<Song>()
-        val seenIds = mutableSetOf<String>()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenIds = ConcurrentHashMap.newKeySet<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         // --- Priority 1: YT Music's official personalized recommendations ---
         if (youTubeRepository.isLoggedIn()) {
@@ -745,7 +745,7 @@ class RecommendationEngine @Inject constructor(
         val profile = tasteProfileBuilder.getProfile()
         val candidates = mutableListOf<Song>()
         val seenIds = excludeIds.toMutableSet()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
 
 
@@ -810,7 +810,7 @@ class RecommendationEngine @Inject constructor(
 
         val candidates = mutableListOf<Song>()
         val seenIds = recentIds.toMutableSet()
-        val seenFingerprints = mutableSetOf<String>()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
         coroutineScope {
             val jobs = recentIds.map { songId ->
