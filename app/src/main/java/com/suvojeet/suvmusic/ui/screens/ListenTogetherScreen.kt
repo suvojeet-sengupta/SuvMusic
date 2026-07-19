@@ -1138,12 +1138,7 @@ fun RoomContent(
             }
             
             val durationString = remember(sessionDuration) {
-                val seconds = sessionDuration / 1000
-                val h = seconds / 3600
-                val m = (seconds % 3600) / 60
-                val s = seconds % 60
-                if (h > 0) String.format("%02d:%02d:%02d", h, m, s)
-                else String.format("%02d:%02d", m, s)
+                com.suvojeet.suvmusic.util.TimeUtil.formatTime(sessionDuration)
             }
 
             Row(

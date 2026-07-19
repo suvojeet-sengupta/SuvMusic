@@ -166,12 +166,7 @@ fun LyricsScreen(
     }
 
     // Formatting helper for seek bar
-    fun formatTime(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
-    }
+    fun formatTime(ms: Long): String = com.suvojeet.suvmusic.util.TimeUtil.formatPosition(ms)
     
     // Detect Mood/Style
     val currentStyle = remember(songTitle, artistName, lyrics) {

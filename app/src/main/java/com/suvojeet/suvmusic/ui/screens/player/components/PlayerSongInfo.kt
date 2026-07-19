@@ -361,9 +361,7 @@ fun SongInfoSection(
                             "Sleep at end of song"
                         } else {
                             sleepTimerRemainingMs?.let { ms ->
-                                val minutes = (ms / 60000).toInt()
-                                val seconds = ((ms % 60000) / 1000).toInt()
-                                String.format("Sleep in %d:%02d", minutes, seconds)
+                                "Sleep in " + com.suvojeet.suvmusic.util.TimeUtil.formatPosition(ms)
                             } ?: ""
                         },
                         style = MaterialTheme.typography.labelMedium.copy(

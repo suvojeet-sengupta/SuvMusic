@@ -113,6 +113,29 @@ class RemoteAudioRepository @Inject constructor(
         }
     }
 
+    private fun selectStreamUrl(
+        downloadUrls: Map<String, String>,
+        quality: AudioQuality,
+        fallback: String?
+    ): String? {
+        val target = when (quality) {
+            AudioQuality.LOW -> "96kbps"
+            AudioQuality.MEDIUM -> "160kbps"
+            AudioQuality.HIGH -> "320kbps"
+            AudioQuality.AUTO -> "160kbps"
+        }
+        return downloadUrls[target]
+            ?: downloadUrls["320kbps"]
+            ?: downloadUrls["160kbps"]
+            ?: downloadUrls["96kbps"]
+            ?: downloadUrls["48kbps"]
+            ?: downloadUrls["12kbps"]
+            ?: fallback
+    }
+
+    private fun formatArtistRole(role: String?): String =
+        (role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() }
+
     /**
      * True when the shared 429 backoff gate is currently active. Lets callers (e.g. a
      * Listen Together guest) skip a doomed HQ resolve and fall straight to YouTube so
@@ -1228,20 +1251,7 @@ class RemoteAudioRepository @Inject constructor(
 
             val audioQuality = cachedAudioQuality()
 
-            val targetQuality = when (audioQuality) {
-                AudioQuality.LOW -> "96kbps"
-                AudioQuality.MEDIUM -> "160kbps"
-                AudioQuality.HIGH -> "320kbps"
-                AudioQuality.AUTO -> "160kbps"
-            }
-
-            val streamUrl = downloadUrlsMap[targetQuality]
-                ?: downloadUrlsMap["320kbps"]
-                ?: downloadUrlsMap["160kbps"]
-                ?: downloadUrlsMap["96kbps"]
-                ?: downloadUrlsMap["48kbps"]
-                ?: downloadUrlsMap["12kbps"]
-                ?: dto.downloadUrl?.lastOrNull()?.url
+            val streamUrl = selectStreamUrl(downloadUrlsMap, audioQuality, dto.downloadUrl?.lastOrNull()?.url)
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = dto.label?.decodeHtml(),
@@ -1256,7 +1266,7 @@ class RemoteAudioRepository @Inject constructor(
                     val name = artist.name ?: return@mapNotNull null
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
                         name = name.decodeHtml(),
-                        role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                        role = formatArtistRole(artist.role),
                         thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
                     )
@@ -1292,20 +1302,7 @@ class RemoteAudioRepository @Inject constructor(
                 quality to url
             }.toMap()
 
-            val targetQuality = when (audioQuality) {
-                AudioQuality.LOW -> "96kbps"
-                AudioQuality.MEDIUM -> "160kbps"
-                AudioQuality.HIGH -> "320kbps"
-                AudioQuality.AUTO -> "160kbps"
-            }
-
-            val streamUrl = downloadUrlsMap[targetQuality]
-                ?: downloadUrlsMap["320kbps"]
-                ?: downloadUrlsMap["160kbps"]
-                ?: downloadUrlsMap["96kbps"]
-                ?: downloadUrlsMap["48kbps"]
-                ?: downloadUrlsMap["12kbps"]
-                ?: dto.downloadUrl.orEmpty().lastOrNull()?.url
+            val streamUrl = selectStreamUrl(downloadUrlsMap, audioQuality, dto.downloadUrl.orEmpty().lastOrNull()?.url)
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = dto.label?.decodeHtml(),
@@ -1319,7 +1316,7 @@ class RemoteAudioRepository @Inject constructor(
                 artists = dto.artists?.all.orEmpty().map { artist ->
                     com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
                         name = artist.name.orEmpty().decodeHtml(),
-                        role = (artist.role ?: "Artist").replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                        role = formatArtistRole(artist.role),
                         thumbnailUrl = artist.image?.lastOrNull()?.url,
                         artistId = artist.id
                     )
@@ -1402,7 +1399,7 @@ class RemoteAudioRepository @Inject constructor(
                 
                 com.suvojeet.suvmusic.core.model.ArtistCreditInfo(
                     name = name.decodeHtml(),
-                    role = role.replace("_", " ").split(" ").joinToString(" ") { it.capitalize() },
+                    role = formatArtistRole(role),
                     thumbnailUrl = artistImage,
                     artistId = artistId
                 )
@@ -1420,20 +1417,11 @@ class RemoteAudioRepository @Inject constructor(
 
             val audioQuality = cachedAudioQuality()
 
-            val targetQuality = when (audioQuality) {
-                AudioQuality.LOW -> "96kbps"
-                AudioQuality.MEDIUM -> "160kbps"
-                AudioQuality.HIGH -> "320kbps"
-                AudioQuality.AUTO -> "160kbps"
-            }
-
-            val streamUrl = downloadUrlsMap[targetQuality]
-                ?: downloadUrlsMap["320kbps"]
-                ?: downloadUrlsMap["160kbps"]
-                ?: downloadUrlsMap["96kbps"]
-                ?: downloadUrlsMap["48kbps"]
-                ?: downloadUrlsMap["12kbps"]
-                ?: json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
+            val streamUrl = selectStreamUrl(
+                downloadUrlsMap,
+                audioQuality,
+                json.getAsJsonArray("downloadUrl")?.lastOrNull()?.asJsonObject?.get("url")?.asString
+            )
 
             val metadata = com.suvojeet.suvmusic.core.model.RemoteAudioMetadata(
                 label = json.get("label")?.asString?.decodeHtml(),

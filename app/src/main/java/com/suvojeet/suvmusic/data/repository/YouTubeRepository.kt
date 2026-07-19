@@ -1183,13 +1183,8 @@ class YouTubeRepository @Inject constructor(
         )
     }
 
-    private fun resolveAutoMixTitle(playlistId: String): String = when {
-        playlistId.startsWith("RDAMPL") -> "Mixed For You"
-        playlistId.startsWith("RDCLAK") -> "Discover Mix"
-        playlistId.startsWith("RDGMUK") -> "Replay Mix"
-        playlistId.startsWith("RTM") || playlistId.startsWith("RDTMAK") -> "My Supermix"
-        else -> "Your Mix"
-    }
+    private fun resolveAutoMixTitle(playlistId: String): String =
+        com.suvojeet.suvmusic.player.AutoMix.resolveTitle(playlistId)
 
     private fun parseAutoMixQueue(json: String): List<com.suvojeet.suvmusic.core.model.Song> {
         val songs = mutableListOf<com.suvojeet.suvmusic.core.model.Song>()

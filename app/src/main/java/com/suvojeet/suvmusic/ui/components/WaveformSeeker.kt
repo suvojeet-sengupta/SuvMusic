@@ -162,9 +162,7 @@ fun WaveformSeeker(
         // Time Tooltip when dragging
         if (isDragging && duration > 0) {
             val seekTime = (currentProgress * duration).toLong()
-            val minutes = seekTime / 1000 / 60
-            val seconds = (seekTime / 1000) % 60
-            val timeText = String.format("%d:%02d", minutes, seconds)
+            val timeText = com.suvojeet.suvmusic.util.TimeUtil.formatPosition(seekTime)
             
             // Calculate horizontal offset to follow finger, constrained to seeker width
             val tooltipOffset = with(density) {

@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.util
 
 import com.suvojeet.suvmusic.core.model.Song
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 object TimeUtil {
@@ -26,17 +27,34 @@ object TimeUtil {
     }
 
     /**
-     * Formats duration in milliseconds to "mm:ss" or "hh:mm:ss"
+     * Formats duration in milliseconds to "mm:ss" or "hh:mm:ss" (zero-padded).
      */
     fun formatTime(millis: Long): String {
         val hours = TimeUnit.MILLISECONDS.toHours(millis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
         val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
-        
+
         return if (hours > 0) {
-            String.format("%02d:%02d:%02d", hours, minutes, seconds)
+            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
         } else {
-            String.format("%02d:%02d", minutes, seconds)
+            String.format(Locale.US, "%02d:%02d", minutes, seconds)
+        }
+    }
+
+    /**
+     * Formats a playback position/duration as "m:ss", widening to "h:mm:ss" past an hour.
+     * Unlike [formatTime] the leading unit is not zero-padded.
+     */
+    fun formatPosition(millis: Long): String {
+        val safe = millis.coerceAtLeast(0L)
+        val hours = TimeUnit.MILLISECONDS.toHours(safe)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(safe) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(safe) % 60
+
+        return if (hours > 0) {
+            String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.US, "%d:%02d", minutes, seconds)
         }
     }
 

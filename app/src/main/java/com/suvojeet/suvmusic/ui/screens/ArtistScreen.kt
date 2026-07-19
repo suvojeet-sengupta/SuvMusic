@@ -1169,7 +1169,5 @@ private fun formatDuration(durationMillis: Long): String {
     if (durationMillis <= 0L) return "--:--"
     // Some parsers may return seconds instead of millis for certain artist rows.
     val normalizedMs = if (durationMillis in 1..43200L) durationMillis * 1000 else durationMillis
-    val minutes = (normalizedMs / 1000) / 60
-    val seconds = (normalizedMs / 1000) % 60
-    return "$minutes:${seconds.toString().padStart(2, '0')}"
+    return com.suvojeet.suvmusic.util.TimeUtil.formatPosition(normalizedMs)
 }

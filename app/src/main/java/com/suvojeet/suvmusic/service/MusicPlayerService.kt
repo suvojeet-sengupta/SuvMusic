@@ -1757,13 +1757,8 @@ class MusicPlayerService : MediaLibraryService() {
         return streamUrl
     }
 
-    private fun resolveAutoMixTitle(playlistId: String): String = when {
-        playlistId.startsWith("RDAMPL") -> "Mixed For You"
-        playlistId.startsWith("RDCLAK") -> "Discover Mix"
-        playlistId.startsWith("RDGMUK") -> "Replay Mix"
-        playlistId.startsWith("RTM") || playlistId.startsWith("RDTMAK") -> "My Supermix"
-        else -> "Your Mix"
-    }
+    private fun resolveAutoMixTitle(playlistId: String): String =
+        com.suvojeet.suvmusic.player.AutoMix.resolveTitle(playlistId)
 
     private fun createBrowsableMediaItem(
         mediaId: String, 
@@ -1844,9 +1839,7 @@ class MusicPlayerService : MediaLibraryService() {
         serviceScope.launch {
             kotlinx.coroutines.flow.combine(sleepTimerManager.isActive, sleepTimerManager.remainingTimeMs) { isActive, remaining -> Pair(isActive, remaining) }.collect { (isActive, remaining) ->
                 if (isActive && remaining != null) {
-                    val minutes = remaining / 1000 / 60
-                    val seconds = (remaining / 1000) % 60
-                    val timeString = String.format("%d:%02d", minutes, seconds)
+                    val timeString = com.suvojeet.suvmusic.util.TimeUtil.formatPosition(remaining)
                     val cancelIntent = Intent(this@MusicPlayerService, MusicPlayerService::class.java).apply { action = "ACTION_CANCEL_SLEEP_TIMER" }
                     val pendingCancelIntent = PendingIntent.getService(this@MusicPlayerService, 99, cancelIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     val notification = androidx.core.app.NotificationCompat.Builder(this@MusicPlayerService, channelId)
