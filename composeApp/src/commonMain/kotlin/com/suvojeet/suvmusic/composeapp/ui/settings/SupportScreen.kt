@@ -38,7 +38,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -208,7 +207,15 @@ fun SupportScreen(
         }
 
         item {
-            SectionTitle("Contribute & Support")
+            SectionTitle(
+                title = "Contribute & Support",
+                modifier = Modifier
+                    .padding(start = 28.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start,
+            )
             SettingsCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -260,7 +267,15 @@ fun SupportScreen(
         }
 
         item {
-            SectionTitle("Help & Feedback")
+            SectionTitle(
+                title = "Help & Feedback",
+                modifier = Modifier
+                    .padding(start = 28.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start,
+            )
             SettingsCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -318,7 +333,15 @@ fun SupportScreen(
         }
 
         item {
-            SectionTitle("Contact")
+            SectionTitle(
+                title = "Contact",
+                modifier = Modifier
+                    .padding(start = 28.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start,
+            )
             SettingsCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -363,28 +386,6 @@ fun SupportScreen(
             onOpenUri = onOpenUri
         )
     }
-}
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier
-            .padding(start = 28.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
-            .fillMaxWidth(),
-        textAlign = TextAlign.Start,
-    )
-}
-
-@Composable
-private fun ThinDivider() {
-    M3HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-    )
 }
 
 @Composable

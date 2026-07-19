@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -637,25 +636,6 @@ private fun formatOneDecimal(value: Float): String {
     val whole = tenths / 10
     val frac = kotlin.math.abs(tenths % 10)
     return "$whole.$frac"
-}
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun ThinDivider() {
-    M3HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-    )
 }
 
 @Composable

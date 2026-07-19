@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -25,7 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.composeapp.theme.SquircleShape
@@ -58,6 +61,42 @@ fun SettingsCard(
     ) {
         Column(modifier = Modifier.padding(contentPadding)) { content() }
     }
+}
+
+/**
+ * Heading that labels a group of settings rows.
+ *
+ * Defaults render the accented variant used across the settings screens. Override
+ * [modifier], [color], [fontWeight] and [textAlign] for the muted variant.
+ */
+@Composable
+fun SectionTitle(
+    title: String,
+    modifier: Modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+    style: TextStyle = MaterialTheme.typography.labelLarge,
+    color: Color = MaterialTheme.colorScheme.primary,
+    fontWeight: FontWeight = FontWeight.Bold,
+    textAlign: TextAlign? = null,
+) {
+    Text(
+        text = title,
+        style = style,
+        color = color,
+        fontWeight = fontWeight,
+        modifier = modifier,
+        textAlign = textAlign,
+    )
+}
+
+/**
+ * Hairline separator between settings rows.
+ */
+@Composable
+fun ThinDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+    )
 }
 
 /**

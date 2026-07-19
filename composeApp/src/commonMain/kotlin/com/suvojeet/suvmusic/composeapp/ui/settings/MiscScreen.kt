@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -185,25 +184,6 @@ fun MiscScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun ThinDivider() {
-    M3HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-    )
 }
 
 @Composable
