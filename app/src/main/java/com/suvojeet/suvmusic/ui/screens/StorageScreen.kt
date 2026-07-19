@@ -394,13 +394,9 @@ fun StorageScreen(
 
 @Composable
 private fun SettingsSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).fillMaxWidth(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Start
+    com.suvojeet.suvmusic.ui.components.SettingsSectionTitle(
+        title = title,
+        modifier = Modifier.fillMaxWidth()
     )
 }
 

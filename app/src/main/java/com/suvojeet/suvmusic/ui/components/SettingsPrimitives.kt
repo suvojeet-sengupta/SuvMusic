@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -170,5 +171,25 @@ fun SettingsSwitchRow(
                 .clickable(enabled = enabled) { onCheckedChange(!checked) }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+/**
+ * Small heading that labels a group of settings rows.
+ */
+@Composable
+fun SettingsSectionTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    fontWeight: FontWeight = FontWeight.Bold,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 8.dp)
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = color,
+        fontWeight = fontWeight,
+        modifier = modifier.padding(contentPadding)
     )
 }

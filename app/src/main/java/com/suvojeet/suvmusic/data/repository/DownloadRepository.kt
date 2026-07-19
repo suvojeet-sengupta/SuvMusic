@@ -294,7 +294,9 @@ class DownloadRepository @Inject constructor(
                             if (targetFolder.listFiles()?.isEmpty() == true) {
                                 targetFolder.delete()
                             }
-                        } catch (e: Exception) {}
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to remove empty folder ${targetFolder.name}", e)
+                        }
                     }
                     if (deleted) return true
                 }
@@ -310,7 +312,9 @@ class DownloadRepository @Inject constructor(
                                     if (targetFolder.listFiles()?.isEmpty() == true) {
                                         targetFolder.delete()
                                     }
-                                } catch (e: Exception) {}
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Failed to remove empty folder ${targetFolder.name}", e)
+                                }
                             }
                             return true
                         }
@@ -326,7 +330,9 @@ class DownloadRepository @Inject constructor(
                                     if (targetFolder.listFiles()?.isEmpty() == true) {
                                         targetFolder.delete()
                                     }
-                                } catch (e: Exception) {}
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Failed to remove empty folder ${targetFolder.name}", e)
+                                }
                             }
                             return true
                         }
@@ -354,7 +360,7 @@ class DownloadRepository @Inject constructor(
                 val song = currentSongs.find { it.id == songId }
                 
                 if (song != null) {
-                    val newUri = saveFileToPublicDownloads(songId, song.artist, song.title, oldFile.inputStream())
+                    val newUri = saveFileToPublicDownloads(song.artist, song.title, oldFile.inputStream())
                     
                     if (newUri != null) {
                         val index = currentSongs.indexOfFirst { it.id == songId }
@@ -382,7 +388,7 @@ class DownloadRepository @Inject constructor(
         }
     }
 
-    private suspend fun saveFileToPublicDownloads(songId: String, artist: String, title: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
+    private suspend fun saveFileToPublicDownloads(artist: String, title: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
         val fileName = "${sanitizeFileName(title)} - ${sanitizeFileName(artist)}.$extension"
 
         val customLocationUri = sessionManager.getDownloadLocation()
@@ -391,13 +397,20 @@ class DownloadRepository @Inject constructor(
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            saveToMediaStore(songId, fileName, inputStream, subfolder, extension)
+            saveToMediaStore(fileName, inputStream, subfolder, extension)
         } else {
-            saveToPublicFolder(songId, fileName, inputStream, subfolder)
+            saveToPublicFolder(fileName, inputStream, subfolder)
         }
     }
 
-    private fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null, extension: String = "m4a"): Uri? {
+    private suspend fun writeToCustomLocation(
+        fileName: String,
+        treeUri: String,
+        subfolder: String?,
+        extension: String,
+        onError: suspend (Exception) -> Uri?,
+        write: suspend (java.io.OutputStream) -> Unit
+    ): Uri? {
         return try {
             val rootUri = Uri.parse(treeUri)
             var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
@@ -420,17 +433,22 @@ class DownloadRepository @Inject constructor(
             val newFile = rootFolder.createFile(mimeType, fileName) ?: return null
 
             context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
-                inputStream.copyTo(output)
+                write(output)
             }
 
             newFile.uri
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving to custom location", e)
-            null
+            onError(e)
         }
     }
 
-    private fun saveToMediaStore(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? {
+    private suspend fun writeToMediaStore(
+        fileName: String,
+        subfolder: String?,
+        extension: String,
+        onError: suspend (Exception) -> Uri?,
+        write: suspend (java.io.OutputStream) -> Unit
+    ): Uri? {
         return try {
             val relativePath = if (subfolder != null) {
                 "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
@@ -451,7 +469,7 @@ class DownloadRepository @Inject constructor(
 
             uri?.let { mediaUri ->
                 resolver.openOutputStream(mediaUri)?.use { outputStream ->
-                    inputStream.copyTo(outputStream)
+                    write(outputStream)
                 }
 
                 contentValues.clear()
@@ -460,17 +478,16 @@ class DownloadRepository @Inject constructor(
             }
             uri
         } catch (e: Exception) {
-            android.util.Log.e(
-                DL_TAG,
-                "[SAVE_MS] EXCEPTION fileName=$fileName msg=${e.message} — falling back to public folder",
-                e,
-            )
-            Log.e(TAG, "Error saving to MediaStore", e)
-            saveToPublicFolder(songId, fileName, inputStream, subfolder)
+            onError(e)
         }
     }
 
-    private fun saveToPublicFolder(songId: String, fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? {
+    private suspend fun writeToPublicFolder(
+        fileName: String,
+        subfolder: String?,
+        onError: suspend (Exception) -> Uri?,
+        write: suspend (java.io.OutputStream) -> Unit
+    ): Uri? {
         return try {
             val rootFolder = getPublicMusicFolder()
             val targetFolder = if (subfolder != null) {
@@ -481,14 +498,57 @@ class DownloadRepository @Inject constructor(
 
             val file = File(targetFolder, fileName)
             FileOutputStream(file).use { outputStream ->
-                inputStream.copyTo(outputStream)
+                write(outputStream)
             }
             file.toUri()
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving to Music folder", e)
-            null
+            onError(e)
         }
     }
+
+    private suspend fun saveToCustomLocation(fileName: String, inputStream: InputStream, treeUri: String, subfolder: String? = null, extension: String = "m4a"): Uri? =
+        writeToCustomLocation(
+            fileName = fileName,
+            treeUri = treeUri,
+            subfolder = subfolder,
+            extension = extension,
+            onError = { e ->
+                Log.e(TAG, "Error saving to custom location", e)
+                null
+            }
+        ) { output ->
+            inputStream.copyTo(output)
+        }
+
+    private suspend fun saveToMediaStore(fileName: String, inputStream: InputStream, subfolder: String? = null, extension: String = "m4a"): Uri? =
+        writeToMediaStore(
+            fileName = fileName,
+            subfolder = subfolder,
+            extension = extension,
+            onError = { e ->
+                android.util.Log.e(
+                    DL_TAG,
+                    "[SAVE_MS] EXCEPTION fileName=$fileName msg=${e.message} — falling back to public folder",
+                    e,
+                )
+                Log.e(TAG, "Error saving to MediaStore", e)
+                saveToPublicFolder(fileName, inputStream, subfolder)
+            }
+        ) { output ->
+            inputStream.copyTo(output)
+        }
+
+    private suspend fun saveToPublicFolder(fileName: String, inputStream: InputStream, subfolder: String? = null): Uri? =
+        writeToPublicFolder(
+            fileName = fileName,
+            subfolder = subfolder,
+            onError = { e ->
+                Log.e(TAG, "Error saving to Music folder", e)
+                null
+            }
+        ) { output ->
+            inputStream.copyTo(output)
+        }
 
     private suspend fun saveFileWithProgress(
         songId: String,
@@ -527,36 +587,17 @@ class DownloadRepository @Inject constructor(
         subfolder: String? = null,
         onProgress: (Float) -> Unit,
         extension: String = "m4a"
-    ): Uri? {
-        return try {
-            val rootUri = Uri.parse(treeUri)
-            var rootFolder = DocumentFile.fromTreeUri(context, rootUri) ?: return null
-
-            if (subfolder != null) {
-                val sanitizedSub = sanitizeFileName(subfolder)
-                var subDir = rootFolder.findFile(sanitizedSub)
-                if (subDir == null || !subDir.isDirectory) {
-                    subDir = rootFolder.createDirectory(sanitizedSub)
-                }
-                if (subDir != null) {
-                    rootFolder = subDir
-                }
-            }
-
-            val existingFile = rootFolder.findFile(fileName)
-            existingFile?.delete()
-
-            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
-            val newFile = rootFolder.createFile(mimeType, fileName) ?: return null
-
-            context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
-                copyWithProgress(inputStream, output, contentLength, onProgress)
-            }
-            newFile.uri
-        } catch (e: Exception) {
+    ): Uri? = writeToCustomLocation(
+        fileName = fileName,
+        treeUri = treeUri,
+        subfolder = subfolder,
+        extension = extension,
+        onError = { e ->
             Log.e(TAG, "Error saving to custom location with progress", e)
             null
         }
+    ) { output ->
+        copyWithProgress(inputStream, output, contentLength, onProgress)
     }
 
     private suspend fun saveToMediaStoreWithProgress(
@@ -566,66 +607,35 @@ class DownloadRepository @Inject constructor(
         subfolder: String? = null,
         onProgress: (Float) -> Unit,
         extension: String = "m4a"
-    ): Uri? {
-        return try {
-            val relativePath = if (subfolder != null) {
-                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER/${sanitizeFileName(subfolder)}"
-            } else {
-                "${Environment.DIRECTORY_MUSIC}/$SUVMUSIC_FOLDER"
-            }
-
-            val mimeType = if (extension == "opus") "audio/opus" else "audio/m4a"
-            val contentValues = ContentValues().apply {
-                put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Audio.Media.MIME_TYPE, mimeType)
-                put(MediaStore.Audio.Media.RELATIVE_PATH, relativePath)
-                put(MediaStore.Audio.Media.IS_PENDING, 1)
-            }
-
-            val resolver = context.contentResolver
-            val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-            uri?.let { mediaUri ->
-                resolver.openOutputStream(mediaUri)?.use { outputStream ->
-                    copyWithProgress(inputStream, outputStream, contentLength, onProgress)
-                }
-
-                contentValues.clear()
-                contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
-                resolver.update(mediaUri, contentValues, null, null)
-            }
-            uri
-        } catch (e: Exception) {
+    ): Uri? = writeToMediaStore(
+        fileName = fileName,
+        subfolder = subfolder,
+        extension = extension,
+        onError = { e ->
             Log.e(TAG, "Error saving to MediaStore with progress", e)
             null
         }
-    }    
+    ) { output ->
+        copyWithProgress(inputStream, output, contentLength, onProgress)
+    }
+
     private suspend fun saveToPublicFolderWithProgress(
         fileName: String,
         inputStream: InputStream,
         contentLength: Long,
         subfolder: String? = null,
         onProgress: (Float) -> Unit
-    ): Uri? {
-        return try {
-            val rootFolder = getPublicMusicFolder()
-            val targetFolder = if (subfolder != null) {
-                File(rootFolder, sanitizeFileName(subfolder)).apply { mkdirs() }
-            } else {
-                rootFolder
-            }
-            
-            val file = File(targetFolder, fileName)
-            FileOutputStream(file).use { outputStream ->
-                copyWithProgress(inputStream, outputStream, contentLength, onProgress)
-            }
-            file.toUri()
-        } catch (e: Exception) {
+    ): Uri? = writeToPublicFolder(
+        fileName = fileName,
+        subfolder = subfolder,
+        onError = { e ->
             Log.e(TAG, "Error saving to Music folder with progress", e)
             null
         }
+    ) { output ->
+        copyWithProgress(inputStream, output, contentLength, onProgress)
     }
-    
+
     /**
      * Suspending copy so cancellation actually stops the byte pump.
      *
@@ -744,7 +754,9 @@ class DownloadRepository @Inject constructor(
                             context.contentResolver.openInputStream(uri)?.close()
                             return@mapNotNull song
                         }
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Stored URI unreadable for ${song.title}, will search on disk", e)
+                    }
                 }
 
                 try {
@@ -764,7 +776,9 @@ class DownloadRepository @Inject constructor(
                         val altFoundFile = findFileRecursive(folder, altFileName)
                         if (altFoundFile != null) return@mapNotNull song.copy(localUri = altFoundFile.toUri().toString())
                     }
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to locate downloaded file for ${song.title}", e)
+                }
                 null
             }
             
@@ -1029,7 +1043,7 @@ class DownloadRepository @Inject constructor(
             val saveT0 = System.currentTimeMillis()
             val downloadedUri = tempFile.inputStream().use { input ->
                 saveFileToPublicDownloads(
-                    song.id, song.artist, song.title, input,
+                    song.artist, song.title, input,
                     song.customFolderPath, extension,
                 )
             } ?: run {
@@ -1229,7 +1243,7 @@ class DownloadRepository @Inject constructor(
                     tagAudioFile(tmp, song)
                     tmp.inputStream().use { input ->
                         saveFileToPublicDownloads(
-                            song.id, song.artist, song.title, input,
+                            song.artist, song.title, input,
                             song.customFolderPath, extension,
                         )
                     }
@@ -1435,7 +1449,9 @@ class DownloadRepository @Inject constructor(
                             localThumbnailUrl = thumbFile.toUri().toString()
                         }
                     }
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to cache video thumbnail for ${song.id}", e)
+                }
             }
 
             val downloadedSong = song.copy(source = SongSource.DOWNLOADED, localUri = savedUri.toString(), thumbnailUrl = localThumbnailUrl, streamUrl = null, originalSource = song.source, isVideo = true)
@@ -1519,9 +1535,11 @@ class DownloadRepository @Inject constructor(
                         else if (file.isDirectory) file.listFiles().forEach { subFile: DocumentFile -> if (subFile.isFile) downloadedSongsBytes += subFile.length() }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to measure custom download location size", e)
+            }
         }
-        
+
         val thumbnailsDir = File(context.filesDir, "thumbnails")
         if (thumbnailsDir.exists()) thumbnailsDir.listFiles()?.forEach { file -> thumbnailsBytes += file.length() }
         

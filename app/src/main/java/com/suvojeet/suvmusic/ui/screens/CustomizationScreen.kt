@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import com.suvojeet.suvmusic.ui.components.SettingsSectionTitle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -343,17 +344,6 @@ fun CustomizationScreen(
             }
         }
     }
-}
-
-@Composable
-private fun SettingsSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-    )
 }
 
 @Composable
