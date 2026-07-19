@@ -1,14 +1,11 @@
 package com.suvojeet.suvmusic.composeapp.ui.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,20 +16,15 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.composeapp.theme.SquircleShape
@@ -77,6 +69,8 @@ fun SponsorBlockSettingsScreen(
                     subtitle = "Skip non-music segments automatically",
                     checked = isMasterEnabled,
                     onCheckedChange = onMasterToggle,
+                    highlightWhenChecked = false,
+                    subtitleMaxLines = Int.MAX_VALUE,
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -119,76 +113,10 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-        ),
-        tonalElevation = 1.dp,
-    ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun ThinDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-    )
-}
-
-@Composable
-private fun SwitchRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-        },
-        modifier = Modifier
-            .clickable { onCheckedChange(!checked) }
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
 

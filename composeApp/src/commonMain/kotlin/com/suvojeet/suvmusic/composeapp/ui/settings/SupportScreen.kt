@@ -209,7 +209,13 @@ fun SupportScreen(
 
         item {
             SectionTitle("Contribute & Support")
-            SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SettingsCard(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = null,
+                tonalElevation = 0.dp,
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
                 SupportListItem(
                     icon = Icons.Default.AttachMoney,
                     title = "Donate via Coindrop",
@@ -255,7 +261,13 @@ fun SupportScreen(
 
         item {
             SectionTitle("Help & Feedback")
-            SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SettingsCard(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = null,
+                tonalElevation = 0.dp,
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
                 SupportListItem(
                     icon = Icons.Default.Feedback,
                     title = "Send Feedback",
@@ -307,7 +319,13 @@ fun SupportScreen(
 
         item {
             SectionTitle("Contact")
-            SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SettingsCard(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = null,
+                tonalElevation = 0.dp,
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
                 SupportListItem(
                     icon = Icons.Default.Email,
                     title = "Email",
@@ -362,21 +380,6 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) { content() }
-    }
-}
-
-@Composable
 private fun ThinDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
@@ -396,20 +399,11 @@ private fun SupportListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.Bold) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
         leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(accentColor.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            LeadingIconBox(
+                icon = icon,
+                tint = accentColor,
+                containerColor = accentColor.copy(alpha = 0.12f),
+            )
         },
         trailingContent = {
             Icon(

@@ -1,8 +1,6 @@
 package com.suvojeet.suvmusic.composeapp.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,9 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -656,49 +651,11 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-        ),
-        tonalElevation = 1.dp,
-    ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) { content() }
-    }
-}
-
-@Composable
 private fun ThinDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
     )
-}
-
-@Composable
-private fun LeadingIconBox(icon: ImageVector) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(SquircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp),
-        )
-    }
 }
 
 @Composable
@@ -723,58 +680,6 @@ private fun NavigationRow(
         modifier = Modifier
             .clickable(onClick = onClick)
             .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
-}
-
-@Composable
-private fun SwitchRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val backgroundColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-        else Color.Transparent
-    )
-
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(SquircleShape)
-            .background(backgroundColor)
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 4.dp),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
