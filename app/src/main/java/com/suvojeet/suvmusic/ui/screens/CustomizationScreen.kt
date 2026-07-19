@@ -58,6 +58,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.sin
 import kotlin.random.Random
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
+import com.suvojeet.suvmusic.ui.components.SettingsCard
 
 /**
  * Customization settings screen for player appearance with Material 3 Expressive design.
@@ -356,30 +357,6 @@ private fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun HorizontalDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
@@ -428,50 +405,6 @@ private fun CustomizationNavigationItem(
         },
         modifier = Modifier
             .dpadFocusable(onClick = onClick, shape = SquircleShape)
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun CustomizationSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = Modifier
-            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )

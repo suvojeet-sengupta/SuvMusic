@@ -33,6 +33,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
+import com.suvojeet.suvmusic.ui.components.SettingsRowStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +119,8 @@ fun LastFmSettingsScreen(
                     item {
                         LastFmSectionTitle("Scrobbling")
                         LastFmCard {
-                            LastFmSwitchItem(
+                            SettingsSwitchRow(
+                                style = SettingsRowStyle.Plain,
                                 icon = Icons.Default.MusicNote,
                                 title = "Enable Scrobbling",
                                 checked = uiState.lastFmScrobblingEnabled,
@@ -126,7 +129,8 @@ fun LastFmSettingsScreen(
                             
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                            LastFmSwitchItem(
+                            SettingsSwitchRow(
+                                style = SettingsRowStyle.Plain,
                                 icon = Icons.Default.Favorite, // Or another icon like Star or Recommend
                                 title = "Enable Recommendations",
                                 subtitle = "Show recommended artists and songs on Home",
@@ -136,7 +140,8 @@ fun LastFmSettingsScreen(
                             
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                             
-                            LastFmSwitchItem(
+                            SettingsSwitchRow(
+                                style = SettingsRowStyle.Plain,
                                 icon = Icons.Default.PlayArrow,
                                 title = "Show 'Now Playing'",
                                 subtitle = "Update your status while listening",
@@ -146,7 +151,8 @@ fun LastFmSettingsScreen(
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                            LastFmSwitchItem(
+                            SettingsSwitchRow(
+                                style = SettingsRowStyle.Plain,
                                 icon = Icons.Default.Favorite,
                                 title = "Send Likes",
                                 subtitle = "Mark songs as loved on Last.fm",
@@ -363,24 +369,3 @@ private fun LastFmCard(content: @Composable () -> Unit) {
     }
 }
 
-@Composable
-private fun LastFmSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        },
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}

@@ -47,6 +47,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
+import com.suvojeet.suvmusic.ui.components.SettingsRowStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,7 +144,8 @@ fun DiscordSettingsScreen(
                     DiscordCard {
                         val isEnabled = uiState.discordToken.isNotBlank()
                         
-                        DiscordSwitchItem(
+                        SettingsSwitchRow(
+                            style = SettingsRowStyle.Plain,
                             icon = Icons.Default.Settings,
                             title = "Enable Rich Presence",
                             subtitle = if (!isEnabled) "Log in to enable" else "Show status on Discord",
@@ -153,7 +156,8 @@ fun DiscordSettingsScreen(
                         
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                        DiscordSwitchItem(
+                        SettingsSwitchRow(
+                            style = SettingsRowStyle.Plain,
                             icon = Icons.Default.Code,
                             title = "Swap Details & State",
                             subtitle = "Show song title prominently instead of artist",
@@ -385,31 +389,6 @@ private fun DiscordCard(content: @Composable () -> Unit) {
             content()
         }
     }
-}
-
-@Composable
-private fun DiscordSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    enabled: Boolean = true,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { 
-            Text(title, fontWeight = FontWeight.Medium, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) 
-        },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1, color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) } },
-        leadingContent = {
-            Icon(imageVector = icon, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
-        },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-        },
-        modifier = Modifier.clickable(enabled = enabled) { onCheckedChange(!checked) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
 }
 
 @Composable

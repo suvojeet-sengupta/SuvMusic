@@ -35,6 +35,8 @@ import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.launch
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
+import com.suvojeet.suvmusic.ui.components.SettingsCard
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
 
 /**
  * Playback settings screen with Material 3 Expressive design.
@@ -127,7 +129,7 @@ fun PlaybackSettingsScreen(
                     
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.History,
                         title = "Sync with YouTube History",
                         subtitle = "Add played songs to your YouTube watch history",
@@ -178,7 +180,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.MusicNote,
                         title = "Headphone Crossfeed",
                         subtitle = "More natural stereo imaging for headphones",
@@ -193,7 +195,7 @@ fun PlaybackSettingsScreen(
             item {
                 PlaybackSectionTitle("Track Transitions")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.GraphicEq,
                         title = "Gapless Playback",
                         subtitle = "Seamlessly transitions between songs without any pause",
@@ -203,7 +205,7 @@ fun PlaybackSettingsScreen(
                     
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.FastForward,
                         title = "Preload Next Song",
                         subtitle = "Start loading the next song early for instant playback",
@@ -246,7 +248,7 @@ fun PlaybackSettingsScreen(
                     
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Refresh,
                         title = "Automix",
                         subtitle = "Keep the queue playing by adding related songs when autoplay or radio is on",
@@ -295,7 +297,7 @@ fun PlaybackSettingsScreen(
             item {
                 PlaybackSectionTitle("Volume")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.VolumeUp,
                         title = "In-App Volume Slider",
                         subtitle = "Show volume slider overlay when adjusting volume",
@@ -305,7 +307,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Equalizer,
                         title = "Volume Normalization",
                         subtitle = "Evens out loud and quiet tracks so every song plays at a similar volume. Off by default.",
@@ -315,7 +317,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.MusicNote,
                         title = "Play During Calls",
                         subtitle = "Keep music playing during Google Meet or phone calls",
@@ -325,7 +327,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.PhoneCallback,
                         title = "Auto-resume After Calls",
                         subtitle = "Automatically resume playback when a call ends",
@@ -335,7 +337,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.VolumeUp,
                         title = "Volume Boost",
                         subtitle = "Boost volume beyond 100%. Use with caution.",
@@ -378,7 +380,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.HighQuality,
                         title = "Audio Offload",
                         subtitle = "Use specialized audio hardware for playback. Saves battery.",
@@ -388,7 +390,7 @@ fun PlaybackSettingsScreen(
 
                     HorizontalDivider()
 
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Language,
                         title = "Spatial Audio (Audio AR)",
                         subtitle = "Rotate soundstage based on device rotation. Needs headphones.",
@@ -398,7 +400,7 @@ fun PlaybackSettingsScreen(
 
                     if (uiState.audioArEnabled) {
                         Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                            PlaybackSwitchItem(
+                            SettingsSwitchRow(
                                 icon = Icons.Default.Refresh,
                                 title = "Auto-Calibration",
                                 subtitle = "Automatically adjust center point if head is stable",
@@ -489,7 +491,7 @@ fun PlaybackSettingsScreen(
             item {
                 PlaybackSectionTitle("Gestures")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Gesture,
                         title = "Swipe Down to Dismiss",
                         subtitle = "Swipe down on mini player to stop and close",
@@ -513,7 +515,7 @@ fun PlaybackSettingsScreen(
             item {
                 PlaybackSectionTitle("Music Haptics")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    PlaybackSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Vibration,
                         title = "Music Haptics",
                         subtitle = "Feel the music with taps & vibrations synced to the beat",
@@ -987,30 +989,6 @@ private fun PlaybackSectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun HorizontalDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
@@ -1054,50 +1032,6 @@ private fun PlaybackNavigationItem(
         },
         modifier = Modifier
             .dpadFocusable(onClick = onClick, shape = SquircleShape)
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun PlaybackSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = Modifier
-            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )

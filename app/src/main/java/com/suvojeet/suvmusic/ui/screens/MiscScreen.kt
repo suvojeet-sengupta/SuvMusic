@@ -77,6 +77,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.suvojeet.suvmusic.ui.components.SettingsCard
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,7 +164,8 @@ fun MiscScreen(
             item {
                 SettingsSectionTitle("Diagnostics")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MiscSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.Warning,
                         title = "Crash Reporting & Logging",
                         subtitle = "Help the developer fix issues by sharing logs",
@@ -237,7 +240,8 @@ fun MiscScreen(
 
                 SettingsSectionTitle("Advanced & Experimental")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MiscSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.Notes,
                         title = "Stop music on task clear",
                         subtitle = "Kills the playback service when app is swiped away",
@@ -247,7 +251,8 @@ fun MiscScreen(
 
                     HorizontalDivider()
 
-                    MiscSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.VolumeOff,
                         title = "Pause music when media is muted",
                         subtitle = "Pauses playback if volume becomes zero",
@@ -257,7 +262,8 @@ fun MiscScreen(
                     
                     HorizontalDivider()
 
-                    MiscSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.Smartphone,
                         title = "Keep screen on when player is expanded",
                         subtitle = "Prevents device from sleeping while viewing player",
@@ -267,7 +273,8 @@ fun MiscScreen(
                     
                     HorizontalDivider()
 
-                    MiscSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.Notes,
                         title = "Filter local audio by duration",
                         subtitle = "Hide short audio files from your library",
@@ -410,78 +417,10 @@ private fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun HorizontalDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-    )
-}
-
-@Composable
-private fun MiscSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = Modifier
-            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
 

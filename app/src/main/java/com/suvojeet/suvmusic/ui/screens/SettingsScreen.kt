@@ -95,6 +95,8 @@ import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.launch
+import com.suvojeet.suvmusic.ui.components.SettingsCard
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
 
 /**
  * Settings screen with Material 3 Expressive design and organized categories.
@@ -211,7 +213,7 @@ fun SettingsScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
                         )
                     } else {
-                        SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                             matches.forEachIndexed { index, entry ->
                                 if (index > 0) HorizontalDivider()
                                 SettingsNavigationItem(
@@ -229,7 +231,7 @@ fun SettingsScreen(
             // --- Account Section ---
             item {
                 SettingsSectionTitle("Account")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     if (uiState.isLoggedIn) {
                         // User Info
                         ListItem(
@@ -347,7 +349,7 @@ fun SettingsScreen(
             // --- Appearance Section ---
             item {
                 SettingsSectionTitle("Appearance")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.DarkMode,
                         title = "Appearance",
@@ -361,8 +363,8 @@ fun SettingsScreen(
             // --- General Section ---
             item {
                 SettingsSectionTitle("General")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SettingsSwitchItem(
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchRow(
                         icon = Icons.Default.VisibilityOff,
                         title = "Incognito Mode",
                         subtitle = "Stop history & activity sharing",
@@ -372,7 +374,7 @@ fun SettingsScreen(
                     
                     HorizontalDivider()
                     
-                    SettingsSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.PictureInPicture,
                         title = "Picture-in-Picture",
                         subtitle = "Show mini player when backgrounded",
@@ -388,8 +390,8 @@ fun SettingsScreen(
             // --- Bluetooth Section ---
             item {
                 SettingsSectionTitle("Bluetooth")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SettingsSwitchItem(
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchRow(
                         icon = Icons.Default.HeadsetMic,
                         title = "Bluetooth Autoplay",
                         subtitle = "Resume when connecting to devices",
@@ -399,7 +401,7 @@ fun SettingsScreen(
 
                     HorizontalDivider()
 
-                    SettingsSwitchItem(
+                    SettingsSwitchRow(
                         icon = Icons.Default.Lyrics,
                         title = "Announce Songs",
                         subtitle = "Speak title when song changes (TTS)",
@@ -409,7 +411,7 @@ fun SettingsScreen(
 
                     if (uiState.speakSongDetailsEnabled) {
                         HorizontalDivider()
-                        SettingsSwitchItem(
+                        SettingsSwitchRow(
                             icon = Icons.Default.HeadsetMic,
                             title = "Bluetooth only",
                             subtitle = "Only announce while a Bluetooth output is connected",
@@ -446,7 +448,7 @@ fun SettingsScreen(
             // --- Player & Audio ---
             item {
                 SettingsSectionTitle("Player & Audio")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.GraphicEq,
                         title = "Playback",
@@ -480,8 +482,8 @@ fun SettingsScreen(
             // --- Integrations ---
             item {
                 SettingsSectionTitle("Integrations")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SettingsSwitchItem(
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SettingsSwitchRow(
                         icon = Icons.Default.FastForward,
                         title = "Enable SponsorBlock",
                         subtitle = "Automatically skip non-music segments",
@@ -516,7 +518,7 @@ fun SettingsScreen(
             // --- Misc Section ---
             item {
                 SettingsSectionTitle("Advanced")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.Tune,
                         title = "Advanced",
@@ -530,7 +532,7 @@ fun SettingsScreen(
             // --- Storage & Data ---
             item {
                 SettingsSectionTitle("Storage & Data")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.Storage,
                         title = "Storage Manager",
@@ -553,7 +555,7 @@ fun SettingsScreen(
             // --- Support & About ---
             item {
                 SettingsSectionTitle("About & Support")
-                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SettingsCard(flat = true, modifier = Modifier.padding(horizontal = 16.dp)) {
                     SettingsNavigationItem(
                         icon = Icons.Default.Favorite,
                         title = "Support the project",
@@ -884,26 +886,6 @@ private fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 0.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun HorizontalDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
@@ -989,53 +971,6 @@ private fun SettingsActionItem(
         },
         modifier = Modifier
             .dpadFocusable(onClick = onClick, shape = SquircleShape)
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
-}
-
-@Composable
-private fun SettingsSwitchItem(
-    icon: ImageVector?,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it, maxLines = 1) } },
-        leadingContent = icon?.let {
-            { 
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(SquircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = it, 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = modifier
-            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
             .clip(SquircleShape),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )

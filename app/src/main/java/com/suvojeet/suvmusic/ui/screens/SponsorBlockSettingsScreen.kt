@@ -56,6 +56,8 @@ import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.util.dpadFocusable
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
+import com.suvojeet.suvmusic.ui.components.SettingsCard
+import com.suvojeet.suvmusic.ui.components.SettingsSwitchRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +105,8 @@ fun SponsorBlockSettingsScreen(
             item {
                 SettingsSectionTitle("General")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SponsorBlockSwitchItem(
+                    SettingsSwitchRow(
+                        subtitleMaxLines = Int.MAX_VALUE,
                         icon = Icons.Default.FastForward,
                         title = "Enable SponsorBlock",
                         subtitle = "Skip non-music segments automatically",
@@ -154,78 +157,10 @@ private fun SettingsSectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun HorizontalDivider() {
     M3HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-    )
-}
-
-@Composable
-private fun SponsorBlockSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.Medium) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(SquircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
-        modifier = Modifier
-            .dpadFocusable(onClick = { onCheckedChange(!checked) }, shape = SquircleShape)
-            .clip(SquircleShape),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
 }
 

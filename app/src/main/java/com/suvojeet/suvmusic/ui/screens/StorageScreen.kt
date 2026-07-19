@@ -38,6 +38,7 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.suvojeet.suvmusic.ui.components.SettingsCard
 
 /**
  * Storage management screen with Material 3 Expressive design.
@@ -401,30 +402,6 @@ private fun SettingsSectionTitle(title: String) {
         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).fillMaxWidth(),
         textAlign = androidx.compose.ui.text.style.TextAlign.Start
     )
-}
-
-@Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = SquircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.8f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        ),
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            content()
-        }
-    }
 }
 
 @Composable
