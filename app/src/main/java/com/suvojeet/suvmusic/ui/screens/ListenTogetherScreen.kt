@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.shareplay.*
+import com.suvojeet.suvmusic.ui.components.BetaBadge
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.MeshGradientBackground
 import com.suvojeet.suvmusic.ui.viewmodel.ListenTogetherViewModel
@@ -2183,26 +2184,6 @@ fun BlockedUsersSheet(
                 Text("Close", fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Composable
-fun BetaBadge(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-    ) {
-        Text(
-            text = "BETA",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp,
-                fontSize = 10.sp
-            ),
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
     }
 }
 
