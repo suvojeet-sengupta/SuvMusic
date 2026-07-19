@@ -54,6 +54,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.platform.LocalDensity
 
+private val QueueRowShape = RoundedCornerShape(12.dp)
+private val QueueRowHorizontalInset = 8.dp
+private val QueueRowVerticalInset = 2.dp
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ModernQueueView(
@@ -404,17 +408,34 @@ fun ModernQueueView(
                                 // Rows are transparent over the dynamic background, so
                                 // only draw the delete affordance mid-swipe.
                                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                                    // Match the row's own inset and radius so this reads as the
+                                    // row turning red rather than a hard-edged bar behind it,
+                                    // and keep the tile opaque — blending errorContainer into
+                                    // the art-derived backdrop muddies it in dark mode and
+                                    // washes it out in light.
+                                    val armed = dismissState.targetValue ==
+                                        SwipeToDismissBoxValue.EndToStart
+                                    val iconScale by animateFloatAsState(
+                                        targetValue = if (armed) 1.1f else 0.85f,
+                                        label = "SwipeDeleteIconScale"
+                                    )
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f))
-                                            .padding(horizontal = 24.dp),
+                                            .padding(
+                                                horizontal = QueueRowHorizontalInset,
+                                                vertical = QueueRowVerticalInset
+                                            )
+                                            .clip(QueueRowShape)
+                                            .background(MaterialTheme.colorScheme.errorContainer)
+                                            .padding(horizontal = 20.dp),
                                         contentAlignment = Alignment.CenterEnd
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Delete,
                                             contentDescription = "Remove from queue",
-                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.scale(iconScale)
                                         )
                                     }
                                 }
@@ -505,7 +526,7 @@ private fun LazyItemScope.ModernQueueListItem(
     var isDragging by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
-    val rowShape = remember { RoundedCornerShape(12.dp) }
+    val rowShape = QueueRowShape
     
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isDragging) 1.05f else 1f,
@@ -535,7 +556,10 @@ private fun LazyItemScope.ModernQueueListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .padding(
+                horizontal = QueueRowHorizontalInset,
+                vertical = QueueRowVerticalInset
+            )
             .animateItem(
                 placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
                     stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
