@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,52 +23,37 @@ class YouTubeApiClient @Inject constructor(
     private val visitorDataProvider: VisitorDataProvider
 ) {
 
-    /**
-     * Fetch authenticated YouTube Music internal API.
-     * @param endpoint Either a browseId (e.g., "FEmusic_home") or endpoint path (e.g., "account/account_menu")
-     * @param hl Host language (e.g., "en", "hi")
-     * @param gl Geolocation (e.g., "US", "IN")
-     */
-    suspend fun fetchInternalApi(endpoint: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
-        val cookies = sessionManager.getCookies() ?: return@withContext ""
-        val authUser = sessionManager.getAuthUserIndex()
-        val visitorData = visitorDataProvider.get()
-        val isBrowse = !endpoint.contains("/")
-
-        val url = if (isBrowse) {
-            "${YouTubeConfig.BASE_URL}/browse"
-        } else {
-            "${YouTubeConfig.BASE_URL}/$endpoint"
-        }
-
-        val contextJson = """
-            "context": {
-                "client": {
-                    "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                    "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                    "hl": "$hl",
-                    "gl": "$gl"
-                }
+    private fun contextJson(hl: String, gl: String): String = """
+        "context": {
+            "client": {
+                "clientName": "${YouTubeConfig.CLIENT_NAME}",
+                "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
+                "hl": "$hl",
+                "gl": "$gl"
             }
-        """.trimIndent()
-
-        val jsonBody = if (isBrowse) {
-            "{ $contextJson, \"browseId\": \"$endpoint\" }"
-        } else {
-            "{ $contextJson }"
         }
+    """.trimIndent()
 
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
-            .build()
+    private fun stripOuterBraces(bodyJson: String): String {
+        val cleaned = bodyJson.trim()
+        return if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
+            cleaned.substring(1, cleaned.length - 1)
+        } else {
+            cleaned
+        }
+    }
 
-        try {
+    private fun okhttp3.Request.Builder.addPublicApiHeaders(): okhttp3.Request.Builder =
+        addHeader("User-Agent", YouTubeConfig.USER_AGENT)
+            .addHeader("Origin", YouTubeConfig.ORIGIN)
+            .addHeader("Referer", "${YouTubeConfig.ORIGIN}/")
+
+    private fun executeForBody(request: okhttp3.Request): String {
+        return try {
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
+                    return ""
                 }
                 response.body?.string() ?: ""
             }
@@ -80,6 +66,46 @@ class YouTubeApiClient @Inject constructor(
     }
 
     /**
+     * Fetch authenticated YouTube Music internal API.
+     * @param endpoint Either a browseId (e.g., "FEmusic_home") or endpoint path (e.g., "account/account_menu")
+     * @param hl Host language (e.g., "en", "hi")
+     * @param gl Geolocation (e.g., "US", "IN")
+     * @param params Optional browse params token (for category browsing)
+     */
+    suspend fun fetchInternalApi(
+        endpoint: String,
+        hl: String = YouTubeConfig.DEFAULT_HL,
+        gl: String = YouTubeConfig.DEFAULT_GL,
+        params: String? = null
+    ): String = withContext(Dispatchers.IO) {
+        val cookies = sessionManager.getCookies() ?: return@withContext ""
+        val authUser = sessionManager.getAuthUserIndex()
+        val visitorData = visitorDataProvider.get()
+        val isBrowse = !endpoint.contains("/")
+
+        val url = if (isBrowse) {
+            "${YouTubeConfig.BASE_URL}/browse"
+        } else {
+            "${YouTubeConfig.BASE_URL}/$endpoint"
+        }
+
+        val fields = buildList {
+            add(contextJson(hl, gl))
+            if (isBrowse) add("\"browseId\": \"$endpoint\"")
+            if (params != null) add("\"params\": \"$params\"")
+        }
+        val jsonBody = "{ ${fields.joinToString(", ")} }"
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
+            .build()
+
+        executeForBody(request)
+    }
+
+    /**
      * Fetch continuation data for paginated results.
      */
     suspend fun fetchInternalApiWithContinuation(continuationToken: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
@@ -87,19 +113,7 @@ class YouTubeApiClient @Inject constructor(
         val authUser = sessionManager.getAuthUserIndex()
         val visitorData = visitorDataProvider.get()
 
-        val jsonBody = """
-            {
-                "continuation": "$continuationToken",
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "$hl",
-                        "gl": "$gl"
-                    }
-                }
-            }
-        """.trimIndent()
+        val jsonBody = "{ \"continuation\": \"$continuationToken\", ${contextJson(hl, gl)} }"
 
         val request = okhttp3.Request.Builder()
             .url("${YouTubeConfig.BASE_URL}/browse?ctoken=$continuationToken&continuation=$continuationToken")
@@ -107,20 +121,7 @@ class YouTubeApiClient @Inject constructor(
             .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
-        try {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
-                }
-                response.body?.string() ?: ""
-            }
-        } catch (e: Exception) {
-            // Log instead of silently returning "": network errors and InnerTube
-            // schema drift otherwise vanish into empty results with no signal.
-            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
-            ""
-        }
+        executeForBody(request)
     }
 
     /**
@@ -133,26 +134,7 @@ class YouTubeApiClient @Inject constructor(
 
         val url = "${YouTubeConfig.BASE_URL}/$endpoint"
 
-        val cleanedBody = bodyJson.trim()
-        val processedBody = if (cleanedBody.startsWith("{") && cleanedBody.endsWith("}")) {
-            cleanedBody.substring(1, cleanedBody.length - 1)
-        } else {
-            cleanedBody
-        }
-
-        val fullBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "$hl",
-                        "gl": "$gl"
-                    }
-                },
-                $processedBody
-            }
-        """.trimIndent()
+        val fullBody = "{ ${contextJson(hl, gl)}, ${stripOuterBraces(bodyJson)} }"
 
         val request = okhttp3.Request.Builder()
             .url(url)
@@ -160,162 +142,38 @@ class YouTubeApiClient @Inject constructor(
             .addYouTubeAuthHeaders(cookies, authUser, visitorData)
             .build()
 
-        try {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
-                }
-                response.body?.string() ?: ""
-            }
-        } catch (e: Exception) {
-            // Log instead of silently returning "": network errors and InnerTube
-            // schema drift otherwise vanish into empty results with no signal.
-            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
-            ""
-        }
-    }
-
-    /**
-     * Fetch with browse parameters (for category browsing).
-     */
-    suspend fun fetchInternalApiWithParams(browseId: String, params: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = YouTubeConfig.DEFAULT_GL): String = withContext(Dispatchers.IO) {
-        val cookies = sessionManager.getCookies() ?: return@withContext ""
-        val authUser = sessionManager.getAuthUserIndex()
-        val visitorData = visitorDataProvider.get()
-
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "$hl",
-                        "gl": "$gl"
-                    }
-                },
-                "browseId": "$browseId",
-                "params": "$params"
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url("${YouTubeConfig.BASE_URL}/browse")
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addYouTubeAuthHeaders(cookies, authUser, visitorData)
-            .build()
-
-        try {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
-                }
-                response.body?.string() ?: ""
-            }
-        } catch (e: Exception) {
-            // Log instead of silently returning "": network errors and InnerTube
-            // schema drift otherwise vanish into empty results with no signal.
-            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
-            ""
-        }
+        executeForBody(request)
     }
 
     /**
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
+     * @param params Optional browse params token, for mood/genre categories that require one.
      */
-    suspend fun fetchPublicApi(browseId: String, hl: String = YouTubeConfig.DEFAULT_HL, gl: String = "IN"): String = withContext(Dispatchers.IO) {
-        val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
-        
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "$hl",
-                        "gl": "$gl"
-                    }
-                },
-                "browseId": "$browseId"
-            }
-        """.trimIndent()
-
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("Referer", "https://music.youtube.com/")
-            .build()
-
-        try {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
-                }
-                response.body?.string() ?: ""
-            }
-        } catch (e: Exception) {
-            // Log instead of silently returning "": network errors and InnerTube
-            // schema drift otherwise vanish into empty results with no signal.
-            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
-            ""
-        }
-    }
-
-    /**
-     * Fetch public YouTube Music API without authentication with browse params.
-     * Useful for mood/genre categories that require a params token.
-     */
-    suspend fun fetchPublicApiWithParams(
+    suspend fun fetchPublicApi(
         browseId: String,
-        params: String,
         hl: String = YouTubeConfig.DEFAULT_HL,
-        gl: String = "IN"
+        gl: String = "IN",
+        params: String? = null
     ): String = withContext(Dispatchers.IO) {
         val url = "${YouTubeConfig.PUBLIC_BASE_URL}/browse?prettyPrint=false"
 
-        val jsonBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "$hl",
-                        "gl": "$gl"
-                    }
-                },
-                "browseId": "$browseId",
-                "params": "$params"
-            }
-        """.trimIndent()
+        val fields = buildList {
+            add(contextJson(hl, gl))
+            add("\"browseId\": \"$browseId\"")
+            if (params != null) add("\"params\": \"$params\"")
+        }
+        val jsonBody = "{ ${fields.joinToString(", ")} }"
 
         val request = okhttp3.Request.Builder()
             .url(url)
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            .addHeader("Origin", "https://music.youtube.com")
-            .addHeader("Referer", "https://music.youtube.com/")
+            .addPublicApiHeaders()
             .build()
 
-        try {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.w("YouTubeApiClient", "InnerTube request failed: HTTP ${response.code}")
-                    return@withContext ""
-                }
-                response.body?.string() ?: ""
-            }
-        } catch (e: Exception) {
-            // Log instead of silently returning "": network errors and InnerTube
-            // schema drift otherwise vanish into empty results with no signal.
-            android.util.Log.w("YouTubeApiClient", "InnerTube request failed: ${e.javaClass.simpleName}: ${e.message}")
-            ""
-        }
+        executeForBody(request)
     }
+
 
     /**
      * Perform an authenticated action (like, create playlist, etc.).
@@ -331,26 +189,7 @@ class YouTubeApiClient @Inject constructor(
         if (YouTubeAuthUtils.getAuthorizationHeader(cookies) == null) return@withContext false
         val authUser = sessionManager.getAuthUserIndex()
 
-        val cleanedBody = innerBody.trim()
-        val processedBody = if (cleanedBody.startsWith("{") && cleanedBody.endsWith("}")) {
-            cleanedBody.substring(1, cleanedBody.length - 1)
-        } else {
-            cleanedBody
-        }
-
-        val fullBody = """
-            {
-                "context": {
-                    "client": {
-                        "clientName": "${YouTubeConfig.CLIENT_NAME}",
-                        "clientVersion": "${YouTubeConfig.CLIENT_VERSION}",
-                        "hl": "${YouTubeConfig.DEFAULT_HL}",
-                        "gl": "${YouTubeConfig.DEFAULT_GL}"
-                    }
-                },
-                $processedBody
-            }
-        """.trimIndent()
+        val fullBody = "{ ${contextJson(YouTubeConfig.DEFAULT_HL, YouTubeConfig.DEFAULT_GL)}, ${stripOuterBraces(innerBody)} }"
 
         val request = okhttp3.Request.Builder()
             .url(url)
@@ -371,6 +210,21 @@ class YouTubeApiClient @Inject constructor(
             android.util.Log.e("YouTubeApiClient", "Action error: $endpoint", e)
             false
         }
+    }
+
+    /**
+     * Apply edit_playlist actions to a playlist.
+     * @param playlistId The ID of the playlist, with or without the "VL" prefix
+     * @param actions The edit_playlist action objects to apply
+     */
+    suspend fun editPlaylist(playlistId: String, actions: List<JSONObject>): Boolean {
+        // Strip "VL" prefix if present, as edit_playlist expects the raw playlist ID
+        val realPlaylistId = playlistId.removePrefix("VL")
+        val body = JSONObject().apply {
+            put("playlistId", realPlaylistId)
+            put("actions", JSONArray(actions))
+        }
+        return performAuthenticatedAction("browse/edit_playlist", body.toString())
     }
 
     /**
