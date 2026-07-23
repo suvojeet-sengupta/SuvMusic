@@ -66,6 +66,7 @@ import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.core.model.RecentSearchItem
 import com.suvojeet.suvmusic.ui.components.AddToPlaylistSheet
 import com.suvojeet.suvmusic.ui.components.CreatePlaylistDialog
+import com.suvojeet.suvmusic.ui.components.SearchResultsSkeleton
 import com.suvojeet.suvmusic.ui.components.SongMenuBottomSheet
 import com.suvojeet.suvmusic.ui.viewmodel.PlaylistManagementViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.ResultFilter
@@ -446,9 +447,9 @@ fun SearchScreen(
             ) {
                 if (uiState.isLoading) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            LoadingIndicator(color = accentColor)
-                        }
+                        // Skeleton rows instead of a bare spinner: the list doesn't
+                        // jump when results land, and perceived load time drops.
+                        SearchResultsSkeleton(modifier = Modifier.padding(top = 8.dp))
                     }
                 }
                 

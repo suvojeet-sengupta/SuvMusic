@@ -289,6 +289,25 @@ fun HomeCardSkeleton() {
 }
 
 /**
+ * Search results loading skeleton — a column of song-row placeholders shown while
+ * a search is in flight, replacing the bare spinner so the layout doesn't jump
+ * when results land.
+ */
+@Composable
+fun SearchResultsSkeleton(
+    rows: Int = 8,
+    modifier: Modifier = Modifier
+) {
+    ShimmerContainer {
+        Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            repeat(rows) {
+                MusicCardSkeleton()
+            }
+        }
+    }
+}
+
+/**
  * Home screen loading skeleton
  */
 @Composable

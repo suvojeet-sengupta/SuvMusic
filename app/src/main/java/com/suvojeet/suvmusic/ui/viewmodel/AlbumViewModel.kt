@@ -155,6 +155,11 @@ class AlbumViewModel @Inject constructor(
         }
     }
 
+    fun retry() {
+        _uiState.update { it.copy(error = null) }
+        loadAlbum()
+    }
+
     fun playNext(songs: List<Song>) {
         musicPlayer.playNext(songs)
     }

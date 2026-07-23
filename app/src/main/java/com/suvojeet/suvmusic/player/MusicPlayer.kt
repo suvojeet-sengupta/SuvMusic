@@ -2437,11 +2437,46 @@ class MusicPlayer @Inject constructor(
         }
     }
     
+    /**
+     * True when a local/downloaded uri still points at a readable file. Downloads can
+     * vanish underneath us (storage cleared, SD card removed, MediaStore row orphaned)
+     * and feeding ExoPlayer a dead uri produces a cryptic source error.
+     */
+    private fun isLocalUriReadable(uri: String): Boolean = try {
+        when {
+            uri.startsWith("content://") ->
+                context.contentResolver.openAssetFileDescriptor(android.net.Uri.parse(uri), "r")?.use { true } ?: false
+            uri.startsWith("file://") -> java.io.File(android.net.Uri.parse(uri).path.orEmpty()).exists()
+            uri.startsWith("/") -> java.io.File(uri).exists()
+            else -> true // unknown scheme — let the player try it
+        }
+    } catch (e: Exception) {
+        false
+    }
+
     private suspend fun createMediaItem(song: Song, resolveStream: Boolean = true, forceLow: Boolean = false): MediaItem {
         var audioStreamUrl: String? = null
 
         val uri = when (song.source) {
-            SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
+            SongSource.LOCAL, SongSource.DOWNLOADED -> {
+                val local = song.localUri.orEmpty()
+                if (local.isNotEmpty() && isLocalUriReadable(local)) {
+                    local
+                } else if (song.source == SongSource.DOWNLOADED && resolveStream) {
+                    // The downloaded file is gone — fall back to streaming the same
+                    // track instead of failing playback with a source error.
+                    android.util.Log.w("MusicPlayer", "Downloaded file missing for '${song.title}' — falling back to stream")
+                    com.suvojeet.suvmusic.telemetry.Telemetry.report(
+                        "playDownloaded", "local",
+                        com.suvojeet.suvmusic.core.model.AppError.Unknown("downloaded file missing"),
+                        mapOf("songId" to song.id)
+                    )
+                    youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
+                        ?: local.ifEmpty { "https://placeholder.invalid/${song.id}" }
+                } else {
+                    local
+                }
+            }
             SongSource.REMOTE -> {
                 if (resolveStream) {
                     // Prefer the embedded HQ URL (search result); retry once if missing.

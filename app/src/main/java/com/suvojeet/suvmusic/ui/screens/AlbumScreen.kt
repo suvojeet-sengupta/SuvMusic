@@ -178,11 +178,40 @@ fun AlbumScreen(
                 )
             }
             uiState.error != null -> {
-                Text(
-                    text = uiState.error ?: "Unknown Error",
-                    color = contentColor,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = secondaryContentColor,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = uiState.error ?: "Could not load album",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = contentColor,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { viewModel.retry() },
+                        shape = PillShape
+                    ) {
+                        Text("Retry")
+                    }
+                    TextButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text("Go Back", color = secondaryContentColor)
+                    }
+                }
             }
             album != null -> {
                 LazyColumn(
