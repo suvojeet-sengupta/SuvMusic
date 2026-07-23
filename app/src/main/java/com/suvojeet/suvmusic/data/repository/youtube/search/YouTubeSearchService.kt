@@ -101,14 +101,15 @@ class YouTubeSearchService @Inject constructor(
      * Returns a list of Artist objects with basic info (id, name, thumbnail, subscribers).
      */
     suspend fun searchArtists(query: String): List<Artist> = withContext(Dispatchers.IO) {
+        val cacheKey = "yt:${query.trim().lowercase()}"
         try {
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val searchExtractor = ytService.getSearchExtractor(query, listOf("channels"), "")
             searchExtractor.fetchPage()
-            
-            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.channel.ChannelInfoItem>().take(3).mapNotNull { item ->
+
+            val artists = searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.channel.ChannelInfoItem>().take(3).mapNotNull { item ->
                 try {
                     val channelId = item.url?.substringAfter("/channel/")?.substringBefore("/")?.substringBefore("?")
                     if (channelId.isNullOrBlank()) return@mapNotNull null
@@ -127,9 +128,12 @@ class YouTubeSearchService @Inject constructor(
                     null
                 }
             }
+            if (artists.isNotEmpty()) OfflineCache.putArtists(cacheKey, artists)
+            artists
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            Telemetry.report("searchArtists", "youtube", e.toAppError(), mapOf("qlen" to query.length.toString()))
+            OfflineCache.getArtists(cacheKey) ?: emptyList()
         }
     }
 
@@ -138,14 +142,15 @@ class YouTubeSearchService @Inject constructor(
      * Returns a list of Playlist objects with basic info (id, title, author, thumbnail).
      */
     suspend fun searchPlaylists(query: String): List<Playlist> = withContext(Dispatchers.IO) {
+        val cacheKey = "yt:${query.trim().lowercase()}"
         try {
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val searchExtractor = ytService.getSearchExtractor(query, listOf(FILTER_PLAYLISTS), "")
             searchExtractor.fetchPage()
-            
-            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().take(5).mapNotNull { item ->
+
+            val playlists = searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().take(5).mapNotNull { item ->
                 try {
                     val playlistId = item.url?.substringAfter("list=")?.substringBefore("&")
                     if (playlistId.isNullOrBlank()) return@mapNotNull null
@@ -161,9 +166,12 @@ class YouTubeSearchService @Inject constructor(
                     null
                 }
             }
+            if (playlists.isNotEmpty()) OfflineCache.putPlaylists(cacheKey, playlists)
+            playlists
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            Telemetry.report("searchPlaylists", "youtube", e.toAppError(), mapOf("qlen" to query.length.toString()))
+            OfflineCache.getPlaylists(cacheKey) ?: emptyList()
         }
     }
 
@@ -171,14 +179,15 @@ class YouTubeSearchService @Inject constructor(
      * Search for albums on YouTube Music.
      */
     suspend fun searchAlbums(query: String): List<com.suvojeet.suvmusic.core.model.Album> = withContext(Dispatchers.IO) {
+        val cacheKey = "yt:${query.trim().lowercase()}"
         try {
-            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" } 
+            val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
                 ?: return@withContext emptyList()
-            
+
             val searchExtractor = ytService.getSearchExtractor(query, listOf(FILTER_ALBUMS), "")
             searchExtractor.fetchPage()
-            
-            searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().mapNotNull { item ->
+
+            val albums = searchExtractor.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.playlist.PlaylistInfoItem>().mapNotNull { item ->
                 try {
                     val albumId = item.url?.substringAfter("list=")?.substringBefore("&")
                     if (albumId.isNullOrBlank()) return@mapNotNull null
@@ -194,9 +203,12 @@ class YouTubeSearchService @Inject constructor(
                     null
                 }
             }
+            if (albums.isNotEmpty()) OfflineCache.putAlbums(cacheKey, albums)
+            albums
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            Telemetry.report("searchAlbums", "youtube", e.toAppError(), mapOf("qlen" to query.length.toString()))
+            OfflineCache.getAlbums(cacheKey) ?: emptyList()
         }
     }
 
@@ -282,6 +294,7 @@ class YouTubeSearchService @Inject constructor(
             parseSongsFromNextResponse(responseBody)
         } catch (e: Exception) {
             e.printStackTrace()
+            Telemetry.report("relatedSongs", "youtube", e.toAppError())
             emptyList()
         }
     }

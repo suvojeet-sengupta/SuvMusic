@@ -80,6 +80,12 @@ class SuvMusicApplication : Application(), SingletonImageLoader.Factory, android
     override fun onCreate() {
         super.onCreate()
 
+        // Crash-loop guard first: if the last launches died within seconds of
+        // starting, this launch runs in safe mode (native DSP off, poison-prone
+        // disk caches wiped) instead of crashing a fourth time. Must run before
+        // anything that could consume a corrupt cache or load the native engine.
+        com.suvojeet.suvmusic.crash.CrashLoopGuard.install(this)
+
         // Install the telemetry sink for swallowed (non-crash) failures as early as
         // possible so any failure during startup is counted. ACRA handles crashes;
         // this counts the quiet failures (resolution/search/lyrics) that used to

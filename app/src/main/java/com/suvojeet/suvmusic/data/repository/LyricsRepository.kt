@@ -42,6 +42,11 @@ class LyricsRepository @Inject constructor(
 ) {
     private val cache = LruCache<String, Lyrics>(MAX_CACHE_SIZE)
 
+    // Skips a provider for a while after repeated hard failures so one dead
+    // provider doesn't add its timeout to every lyrics lookup. Explicit
+    // user-selected fetches (fetchFromProvider) bypass the breaker on purpose.
+    private val circuitBreaker = com.suvojeet.suvmusic.providers.lyrics.ProviderCircuitBreaker()
+
     /**
      * Hydrate the LRU cache from the persistent lyrics_cache table.
      * Stores the parsed result under both the provider key and the AUTO key.
@@ -205,14 +210,21 @@ class LyricsRepository @Inject constructor(
         
         // 1. Try external providers (BetterLyrics, SimpMusic)
         for (provider in getLyricsProviders()) {
+            if (circuitBreaker.isOpen(provider.name)) {
+                android.util.Log.i("LyricsRepository", "skipping '${provider.name}' for '${song.title}' — circuit open after repeated failures")
+                continue
+            }
             try {
-                provider.getLyrics(
+                val result = provider.getLyrics(
                     id = song.id,
                     title = song.title,
                     artist = song.artist,
                     duration = (song.duration / 1000).toInt(),
                     album = song.album
-                ).onSuccess { lrcText ->
+                )
+                if (result.isSuccess) circuitBreaker.recordSuccess(provider.name)
+                else circuitBreaker.recordFailure(provider.name)
+                result.onSuccess { lrcText ->
                     val parsed = parseLrcLyrics(lrcText)
                     if (parsed.isNotEmpty()) {
                         val providerEnum = when (provider) {
@@ -235,12 +247,14 @@ class LyricsRepository @Inject constructor(
             } catch (e: Exception) {
                 // Log and continue to the next provider. Swallowing silently hid
                 // provider outages and parser drift behind "no lyrics found".
+                circuitBreaker.recordFailure(provider.name)
                 android.util.Log.w("LyricsRepository", "provider '${provider.name}' failed for '${song.title}': ${e.javaClass.simpleName}: ${e.message}")
             }
         }
 
         // 2. Try LRCLIB for synced lyrics
-        val lrcLibLyrics = fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
+        val lrcLibLyrics = if (circuitBreaker.isOpen(lrcLibLyricsProvider.name)) null
+            else fetchExternalLyrics(lrcLibLyricsProvider, song, LyricsProviderType.LRCLIB)
         if (lrcLibLyrics != null) {
             cacheBoth(song.id, LyricsProviderType.LRCLIB, lrcLibLyrics)
             persist(song.id, lrcLibLyrics)
@@ -257,6 +271,7 @@ class LyricsRepository @Inject constructor(
         
         // 4. Last resort: Try LRCLIB plain lyrics
         try {
+            if (circuitBreaker.isOpen(lrcLibLyricsProvider.name)) return@withContext null
             val result = lrcLibLyricsProvider.getLyrics(
                 id = song.id,
                 title = song.title,
@@ -264,6 +279,8 @@ class LyricsRepository @Inject constructor(
                 duration = (song.duration / 1000).toInt(),
                 album = song.album
             )
+            if (result.isSuccess) circuitBreaker.recordSuccess(lrcLibLyricsProvider.name)
+            else circuitBreaker.recordFailure(lrcLibLyricsProvider.name)
             val text = result.getOrNull()
             if (!text.isNullOrBlank()) {
                  val lines = text.split("\n").map { LyricsLine(text = it.trim()) }
@@ -363,13 +380,16 @@ class LyricsRepository @Inject constructor(
     ): Lyrics? {
         return try {
             var result: Lyrics? = null
-            provider.getLyrics(
+            val fetch = provider.getLyrics(
                 id = song.id,
                 title = song.title,
                 artist = song.artist,
                 duration = (song.duration / 1000).toInt(),
                 album = song.album
-            ).onSuccess { lrcText ->
+            )
+            if (fetch.isSuccess) circuitBreaker.recordSuccess(provider.name)
+            else circuitBreaker.recordFailure(provider.name)
+            fetch.onSuccess { lrcText ->
                 val parsed = parseLrcLyrics(lrcText)
                 if (parsed.isNotEmpty()) {
                     result = Lyrics(
@@ -382,6 +402,8 @@ class LyricsRepository @Inject constructor(
             }
             result
         } catch (e: Exception) {
+            circuitBreaker.recordFailure(provider.name)
+            android.util.Log.w("LyricsRepository", "provider '${provider.name}' threw for '${song.title}': ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }

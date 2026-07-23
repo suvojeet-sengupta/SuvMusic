@@ -13,6 +13,10 @@ class NativeSpatialAudio @Inject constructor() {
     init {
         // Load native library on a background thread to avoid potential I/O block on main thread
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            if (com.suvojeet.suvmusic.crash.CrashLoopGuard.isSafeMode) {
+                android.util.Log.w("NativeSpatialAudio", "Safe mode — skipping native DSP; playback continues without spatial audio")
+                return@launch
+            }
             try {
                 System.loadLibrary("suvmusic_native")
                 isLibraryLoaded = true

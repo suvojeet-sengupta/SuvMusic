@@ -3,6 +3,9 @@ package com.suvojeet.suvmusic.cache
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.suvojeet.suvmusic.core.model.Album
+import com.suvojeet.suvmusic.core.model.Artist
+import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import java.io.File
 
@@ -35,6 +38,10 @@ object OfflineCache {
     @Volatile
     private var searchDir: File? = null
 
+    /** Artist/album/playlist search results (song search predates this dir). */
+    @Volatile
+    private var listsDir: File? = null
+
     /**
      * Wrapper carrying the save time so freshness can be judged on read.
      *
@@ -55,6 +62,9 @@ object OfflineCache {
 
     fun init(context: Context) {
         searchDir = File(context.filesDir, "offline_search").apply {
+            runCatching { mkdirs() }
+        }
+        listsDir = File(context.filesDir, "offline_lists").apply {
             runCatching { mkdirs() }
         }
     }
@@ -138,6 +148,101 @@ object OfflineCache {
             (raw as List<Song>)
         } catch (e: Exception) {
             android.util.Log.w(TAG, "getSearch('$query') failed: ${e.javaClass.simpleName}: ${e.message}")
+            null
+        }
+    }
+
+    // ── Artist / album / playlist search results ─────────────────────────────
+    //
+    // Same idea as the Song search cache, with one concrete envelope class per
+    // element type. Concrete (non-generic-at-the-callsite) envelopes with
+    // @SerializedName fields are what keeps the element type argument alive
+    // under R8 full mode — see the Envelope doc above for the failure mode.
+
+    private data class ArtistEnvelope(
+        @SerializedName("savedAt") val savedAt: Long,
+        @SerializedName("items") val items: List<Artist>?
+    )
+
+    private data class AlbumEnvelope(
+        @SerializedName("savedAt") val savedAt: Long,
+        @SerializedName("items") val items: List<Album>?
+    )
+
+    private data class PlaylistEnvelope(
+        @SerializedName("savedAt") val savedAt: Long,
+        @SerializedName("items") val items: List<Playlist>?
+    )
+
+    fun putArtists(query: String, artists: List<Artist>, now: Long = System.currentTimeMillis()) =
+        putList("artists", query, artists.size) { gson.toJson(ArtistEnvelope(now, artists)) }
+
+    fun getArtists(query: String, now: Long = System.currentTimeMillis()): List<Artist>? =
+        getList("artists", query, now) { json ->
+            gson.fromJson(json, ArtistEnvelope::class.java)?.let { it.savedAt to it.items }
+        }
+
+    fun putAlbums(query: String, albums: List<Album>, now: Long = System.currentTimeMillis()) =
+        putList("albums", query, albums.size) { gson.toJson(AlbumEnvelope(now, albums)) }
+
+    fun getAlbums(query: String, now: Long = System.currentTimeMillis()): List<Album>? =
+        getList("albums", query, now) { json ->
+            gson.fromJson(json, AlbumEnvelope::class.java)?.let { it.savedAt to it.items }
+        }
+
+    fun putPlaylists(query: String, playlists: List<Playlist>, now: Long = System.currentTimeMillis()) =
+        putList("playlists", query, playlists.size) { gson.toJson(PlaylistEnvelope(now, playlists)) }
+
+    fun getPlaylists(query: String, now: Long = System.currentTimeMillis()): List<Playlist>? =
+        getList("playlists", query, now) { json ->
+            gson.fromJson(json, PlaylistEnvelope::class.java)?.let { it.savedAt to it.items }
+        }
+
+    private fun putList(kind: String, query: String, count: Int, toJson: () -> String) {
+        if (count == 0) return
+        val dir = listsDir ?: return
+        try {
+            val file = fileFor(dir, "$kind:$query")
+            file.writeText(toJson())
+            android.util.Log.i(TAG, "putList($kind, '$query') WROTE n=$count")
+            pruneIfNeeded(dir)
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "putList($kind, '$query') failed: ${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    /**
+     * Reads a cached list, tolerating corrupt or absent entries. Like [getSearch],
+     * stale entries ARE returned — every caller is an offline/error fallback where
+     * old results beat a blank screen. Malformed payloads are deleted on sight.
+     * [parse] returns (savedAt, items) or null for an unreadable envelope.
+     */
+    private inline fun <reified T> getList(
+        kind: String,
+        query: String,
+        now: Long,
+        parse: (String) -> Pair<Long, List<T>?>?,
+    ): List<T>? {
+        val dir = listsDir ?: return null
+        return try {
+            val file = fileFor(dir, "$kind:$query")
+            if (!file.exists()) return null
+            val parsed = parse(file.readText()) ?: run {
+                runCatching { file.delete() }
+                return null
+            }
+            val (savedAt, items) = parsed
+            val raw: List<*>? = items
+            if (raw.isNullOrEmpty() || raw.any { it !is T }) {
+                android.util.Log.e(TAG, "getList($kind, '$query') CORRUPT payload dropped -> deleting")
+                runCatching { file.delete() }
+                return null
+            }
+            android.util.Log.i(TAG, "getList($kind, '$query') HIT n=${raw.size} age=${(now - savedAt) / 60_000}min")
+            @Suppress("UNCHECKED_CAST")
+            raw as List<T>
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "getList($kind, '$query') failed: ${e.javaClass.simpleName}: ${e.message}")
             null
         }
     }

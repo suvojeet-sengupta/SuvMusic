@@ -830,6 +830,15 @@ class MusicPlayer @Inject constructor(
         }
         
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            // A genuinely new track gets a fresh watchdog budget. PLAYLIST_CHANGED is
+            // excluded: that's how the watchdog's own downscale/rebuild replays arrive,
+            // and resetting there would defeat the one-shot guards.
+            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+                hasTriedLowQualityForCurrent = false
+                hasTriedStuckRebuildForCurrent = false
+                bufferingStartWallTime = 0L
+            }
+
             // Reset crossfade guard + restore volume for the incoming track.
             // Skip the volume restore while a crossfade is mid fade-in; otherwise we
             // overwrite the ramp and the new track jumps to full volume instantly.
@@ -1848,6 +1857,11 @@ class MusicPlayer @Inject constructor(
     private var bufferingStartWallTime = 0L
     private val MAX_BUFFERING_DURATION_BEFORE_DOWNSCALE = 3000L // 3 seconds
     private var hasTriedLowQualityForCurrent = false
+    // Stage-2 watchdog: after this long stuck in BUFFERING, throw away the (possibly
+    // expired/IP-bound) stream URL and rebuild with a fresh resolution. If that
+    // rebuild is ALSO stuck for the same duration, give up and move to the next track.
+    private val STUCK_REBUILD_AFTER_MS = 15_000L
+    private var hasTriedStuckRebuildForCurrent = false
     
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
@@ -1915,8 +1929,42 @@ class MusicPlayer @Inject constructor(
                                     hasTriedLowQualityForCurrent = true
                                     bufferingStartWallTime = 0L
                                     scope.launch {
-                                        playSong(song, _playerState.value.queue, _playerState.value.currentIndex, forceLow = true)
+                                        playSong(song, _playerState.value.queue, _playerState.value.currentIndex, forceLow = true, startPositionMs = currentPos)
                                     }
+                                }
+                            }
+                        }
+                        if (bufferingDuration > STUCK_REBUILD_AFTER_MS) {
+                            if (!hasTriedStuckRebuildForCurrent) {
+                                // Stage 2: the stream URL has likely expired (long pause,
+                                // network switch, IP-bound URL). Rebuild with a fresh
+                                // resolution and resume from where playback stalled.
+                                _playerState.value.currentSong?.let { song ->
+                                    android.util.Log.w("MusicPlayer", "Stuck buffering for ${bufferingDuration}ms — re-resolving stream for ${song.title}")
+                                    hasTriedStuckRebuildForCurrent = true
+                                    bufferingStartWallTime = System.currentTimeMillis()
+                                    streamingService.clearCacheFor(song.id)
+                                    scope.launch {
+                                        playSong(
+                                            song,
+                                            _playerState.value.queue,
+                                            _playerState.value.currentIndex,
+                                            isRecovery = true,
+                                            startPositionMs = currentPos
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Stage 3: a fresh resolution ALSO stalled — this track is
+                                // unplayable right now. Move on instead of spinning forever.
+                                android.util.Log.e("MusicPlayer", "Still stuck after stream rebuild — skipping unplayable track")
+                                bufferingStartWallTime = 0L
+                                if (controller.hasNextMediaItem()) {
+                                    _playerState.update { it.copy(error = "Track unavailable — skipped to next song") }
+                                    controller.seekToNextMediaItem()
+                                } else {
+                                    _playerState.update { it.copy(error = "Track unavailable right now. Try again later.", isLoading = false) }
+                                    controller.stop()
                                 }
                             }
                         }
@@ -2313,7 +2361,7 @@ class MusicPlayer @Inject constructor(
         return true
     }
 
-    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false) {
+    fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0, autoPlay: Boolean = true, forceLow: Boolean = false, isRecovery: Boolean = false, startPositionMs: Long = 0L) {
         // A guest without control may not change what the room is playing. (A
         // guest WITH control may: the track transition is broadcast to the room.)
         if (blockedForListenTogetherGuest()) return
@@ -2322,9 +2370,11 @@ class MusicPlayer @Inject constructor(
         playJob?.cancel()
         currentResolutionJob?.cancel()
 
-        // Reset downscale tracking for new song (unless we ARE downscaling)
-        if (!forceLow) {
+        // Reset watchdog tracking for new song (unless this replay IS the watchdog's
+        // own downscale/rebuild, whose one-shot flags must survive the replay)
+        if (!forceLow && !isRecovery) {
             hasTriedLowQualityForCurrent = false
+            hasTriedStuckRebuildForCurrent = false
         }
 
         // IMMEDIATELY pause current playback for instant response
@@ -2370,7 +2420,7 @@ class MusicPlayer @Inject constructor(
                         crossfadeTriggered = false
                         if (controller.volume < 1f) controller.volume = 1f
 
-                        controller.setMediaItems(mediaItems, startIndex, 0L)
+                        controller.setMediaItems(mediaItems, startIndex, startPositionMs.coerceAtLeast(0L))
                         controller.prepare()
                         if (autoPlay) {
                             controller.play()

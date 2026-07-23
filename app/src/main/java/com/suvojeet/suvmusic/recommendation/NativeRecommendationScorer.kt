@@ -36,14 +36,19 @@ class NativeRecommendationScorer @Inject constructor() {
     private var isAvailable = false
 
     init {
-        try {
-            // Library is already loaded by NativeSpatialAudio — but ensure it's loaded
-            System.loadLibrary("suvmusic_native")
-            isAvailable = true
-            Log.d(TAG, "Native recommendation scorer loaded successfully")
-        } catch (e: UnsatisfiedLinkError) {
-            Log.w(TAG, "Native recommendation scorer not available, will use Kotlin fallback", e)
+        if (com.suvojeet.suvmusic.crash.CrashLoopGuard.isSafeMode) {
+            Log.w(TAG, "Safe mode — using Kotlin scoring fallback")
             isAvailable = false
+        } else {
+            try {
+                // Library is already loaded by NativeSpatialAudio — but ensure it's loaded
+                System.loadLibrary("suvmusic_native")
+                isAvailable = true
+                Log.d(TAG, "Native recommendation scorer loaded successfully")
+            } catch (e: UnsatisfiedLinkError) {
+                Log.w(TAG, "Native recommendation scorer not available, will use Kotlin fallback", e)
+                isAvailable = false
+            }
         }
     }
 
