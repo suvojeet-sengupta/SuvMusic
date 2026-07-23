@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.6.1.0",
+      "versionCode": 40,
+      "date": "July 23, 2026",
+      "description": "• Stability and Error Recovery: Crash-loop safe mode, stuck-playback watchdog, lyrics circuit breaker, offline cache for search, and album error retry.\n• Player & Library Ergonomics: Mini player swipe-to-skip, queue swipe-to-remove, library sort/search, sleep timer & speed chips, and stream fallback.\n• Listen Together Enhancements: Song suggestions, leave-button fix, disband/kick feedback, live server stats, and exact-sync toggle.\n• Jam Mode: Guest participation, queue routing, and control unblock.\n• User Experience: Settings search, taste onboarding, Hindi & Bengali translations, accessibility labels.\n• Support: Feedback API with email and Telegram fallback.\n• Fixed HQ Audio null-safety, dead failover, leaks, races, blank search results, and swipe-to-delete affordance.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.6.0.0",
       "versionCode": 39,
       "date": "July 08, 2026",
