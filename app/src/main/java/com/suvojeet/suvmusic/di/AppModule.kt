@@ -109,9 +109,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideRemoteAudioApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService {
+    fun provideRemoteAudioApiService(
+        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context
+    ): com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService {
+        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.getBaseUrl(context)
         val primary = retrofit2.Retrofit.Builder()
-            .baseUrl("https://hqaudio.suvojeetsengupta.in/api/")
+            .baseUrl(primaryBaseUrl)
             .client(okHttpClient)
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
             .build()
@@ -129,9 +133,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideHqAudioPlaylistApiService(okHttpClient: OkHttpClient): com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistApiService {
+    fun provideHqAudioPlaylistApiService(
+        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context
+    ): com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistApiService {
+        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.getBaseUrl(context)
         val primary = retrofit2.Retrofit.Builder()
-            .baseUrl("https://hqaudio.suvojeetsengupta.in/api/")
+            .baseUrl(primaryBaseUrl)
             .client(okHttpClient)
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
             .build()
