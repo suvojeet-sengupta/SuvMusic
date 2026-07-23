@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.6.1.0] - 2026-07-23
+
+### Added
+- **Stability and Error Recovery**: Crash-loop safe mode, stuck-playback watchdog, lyrics circuit breaker, offline cache for artist/album/playlist search, and album error retry.
+- **Listen Together Enhancements**: Song suggestions, leave-button fix, disband/kick feedback, live server stats over WebSocket, exact-sync toggle.
+- **Jam Mode**: Guest participation, queue routing, control unblock, and attribution UI.
+- **User Experience**: Settings search, taste onboarding, Hindi & Bengali translations, accessibility labels.
+- **Player & Library Ergonomics**: Mini player swipe-to-skip, queue swipe-to-remove, library sort/search, sleep timer & speed chips, search mood row, and stream fallback for missing downloads.
+- **Support**: Integrate feedback API with email and Telegram fallback support on failure.
+
+### Improved
+- **Code Refactoring**: Shared settings cards, switch rows, icon boxes, section titles, thin dividers, playback duration, auto-mix, and stream-selection helpers across the app. Collapsed YouTube request boilerplate.
+- **Listen Together Integrity**: Enforced permissions at the transport layer to prevent guest bypass.
+
+### Fixed
+- **HQ Audio**: Fixed null-safety, dead failover, inert backoff, leaks, and races.
+- **Search**: Resolved blank search results for playlists and artists, removed albums from `searchAll`, and added `@SerializedName` to `PlaylistSearchItem` to fix empty playlist results.
+- **Queue**: Swipe-to-delete affordance now reads correctly in both themes.
+
 ## [2.5.9.0] - 2026-07-06
 
 ### Added
