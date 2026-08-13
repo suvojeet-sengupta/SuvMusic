@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.6.3.0",
+      "versionCode": 42,
+      "date": "August 13, 2026",
+      "description": "• Player & Artwork Polish: Centered album artwork with Extra Large (92%) and Full Width (100%) presets, Full Width default, left-aligned now playing metadata layout, and customizable player background styles (Ambient, Black, Light).\n• Per-Song Audio Source Switching: Seamlessly switch between YouTube and HQ Audio per song right from the player controls, preserving playback position.\n• Download Feedback & Error Recovery: Comprehensive download status tracking with detailed failure reasons, one-tap retries from player snackbar and Downloads screen, offline fast-fail, and per-song notification tracking.\n• Story & Layout Fixes: Added 'The Story' section in About screen detailing project history and fixed layout stacking issues.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.6.2.0",
       "versionCode": 41,
       "date": "July 25, 2026",

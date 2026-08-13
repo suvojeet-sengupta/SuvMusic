@@ -132,11 +132,11 @@ old client that ignores them still works.
 
 ```json
 {
-  "versionName": "2.6.2.0",
-  "versionCode": 41,
+  "versionName": "2.6.3.0",
+  "versionCode": 42,
   "minSupportedVersionCode": 30,
-  "downloadUrl": "https://ota.suvmusic.app/stable/apks/SuvMusic-v2.6.2.0.apk",
-  "mirrorUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.6.2.0/SuvMusic-v2.6.2.0.apk",
+  "downloadUrl": "https://ota.suvmusic.app/stable/apks/SuvMusic-v2.6.3.0.apk",
+  "mirrorUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.6.3.0/SuvMusic-v2.6.3.0.apk",
   "sha256": "<hex sha-256 of the apk>",
   "size": 17301504,
   "forceUpdate": false,

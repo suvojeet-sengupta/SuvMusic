@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.3.0] - 2026-08-13
+
+### Added
+- **Artwork Size & Layout Polish**: Centered album artwork across all presets with new Extra Large (92%) and Full Width (100%) sizes (Full Width is now default). Left-aligned Now Playing layout with continuous margin.
+- **Player Background Styles**: Added customizable player background styles (Ambient blurred artwork, solid Black, or Light) under Customization settings.
+- **Per-Song Source Switching**: Quick toggle beside like/dislike buttons to switch audio source between YouTube and HQ Audio per song, keeping current playback position.
+- **Download Status & Error Tracking**: Track failed downloads with clear failure reasons, one-tap retries from player snackbar and Downloads screen, offline fast-fail, and per-song notification tracking.
+- **About Screen "The Story"**: Added "The Story" section detailing the project origin and development journey, and fixed section card layout stacking.
+
 ## [2.6.2.0] - 2026-07-25
 
 ### Added
