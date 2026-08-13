@@ -58,6 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.model.SponsorCategory
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -89,7 +90,10 @@ fun WaveformSeeker(
     initialStyle: SeekbarStyle = SeekbarStyle.M3E_WAVY,
     onStyleChange: ((SeekbarStyle) -> Unit)? = null,
     duration: Long = 0L,
-    sponsorSegments: List<SponsorSegment> = emptyList()
+    sponsorSegments: List<SponsorSegment> = emptyList(),
+    // Inset between the seeker's bounds and the drawn track. Styles that want the
+    // track flush with the screen's content margin pass 0.dp.
+    contentPadding: Dp = 8.dp
 ) {
     // Current seekbar style - uses initial style from settings
     var currentStyle by remember { mutableStateOf(initialStyle) }
@@ -193,7 +197,7 @@ fun WaveformSeeker(
                 .fillMaxWidth()
                 .height(60.dp)
                 .graphicsLayer { clip = false }
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = contentPadding)
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {

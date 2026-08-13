@@ -458,7 +458,8 @@ fun SongInfoSection(
 fun TimeLabelsWithQuality(
     currentPositionProvider: () -> Long,
     durationProvider: () -> Long,
-    dominantColors: DominantColors
+    dominantColors: DominantColors,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 8.dp
 ) {
     // Derive the formatted strings so recomposition only happens when the
     // second-resolution text actually changes, not every ~400ms position tick.
@@ -472,7 +473,7 @@ fun TimeLabelsWithQuality(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = horizontalPadding)
             .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

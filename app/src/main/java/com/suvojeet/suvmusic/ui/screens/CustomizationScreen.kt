@@ -48,6 +48,7 @@ import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import com.suvojeet.suvmusic.core.model.ArtworkShape
 import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientMiddle
 import com.suvojeet.suvmusic.ui.theme.GradientStart
@@ -101,6 +102,9 @@ fun CustomizationScreen(
         ArtworkSize.LARGE
     }
 
+    val currentPlayerBackground by sessionManager.playerBackgroundStyleFlow
+        .collectAsStateWithLifecycle(initialValue = PlayerBackgroundStyle.AMBIENT)
+
     val miniPlayerAlpha = uiState.miniPlayerAlpha
     val navBarAlpha = uiState.navBarAlpha
     val currentMiniPlayerStyle = uiState.miniPlayerStyle
@@ -111,6 +115,7 @@ fun CustomizationScreen(
     // Style Selection Dialog/Sheet
     var showMiniPlayerStyleSheet by remember { mutableStateOf(false) }
     var showHomeSectionsSheet by remember { mutableStateOf(false) }
+    var showPlayerBackgroundSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     Scaffold(
@@ -179,9 +184,18 @@ fun CustomizationScreen(
                     CustomizationNavigationItem(
                         icon = Icons.Default.PhotoSizeSelectActual,
                         title = "Artwork Size",
-                        subtitle = currentArtworkSize.name.lowercase().titlecaseFirst(),
+                        subtitle = currentArtworkSize.label,
                         trailingContent = { ArtworkSizeIndicator(currentArtworkSize) },
                         onClick = onArtworkSizeClick
+                    )
+
+                    HorizontalDivider()
+
+                    CustomizationNavigationItem(
+                        icon = Icons.Default.Gradient,
+                        title = "Player Background",
+                        subtitle = currentPlayerBackground.label,
+                        onClick = { showPlayerBackgroundSheet = true }
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -269,6 +283,53 @@ fun CustomizationScreen(
                                     scope.launch {
                                         sheetState.hide()
                                         showMiniPlayerStyleSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    // Player Background Bottom Sheet
+    if (showPlayerBackgroundSheet) {
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
+            onDismissRequest = { showPlayerBackgroundSheet = false },
+            sheetState = sheetState,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Player Background",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+
+                PlayerBackgroundStyle.entries.forEach { style ->
+                    ListItem(
+                        headlineContent = { Text(style.label) },
+                        supportingContent = { Text(style.description) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = currentPlayerBackground == style,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(
+                                onClick = {
+                                    scope.launch {
+                                        sessionManager.setPlayerBackgroundStyle(style)
+                                        sheetState.hide()
+                                        showPlayerBackgroundSheet = false
                                     }
                                 },
                                 shape = SquircleShape
@@ -406,18 +467,14 @@ private fun ArtworkSizeIndicator(size: ArtworkSize) {
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val boxCount = when (size) {
-            ArtworkSize.SMALL -> 1
-            ArtworkSize.MEDIUM -> 2
-            ArtworkSize.LARGE -> 3
-        }
-        repeat(3) { index ->
+        val filled = ArtworkSize.entries.indexOf(size) + 1
+        ArtworkSize.entries.forEachIndexed { index, _ ->
             Box(
                 modifier = Modifier
-                    .size(if (index < boxCount) 10.dp else 8.dp)
+                    .size(if (index < filled) 8.dp else 6.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(
-                        if (index < boxCount) MaterialTheme.colorScheme.primary 
+                        if (index < filled) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                     )
             )

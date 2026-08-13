@@ -185,7 +185,7 @@ private fun YTMusicPortraitContent(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = if (isVeryShort) 16.dp else 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Start
         ) {
             PlayerTopBar(
                 onBack = actions.onBack,
@@ -199,16 +199,18 @@ private fun YTMusicPortraitContent(
                 onRecenter = onRecenterAr
             )
 
-            // Flexible space above artwork
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 1f))
-            
+            // Flexible space above artwork. Kept deliberately small: the artwork box is
+            // square and height-capped by its weight share, so generous spacers here used
+            // to shrink the art far below the requested fraction of the screen width.
+            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 0.18f))
+
             // Adaptive Artwork Box
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(if (isVeryShort) 1.5f else 4f, fill = false)
+                    .weight(if (isVeryShort) 1.5f else 8f, fill = false)
                     .then(if (!isVeryShort) Modifier.aspectRatio(1f) else Modifier),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.CenterStart
             ) {
                 AnimatedContent(
                     targetState = playerState.isVideoMode && player != null && !isFullScreen,
@@ -217,14 +219,14 @@ private fun YTMusicPortraitContent(
                 ) { isVideo ->
                     if (isVideo) {
                         Box(
-                            contentAlignment = Alignment.Center,
+                            contentAlignment = Alignment.CenterStart,
                             modifier = Modifier
                                 .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
                                 .aspectRatio(1f)
                         ) {
                             Surface(
                                 modifier = Modifier
-                                    .fillMaxSize(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
+                                    .fillMaxSize(currentArtworkSize.fraction / ArtworkSize.MAX_FRACTION)
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.Black)
                                     .clickable { onSetFullScreen(true) },
@@ -257,7 +259,7 @@ private fun YTMusicPortraitContent(
                         }
                     } else {
                         Box(
-                            contentAlignment = Alignment.Center,
+                            contentAlignment = Alignment.CenterStart,
                             modifier = Modifier
                                 .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
                                 .aspectRatio(1f)
@@ -267,6 +269,7 @@ private fun YTMusicPortraitContent(
                                 isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
                                 onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                                 onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id,
+                                alignStart = true,
                                 modifier = Modifier.fillMaxSize()
                             )
                             
@@ -277,7 +280,7 @@ private fun YTMusicPortraitContent(
             }
             
             // Flexible space below artwork
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 1f))
+            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 0.4f))
 
             SongInfoSection(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
@@ -314,9 +317,20 @@ private fun YTMusicPortraitContent(
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
 
-            SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments)
+            // Flush against the Column's horizontal padding so the waveform and the
+            // 0:00 / -0:00 labels share the artwork's and title's left margin.
+            SeekbarSection(
+                combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions,
+                durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments,
+                contentPadding = 0.dp
+            )
 
-            TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
+            TimeLabelsWithQuality(
+                currentPositionProvider = positionProvider,
+                durationProvider = durationProvider,
+                dominantColors = dominantColors,
+                horizontalPadding = 0.dp
+            )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.05f else 0.08f))
 
@@ -380,11 +394,11 @@ private fun YTMusicLandscapeContent(
                 if (isVideo) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxHeight(ArtworkSize.LARGE.fraction).aspectRatio(1f)
+                        modifier = Modifier.fillMaxHeight(ArtworkSize.MAX_FRACTION).aspectRatio(1f)
                     ) {
                         Surface(
                             modifier = Modifier
-                                .fillMaxHeight(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
+                                .fillMaxHeight(currentArtworkSize.fraction / ArtworkSize.MAX_FRACTION)
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(Color.Black)
@@ -497,7 +511,8 @@ private fun SeekbarSection(
     durationProvider: () -> Long,
     currentSeekbarStyle: SeekbarStyle,
     onSeekbarStyleChange: (SeekbarStyle) -> Unit,
-    sponsorSegments: List<SponsorSegment>
+    sponsorSegments: List<SponsorSegment>,
+    contentPadding: androidx.compose.ui.unit.Dp = 8.dp
 ) {
     Box(
         modifier = Modifier.fillMaxWidth().height(44.dp),
@@ -513,7 +528,8 @@ private fun SeekbarSection(
                 modifier = Modifier.fillMaxWidth(), activeColor = dominantColors.accent,
                 inactiveColor = dominantColors.onBackground.copy(alpha = 0.3f),
                 initialStyle = currentSeekbarStyle, onStyleChange = onSeekbarStyleChange,
-                duration = duration, sponsorSegments = sponsorSegments
+                duration = duration, sponsorSegments = sponsorSegments,
+                contentPadding = contentPadding
             )
         }
     }

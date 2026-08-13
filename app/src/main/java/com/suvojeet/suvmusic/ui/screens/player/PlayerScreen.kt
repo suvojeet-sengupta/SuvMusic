@@ -74,6 +74,7 @@ import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.rememberSupportingPaneScaffoldNavigator
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle
 import com.suvojeet.suvmusic.core.model.ThemeMode
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.data.repository.SponsorSegment
@@ -240,12 +241,23 @@ fun PlayerScreen(
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
     val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
-    val isAppInDarkTheme = when (themeMode) {
+    val playerBackgroundStyle by sessionManager.playerBackgroundStyleFlow
+        .collectAsStateWithLifecycle(initialValue = PlayerBackgroundStyle.AMBIENT)
+
+    val isThemeDark = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    
+
+    // A pinned player backdrop overrides the app theme for everything drawn on top of
+    // it — text colors, status-bar icons and the sheets' frosting all key off this.
+    val isAppInDarkTheme = when (playerBackgroundStyle) {
+        PlayerBackgroundStyle.BLACK -> true
+        PlayerBackgroundStyle.LIGHT -> false
+        PlayerBackgroundStyle.AMBIENT -> isThemeDark
+    }
+
     val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle()
     val aiAutoStatus by playerViewModel.aiAutoStatus.collectAsStateWithLifecycle()
     val currentDownloadProgress by playerViewModel.currentDownloadProgress.collectAsStateWithLifecycle()
@@ -286,7 +298,7 @@ fun PlayerScreen(
         label = "bgLoadingDim"
     )
 
-    DisposableEffect(Unit) {
+    DisposableEffect(isAppInDarkTheme) {
         val window = (view.context as Activity).window
         val insetsController = WindowCompat.getInsetsController(window, view)
         val previousLightStatusBars = insetsController.isAppearanceLightStatusBars
@@ -371,7 +383,11 @@ fun PlayerScreen(
         }
     }
 
-    val playerBackgroundColor = if (isAppInDarkTheme) Color.Black else Color.White
+    val playerBackgroundColor = when (playerBackgroundStyle) {
+        PlayerBackgroundStyle.BLACK -> Color.Black
+        PlayerBackgroundStyle.LIGHT -> Color(0xFFF7F7F9)
+        PlayerBackgroundStyle.AMBIENT -> if (isAppInDarkTheme) Color.Black else Color.White
+    }
 
     if (isInPip) {
         PiPPlayerContent(song = song, isVideoMode = playerState.isVideoMode, player = player)
@@ -382,7 +398,9 @@ fun PlayerScreen(
         // against the same backdrop instead of painting its own flat slab over it.
         com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork provides
             com.suvojeet.suvmusic.ui.components.glass.GlassArtwork(
-                artworkUrl = song?.thumbnailUrl?.takeIf { !playerState.isVideoMode },
+                artworkUrl = song?.thumbnailUrl?.takeIf {
+                    !playerState.isVideoMode && playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT
+                },
                 colors = dominantColors,
                 isDarkTheme = isAppInDarkTheme
             )
@@ -392,7 +410,9 @@ fun PlayerScreen(
             // backdrop — the blurred album art shows prominently through a translucent
             // scrim. LIQUID_GLASS (unreachable, migrated to YT_MUSIC) still draws its own
             // full-screen backdrop, so it's skipped here.
-            when (playerStyle) {
+            // A solid backdrop is the whole point of BLACK / LIGHT, so the ambient art
+            // blur is skipped entirely rather than layered underneath it.
+            if (playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT) when (playerStyle) {
                 PlayerStyle.LIQUID_GLASS -> {
                     // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
                 }

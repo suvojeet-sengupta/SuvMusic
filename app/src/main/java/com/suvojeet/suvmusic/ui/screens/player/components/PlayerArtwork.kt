@@ -101,6 +101,9 @@ fun AlbumArtwork(
     onDoubleTapLeft: () -> Unit = {},
     onDoubleTapRight: () -> Unit = {},
     songId: String? = null,
+    // When true the artwork hugs the start edge and shrinks towards it, so its left
+    // edge lines up with the title / artist / seekbar margin at every size preset.
+    alignStart: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -229,9 +232,12 @@ fun AlbumArtwork(
     val currentOnSwipeLeft by rememberUpdatedState(onSwipeLeft)
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
 
-    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(
+        modifier = modifier,
+        contentAlignment = if (alignStart) Alignment.CenterStart else Alignment.Center
+    ) {
         val isWideLayout = maxWidth > maxHeight
-        val maxFraction = ArtworkSize.LARGE.fraction
+        val maxFraction = ArtworkSize.MAX_FRACTION
 
         // Outer fixed-size container to maintain layout stability
         Box(
@@ -284,8 +290,12 @@ fun AlbumArtwork(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        translationX = animatedOffsetX
                         val dynamicScale = (artworkSize.fraction / maxFraction) * scale
+                        // Scaling happens about the centre so vinyl spin and the swipe tilt
+                        // stay on-axis; the offset re-pins the shrunken art's left edge to the
+                        // container's start edge instead of letting it drift inwards.
+                        val startPin = if (alignStart) (1f - dynamicScale) * size.width / 2f else 0f
+                        translationX = animatedOffsetX - startPin
                         scaleX = dynamicScale
                         scaleY = dynamicScale
                         rotationZ = rotation + currentRotation

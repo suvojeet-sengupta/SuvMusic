@@ -213,7 +213,7 @@ private fun ClassicPortraitContent(
                         ) {
                             Surface(
                                 modifier = Modifier
-                                    .fillMaxSize(currentArtworkSize.fraction / ArtworkSize.LARGE.fraction)
+                                    .fillMaxSize(currentArtworkSize.fraction / ArtworkSize.MAX_FRACTION)
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.Black)
                                     .clickable { onSetFullScreen(true) },

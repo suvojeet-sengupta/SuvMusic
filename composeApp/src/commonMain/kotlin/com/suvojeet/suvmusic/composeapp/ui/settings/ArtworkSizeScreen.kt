@@ -116,34 +116,18 @@ private fun ArtworkSizeCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom,
+            Box(
+                modifier = Modifier.size(40.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                val boxCount = when (size) {
-                    ArtworkSize.SMALL -> 1
-                    ArtworkSize.MEDIUM -> 2
-                    ArtworkSize.LARGE -> 3
-                }
-                repeat(3) { index ->
-                    val boxSize = when {
-                        index == 0 -> 16.dp
-                        index == 1 -> 24.dp
-                        else -> 32.dp
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(boxSize)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (index < boxCount) {
-                                    if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                },
-                            ),
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp * size.fraction)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                )
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -156,11 +140,7 @@ private fun ArtworkSizeCard(
                 )
 
                 Text(
-                    text = when (size) {
-                        ArtworkSize.SMALL -> "65% of screen width"
-                        ArtworkSize.MEDIUM -> "75% of screen width"
-                        ArtworkSize.LARGE -> "85% of screen width"
-                    },
+                    text = "${(size.fraction * 100).toInt()}% of available width",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

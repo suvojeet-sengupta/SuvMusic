@@ -173,6 +173,7 @@ class SessionManager @Inject constructor(
         private val PURE_BLACK_KEY = booleanPreferencesKey("pure_black_enabled")
         private val MINI_PLAYER_STYLE_KEY = stringPreferencesKey("mini_player_style")
         private val PLAYER_STYLE_KEY = stringPreferencesKey("player_style")
+        private val PLAYER_BACKGROUND_STYLE_KEY = stringPreferencesKey("player_background_style")
         private val UPDATE_CHANNEL_KEY = stringPreferencesKey("update_channel")
         private val PENDING_UPDATE_VERSION_CODE_KEY = intPreferencesKey("pending_update_version_code")
         private val PENDING_UPDATE_VERSION_NAME_KEY = stringPreferencesKey("pending_update_version_name")
@@ -850,6 +851,23 @@ class SessionManager @Inject constructor(
     suspend fun setPlayerStyle(style: com.suvojeet.suvmusic.core.model.PlayerStyle) {
         context.dataStore.edit { preferences ->
             preferences[PLAYER_STYLE_KEY] = style.name
+        }
+    }
+
+    val playerBackgroundStyleFlow: Flow<com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle> =
+        context.dataStore.data.map { preferences ->
+            preferences[PLAYER_BACKGROUND_STYLE_KEY]?.let {
+                try {
+                    com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle.valueOf(it)
+                } catch (e: Exception) {
+                    com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle.AMBIENT
+                }
+            } ?: com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle.AMBIENT
+        }
+
+    suspend fun setPlayerBackgroundStyle(style: com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle) {
+        context.dataStore.edit { preferences ->
+            preferences[PLAYER_BACKGROUND_STYLE_KEY] = style.name
         }
     }
 
