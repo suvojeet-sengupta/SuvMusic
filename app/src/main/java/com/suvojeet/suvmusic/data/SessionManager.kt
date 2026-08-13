@@ -25,6 +25,7 @@ import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.DownloadQuality
 import com.suvojeet.suvmusic.core.model.HapticsIntensity
 import com.suvojeet.suvmusic.core.model.HapticsMode
+import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.core.model.HomeItem
 import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeSectionType
@@ -728,10 +729,10 @@ class SessionManager @Inject constructor(
     }
     
     suspend fun getArtworkSize(): String = 
-        context.dataStore.data.first()[ARTWORK_SIZE_KEY] ?: "LARGE"
+        context.dataStore.data.first()[ARTWORK_SIZE_KEY] ?: ArtworkSize.FULL.name
     
     val artworkSizeFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[ARTWORK_SIZE_KEY] ?: "LARGE"
+        preferences[ARTWORK_SIZE_KEY] ?: ArtworkSize.FULL.name
     }
     
     suspend fun setArtworkSize(size: String) {

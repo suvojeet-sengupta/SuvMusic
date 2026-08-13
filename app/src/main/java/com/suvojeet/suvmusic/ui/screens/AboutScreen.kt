@@ -1,6 +1,7 @@
 package com.suvojeet.suvmusic.ui.screens
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -29,6 +30,7 @@ import com.suvojeet.suvmusic.ui.screens.about.AboutFeaturesSection
 import com.suvojeet.suvmusic.ui.screens.about.AboutFooterSection
 import com.suvojeet.suvmusic.ui.screens.about.AboutHeroSection
 import com.suvojeet.suvmusic.ui.screens.about.AboutInformationSection
+import com.suvojeet.suvmusic.ui.screens.about.AboutStorySection
 import com.suvojeet.suvmusic.ui.screens.about.AboutTechStackSection
 import com.suvojeet.suvmusic.ui.utils.animateEnter
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
@@ -79,24 +81,28 @@ fun AboutScreen(
             contentPadding = PaddingValues(bottom = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item { Box(modifier = Modifier.animateEnter(0)) { AboutHeroSection() } }
-            item { Box(modifier = Modifier.animateEnter(1)) { AboutDescriptionSection() } }
-            item { Box(modifier = Modifier.animateEnter(2)) { AboutFeaturesSection() } }
+            // Column, not Box: every section emits a title, a card and a spacer as
+            // siblings, and a Box would stack them on top of each other — that's what
+            // made the section headings render over their cards.
+            item { Column(modifier = Modifier.animateEnter(0)) { AboutHeroSection() } }
+            item { Column(modifier = Modifier.animateEnter(1)) { AboutDescriptionSection() } }
+            item { Column(modifier = Modifier.animateEnter(2)) { AboutStorySection() } }
+            item { Column(modifier = Modifier.animateEnter(3)) { AboutFeaturesSection() } }
             item {
-                Box(modifier = Modifier.animateEnter(3)) {
+                Column(modifier = Modifier.animateEnter(4)) {
                     AboutDeveloperSection(onOpenUri = { uriHandler.openUri(it) })
                 }
             }
-            item { Box(modifier = Modifier.animateEnter(4)) { AboutTechStackSection() } }
+            item { Column(modifier = Modifier.animateEnter(5)) { AboutTechStackSection() } }
             item {
-                Box(modifier = Modifier.animateEnter(5)) {
+                Column(modifier = Modifier.animateEnter(6)) {
                     AboutInformationSection(
                         onOpenUri = { uriHandler.openUri(it) },
                         onHowItWorksClick = onHowItWorksClick
                     )
                 }
             }
-            item { Box(modifier = Modifier.animateEnter(6)) { AboutFooterSection() } }
+            item { Column(modifier = Modifier.animateEnter(7)) { AboutFooterSection() } }
         }
     }
 }

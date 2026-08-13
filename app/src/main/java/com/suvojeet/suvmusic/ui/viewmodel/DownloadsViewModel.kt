@@ -28,6 +28,16 @@ class DownloadsViewModel @Inject constructor(
     val queueState: StateFlow<List<Song>> = downloadRepository.queueState
     val downloadingIds: StateFlow<Set<String>> = downloadRepository.downloadingIds
     val downloadProgress: StateFlow<Map<String, Float>> = downloadRepository.downloadProgress
+    val downloadFailures: StateFlow<Map<String, com.suvojeet.suvmusic.data.repository.DownloadFailure>> =
+        downloadRepository.downloadFailures
+
+    fun retryDownload(songId: String) {
+        downloadRepository.retryDownload(songId)
+    }
+
+    fun dismissFailure(songId: String) {
+        downloadRepository.clearFailure(songId)
+    }
 
     /** Audio-only downloads (isVideo == false) shown in the Songs tab. */
     val downloadedAudioSongs: StateFlow<List<Song>> = downloadedSongs
@@ -43,10 +53,13 @@ class DownloadsViewModel @Inject constructor(
         downloadedSongs,
         queueState,
         downloadingIds,
-        downloadProgress
-    ) { downloaded, queued, downloading, progressMap ->
-        val allSongs = (downloaded + queued).distinctBy { it.id }
-        
+        downloadProgress,
+        downloadFailures
+    ) { downloaded, queued, downloading, progressMap, failures ->
+        // Failed songs are off the queue and not downloaded, so they'd disappear from
+        // this list entirely — include them so the user can see and retry them.
+        val allSongs = (downloaded + queued + failures.values.map { it.song }).distinctBy { it.id }
+
         val collections = allSongs.filter { it.collectionId != null }
             .groupBy { it.collectionId.orEmpty() }
             .map { (id, groupSongs) ->
@@ -58,7 +71,7 @@ class DownloadsViewModel @Inject constructor(
                     songs = groupSongs.map { song ->
                         val isDownloading = downloading.contains(song.id)
                         val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
-                        SongStatus(song, isDownloading, progress)
+                        SongStatus(song, isDownloading, progress, failures[song.id]?.reason)
                     }
                 )
             }
@@ -67,7 +80,7 @@ class DownloadsViewModel @Inject constructor(
             .map { song ->
                 val isDownloading = downloading.contains(song.id)
                 val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
-                DownloadItem.SongItem(song, isDownloading, progress)
+                DownloadItem.SongItem(song, isDownloading, progress, failures[song.id]?.reason)
             }
             
         (collections + singles).sortedBy { 
@@ -152,14 +165,16 @@ class DownloadsViewModel @Inject constructor(
 data class SongStatus(
     val song: Song,
     val isDownloading: Boolean,
-    val progress: Float
+    val progress: Float,
+    val failureReason: String? = null
 )
 
 sealed class DownloadItem {
     data class SongItem(
         val song: Song,
         val isDownloading: Boolean = false,
-        val progress: Float = 1.0f
+        val progress: Float = 1.0f,
+        val failureReason: String? = null
     ) : DownloadItem()
     
     data class CollectionItem(

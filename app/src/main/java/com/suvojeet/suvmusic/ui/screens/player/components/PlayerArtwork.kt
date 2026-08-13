@@ -96,14 +96,11 @@ fun AlbumArtwork(
     onSwipeLeft: () -> Unit = {},
     onSwipeRight: () -> Unit = {},
     initialShape: ArtworkShape = ArtworkShape.ROUNDED_SQUARE,
-    artworkSize: ArtworkSize = ArtworkSize.LARGE,
+    artworkSize: ArtworkSize = ArtworkSize.FULL,
     onShapeChange: ((ArtworkShape) -> Unit)? = null,
     onDoubleTapLeft: () -> Unit = {},
     onDoubleTapRight: () -> Unit = {},
     songId: String? = null,
-    // When true the artwork hugs the start edge and shrinks towards it, so its left
-    // edge lines up with the title / artist / seekbar margin at every size preset.
-    alignStart: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -234,7 +231,7 @@ fun AlbumArtwork(
 
     BoxWithConstraints(
         modifier = modifier,
-        contentAlignment = if (alignStart) Alignment.CenterStart else Alignment.Center
+        contentAlignment = Alignment.Center
     ) {
         val isWideLayout = maxWidth > maxHeight
         val maxFraction = ArtworkSize.MAX_FRACTION
@@ -290,12 +287,10 @@ fun AlbumArtwork(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
+                        // Scaling stays about the centre, so every size preset keeps the
+                        // artwork optically centred and the vinyl spin / swipe tilt on-axis.
                         val dynamicScale = (artworkSize.fraction / maxFraction) * scale
-                        // Scaling happens about the centre so vinyl spin and the swipe tilt
-                        // stay on-axis; the offset re-pins the shrunken art's left edge to the
-                        // container's start edge instead of letting it drift inwards.
-                        val startPin = if (alignStart) (1f - dynamicScale) * size.width / 2f else 0f
-                        translationX = animatedOffsetX - startPin
+                        translationX = animatedOffsetX
                         scaleX = dynamicScale
                         scaleY = dynamicScale
                         rotationZ = rotation + currentRotation

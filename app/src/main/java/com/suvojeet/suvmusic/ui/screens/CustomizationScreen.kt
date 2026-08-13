@@ -95,11 +95,11 @@ fun CustomizationScreen(
         ArtworkShape.ROUNDED_SQUARE
     }
     
-    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
+    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.FULL.name)
     val currentArtworkSize = try {
         ArtworkSize.valueOf(artworkSizeString)
     } catch (e: Exception) {
-        ArtworkSize.LARGE
+        ArtworkSize.FULL
     }
 
     val currentPlayerBackground by sessionManager.playerBackgroundStyleFlow

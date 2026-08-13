@@ -151,7 +151,8 @@ data class PlayerScreenActions(
     val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
     val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
     val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit,
-    val onClearQueue: () -> Unit = {}
+    val onClearQueue: () -> Unit = {},
+    val onSwitchAudioSource: () -> Unit = {}
 )
 
 /**
@@ -200,7 +201,8 @@ fun PlayerScreen(
                     onPlayFromQueue = { blockedMsg() },
                     onShuffleToggle = blockedMsg,
                     onRepeatToggle = blockedMsg,
-                    onToggleAutoplay = blockedMsg
+                    onToggleAutoplay = blockedMsg,
+                    onSwitchAudioSource = blockedMsg
                 )
             } else {
                 originalActions.copy(
@@ -211,7 +213,8 @@ fun PlayerScreen(
                     onPlayFromQueue = { blockedMsg() },
                     onShuffleToggle = blockedMsg,
                     onRepeatToggle = blockedMsg,
-                    onToggleAutoplay = blockedMsg
+                    onToggleAutoplay = blockedMsg,
+                    onSwitchAudioSource = blockedMsg
                 )
             }
         } else originalActions
@@ -232,7 +235,7 @@ fun PlayerScreen(
     val playerStyle by sessionManager.playerStyleFlow.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerStyle.YT_MUSIC)
     val animatedBackgroundEnabled by sessionManager.playerAnimatedBackgroundFlow.collectAsStateWithLifecycle(initialValue = true)
     val currentArtworkShapeName by sessionManager.artworkShapeFlow.collectAsStateWithLifecycle(initialValue = ArtworkShape.ROUNDED_SQUARE.name)
-    val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.LARGE.name)
+    val currentArtworkSizeName by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.FULL.name)
     val currentSeekbarStyleName by sessionManager.seekbarStyleFlow.collectAsStateWithLifecycle(initialValue = SeekbarStyle.M3E_WAVY.name)
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerGlassBlur by sessionManager.playerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 60f)
@@ -277,7 +280,7 @@ fun PlayerScreen(
     val virtualizer by playerViewModel.getVirtualizer().collectAsStateWithLifecycle(initialValue = 0f)
 
     val currentArtworkShape = try { ArtworkShape.valueOf(currentArtworkShapeName) } catch (e: Exception) { ArtworkShape.ROUNDED_SQUARE }
-    val currentArtworkSize = try { ArtworkSize.valueOf(currentArtworkSizeName) } catch (e: Exception) { ArtworkSize.LARGE }
+    val currentArtworkSize = try { ArtworkSize.valueOf(currentArtworkSizeName) } catch (e: Exception) { ArtworkSize.FULL }
     val currentSeekbarStyle = try { SeekbarStyle.valueOf(currentSeekbarStyleName) } catch (e: Exception) { SeekbarStyle.MATERIAL }
 
     val view = LocalView.current

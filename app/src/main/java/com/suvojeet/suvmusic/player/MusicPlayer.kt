@@ -146,6 +146,14 @@ class MusicPlayer @Inject constructor(
     // spams the snackbar across preload + transition + replays. Cleared on a new queue.
     private val hqNoticeShown = android.util.LruCache<String, Boolean>(200)
 
+    // Per-song source overrides set from the player screen's source switch. They win
+    // over the global preference for that one song and are dropped when the user
+    // changes the global source.
+    private val songSourceOverrides = android.util.LruCache<String, MusicSource>(200)
+    // Non-suspending mirror of the global source preference, kept current by the
+    // musicSourceFlow collector in init. Used where we can't suspend (state ticks).
+    @Volatile private var globalMusicSource: MusicSource = MusicSource.REMOTE
+
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
     private var currentSongStartPosition: Long = 0L
@@ -367,9 +375,12 @@ class MusicPlayer @Inject constructor(
         // new HQ catalogue choice.
         scope.launch {
             sessionManager.musicSourceFlow.collect {
+                globalMusicSource = it
                 hybridRemoteIds.evictAll()
                 hqFallbackReason.evictAll()
                 hqNoticeShown.evictAll()
+                // A deliberate global change outranks the per-song switches made before it.
+                songSourceOverrides.evictAll()
             }
         }
 
@@ -1316,6 +1327,139 @@ class MusicPlayer @Inject constructor(
     }
     
     /**
+     * The source [song] should play from: its own switch if the user flipped one on
+     * the player screen, otherwise the global preference.
+     */
+    private suspend fun effectiveMusicSource(song: Song): MusicSource =
+        songSourceOverrides[song.id] ?: sessionManager.getMusicSource()
+
+    /**
+     * Where [song]'s audio is coming from right now, for the player screen's source
+     * badge. Null means the switch doesn't apply — local files and video mode have
+     * only one possible source.
+     */
+    private fun computeActiveAudioSource(song: Song?): MusicSource? {
+        if (song == null) return null
+        return when {
+            song.source == SongSource.LOCAL || song.source == SongSource.DOWNLOADED -> null
+            _playerState.value.isVideoMode -> null
+            song.source == SongSource.REMOTE ->
+                if (songSourceOverrides[song.id] == MusicSource.YOUTUBE) MusicSource.YOUTUBE
+                else MusicSource.REMOTE
+            // A YouTube song only ends up on HQ when HQ is the effective source AND the
+            // hybrid resolve found a match — a blank cache entry is a recorded miss.
+            (songSourceOverrides[song.id] ?: globalMusicSource) == MusicSource.REMOTE &&
+                hybridRemoteIds[song.id]?.isNotBlank() == true -> MusicSource.REMOTE
+            else -> MusicSource.YOUTUBE
+        }
+    }
+
+    private suspend fun resolveStreamForSource(song: Song, source: MusicSource): String? =
+        if (source == MusicSource.REMOTE) {
+            if (song.source == SongSource.REMOTE) remoteStreamUrlFor(song)
+            else resolveHybridRemoteStream(song)
+        } else {
+            val videoId = if (song.source == SongSource.REMOTE) {
+                resolvedVideoIds[song.id] ?: youTubeRepository.getBestVideoId(song).also {
+                    resolvedVideoIds.put(song.id, it)
+                }
+            } else {
+                song.id
+            }
+            youTubeRepository.getStreamUrl(videoId)
+        }
+
+    /**
+     * Flip the current song between YouTube and HQ Audio, keeping the playback
+     * position. The choice sticks to that song only; the global preference and every
+     * other song in the queue are untouched.
+     */
+    fun switchAudioSourceForCurrentSong() {
+        val song = _playerState.value.currentSong ?: return
+        val current = computeActiveAudioSource(song) ?: return
+        val target = if (current == MusicSource.REMOTE) MusicSource.YOUTUBE else MusicSource.REMOTE
+        val targetLabel = if (target == MusicSource.REMOTE) "HQ Audio" else "YouTube"
+
+        songSourceOverrides.put(song.id, target)
+        if (target == MusicSource.REMOTE) {
+            // An explicit request must not be answered from a recorded miss.
+            if (hybridRemoteIds[song.id]?.isBlank() == true) hybridRemoteIds.remove(song.id)
+            hqNoticeShown.remove(song.id)
+        }
+        invalidatePreload()
+
+        val resumePosition = mediaController?.currentPosition?.coerceAtLeast(0L) ?: 0L
+        val wasPlaying = mediaController?.isPlaying == true
+        _playerState.update { it.copy(isLoading = true, error = null) }
+
+        currentResolutionJob?.cancel()
+        currentResolutionJob = scope.launch {
+            val streamUrl = try {
+                kotlinx.coroutines.withTimeoutOrNull(20_000L) {
+                    withContext(Dispatchers.IO) { resolveStreamForSource(song, target) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("MusicPlayer", "Source switch resolve failed: ${e.message}")
+                null
+            }
+
+            if (streamUrl.isNullOrBlank()) {
+                // Nothing to switch to — put the song back on the source it was on.
+                songSourceOverrides.put(song.id, current)
+                _playerState.update { it.copy(isLoading = false, activeAudioSource = current) }
+                com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                    if (target == MusicSource.REMOTE) "No HQ version found for “${song.title}”"
+                    else "Couldn't switch “${song.title}” to YouTube",
+                    com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
+                )
+                return@launch
+            }
+
+            val controller = mediaController
+            val index = controller?.currentMediaItemIndex ?: -1
+            if (controller == null || index < 0 || index >= controller.mediaItemCount ||
+                controller.getMediaItemAt(index).mediaId != song.id
+            ) {
+                _playerState.update { it.copy(isLoading = false) }
+                return@launch
+            }
+
+            controller.replaceMediaItem(
+                index,
+                MediaItem.Builder()
+                    .setUri(streamUrl)
+                    .setMediaId(song.id)
+                    // Distinct cache key per source so the two versions never collide
+                    // in the media cache.
+                    .setCustomCacheKey("${song.id}_${target.name}")
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.title)
+                            .setArtist(song.artist)
+                            .setAlbumTitle(song.album)
+                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                            .setIsPlayable(true)
+                            .setIsBrowsable(false)
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                            .build()
+                    )
+                    .build()
+            )
+            controller.prepare()
+            controller.seekTo(resumePosition)
+            if (wasPlaying) controller.play()
+
+            _playerState.update { it.copy(isLoading = false, activeAudioSource = target) }
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                "Playing “${song.title}” from $targetLabel",
+                com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
+            )
+        }
+    }
+
+    /**
      * Hybrid playback: try to stream a YouTube-sourced [song] from RemoteAudio's
      * HQ catalogue (320 kbps) instead. Returns a RemoteAudio stream URL when a
      * confident title+artist (and, when known, duration) match is found, else
@@ -1533,7 +1677,7 @@ class MusicPlayer @Inject constructor(
                 // the normal YouTube path below when no match is found.
                 if ((song.source == SongSource.YOUTUBE || song.source == SongSource.YOUTUBE_MUSIC) &&
                     !_playerState.value.isVideoMode &&
-                    sessionManager.getMusicSource() == MusicSource.REMOTE
+                    effectiveMusicSource(song) == MusicSource.REMOTE
                 ) {
                     coroutineScope {
                         val remoteJob = async(Dispatchers.IO) {
@@ -1972,16 +2116,23 @@ class MusicPlayer @Inject constructor(
                         bufferingStartWallTime = 0L
                     }
 
+                    // Recomputed on every tick rather than at each of the many
+                    // resolution paths, so the player screen's source badge can't drift
+                    // out of sync with what is actually streaming.
+                    val activeSource = computeActiveAudioSource(currentState.currentSong)
+
                     val shouldUpdate = kotlin.math.abs(currentState.currentPosition - currentPos) > 500 ||
                                      currentState.duration != duration ||
-                                     currentState.bufferedPercentage != bufferedPercentage
+                                     currentState.bufferedPercentage != bufferedPercentage ||
+                                     currentState.activeAudioSource != activeSource
 
                     if (shouldUpdate) {
                         _playerState.update {
                             it.copy(
                                 currentPosition = currentPos,
                                 duration = duration,
-                                bufferedPercentage = bufferedPercentage
+                                bufferedPercentage = bufferedPercentage,
+                                activeAudioSource = activeSource
                             )
                         }
                     }
@@ -2231,7 +2382,7 @@ class MusicPlayer @Inject constructor(
                             // the next song from YouTube. No user notice here — preload is
                             // speculative; the notice fires when the song actually plays
                             // (resolveAndPlayCurrentItem, or the transition fast-path below).
-                            val hqSelected = sessionManager.getMusicSource() == MusicSource.REMOTE
+                            val hqSelected = effectiveMusicSource(nextSong) == MusicSource.REMOTE
                             (if (hqSelected) resolveHybridRemoteStream(nextSong) else null)
                                 ?: youTubeRepository.getStreamUrl(nextSong.id)
                         }
@@ -2517,7 +2668,7 @@ class MusicPlayer @Inject constructor(
                     } else {
                         // Hybrid: prefer RemoteAudio HQ audio for YouTube songs when
                         // the user has selected HQ Audio as their primary source.
-                        val hqSelected = sessionManager.getMusicSource() == MusicSource.REMOTE
+                        val hqSelected = effectiveMusicSource(song) == MusicSource.REMOTE
                         val hybrid = if (hqSelected) resolveHybridRemoteStream(song) else null
                         if (hqSelected && hybrid == null) notifyHqFallbackIfNeeded(song)
                         // Retry once if first attempt fails

@@ -1100,8 +1100,9 @@ fun SuvMusicApp(
                     onRepeatToggle = { playerViewModel.toggleRepeat() },
                     onToggleAutoplay = { playerViewModel.toggleAutoplay() },
                     onToggleVideoMode = { playerViewModel.toggleVideoMode() },
+                    onSwitchAudioSource = { playerViewModel.switchAudioSource() },
                     onDismissVideoError = { playerViewModel.dismissVideoError() },
-                    onStartRadio = { 
+                    onStartRadio = {
                          playbackInfo.currentSong?.let { 
                              playerViewModel.startRadio(it, null)
                          }

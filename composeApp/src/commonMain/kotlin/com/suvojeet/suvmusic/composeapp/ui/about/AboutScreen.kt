@@ -40,6 +40,7 @@ fun AboutScreen(
     ) {
         item { AboutHeroSection(appVersion = appVersion) }
         item { AboutDescriptionSection() }
+        item { AboutStorySection() }
         item { AboutFeaturesSection() }
         item { AboutDeveloperSection(onOpenUri = onOpenUri) }
         item { AboutTechStackSection() }

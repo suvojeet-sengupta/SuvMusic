@@ -210,7 +210,7 @@ private fun YTMusicPortraitContent(
                     .fillMaxWidth()
                     .weight(if (isVeryShort) 1.5f else 8f, fill = false)
                     .then(if (!isVeryShort) Modifier.aspectRatio(1f) else Modifier),
-                contentAlignment = Alignment.CenterStart
+                contentAlignment = Alignment.Center
             ) {
                 AnimatedContent(
                     targetState = playerState.isVideoMode && player != null && !isFullScreen,
@@ -219,7 +219,7 @@ private fun YTMusicPortraitContent(
                 ) { isVideo ->
                     if (isVideo) {
                         Box(
-                            contentAlignment = Alignment.CenterStart,
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
                                 .aspectRatio(1f)
@@ -259,7 +259,7 @@ private fun YTMusicPortraitContent(
                         }
                     } else {
                         Box(
-                            contentAlignment = Alignment.CenterStart,
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
                                 .aspectRatio(1f)
@@ -269,7 +269,6 @@ private fun YTMusicPortraitContent(
                                 isPlaying = playerState.isPlaying, isRotatingEnabled = isRotatingEnabled,
                                 onSwipeLeft = actions.onNext, onSwipeRight = actions.onPrevious, initialShape = currentArtworkShape, artworkSize = currentArtworkSize,
                                 onShapeChange = onShapeChange, onDoubleTapLeft = { handleDoubleTapSeek(false) }, onDoubleTapRight = { handleDoubleTapSeek(true) }, songId = song?.id,
-                                alignStart = true,
                                 modifier = Modifier.fillMaxSize()
                             )
                             
@@ -312,7 +311,9 @@ private fun YTMusicPortraitContent(
                 onSleepTimerClick = onShowSleepTimer,
                 onSpeedClick = onShowPlaybackSpeed,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
-                playbackSpeed = playerState.playbackSpeed
+                playbackSpeed = playerState.playbackSpeed,
+                activeAudioSource = playbackInfo.activeAudioSource,
+                onSwitchAudioSource = actions.onSwitchAudioSource
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.15f))
@@ -479,7 +480,9 @@ private fun YTMusicLandscapeContent(
                 onSleepTimerClick = onShowSleepTimer,
                 onSpeedClick = onShowPlaybackSpeed,
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
-                playbackSpeed = playerState.playbackSpeed
+                playbackSpeed = playerState.playbackSpeed,
+                activeAudioSource = playbackInfo.activeAudioSource,
+                onSwitchAudioSource = actions.onSwitchAudioSource
             )
             Spacer(modifier = Modifier.height(16.dp))
 

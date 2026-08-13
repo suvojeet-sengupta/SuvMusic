@@ -84,6 +84,20 @@ object SnackbarUtil {
     }
 
     /**
+     * Shows a snackbar with an action button (uses stored root view).
+     */
+    fun showMessageWithAction(
+        message: String,
+        actionText: String,
+        action: () -> Unit,
+        duration: Duration = Duration.LONG
+    ) {
+        rootView?.get()?.let { view ->
+            showMessageWithAction(view, message, actionText, action, duration)
+        }
+    }
+
+    /**
      * Shows an error snackbar (with error color tint).
      */
     fun showError(

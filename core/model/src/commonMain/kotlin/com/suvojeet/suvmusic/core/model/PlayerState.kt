@@ -30,7 +30,11 @@ data class PlayerState(
     val audioBitrate: Int? = null, // in kbps, e.g., 256
     val dominantColor: Int = -16777216, // Black/Dark default
     val videoNotFound: Boolean = false, // Flag for video stream failures
-    val isRadioMode: Boolean = false // Radio mode flag
+    val isRadioMode: Boolean = false, // Radio mode flag
+    // Where the current song's audio is actually coming from right now. Null when the
+    // question doesn't apply (local/downloaded file, or nothing playing) — the player
+    // screen only offers the source switch when this is non-null.
+    val activeAudioSource: MusicSource? = null
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f

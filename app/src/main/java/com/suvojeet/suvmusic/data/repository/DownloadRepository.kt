@@ -43,6 +43,7 @@ class DownloadRepository @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
     private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: com.suvojeet.suvmusic.data.SessionManager,
+    private val networkMonitor: com.suvojeet.suvmusic.util.NetworkMonitor,
     @param:com.suvojeet.suvmusic.di.DownloadDataSource private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory
 ) {
     companion object {
@@ -70,6 +71,29 @@ class DownloadRepository @Inject constructor(
     // Download progress tracking for progressive download UI (songId -> progress 0.0-1.0)
     private val _downloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, Float>> = _downloadProgress.asStateFlow()
+
+    // Failed downloads (songId -> song + human-readable reason). A failed song is
+    // popped off the queue and isn't downloaded, so without this it vanished from the
+    // Downloads screen entirely and the only trace was a notification. Keeping the
+    // Song here lets the UI list it and retry it. Cleared on retry or success.
+    private val _downloadFailures = MutableStateFlow<Map<String, DownloadFailure>>(emptyMap())
+    val downloadFailures: StateFlow<Map<String, DownloadFailure>> = _downloadFailures.asStateFlow()
+
+    fun clearFailure(songId: String) {
+        _downloadFailures.update { it - songId }
+    }
+
+    fun failureReason(songId: String): String? = _downloadFailures.value[songId]?.reason
+
+    /** Re-enqueue a previously failed song. */
+    fun retryDownload(songId: String) {
+        val failure = _downloadFailures.value[songId] ?: return
+        downloadSongs(listOf(failure.song))
+    }
+
+    private fun recordFailure(song: Song, reason: String) {
+        _downloadFailures.update { it + (song.id to DownloadFailure(song, reason)) }
+    }
     
     private val downloadClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -861,6 +885,18 @@ class DownloadRepository @Inject constructor(
 
             if (!canDownload) return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.SKIPPED
 
+            // A fresh attempt clears the previous verdict so the UI stops showing the
+            // old failure the moment the retry starts.
+            clearFailure(song.id)
+
+            if (!networkMonitor.isCurrentlyConnected()) {
+                android.util.Log.w(DL_TAG, "[OFFLINE] id=${song.id} — refusing to start")
+                clearInFlight(song.id)
+                activeDownloadJobs.remove(song.id)
+                recordFailure(song, "You're offline")
+                return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
+            }
+
             try {
                 val rt0 = System.currentTimeMillis()
                 android.util.Log.i(
@@ -898,6 +934,9 @@ class DownloadRepository @Inject constructor(
                         }
                     }
                     if (streamResult != null) break
+                    // Retrying into a dead network just burns 12s before the same
+                    // failure — stop early and say why.
+                    if (!networkMonitor.isCurrentlyConnected()) break
                     if (streamAttempt < maxStreamAttempts) {
                         val backoff = 4000L * streamAttempt // 4s, then 8s
                         android.util.Log.w(
@@ -916,6 +955,11 @@ class DownloadRepository @Inject constructor(
                             "elapsed=${streamElapsed}ms totalElapsed=${System.currentTimeMillis() - t0}ms",
                     )
                     clearInFlight(song.id)
+                    recordFailure(
+                        song,
+                        if (!networkMonitor.isCurrentlyConnected()) "You're offline"
+                        else "Couldn't get a download link — try again later"
+                    )
                     return@withContext com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
                 }
 
@@ -929,8 +973,14 @@ class DownloadRepository @Inject constructor(
                 val ok = downloadUsingSharedCache(song, streamUrl, extension)
                 val total = System.currentTimeMillis() - t0
                 if (ok) {
+                    clearFailure(song.id)
                     com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS
                 } else {
+                    recordFailure(
+                        song,
+                        if (!networkMonitor.isCurrentlyConnected()) "Connection lost during download"
+                        else "Download was interrupted — tap to retry"
+                    )
                     com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -952,6 +1002,7 @@ class DownloadRepository @Inject constructor(
                 )
                 Log.e(TAG, "Download error for ${song.id}", e)
                 clearInFlight(song.id)
+                recordFailure(song, e.message?.takeIf { it.isNotBlank() } ?: "Download failed")
                 com.suvojeet.suvmusic.core.model.DownloadResult.FAILED
             } finally {
                 activeDownloadJobs.remove(song.id)
@@ -1580,6 +1631,9 @@ class DownloadRepository @Inject constructor(
                 "skipped=${songs.size - newSongs.size} queueSizeAfter=${downloadQueue.size + newSongs.size}",
         )
         if (newSongs.isEmpty()) return
+        // Queuing a song is the user retrying it — drop any stale failure so the UI
+        // switches to "queued" immediately instead of still reading as failed.
+        _downloadFailures.update { failures -> failures - newSongs.map { it.id }.toSet() }
         downloadQueue.addAll(newSongs)
         _queueState.value = downloadQueue.toList()
         // Atomic CAS-style update so concurrent done-counter increments from the
@@ -1761,3 +1815,9 @@ class DownloadRepository @Inject constructor(
         return clean.replace(Regex("\\s+"), " ").trim()
     }
 }
+
+/** A download that failed, kept so the UI can list it and offer a retry. */
+data class DownloadFailure(
+    val song: Song,
+    val reason: String
+)

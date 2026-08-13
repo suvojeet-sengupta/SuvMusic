@@ -99,7 +99,8 @@ class PlayerViewModel @Inject constructor(
         old.videoQuality == new.videoQuality &&
         old.isVideoMode == new.isVideoMode &&
         old.playbackSpeed == new.playbackSpeed &&
-        old.pitch == new.pitch
+        old.pitch == new.pitch &&
+        old.activeAudioSource == new.activeAudioSource
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -174,7 +175,7 @@ class PlayerViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = "LARGE"
+            initialValue = com.suvojeet.suvmusic.core.model.ArtworkSize.FULL.name
         )
     
     val seekbarStyle: StateFlow<String> = sessionManager.seekbarStyleFlow
@@ -482,17 +483,45 @@ class PlayerViewModel @Inject constructor(
                 playerState.map { it.currentSong?.id }.distinctUntilChanged(),
                 downloadRepository.downloadedSongs,
                 downloadRepository.downloadingIds,
-            ) { currentSongId, downloaded, downloading ->
+                downloadRepository.downloadFailures,
+            ) { currentSongId, downloaded, downloading, failures ->
                 when {
                     currentSongId == null -> DownloadState.NOT_DOWNLOADED
                     downloaded.any { it.id == currentSongId } -> DownloadState.DOWNLOADED
                     downloading.contains(currentSongId) -> DownloadState.DOWNLOADING
+                    // A failed download used to fall back to NOT_DOWNLOADED, so the
+                    // button silently reset and the only trace was a notification.
+                    failures.containsKey(currentSongId) -> DownloadState.FAILED
                     else -> DownloadState.NOT_DOWNLOADED
                 }
             }
                 .distinctUntilChanged()
                 .collect { musicPlayer.updateDownloadState(it) }
         }
+
+        // Tell the user the moment a download fails, with a one-tap retry, rather
+        // than leaving the news in the notification shade.
+        viewModelScope.launch {
+            downloadRepository.downloadFailures
+                .map { it.keys }
+                .distinctUntilChanged()
+                .collect { failedIds ->
+                    val song = playerState.value.currentSong ?: return@collect
+                    if (song.id !in failedIds) return@collect
+                    val reason = downloadRepository.failureReason(song.id) ?: "Download failed"
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showMessageWithAction(
+                        message = "$reason — ${song.title}",
+                        actionText = "Retry",
+                        action = { retryDownload(song) }
+                    )
+                }
+        }
+    }
+
+    private fun retryDownload(song: Song) {
+        downloadRepository.clearFailure(song.id)
+        musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
+        DownloadService.startDownload(context, song)
     }
     
     private var likeCheckJob: Job? = null
@@ -748,6 +777,11 @@ class PlayerViewModel @Inject constructor(
             delay(1200) 
             _isSwitchingMode.value = false
         }
+    }
+
+    /** Flip just the current song between YouTube and HQ Audio. */
+    fun switchAudioSource() {
+        musicPlayer.switchAudioSourceForCurrentSong()
     }
 
     fun setVideoQuality(quality: VideoQuality) {
@@ -1067,10 +1101,22 @@ class PlayerViewModel @Inject constructor(
     
     fun downloadCurrentSong() {
         val song = playerState.value.currentSong ?: return
-        if (downloadRepository.isDownloaded(song.id) || downloadRepository.isDownloading(song.id)) return
-        
+
+        // Every branch answers the tap. These used to return silently, so tapping a
+        // song that was already saved (or already running) looked like a dead button.
+        if (downloadRepository.isDownloaded(song.id)) {
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Already downloaded")
+            return
+        }
+        if (downloadRepository.isDownloading(song.id)) {
+            com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Already downloading “${song.title}”")
+            return
+        }
+
+        downloadRepository.clearFailure(song.id)
         musicPlayer.updateDownloadState(DownloadState.DOWNLOADING)
-        
+        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage("Downloading “${song.title}”")
+
         // Start foreground service for background download with notification
         DownloadService.startDownload(context, song)
     }

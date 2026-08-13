@@ -245,9 +245,9 @@ class DownloadService : Service() {
                     // "Download complete" for songs they'd already saved).
                     when (downloadRepository.downloadSong(song)) {
                         com.suvojeet.suvmusic.core.model.DownloadResult.SUCCESS ->
-                            showCompleteNotification(song.title, true)
+                            showCompleteNotification(song, true)
                         com.suvojeet.suvmusic.core.model.DownloadResult.FAILED ->
-                            showCompleteNotification(song.title, false)
+                            showCompleteNotification(song, false, downloadRepository.failureReason(song.id))
                         com.suvojeet.suvmusic.core.model.DownloadResult.SKIPPED -> {
                             /* no notification — silent skip */
                         }
@@ -264,7 +264,7 @@ class DownloadService : Service() {
                     if (!isActive) throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "Download error", e)
-                    showCompleteNotification(song.title, false)
+                    showCompleteNotification(song, false, e.message)
                 } finally {
                     activeDownloads.remove(song.id)
                     if (primaryNotificationSongId == song.id) {
@@ -334,27 +334,55 @@ class DownloadService : Service() {
         }
     }
     
-    private fun showCompleteNotification(songTitle: String, success: Boolean) {
+    private fun showCompleteNotification(song: Song, success: Boolean, reason: String? = null) {
+        val requestCode = song.id.hashCode()
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            requestCode,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(if (success) "Download complete" else "Download failed")
-            .setContentText(songTitle)
+            .setContentText(
+                if (success || reason.isNullOrBlank()) song.title else "${song.title} — $reason"
+            )
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    if (success || reason.isNullOrBlank()) song.title else "${song.title}\n$reason"
+                )
+            )
             .setSmallIcon(
-                if (success) android.R.drawable.stat_sys_download_done 
+                if (success) android.R.drawable.stat_sys_download_done
                 else android.R.drawable.stat_notify_error
             )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-        
-        notificationManager.notify(COMPLETE_NOTIFICATION_ID, notification)
+
+        if (!success) {
+            // Retry straight from the shade — otherwise a failed download means
+            // reopening the app and hunting for the song again.
+            val retryIntent = Intent(this, DownloadService::class.java).apply {
+                action = ACTION_START_DOWNLOAD
+                putExtra(EXTRA_SONG_JSON, songToJson(song))
+            }
+            builder.addAction(
+                android.R.drawable.stat_notify_sync,
+                "Retry",
+                PendingIntent.getForegroundService(
+                    this,
+                    requestCode,
+                    retryIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+        }
+
+        // A per-song id so a batch's results don't overwrite one another — the old
+        // shared id meant only the last song's outcome was ever visible.
+        notificationManager.notify(COMPLETE_NOTIFICATION_ID + (requestCode and 0xFFFF), builder.build())
     }
     
     override fun onDestroy() {

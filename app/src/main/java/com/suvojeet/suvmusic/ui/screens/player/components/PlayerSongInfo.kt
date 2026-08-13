@@ -63,7 +63,11 @@ fun SongInfoSection(
     // into the action-chip row below the artist, and the title gains a ">" hint.
     showInlineLikeCapsule: Boolean = true,
     showTitleArrow: Boolean = false,
-    onTitleArrowClick: () -> Unit = {}
+    onTitleArrowClick: () -> Unit = {},
+    // Where this song streams from right now; null hides the source switch (local
+    // files and video mode have only one possible source).
+    activeAudioSource: com.suvojeet.suvmusic.core.model.MusicSource? = null,
+    onSwitchAudioSource: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -204,6 +208,22 @@ fun SongInfoSection(
                                 contentDescription = "Dislike",
                                 tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.7f),
                                 modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        if (activeAudioSource != null) {
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(20.dp)
+                                    .background(dominantColors.onBackground.copy(alpha = 0.15f))
+                            )
+                            SourceSwitchButton(
+                                activeAudioSource = activeAudioSource,
+                                onClick = onSwitchAudioSource,
+                                dominantColors = dominantColors,
+                                buttonSize = 42.dp,
+                                iconSize = 20.dp
                             )
                         }
                     }
@@ -433,6 +453,22 @@ fun SongInfoSection(
                             modifier = Modifier.size(24.dp)
                         )
                     }
+
+                    if (activeAudioSource != null) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(24.dp)
+                                .background(dominantColors.onBackground.copy(alpha = 0.15f))
+                        )
+                        SourceSwitchButton(
+                            activeAudioSource = activeAudioSource,
+                            onClick = onSwitchAudioSource,
+                            dominantColors = dominantColors,
+                            buttonSize = 44.dp,
+                            iconSize = 22.dp
+                        )
+                    }
                 }
 
                 // Increased 3-dot button size for Classic style
@@ -538,5 +574,38 @@ private fun DownloadProgressChip(
             ),
             color = dominantColors.accent
         )
+    }
+}
+
+/**
+ * Per-song source switch that lives at the end of the like/dislike capsule. It shows
+ * the source you'd get by tapping — the YouTube logo while HQ Audio is playing, the
+ * HQ badge while YouTube is playing.
+ */
+@Composable
+private fun SourceSwitchButton(
+    activeAudioSource: com.suvojeet.suvmusic.core.model.MusicSource,
+    onClick: () -> Unit,
+    dominantColors: DominantColors,
+    buttonSize: androidx.compose.ui.unit.Dp,
+    iconSize: androidx.compose.ui.unit.Dp
+) {
+    val playingHq = activeAudioSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE
+    IconButton(onClick = onClick, modifier = Modifier.size(buttonSize)) {
+        if (playingHq) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(id = com.suvojeet.suvmusic.R.drawable.ic_youtube),
+                contentDescription = "Switch to YouTube",
+                tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.size(iconSize)
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.HighQuality,
+                contentDescription = "Switch to HQ Audio",
+                tint = dominantColors.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.size(iconSize)
+            )
+        }
     }
 }

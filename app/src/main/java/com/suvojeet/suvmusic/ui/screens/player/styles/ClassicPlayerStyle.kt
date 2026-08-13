@@ -251,7 +251,9 @@ private fun ClassicPortraitContent(
                 sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
                 isClassic = true,
                 isAIEnabled = isAIEnabled,
-                aiStatus = aiStatus
+                aiStatus = aiStatus,
+                activeAudioSource = playbackInfo.activeAudioSource,
+                onSwitchAudioSource = actions.onSwitchAudioSource
             )
 
             Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
@@ -330,7 +332,9 @@ private fun ClassicLandscapeContent(
                 sleepTimerRemainingMs = sleepTimerRemainingMs, sleepTimerOption = sleepTimerOption,
                 isClassic = true,
                 isAIEnabled = isAIEnabled,
-                aiStatus = aiStatus
+                aiStatus = aiStatus,
+                activeAudioSource = playbackInfo.activeAudioSource,
+                onSwitchAudioSource = actions.onSwitchAudioSource
             )
             Spacer(modifier = Modifier.height(16.dp))
             

@@ -60,12 +60,12 @@ fun ArtworkSizeScreen(
     val scope = rememberCoroutineScope()
     val sessionManager = remember { SessionManager(context) }
     
-    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = "LARGE")
+    val artworkSizeString by sessionManager.artworkSizeFlow.collectAsStateWithLifecycle(initialValue = ArtworkSize.FULL.name)
     
     val currentArtworkSize = try {
         ArtworkSize.valueOf(artworkSizeString)
     } catch (e: Exception) {
-        ArtworkSize.LARGE
+        ArtworkSize.FULL
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()

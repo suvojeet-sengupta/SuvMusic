@@ -34,6 +34,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.MusicNote
@@ -210,6 +212,7 @@ fun DownloadsScreen(
                 onDeleteSong = { song -> 
                      viewModel.deleteDownload(song.id)
                 },
+                onRetrySong = { song -> viewModel.retryDownload(song.id) },
                 dominantColors = dominantColors,
                 isDarkTheme = isDarkTheme
             )
@@ -540,6 +543,8 @@ fun DownloadsScreen(
                                 index = index + 1,
                                 isDownloading = item.isDownloading,
                                 progress = item.progress,
+                                failureReason = item.failureReason,
+                                onRetryClick = { viewModel.retryDownload(item.song.id) },
                                 onClick = {
                                     if (isSelectionMode) {
                                         viewModel.toggleSelection(item.song.id)
@@ -901,6 +906,8 @@ private fun DownloadedSongCard(
     index: Int,
     isDownloading: Boolean = false,
     progress: Float = 1.0f,
+    failureReason: String? = null,
+    onRetryClick: () -> Unit = {},
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDeleteClick: () -> Unit,
@@ -1037,6 +1044,21 @@ private fun DownloadedSongCard(
                             color = dominantColors.accent,
                             maxLines = 1
                         )
+                    } else if (failureReason != null) {
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = failureReason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     } else {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
@@ -1057,7 +1079,15 @@ private fun DownloadedSongCard(
             }
 
             // Delete button
-            if (!isSelectionMode && !isDownloading) {
+            if (failureReason != null && !isSelectionMode && !isDownloading) {
+                IconButton(onClick = onRetryClick) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Retry download",
+                        tint = dominantColors.accent
+                    )
+                }
+            } else if (!isSelectionMode && !isDownloading) {
                 IconButton(onClick = onDeleteClick) {
                     Icon(
                         imageVector = Icons.Default.Delete,
@@ -1168,6 +1198,7 @@ private fun DownloadedCollectionDetail(
     onPlayAll: (List<Song>) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
     onDeleteSong: (Song) -> Unit,
+    onRetrySong: (Song) -> Unit = {},
     dominantColors: DominantColors,
     isDarkTheme: Boolean
 ) {
@@ -1272,6 +1303,8 @@ private fun DownloadedCollectionDetail(
                     index = index + 1,
                     isDownloading = songStatus.isDownloading,
                     progress = songStatus.progress,
+                    failureReason = songStatus.failureReason,
+                    onRetryClick = { onRetrySong(songStatus.song) },
                     onClick = { onSongClick(collection.songs.map { it.song }, index) },
                     onDeleteClick = { onDeleteSong(songStatus.song) },
                     isSelectionMode = false,

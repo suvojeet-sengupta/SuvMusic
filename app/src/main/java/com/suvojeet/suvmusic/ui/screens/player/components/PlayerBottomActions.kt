@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Recommend
 import androidx.compose.material.icons.filled.Speed
@@ -46,9 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.R
 import com.suvojeet.suvmusic.core.model.DownloadState
+import com.suvojeet.suvmusic.core.model.MusicSource
 import com.suvojeet.suvmusic.ui.components.DominantColors
 
 /**
@@ -72,7 +76,11 @@ fun PlayerActionChips(
     onSleepTimerClick: (() -> Unit)? = null,
     onSpeedClick: (() -> Unit)? = null,
     sleepTimerRemainingMs: Long? = null,
-    playbackSpeed: Float = 1f
+    playbackSpeed: Float = 1f,
+    // Where this song is streaming from right now, or null when it can't be switched
+    // (a local file, or video mode). The chip offers the *other* source.
+    activeAudioSource: MusicSource? = null,
+    onSwitchAudioSource: () -> Unit = {}
 ) {
     val haptics = com.suvojeet.suvmusic.ui.utils.rememberHaptics()
     Row(
@@ -107,6 +115,14 @@ fun PlayerActionChips(
                 tint = if (isDisliked) MaterialTheme.colorScheme.error else dominantColors.onBackground.copy(alpha = 0.9f),
                 contentDescription = "Dislike",
                 onClick = onToggleDislike
+            )
+        }
+
+        if (activeAudioSource != null) {
+            SourceSwitchChip(
+                activeAudioSource = activeAudioSource,
+                onClick = { haptics.thump(); onSwitchAudioSource() },
+                dominantColors = dominantColors
             )
         }
 
@@ -174,6 +190,59 @@ fun QueueHandle(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = dominantColors.onBackground
+        )
+    }
+}
+
+/**
+ * Per-song source switch. It always shows the source you'd get by tapping it — the
+ * YouTube logo while HQ Audio is playing, the HQ badge while YouTube is playing —
+ * so the chip reads as "switch to this".
+ */
+@Composable
+private fun SourceSwitchChip(
+    activeAudioSource: MusicSource,
+    onClick: () -> Unit,
+    dominantColors: DominantColors
+) {
+    val target = if (activeAudioSource == MusicSource.REMOTE) MusicSource.YOUTUBE else MusicSource.REMOTE
+    val tint = dominantColors.onBackground.copy(alpha = 0.9f)
+
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(dominantColors.onBackground.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        AnimatedContent(
+            targetState = target,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "source_switch_icon"
+        ) { source ->
+            if (source == MusicSource.YOUTUBE) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_youtube),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.HighQuality,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        Text(
+            text = if (target == MusicSource.YOUTUBE) "YouTube" else "HQ Audio",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            color = tint
         )
     }
 }
