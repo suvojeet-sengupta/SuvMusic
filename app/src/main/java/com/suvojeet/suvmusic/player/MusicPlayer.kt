@@ -148,6 +148,9 @@ class MusicPlayer @Inject constructor(
     // Song ids we've already shown an HQ-fallback notice for, so a single song never
     // spams the snackbar across preload + transition + replays. Cleared on a new queue.
     private val hqNoticeShown = android.util.LruCache<String, Boolean>(200)
+    // Timestamp of the last "HQ source busy" snackbar so a backoff window (15–300s)
+    // doesn't spam one notice per song — one every 30s is plenty.
+    @Volatile private var lastBusyNoticeAtMs = 0L
 
     // Per-song source overrides set from the player screen's source switch. They win
     // over the global preference for that one song and are dropped when the user
@@ -1567,6 +1570,15 @@ class MusicPlayer @Inject constructor(
         // Positive/negative cache of the resolved HQ stream URL so we don't re-search on
         // every play. A blank value is the negative-cache marker ("searched, no match").
         hybridRemoteIds[song.id]?.let { cached -> return cached.ifBlank { null } }
+        // Fast-path: if the shared 429 backoff gate is already active there's no point
+        // firing a search that will be rejected immediately — it only produces another
+        // SOURCE_BUSY snackbar for every song in the queue. Skip silently and let the
+        // caller fall back to YouTube; the next play after the backoff expires will
+        // re-attempt the HQ resolve normally.
+        if (remoteAudioRepository.isInBackoff()) {
+            hqFallbackReason.put(song.id, HqFallbackReason.SOURCE_BUSY)
+            return null
+        }
         // Tracks whether the HQ backend was actually reachable. A timeout / rate-limit /
         // no-network result means "couldn't ask" (SOURCE_BUSY) rather than "asked, no
         // match" (NO_MATCH) — the user gets a different message for each.
@@ -1657,9 +1669,17 @@ class MusicPlayer @Inject constructor(
         if (reason == HqFallbackReason.NONE) return
         if (hqNoticeShown[song.id] != null) return
         hqNoticeShown.put(song.id, true)
+        // "Busy" is a transient backend state (rate-limit / timeout) shared across all
+        // songs — one notice per backoff window is enough. "No HQ version" is a permanent
+        // per-song verdict and should always show.
+        if (reason == HqFallbackReason.SOURCE_BUSY) {
+            val now = System.currentTimeMillis()
+            if (now - lastBusyNoticeAtMs < 30_000L) return
+            lastBusyNoticeAtMs = now
+        }
         val title = song.title.ifBlank { "this song" }
         val msg = when (reason) {
-            HqFallbackReason.SOURCE_BUSY -> "HQ source busy — playing “$title” from YouTube"
+            HqFallbackReason.SOURCE_BUSY -> "HQ source busy — playing from YouTube"
             else -> "No HQ version found — playing “$title” from YouTube"
         }
         scope.launch(Dispatchers.Main) {
