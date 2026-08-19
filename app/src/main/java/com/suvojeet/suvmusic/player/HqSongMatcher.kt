@@ -227,8 +227,8 @@ internal object HqSongMatcher {
             .filter { it.isNotEmpty() }
 
     private fun cleanArtistString(artist: String): String =
-        artist.replace(Regex("(?i)\\s*-\\s*topic\\b"), " ")
-            .replace(Regex("\\(.*?\\)|\\[.*?]|\\{.*?}"), " ")
+        artist.replace(TOPIC_SUFFIX, " ")
+            .replace(BRACKETED, " ")
             .trim()
 
     /** "Various Artists", "T-Series", "Zee Music Company", "SVF" — not a person. */
@@ -263,19 +263,32 @@ internal object HqSongMatcher {
 
     private fun albumTokensOf(album: String?): Set<String> {
         if (album.isNullOrBlank()) return emptySet()
-        val stripped = album.replace(Regex("\\(.*?\\)|\\[.*?]"), " ")
+        val stripped = album.replace(PAREN_OR_SQUARE, " ")
         return wordTokens(stripped) - ALBUM_NOISE
     }
 
     /** `Song (From "Film")` / `Song [from Film]` → `Film`. */
     private fun fromAlbumHint(title: String): String? {
-        val m = Regex("(?i)[(\\[]\\s*from\\s+[\"“]?([^)\\]\"”]+)[\"”]?\\s*[)\\]]").find(title) ?: return null
+        val m = FROM_HINT.find(title) ?: return null
         return m.groupValues[1].trim().ifBlank { null }
     }
 
     // ── Title handling ─────────────────────────────────────────────────────────────
 
     private val SEGMENT_SPLIT = Regex("\\s+(?:·|\\|\\||\\||•|–|—|-|/)\\s+")
+
+    // Escape EVERY closing bracket/brace: Android's ICU-backed regex engine throws
+    // PatternSyntaxException on a bare '}' that desktop JVM regex accepts as a literal —
+    // an unescaped pattern here crashed every on-device hybrid resolve into SOURCE_BUSY.
+    private val BRACKETED = Regex("\\(.*?\\)|\\[.*?\\]|\\{.*?\\}")
+    private val PAREN_OR_SQUARE = Regex("\\(.*?\\)|\\[.*?\\]")
+    private val TOPIC_SUFFIX = Regex("(?i)\\s*-\\s*topic\\b")
+    private val FROM_HINT = Regex("(?i)[(\\[]\\s*from\\s+[\"“]?([^)\\]\"”]+)[\"”]?\\s*[)\\]]")
+    private val LOFI_FOLD = Regex("(?i)\\blo[\\s-]?fi\\b")
+    private val REMIX_FOLD = Regex("(?i)\\bre-?mix\\b")
+    private val NON_WORD = Regex("[^\\p{L}\\p{N}\\s]")
+    private val WHITESPACE = Regex("\\s+")
+    private val REPEATED_CHAR = Regex("(.)\\1+")
 
     /** First segment is the song name; the rest ("· Movie", "| Film") are album hints. */
     private fun splitTitleSegments(title: String): Pair<String, List<String>> {
@@ -285,12 +298,12 @@ internal object HqSongMatcher {
     }
 
     private fun titleTokensOf(title: String): Set<String> {
-        val stripped = title.replace(Regex("\\(.*?\\)|\\[.*?]|\\{.*?}"), " ")
+        val stripped = title.replace(BRACKETED, " ")
         return wordTokens(stripped) - TITLE_NOISE
     }
 
     private fun tagTokens(title: String): Set<String> =
-        wordTokens(title.replace(Regex("(?i)\\blo[\\s-]?fi\\b"), "lofi").replace(Regex("(?i)\\bre-?mix\\b"), "remix"))
+        wordTokens(title.replace(LOFI_FOLD, "lofi").replace(REMIX_FOLD, "remix"))
 
     private fun hardTagsOf(title: String): Set<String> = tagTokens(title).mapNotNull { HARD_TAGS[it] }.toSet()
 
@@ -300,8 +313,8 @@ internal object HqSongMatcher {
 
     private fun wordTokens(s: String): Set<String> =
         s.lowercase()
-            .replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
-            .split(Regex("\\s+"))
+            .replace(NON_WORD, " ")
+            .split(WHITESPACE)
             .filter { it.isNotBlank() && (it.length > 1 || it.any { ch -> ch.isDigit() }) }
             .toSet()
 
@@ -352,7 +365,7 @@ internal object HqSongMatcher {
             .replace("jh", "j").replace("zh", "j").replace("ck", "k")
         s = s.replace("aa", "a").replace("ee", "i").replace("ii", "i").replace("oo", "u").replace("uu", "u")
         s = s.replace('w', 'v').replace('z', 'j').replace('q', 'k')
-        s = s.replace(Regex("(.)\\1+"), "$1")
+        s = s.replace(REPEATED_CHAR, "$1")
         return s
     }
 
