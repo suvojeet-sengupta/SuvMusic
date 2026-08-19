@@ -141,6 +141,9 @@ class MusicPlayer @Inject constructor(
     // resolve so the player can tell the user the right thing when it falls back to
     // YouTube (no HQ version vs. the HQ backend being busy/offline).
     private enum class HqFallbackReason { NONE, NO_MATCH, SOURCE_BUSY }
+
+    /** How long a fresh resolve waits for the HQ answer before starting from YouTube. */
+    private val HQ_RACE_GRACE_MS = 2_000L
     private val hqFallbackReason = android.util.LruCache<String, HqFallbackReason>(200)
     // Song ids we've already shown an HQ-fallback notice for, so a single song never
     // spams the snackbar across preload + transition + replays. Cleared on a new queue.
@@ -153,6 +156,12 @@ class MusicPlayer @Inject constructor(
     // Non-suspending mirror of the global source preference, kept current by the
     // musicSourceFlow collector in init. Used where we can't suspend (state ticks).
     @Volatile private var globalMusicSource: MusicSource = MusicSource.REMOTE
+
+    // What each song's audio *actually* resolved to the last time a real stream URL was
+    // committed to the player — recorded at every resolution path (initial resolve, preload,
+    // queue pre-resolve, fallbacks, source switch). This is the truth the player screen's
+    // source badge is built from; the preference caches above only describe intent.
+    private val resolvedAudioSources = android.util.LruCache<String, MusicSource>(200)
 
     // Listening history tracking
     private var currentSongStartTime: Long = 0L
@@ -381,6 +390,9 @@ class MusicPlayer @Inject constructor(
                 hqNoticeShown.evictAll()
                 // A deliberate global change outranks the per-song switches made before it.
                 songSourceOverrides.evictAll()
+                // Old truths would only mislabel the *next* play; the current stream is read
+                // straight from the player and stays honest.
+                resolvedAudioSources.evictAll()
             }
         }
 
@@ -1010,10 +1022,12 @@ class MusicPlayer @Inject constructor(
                             // up on YouTube, tell the user now that it's actually playing.
                             notifyHqFallbackIfNeeded(song)
 
+                            noteResolvedStream(song, currentUri)
+
                             // Start aggressive caching for this preloaded/resolved song
                             if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                                 cachingJob?.cancel()
-                                startAggressiveCaching(song.id, currentUri)
+                                startAggressiveCaching(audioCacheKey(song, currentUri), currentUri)
                             }
     
                             // Ensure playback continues for SEEK transitions (notification controls)
@@ -1066,7 +1080,7 @@ class MusicPlayer @Inject constructor(
                         
                         currentResolutionJob?.cancel()
                         currentResolutionJob = scope.launch {
-                            val cacheKey = if (cachedIsVideo) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+                            val cacheKey = if (cachedIsVideo) "${song.id}_${_playerState.value.videoQuality.name}" else audioCacheKey(song, cachedUrl)
                             val newMediaItem = MediaItem.Builder()
                                 .setUri(cachedUrl)
                                 .setMediaId(song.id)
@@ -1090,6 +1104,7 @@ class MusicPlayer @Inject constructor(
                                     controller.prepare()
                                     if (!timerTriggered) controller.play()
                                 }
+                                if (!cachedIsVideo) noteResolvedStream(song, cachedUrl)
                                 _playerState.update { it.copy(isLoading = false, error = null) }
 
                                 // HQ selected but this preloaded song fell back to YouTube — notify now.
@@ -1340,9 +1355,19 @@ class MusicPlayer @Inject constructor(
      */
     private fun computeActiveAudioSource(song: Song?): MusicSource? {
         if (song == null) return null
+        if (song.source == SongSource.LOCAL || song.source == SongSource.DOWNLOADED) return null
+        if (_playerState.value.isVideoMode) return null
+
+        // 1. The stream the player is holding right now is the ground truth.
+        mediaController?.currentMediaItem?.let { item ->
+            if (item.mediaId == song.id) {
+                sourceOfStreamUrl(item.localConfiguration?.uri?.toString())?.let { return it }
+            }
+        }
+        // 2. Whatever the last resolution committed for this song (placeholder still loaded).
+        resolvedAudioSources[song.id]?.let { return it }
+        // 3. Nothing resolved yet — show what the resolve is going to try.
         return when {
-            song.source == SongSource.LOCAL || song.source == SongSource.DOWNLOADED -> null
-            _playerState.value.isVideoMode -> null
             song.source == SongSource.REMOTE ->
                 if (songSourceOverrides[song.id] == MusicSource.YOUTUBE) MusicSource.YOUTUBE
                 else MusicSource.REMOTE
@@ -1351,6 +1376,49 @@ class MusicPlayer @Inject constructor(
             (songSourceOverrides[song.id] ?: globalMusicSource) == MusicSource.REMOTE &&
                 hybridRemoteIds[song.id]?.isNotBlank() == true -> MusicSource.REMOTE
             else -> MusicSource.YOUTUBE
+        }
+    }
+
+    /**
+     * Which backend a committed stream URL belongs to, or null for placeholders / local
+     * files / anything we can't tell apart.
+     */
+    private fun sourceOfStreamUrl(url: String?): MusicSource? {
+        if (url.isNullOrBlank()) return null
+        if (url.contains("placeholder.invalid") || isYouTubeWatchPlaceholder(url)) return null
+        return when {
+            isRemoteAudioStreamUrl(url) -> MusicSource.REMOTE
+            url.contains("googlevideo.com") || url.contains("youtube.com") ||
+                url.contains("youtu.be") || url.contains("ytimg.com") -> MusicSource.YOUTUBE
+            else -> null
+        }
+    }
+
+    private fun isRemoteAudioStreamUrl(url: String?): Boolean =
+        url != null && (
+            url.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST) ||
+                url.contains("saavn", ignoreCase = true)
+            )
+
+    /** Records what [song]'s audio actually resolved to, if [streamUrl] tells us. */
+    private fun noteResolvedStream(song: Song, streamUrl: String?) {
+        val source = sourceOfStreamUrl(streamUrl) ?: return
+        resolvedAudioSources.put(song.id, source)
+    }
+
+    /**
+     * Media-cache key for [song]'s audio at [streamUrl]. The HQ and YouTube renditions of
+     * one YouTube song are different files, so they need different keys — otherwise
+     * CacheDataSource happily serves the bytes cached under one for a request for the
+     * other after a source switch. YouTube audio keeps the bare id so existing caches and
+     * the download store stay valid.
+     */
+    private fun audioCacheKey(song: Song, streamUrl: String?): String {
+        val hq = isRemoteAudioStreamUrl(streamUrl)
+        return when {
+            song.source == SongSource.REMOTE -> if (hq || streamUrl == null) song.id else "${song.id}_yt"
+            hq -> "${song.id}_hq"
+            else -> song.id
         }
     }
 
@@ -1369,12 +1437,16 @@ class MusicPlayer @Inject constructor(
             youTubeRepository.getStreamUrl(videoId)
         }
 
+    private var sourceSwitchJob: Job? = null
+
     /**
      * Flip the current song between YouTube and HQ Audio, keeping the playback
      * position. The choice sticks to that song only; the global preference and every
-     * other song in the queue are untouched.
+     * other song in the queue are untouched. Audio keeps playing from the old source
+     * until the new stream is ready, then swaps in place.
      */
     fun switchAudioSourceForCurrentSong() {
+        if (_playerState.value.isSwitchingSource) return
         val song = _playerState.value.currentSong ?: return
         val current = computeActiveAudioSource(song) ?: return
         val target = if (current == MusicSource.REMOTE) MusicSource.YOUTUBE else MusicSource.REMOTE
@@ -1387,28 +1459,31 @@ class MusicPlayer @Inject constructor(
             hqNoticeShown.remove(song.id)
         }
         invalidatePreload()
-
-        val resumePosition = mediaController?.currentPosition?.coerceAtLeast(0L) ?: 0L
-        val wasPlaying = mediaController?.isPlaying == true
-        _playerState.update { it.copy(isLoading = true, error = null) }
+        _playerState.update { it.copy(isSwitchingSource = true, error = null) }
 
         currentResolutionJob?.cancel()
-        currentResolutionJob = scope.launch {
-            val streamUrl = try {
+        sourceSwitchJob?.cancel()
+        sourceSwitchJob = scope.launch {
+            val resolved: String? = try {
                 kotlinx.coroutines.withTimeoutOrNull(20_000L) {
                     withContext(Dispatchers.IO) { resolveStreamForSource(song, target) }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
+                _playerState.update { it.copy(isSwitchingSource = false) }
                 throw e
             } catch (e: Exception) {
                 android.util.Log.w("MusicPlayer", "Source switch resolve failed: ${e.message}")
                 null
             }
 
-            if (streamUrl.isNullOrBlank()) {
+            // Sanity: an HQ request must produce an HQ stream (and vice-versa) — the resolver
+            // never falls back silently here, but the badge would lie if it ever did.
+            val streamUrl: String? = resolved?.takeIf { it.isNotBlank() }
+            val landed = sourceOfStreamUrl(streamUrl)
+            if (streamUrl == null || (landed != null && landed != target)) {
                 // Nothing to switch to — put the song back on the source it was on.
                 songSourceOverrides.put(song.id, current)
-                _playerState.update { it.copy(isLoading = false, activeAudioSource = current) }
+                _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = current) }
                 com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
                     if (target == MusicSource.REMOTE) "No HQ version found for “${song.title}”"
                     else "Couldn't switch “${song.title}” to YouTube",
@@ -1422,18 +1497,24 @@ class MusicPlayer @Inject constructor(
             if (controller == null || index < 0 || index >= controller.mediaItemCount ||
                 controller.getMediaItemAt(index).mediaId != song.id
             ) {
-                _playerState.update { it.copy(isLoading = false) }
+                // The user moved on while we were resolving; the override still applies the
+                // next time this song comes around.
+                _playerState.update { it.copy(isSwitchingSource = false) }
                 return@launch
             }
+
+            // Read the position *now*, not when the tap happened — resolution can take a
+            // few seconds and the old stream kept playing through them.
+            val resumePosition = controller.currentPosition.coerceAtLeast(0L)
+            val wasPlaying = controller.playWhenReady
+            val cacheKey = audioCacheKey(song, streamUrl)
 
             controller.replaceMediaItem(
                 index,
                 MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
-                    // Distinct cache key per source so the two versions never collide
-                    // in the media cache.
-                    .setCustomCacheKey("${song.id}_${target.name}")
+                    .setCustomCacheKey(cacheKey)
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(song.title)
@@ -1451,7 +1532,24 @@ class MusicPlayer @Inject constructor(
             controller.seekTo(resumePosition)
             if (wasPlaying) controller.play()
 
-            _playerState.update { it.copy(isLoading = false, activeAudioSource = target) }
+            noteResolvedStream(song, streamUrl)
+            hqFallbackReason.put(song.id, HqFallbackReason.NONE)
+            cachingJob?.cancel()
+            startAggressiveCaching(cacheKey, streamUrl)
+            // Listen Together hosts tell guests what actually played; keep that honest.
+            val remoteId = if (target == MusicSource.REMOTE) {
+                if (song.source == SongSource.REMOTE) song.id else sessionManager.getMatchedRemoteSongId(song.id) ?: song.id
+            } else {
+                if (song.source == SongSource.REMOTE) resolvedVideoIds[song.id] ?: song.id else song.id
+            }
+            sessionManager.putResolvedPlaybackInfo(
+                song.id,
+                if (target == MusicSource.REMOTE) "remote_audio" else "youtube",
+                remoteId,
+                sessionManager.getAudioQuality().name.lowercase()
+            )
+
+            _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = target) }
             com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
                 "Playing “${song.title}” from $targetLabel",
                 com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
@@ -1505,9 +1603,16 @@ class MusicPlayer @Inject constructor(
                     match = pickBestRemoteMatch(song, searchTyped(titleOnly))
                 }
             }
-            // Save the matched remote song id so lyrics repository can also fetch lyrics from HQ Audio Source
             if (match != null) {
+                android.util.Log.i(
+                    "MusicPlayer",
+                    "HQ match for '${song.title}' / '${song.artist}' → '${match.title}' / '${match.artist}' " +
+                        "[${match.album}] ${HqSongMatcher.explain(song, match)}"
+                )
+                // Save the matched remote song id so lyrics repository can also fetch lyrics from HQ Audio Source
                 sessionManager.putMatchedRemoteSongId(song.id, match.id)
+            } else if (!busy) {
+                android.util.Log.i("MusicPlayer", "HQ match for '${song.title}' / '${song.artist}': none")
             }
             // Use the 320 kbps stream URL the search result already carries; only fall
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
@@ -1530,6 +1635,10 @@ class MusicPlayer @Inject constructor(
                 }
             )
             url
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // The caller moved on (race lost, song skipped, switch cancelled) — that is not a
+            // verdict on the HQ backend, so leave the caches and the reason untouched.
+            throw e
         } catch (e: Exception) {
             android.util.Log.w("MusicPlayer", "Hybrid RemoteAudio resolve failed: ${e.message}")
             hqFallbackReason.put(song.id, HqFallbackReason.SOURCE_BUSY)
@@ -1574,89 +1683,11 @@ class MusicPlayer @Inject constructor(
     }
 
     /**
-     * Picks the most likely RemoteAudio equivalent of a YouTube [song]. Requires a
-     * strong title-token overlap and, when both durations are known, a duration
-     * within ±7 s — this rejects remixes / live / sped-up versions.
+     * Picks the RemoteAudio recording that is the same as the YouTube [song], or null when
+     * nothing in [candidates] is corroborated well enough — see [HqSongMatcher].
      */
-    private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? {
-        if (candidates.isEmpty()) return null
-        // Boilerplate tokens that carry no identity — stripped so a YouTube title like
-        // "Tum Hi Ho (Official Video) | Aashiqui 2" matches the bare HQ "Tum Hi Ho".
-        val noise = setOf(
-            "official", "video", "audio", "lyrics", "lyric", "full", "song", "songs",
-            "hd", "4k", "mv", "feat", "ft", "with", "the", "remastered", "version",
-            "original", "soundtrack", "ost", "from", "movie"
-        )
-        fun normalize(s: String): Set<String> =
-            s.lowercase()
-                .replace(Regex("\\(.*?\\)|\\[.*?]"), " ") // drop (feat..)/[remix] etc.
-                .replace(Regex("[^a-z0-9\\s]"), " ")
-                .split(Regex("\\s+"))
-                .filter { it.isNotBlank() && it.length > 1 && it !in noise }
-                .toSet()
-
-        val targetTitle = normalize(song.title)
-        val targetArtist = normalize(song.artist)
-        if (targetTitle.isEmpty()) return null
-
-        var best: Song? = null
-        var bestScore = 0.0
-        for (c in candidates) {
-            val cTitle = normalize(c.title)
-            if (cTitle.isEmpty()) continue
-
-            // Bidirectional title check. `recall` = how much of OUR title the candidate
-            // covers; `precision` = how much of the CANDIDATE'S title is actually ours.
-            // The old code only looked at recall, so "Tum Hi Ho" happily matched a
-            // different, padded song like "Tum Hi Ho Bandhu" (recall 1.0). Requiring
-            // precision too rejects candidates stuffed with extra, unrelated words.
-            val inter = targetTitle.intersect(cTitle).size.toDouble()
-            val titleRecall = inter / targetTitle.size
-            val titlePrecision = inter / cTitle.size
-            if (titleRecall < 0.5 || titlePrecision < 0.5) continue
-            // Harmonic mean (F1) of the two — penalises a lopsided match where one side
-            // is strong but the other is weak.
-            val titleF1 = 2.0 * titleRecall * titlePrecision / (titleRecall + titlePrecision)
-
-            // Duration gate (only when both are known): reject anything beyond ±15s to
-            // tolerate intros/outros while filtering remixes / live / extended cuts.
-            // A closer duration earns a small bonus that breaks ties toward the right take.
-            var durBonus = 0.0
-            var durationKnown = false
-            if (song.duration > 0 && c.duration > 0) {
-                durationKnown = true
-                val diff = kotlin.math.abs(song.duration - c.duration)
-                if (diff > 15_000L) continue
-                durBonus = (1.0 - diff / 15_000.0) * 0.15
-            }
-
-            val cArtist = normalize(c.artist)
-            val artistKnown = targetArtist.isNotEmpty() && cArtist.isNotEmpty()
-            val artistOverlap = if (!artistKnown) 0.0
-                else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
-
-            // Artist gate: when BOTH artists are known but share no tokens at all, this
-            // is almost always a cover / re-sing / wrong rendition. Only let it through
-            // if the title is a near-exact match *and* the duration confirms it.
-            if (artistKnown && artistOverlap == 0.0 && !(titleF1 >= 0.95 && durationKnown)) continue
-
-            val score = titleF1 + artistOverlap * 0.5 + durBonus
-
-            // Per-candidate confidence floor. When NOTHING corroborates the title
-            // (no shared artist AND no usable duration) a title-only match is the easiest
-            // way to land on the wrong song, so demand a much higher bar (0.85). With any
-            // corroboration the normal 0.6 floor applies.
-            val hasCorroboration = (artistKnown && artistOverlap > 0.0) || durationKnown
-            val requiredFloor = if (hasCorroboration) 0.60 else 0.85
-            if (score < requiredFloor) continue
-
-            if (score > bestScore) {
-                bestScore = score
-                best = c
-            }
-        }
-        return best
-    }
+    private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? =
+        HqSongMatcher.pickBest(song, candidates)
 
     private suspend fun resolveAndPlayCurrentItem(song: Song, index: Int, shouldPlay: Boolean = true) {
         resolutionMutex.withLock {
@@ -1695,8 +1726,10 @@ class MusicPlayer @Inject constructor(
                             }
                         }
 
-                        // Prefer Remote (HQ) but start playback as fast as possible.
-                        // Wait for Remote with a grace period of 800ms.
+                        // Prefer Remote (HQ) but start playback as fast as possible. The HQ
+                        // search takes ~0.5–1.5 s on real networks (plus a second query when the
+                        // artist-qualified one misses), so the grace has to cover that or an HQ
+                        // listener lands on YouTube for most first plays.
                         val resolvedUrl = select<String?> {
                             remoteJob.onAwait { remote ->
                                 if (remote != null) {
@@ -1706,7 +1739,7 @@ class MusicPlayer @Inject constructor(
                                     null
                                 }
                             }
-                            onTimeout(800L) {
+                            onTimeout(HQ_RACE_GRACE_MS) {
                                 if (ytJob.isCompleted) {
                                     val ytUrl = ytJob.await()
                                     if (ytUrl != null) {
@@ -1863,11 +1896,12 @@ class MusicPlayer @Inject constructor(
                     return@withLock
                 }
 
-                val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else song.id
+                val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else audioCacheKey(song, streamUrl)
 
                 if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                     startAggressiveCaching(cacheKey, streamUrl)
                 }
+                if (!_playerState.value.isVideoMode) noteResolvedStream(song, streamUrl)
 
                 val mediaItemBuilder = MediaItem.Builder()
                     .setUri(streamUrl)
@@ -1885,8 +1919,10 @@ class MusicPlayer @Inject constructor(
                             .build()
                     )
 
-                // Remote HQ CDN requires Referer + User-Agent to avoid 403.
-                val isRemoteAudioSource = song.source == SongSource.REMOTE || (streamUrl != null && streamUrl.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST))
+                // Remote HQ CDN requires Referer + User-Agent to avoid 403. Decide from the URL
+                // that actually resolved — a REMOTE song can have fallen back to YouTube.
+                val isRemoteAudioSource = isRemoteAudioStreamUrl(streamUrl) ||
+                    (song.source == SongSource.REMOTE && sourceOfStreamUrl(streamUrl) == null)
 
                 // --- Listen Together: record what this song *actually* resolved to so a
                 // host can tell guests the real backend + quality. This is the truth (it
@@ -1895,9 +1931,13 @@ class MusicPlayer @Inject constructor(
                 // pointless RemoteAudio attempt (and the shared 429 storm it would cause).
                 run {
                     val ltSource = if (isRemoteAudioSource) "remote_audio" else "youtube"
-                    val ltSourceId = if (isRemoteAudioSource)
-                        (sessionManager.getMatchedRemoteSongId(song.id) ?: song.id)
-                    else song.id
+                    val ltSourceId = when {
+                        isRemoteAudioSource && song.source != SongSource.REMOTE ->
+                            sessionManager.getMatchedRemoteSongId(song.id) ?: song.id
+                        !isRemoteAudioSource && song.source == SongSource.REMOTE ->
+                            resolvedVideoIds[song.id] ?: song.id
+                        else -> song.id
+                    }
                     val ltQuality = sessionManager.getAudioQuality().name.lowercase()
                     sessionManager.putResolvedPlaybackInfo(song.id, ltSource, ltSourceId, ltQuality)
                 }
@@ -2433,7 +2473,7 @@ class MusicPlayer @Inject constructor(
                     .setMediaId(song.id)
                     .setCustomCacheKey(
                     if (preloadedIsVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" 
-                    else song.id
+                    else audioCacheKey(song, streamUrl)
                 ) // CRITICAL: Stable cache key matching video/audio mode
                     .setMediaMetadata(
                         MediaMetadata.Builder()
@@ -2690,8 +2730,9 @@ class MusicPlayer @Inject constructor(
         val cacheKey = if (_playerState.value.isVideoMode && resolveStream) {
             "${song.id}_${_playerState.value.videoQuality.name}"
         } else {
-            song.id
+            audioCacheKey(song, uri)
         }
+        if (resolveStream && !_playerState.value.isVideoMode) noteResolvedStream(song, uri)
         
         val builder = MediaItem.Builder()
             .setUri(uri)
@@ -2710,7 +2751,8 @@ class MusicPlayer @Inject constructor(
             )
 
         // Remote HQ CDN requires Referer + User-Agent to avoid 403 (queue pre-resolve path).
-        val isRemoteAudioSource = song.source == SongSource.REMOTE || (uri != null && uri.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST))
+        val isRemoteAudioSource = isRemoteAudioStreamUrl(uri) ||
+            (song.source == SongSource.REMOTE && sourceOfStreamUrl(uri) == null)
 
         if (isRemoteAudioSource) {
             android.util.Log.i("SuvMusicRemote", "Applying mandatory headers (Queue pre-resolve) for: ${song.title}")
@@ -3410,11 +3452,18 @@ class MusicPlayer @Inject constructor(
                         }
                     }
                 } else {
-                    // Switch back to audio stream - use original source logic
+                    // Switch back to audio stream — same source rules as a fresh resolve, so an
+                    // HQ listener (or a per-song switch) doesn't silently land on YouTube here.
                     streamUrl = when (song.source) {
                         SongSource.LOCAL, SongSource.DOWNLOADED -> song.localUri.orEmpty()
-                        SongSource.REMOTE -> remoteStreamUrlFor(song)
-                        else -> youTubeRepository.getStreamUrl(song.id)
+                        else -> {
+                            val preferred = effectiveMusicSource(song)
+                            (runCatching { resolveStreamForSource(song, preferred) }.getOrNull())
+                                ?: when (song.source) {
+                                    SongSource.REMOTE -> remoteStreamUrlFor(song)
+                                    else -> youTubeRepository.getStreamUrl(song.id)
+                                }
+                        }
                     }
                 }
                 
@@ -3433,8 +3482,9 @@ class MusicPlayer @Inject constructor(
                 val cacheKey = if (newVideoMode) {
                     "${song.id}_${_playerState.value.videoQuality.name}"
                 } else {
-                    song.id
+                    audioCacheKey(song, streamUrl)
                 }
+                if (!newVideoMode) noteResolvedStream(song, streamUrl)
                 
                 val mediaItemBuilder = MediaItem.Builder()
                     .setUri(streamUrl)
@@ -3602,16 +3652,11 @@ class MusicPlayer @Inject constructor(
     private fun cleanSongTitle(title: String): String {
         var clean = title
         clean = clean.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
-        val delimiters = listOf("|", "-", "–", "—", "•", "/")
-        for (delim in delimiters) {
-            if (clean.contains(delim)) {
-                val parts = clean.split(delim)
-                if (parts.isNotEmpty() && parts[0].trim().isNotEmpty()) {
-                    clean = parts[0]
-                    break
-                }
-            }
-        }
+        // Only a delimiter with space on both sides separates the song name from a movie /
+        // artist segment ("Song · Movie", "Song - Artist"); a bare hyphen is part of the
+        // name ("Ek-Do-Teen", "Lo-Fi").
+        val firstSegment = clean.split(Regex("\\s*\\|+\\s*|\\s+(?:·|•|–|—|-|/)\\s+")).firstOrNull()?.trim()
+        if (!firstSegment.isNullOrEmpty()) clean = firstSegment
         val junkWords = Regex("(?i)\\b(official|video|audio|lyrics|lyric|lyrical|full|song|songs|hd|4k|mv|remastered|version|original|soundtrack|ost|from|movie|presents|presents:|hits|visualizer|lq)\\b")
         clean = clean.replace(junkWords, " ")
         return clean.replace(Regex("\\s+"), " ").trim()

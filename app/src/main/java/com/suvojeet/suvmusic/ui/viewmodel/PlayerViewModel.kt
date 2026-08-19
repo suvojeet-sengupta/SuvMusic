@@ -100,7 +100,8 @@ class PlayerViewModel @Inject constructor(
         old.isVideoMode == new.isVideoMode &&
         old.playbackSpeed == new.playbackSpeed &&
         old.pitch == new.pitch &&
-        old.activeAudioSource == new.activeAudioSource
+        old.activeAudioSource == new.activeAudioSource &&
+        old.isSwitchingSource == new.isSwitchingSource
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

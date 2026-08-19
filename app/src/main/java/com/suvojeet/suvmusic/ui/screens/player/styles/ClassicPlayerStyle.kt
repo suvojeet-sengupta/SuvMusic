@@ -253,6 +253,7 @@ private fun ClassicPortraitContent(
                 isAIEnabled = isAIEnabled,
                 aiStatus = aiStatus,
                 activeAudioSource = playbackInfo.activeAudioSource,
+                isSwitchingSource = playbackInfo.isSwitchingSource,
                 onSwitchAudioSource = actions.onSwitchAudioSource
             )
 
@@ -334,6 +335,7 @@ private fun ClassicLandscapeContent(
                 isAIEnabled = isAIEnabled,
                 aiStatus = aiStatus,
                 activeAudioSource = playbackInfo.activeAudioSource,
+                isSwitchingSource = playbackInfo.isSwitchingSource,
                 onSwitchAudioSource = actions.onSwitchAudioSource
             )
             Spacer(modifier = Modifier.height(16.dp))

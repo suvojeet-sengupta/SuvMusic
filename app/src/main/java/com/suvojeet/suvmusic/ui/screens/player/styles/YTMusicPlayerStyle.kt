@@ -313,6 +313,7 @@ private fun YTMusicPortraitContent(
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 playbackSpeed = playerState.playbackSpeed,
                 activeAudioSource = playbackInfo.activeAudioSource,
+                isSwitchingSource = playbackInfo.isSwitchingSource,
                 onSwitchAudioSource = actions.onSwitchAudioSource
             )
 
@@ -482,6 +483,7 @@ private fun YTMusicLandscapeContent(
                 sleepTimerRemainingMs = sleepTimerRemainingMs,
                 playbackSpeed = playerState.playbackSpeed,
                 activeAudioSource = playbackInfo.activeAudioSource,
+                isSwitchingSource = playbackInfo.isSwitchingSource,
                 onSwitchAudioSource = actions.onSwitchAudioSource
             )
             Spacer(modifier = Modifier.height(16.dp))

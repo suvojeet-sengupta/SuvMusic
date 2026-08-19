@@ -67,6 +67,7 @@ fun SongInfoSection(
     // Where this song streams from right now; null hides the source switch (local
     // files and video mode have only one possible source).
     activeAudioSource: com.suvojeet.suvmusic.core.model.MusicSource? = null,
+    isSwitchingSource: Boolean = false,
     onSwitchAudioSource: () -> Unit = {}
 ) {
     Row(
@@ -218,12 +219,13 @@ fun SongInfoSection(
                                     .height(20.dp)
                                     .background(dominantColors.onBackground.copy(alpha = 0.15f))
                             )
-                            SourceSwitchButton(
+                            AudioSourceToggle(
                                 activeAudioSource = activeAudioSource,
-                                onClick = onSwitchAudioSource,
+                                isSwitching = isSwitchingSource,
+                                onSwitch = onSwitchAudioSource,
                                 dominantColors = dominantColors,
-                                buttonSize = 42.dp,
-                                iconSize = 20.dp
+                                compact = true,
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
                     }
@@ -461,12 +463,13 @@ fun SongInfoSection(
                                 .height(24.dp)
                                 .background(dominantColors.onBackground.copy(alpha = 0.15f))
                         )
-                        SourceSwitchButton(
+                        AudioSourceToggle(
                             activeAudioSource = activeAudioSource,
-                            onClick = onSwitchAudioSource,
+                            isSwitching = isSwitchingSource,
+                            onSwitch = onSwitchAudioSource,
                             dominantColors = dominantColors,
-                            buttonSize = 44.dp,
-                            iconSize = 22.dp
+                            compact = true,
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
                 }
@@ -577,35 +580,3 @@ private fun DownloadProgressChip(
     }
 }
 
-/**
- * Per-song source switch that lives at the end of the like/dislike capsule. It shows
- * the source you'd get by tapping — the YouTube logo while HQ Audio is playing, the
- * HQ badge while YouTube is playing.
- */
-@Composable
-private fun SourceSwitchButton(
-    activeAudioSource: com.suvojeet.suvmusic.core.model.MusicSource,
-    onClick: () -> Unit,
-    dominantColors: DominantColors,
-    buttonSize: androidx.compose.ui.unit.Dp,
-    iconSize: androidx.compose.ui.unit.Dp
-) {
-    val playingHq = activeAudioSource == com.suvojeet.suvmusic.core.model.MusicSource.REMOTE
-    IconButton(onClick = onClick, modifier = Modifier.size(buttonSize)) {
-        if (playingHq) {
-            Icon(
-                painter = androidx.compose.ui.res.painterResource(id = com.suvojeet.suvmusic.R.drawable.ic_youtube),
-                contentDescription = "Switch to YouTube",
-                tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(iconSize)
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.HighQuality,
-                contentDescription = "Switch to HQ Audio",
-                tint = dominantColors.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(iconSize)
-            )
-        }
-    }
-}

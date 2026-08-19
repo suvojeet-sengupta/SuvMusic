@@ -34,7 +34,10 @@ data class PlayerState(
     // Where the current song's audio is actually coming from right now. Null when the
     // question doesn't apply (local/downloaded file, or nothing playing) — the player
     // screen only offers the source switch when this is non-null.
-    val activeAudioSource: MusicSource? = null
+    val activeAudioSource: MusicSource? = null,
+    // True while the player screen's source switch is re-resolving the current song on
+    // the other backend. Audio keeps playing from the old source until the swap lands.
+    val isSwitchingSource: Boolean = false
 ) {
     val progress: Float
         get() = if (duration > 0) currentPosition.toFloat() / duration else 0f
