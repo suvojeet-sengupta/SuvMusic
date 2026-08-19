@@ -1455,6 +1455,7 @@ class MusicPlayer @Inject constructor(
         val target = if (current == MusicSource.REMOTE) MusicSource.YOUTUBE else MusicSource.REMOTE
         val targetLabel = if (target == MusicSource.REMOTE) "HQ Audio" else "YouTube"
 
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("switch", "user switch on '${song.title}': ${current.name} → ${target.name}")
         songSourceOverrides.put(song.id, target)
         if (target == MusicSource.REMOTE) {
             // An explicit request must not be answered from a recorded miss.
@@ -1484,6 +1485,7 @@ class MusicPlayer @Inject constructor(
             val streamUrl: String? = resolved?.takeIf { it.isNotBlank() }
             val landed = sourceOfStreamUrl(streamUrl)
             if (streamUrl == null || (landed != null && landed != target)) {
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("switch", "switch of '${song.title}' to ${target.name} FAILED (${if (streamUrl == null) "no stream" else "landed on ${landed?.name}"})")
                 // Nothing to switch to — put the song back on the source it was on.
                 songSourceOverrides.put(song.id, current)
                 _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = current) }
@@ -1552,6 +1554,7 @@ class MusicPlayer @Inject constructor(
                 sessionManager.getAudioQuality().name.lowercase()
             )
 
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("switch", "switch of '${song.title}' to ${target.name} OK")
             _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = target) }
             com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
                 "Playing “${song.title}” from $targetLabel",
@@ -1569,16 +1572,21 @@ class MusicPlayer @Inject constructor(
     private suspend fun resolveHybridRemoteStream(song: Song): String? {
         // Positive/negative cache of the resolved HQ stream URL so we don't re-search on
         // every play. A blank value is the negative-cache marker ("searched, no match").
-        hybridRemoteIds[song.id]?.let { cached -> return cached.ifBlank { null } }
+        hybridRemoteIds[song.id]?.let { cached ->
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "'${song.title}' / '${song.artist}' cache ${if (cached.isBlank()) "MISS (recorded no-match)" else "HIT (HQ url)"}")
+            return cached.ifBlank { null }
+        }
         // Fast-path: if the shared 429 backoff gate is already active there's no point
         // firing a search that will be rejected immediately — it only produces another
         // SOURCE_BUSY snackbar for every song in the queue. Skip silently and let the
         // caller fall back to YouTube; the next play after the backoff expires will
         // re-attempt the HQ resolve normally.
         if (remoteAudioRepository.isInBackoff()) {
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "'${song.title}' SKIPPED — HQ gate active → SOURCE_BUSY, playing from YouTube")
             hqFallbackReason.put(song.id, HqFallbackReason.SOURCE_BUSY)
             return null
         }
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "resolving '${song.title}' / '${song.artist}' (id=${song.id}, dur=${song.duration / 1000}s, video=${song.isVideo})")
         // Tracks whether the HQ backend was actually reachable. A timeout / rate-limit /
         // no-network result means "couldn't ask" (SOURCE_BUSY) rather than "asked, no
         // match" (NO_MATCH) — the user gets a different message for each.
@@ -1595,9 +1603,14 @@ class MusicPlayer @Inject constructor(
                         e is com.suvojeet.suvmusic.core.model.AppError.NoNetwork ||
                         e is com.suvojeet.suvmusic.core.model.AppError.Timeout
                     ) busy = true
+                    com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "search '$q' failed: ${e::class.simpleName} → ${if (busy) "counts as BUSY" else "not busy"}")
                     emptyList()
                 }
-                null -> { busy = true; emptyList() } // outer 8s timeout
+                null -> {
+                    busy = true
+                    com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "search '$q' hit the 8s outer timeout → counts as BUSY")
+                    emptyList()
+                }
             }
         }
         return try {
@@ -1608,11 +1621,14 @@ class MusicPlayer @Inject constructor(
             val cleanTitle = cleanSongTitle(song.title)
             val cleanArtist = cleanSongArtist(song.artist)
             val primaryQuery = if (cleanArtist.isNotEmpty()) "$cleanTitle $cleanArtist" else cleanTitle
-            var match = pickBestRemoteMatch(song, searchTyped(primaryQuery))
+            var lastCandidates = searchTyped(primaryQuery)
+            var match = pickBestRemoteMatch(song, lastCandidates)
             if (match == null) {
                 val titleOnly = cleanTitle
                 if (titleOnly.isNotEmpty() && !titleOnly.equals(primaryQuery, ignoreCase = true)) {
-                    match = pickBestRemoteMatch(song, searchTyped(titleOnly))
+                    val titleCandidates = searchTyped(titleOnly)
+                    if (titleCandidates.isNotEmpty()) lastCandidates = titleCandidates
+                    match = pickBestRemoteMatch(song, titleCandidates)
                 }
             }
             if (match != null) {
@@ -1621,10 +1637,15 @@ class MusicPlayer @Inject constructor(
                     "HQ match for '${song.title}' / '${song.artist}' → '${match.title}' / '${match.artist}' " +
                         "[${match.album}] ${HqSongMatcher.explain(song, match)}"
                 )
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("match", "'${song.title}' → '${match.title}' / '${match.artist}' [${match.album}] (${HqSongMatcher.explain(song, match)})")
                 // Save the matched remote song id so lyrics repository can also fetch lyrics from HQ Audio Source
                 sessionManager.putMatchedRemoteSongId(song.id, match.id)
             } else if (!busy) {
                 android.util.Log.i("MusicPlayer", "HQ match for '${song.title}' / '${song.artist}': none")
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("match", "'${song.title}' / '${song.artist}': NO confident match")
+                lastCandidates.take(5).forEach { c ->
+                    com.suvojeet.suvmusic.util.HqDiagnostics.log("match", "  rejected '${c.title}' / '${c.artist}' [${c.album}, ${c.duration / 1000}s]: ${HqSongMatcher.explain(song, c)}")
+                }
             }
             // Use the 320 kbps stream URL the search result already carries; only fall
             // back to the /songs/{id} detail endpoint if it's somehow missing (that
@@ -1646,6 +1667,11 @@ class MusicPlayer @Inject constructor(
                     else -> HqFallbackReason.NO_MATCH
                 }
             )
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "'${song.title}' verdict: ${when {
+                url != null -> "HQ stream resolved"
+                busy -> "SOURCE_BUSY (backend unreachable/throttled this attempt)"
+                else -> "NO_MATCH (cached; won't re-search this session)"
+            }}")
             url
         } catch (e: kotlinx.coroutines.CancellationException) {
             // The caller moved on (race lost, song skipped, switch cancelled) — that is not a
@@ -1653,6 +1679,7 @@ class MusicPlayer @Inject constructor(
             throw e
         } catch (e: Exception) {
             android.util.Log.w("MusicPlayer", "Hybrid RemoteAudio resolve failed: ${e.message}")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("hybrid", "'${song.title}' resolve threw ${e.javaClass.simpleName}: ${e.message} → SOURCE_BUSY")
             hqFallbackReason.put(song.id, HqFallbackReason.SOURCE_BUSY)
             null
         }
@@ -1677,6 +1704,7 @@ class MusicPlayer @Inject constructor(
             if (now - lastBusyNoticeAtMs < 30_000L) return
             lastBusyNoticeAtMs = now
         }
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("notice", "showing '${if (reason == HqFallbackReason.SOURCE_BUSY) "HQ source busy" else "No HQ version found"}' for '${song.title}'")
         val title = song.title.ifBlank { "this song" }
         val msg = when (reason) {
             HqFallbackReason.SOURCE_BUSY -> "HQ source busy — playing from YouTube"
@@ -1754,6 +1782,7 @@ class MusicPlayer @Inject constructor(
                             remoteJob.onAwait { remote ->
                                 if (remote != null) {
                                     android.util.Log.d("MusicPlayer", "Race: Remote resolved first or fast")
+                                    com.suvojeet.suvmusic.util.HqDiagnostics.log("race", "'${song.title}' → HQ won the race (within grace)")
                                     remote
                                 } else {
                                     null
@@ -1764,6 +1793,7 @@ class MusicPlayer @Inject constructor(
                                     val ytUrl = ytJob.await()
                                     if (ytUrl != null) {
                                         android.util.Log.d("MusicPlayer", "Race: Remote took too long, using YouTube")
+                                        com.suvojeet.suvmusic.util.HqDiagnostics.log("race", "'${song.title}' → HQ exceeded ${HQ_RACE_GRACE_MS}ms grace and YouTube was ready → playing YouTube")
                                         remoteJob.cancel()
                                         notifyHqFallbackIfNeeded(song)
                                         ytUrl
@@ -1792,8 +1822,10 @@ class MusicPlayer @Inject constructor(
                                 streamUrl = firstResolved.first
                                 if (firstResolved.second) {
                                     android.util.Log.d("MusicPlayer", "Race: Remote resolved eventually")
+                                    com.suvojeet.suvmusic.util.HqDiagnostics.log("race", "'${song.title}' → HQ resolved after the grace, still used (YT wasn't ready)")
                                 } else {
                                     android.util.Log.d("MusicPlayer", "Race: YouTube resolved first after timeout fallback")
+                                    com.suvojeet.suvmusic.util.HqDiagnostics.log("race", "'${song.title}' → YouTube resolved first (HQ slow or no match)")
                                     notifyHqFallbackIfNeeded(song)
                                 }
                             }

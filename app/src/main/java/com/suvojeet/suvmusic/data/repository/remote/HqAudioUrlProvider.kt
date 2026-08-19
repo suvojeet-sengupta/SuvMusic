@@ -150,6 +150,7 @@ object HqAudioUrlProvider {
             persistBreakerState()
             _isAsiaEdgeDegraded.value = false
             Log.i(TAG, "Asia edge recovered, breaker closed")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("route", "Asia edge recovered — breaker closed, HQ traffic back on Asia")
         }
     }
 
@@ -182,6 +183,7 @@ object HqAudioUrlProvider {
         persistBreakerState()
         _isAsiaEdgeDegraded.value = true
         Log.w(TAG, "Diverting to main server for ${cooldown / 60_000}min ($reason)")
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("route", "Asia edge breaker TRIPPED ($reason) — diverting to main server for ${cooldown / 60_000}min")
     }
 
     /**

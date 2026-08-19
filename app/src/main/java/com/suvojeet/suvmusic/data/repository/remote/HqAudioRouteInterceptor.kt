@@ -37,10 +37,12 @@ class HqAudioRouteInterceptor : Interceptor {
                 HqAudioUrlProvider.recordSuccess(targetHost)
             } else {
                 HqAudioUrlProvider.recordFailure(targetHost)
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("route", "HTTP ${response.code} from $targetHost ${routed.url.encodedPath}")
             }
             response
         } catch (e: IOException) {
             HqAudioUrlProvider.recordFailure(targetHost)
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("route", "transport error to $targetHost: ${e.javaClass.simpleName}: ${e.message}")
             throw e
         }
     }

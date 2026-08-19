@@ -6,6 +6,8 @@
     <cache-path name="images" path="images/" />
     <!-- Cache directory for crash logs -->
     <cache-path name="crash_logs" path="crash_logs/" />
+    <!-- Cache directory for temporary HQ diagnostics logs -->
+    <cache-path name="diag" path="diag/" />
     <!-- Cache directory for exported playlists -->
     <cache-path name="playlists" path="playlists/" />
     <!-- Public downloads for APK installation -->

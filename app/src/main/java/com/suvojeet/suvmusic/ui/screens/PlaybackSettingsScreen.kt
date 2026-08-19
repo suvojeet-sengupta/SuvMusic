@@ -550,6 +550,60 @@ fun PlaybackSettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
+
+            // TEMPORARY: HQ source diagnostics recorder. Remove this item together with
+            // HqDiagnostics and its log() call sites once field debugging is done.
+            item {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val diagRecording by com.suvojeet.suvmusic.util.HqDiagnostics.active.collectAsState()
+                PlaybackSectionTitle("HQ Diagnostics (temporary)")
+                SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    PlaybackNavigationItem(
+                        icon = if (diagRecording) Icons.Default.StopCircle else Icons.Default.BugReport,
+                        title = if (diagRecording) "Stop & share HQ log" else "Start HQ source logging",
+                        subtitle = if (diagRecording)
+                            "Recording… play a few songs, then tap here to stop and share"
+                        else
+                            "Records why songs play from HQ or fall back to YouTube",
+                        onClick = {
+                            if (!diagRecording) {
+                                if (com.suvojeet.suvmusic.util.HqDiagnostics.start(context)) {
+                                    com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                                        "HQ logging started — play a few songs, then come back and stop it",
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
+                                    )
+                                }
+                            } else {
+                                val logFile = com.suvojeet.suvmusic.util.HqDiagnostics.stop()
+                                if (logFile != null) {
+                                    try {
+                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                            context, "${context.packageName}.provider", logFile
+                                        )
+                                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                            putExtra(android.content.Intent.EXTRA_SUBJECT, "SuvMusic HQ diagnostics log")
+                                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(
+                                            android.content.Intent.createChooser(send, "Share HQ diagnostics log").apply {
+                                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                        )
+                                    } catch (e: Exception) {
+                                        com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
+                                            "Couldn't share log: ${e.message}",
+                                            com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 

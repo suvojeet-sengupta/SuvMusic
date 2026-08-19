@@ -159,6 +159,7 @@ class RemoteAudioRepository @Inject constructor(
         val backoff = (15_000L shl (rateLimitStreak - 1)).coerceAtMost(5 * 60_000L)
         rateLimitedUntilMs = System.currentTimeMillis() + backoff
         android.util.Log.w("RemoteAudio", "BACKOFF: 429 — pausing all RemoteAudio network for ${backoff / 1000}s (streak=$rateLimitStreak)")
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("backoff", "HQ gate ARMED for ${backoff / 1000}s (streak=$rateLimitStreak) — genuine 429 from the HQ API")
     }
 
     @Synchronized
@@ -175,6 +176,7 @@ class RemoteAudioRepository @Inject constructor(
         val backoff = (15_000L shl (legacyRateLimitStreak - 1)).coerceAtMost(5 * 60_000L)
         legacyRateLimitedUntilMs = System.currentTimeMillis() + backoff
         android.util.Log.w("RemoteAudio", "BACKOFF(legacy): 429 — pausing legacy endpoints for ${backoff / 1000}s (streak=$legacyRateLimitStreak)")
+        com.suvojeet.suvmusic.util.HqDiagnostics.log("backoff", "LEGACY gate armed for ${backoff / 1000}s (streak=$legacyRateLimitStreak) — home/charts host throttled (does NOT block HQ)")
     }
 
     @Synchronized
@@ -225,6 +227,7 @@ class RemoteAudioRepository @Inject constructor(
         val cacheKey = query.trim().lowercase()
         searchCache[cacheKey]?.let { cached ->
             android.util.Log.i("RemoteAudio", "search('$query') CACHE_HIT n=${cached.size}")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("search", "'$query' cache hit (${cached.size} results)")
             return@withContext AppResult.Success(cached)
         }
 
@@ -232,6 +235,7 @@ class RemoteAudioRepository @Inject constructor(
         if (isRateLimited()) {
             val stale = OfflineCache.getSearch("ra:$cacheKey")
             android.util.Log.w("RemoteAudio", "search('$query') SKIP backoff active; ${if (stale != null) "serving ${stale.size} cached" else "no cache"}")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("search", "'$query' SKIPPED — HQ gate active for another ${(rateLimitedUntilMs - System.currentTimeMillis()) / 1000}s; ${if (stale != null) "served ${stale.size} from disk cache" else "no cache → RateLimited(backoff)"}")
             return@withContext if (stale != null) {
                 searchCache[cacheKey] = stale
                 AppResult.Success(stale)
@@ -253,6 +257,7 @@ class RemoteAudioRepository @Inject constructor(
             val ms = System.currentTimeMillis() - started
 
             android.util.Log.i("RemoteAudio", "search('$query') OK in ${ms}ms raw=$rawCount parsed=${songs.size}")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("search", "'$query' OK in ${ms}ms — $rawCount raw, ${songs.size} parsed")
             if (rawCount > 0 && songs.isEmpty()) {
                 android.util.Log.w("RemoteAudio", "search('$query') had $rawCount raw results but all failed parseSongDto — backend schema may have shifted")
                 // Raw rows arrived but none parsed → the backend schema likely shifted.
@@ -274,6 +279,7 @@ class RemoteAudioRepository @Inject constructor(
             // Name the classified error (RateLimited/Timeout/NoNetwork/…) so a 429 storm
             // is obvious in logcat and distinguishable from a parse or network failure.
             android.util.Log.e("RemoteAudio", "search('$query') FAIL in ${ms}ms ${e.javaClass.simpleName}: ${e.message} classified=${error::class.simpleName}", e)
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("search", "'$query' FAILED in ${ms}ms — ${e.javaClass.simpleName}: ${e.message} → classified ${error::class.simpleName}")
             Telemetry.report("search", "remoteaudio", error, mapOf("qlen" to query.length.toString()))
             // Offline-first fallback: serve last-known results from disk rather than a
             // blank screen. The failure is still recorded above for telemetry.
@@ -438,6 +444,7 @@ class RemoteAudioRepository @Inject constructor(
         // seconds while resolving a stream URL.
         if (isRateLimited()) {
             android.util.Log.w("RemoteAudio", "getSongDetails($songId) SKIP backoff active")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("details", "getSongDetails($songId) SKIPPED — HQ gate active")
             return@withContext null
         }
 
@@ -489,6 +496,7 @@ class RemoteAudioRepository @Inject constructor(
         // re-trigger the throttle and stall waiting for a URL that won't come.
         if (isRateLimited()) {
             android.util.Log.w("RemoteAudio", ">> getStreamUrl SKIP vid=$songId q=$quality backoff active")
+            com.suvojeet.suvmusic.util.HqDiagnostics.log("stream", "getStreamUrl($songId) SKIPPED — HQ gate active for another ${(rateLimitedUntilMs - System.currentTimeMillis()) / 1000}s")
             return@withContext null
         }
 
@@ -518,14 +526,19 @@ class RemoteAudioRepository @Inject constructor(
                     if (song != null) return@withContext null
                 } else {
                     android.util.Log.i("RemoteAudio", "<< getStreamUrl EXIT vid=$songId ok(${streamUrl.take(80)}) in ${ms}ms")
+                    com.suvojeet.suvmusic.util.HqDiagnostics.log("stream", "getStreamUrl($songId) OK in ${ms}ms")
                     streamUrlCache[cacheKey] = streamUrl
                     return@withContext streamUrl
                 }
             } catch (e: Exception) {
                 lastError = e
-                if (is429(e)) { noteRateLimited(); return@withContext null }
+                if (is429(e)) {
+                    com.suvojeet.suvmusic.util.HqDiagnostics.log("stream", "getStreamUrl($songId) got 429 from HQ API")
+                    noteRateLimited(); return@withContext null
+                }
                 val ms = System.currentTimeMillis() - started
                 android.util.Log.e("RemoteAudio", "<< getStreamUrl vid=$songId FAIL (attempt ${attempt + 1}/$maxAttempts) in ${ms}ms ${e.javaClass.simpleName}: ${e.message}")
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("stream", "getStreamUrl($songId) attempt ${attempt + 1} failed in ${ms}ms — ${e.javaClass.simpleName}: ${e.message}")
             }
             if (attempt < maxAttempts - 1) kotlinx.coroutines.delay(800)
         }
@@ -1261,6 +1274,7 @@ class RemoteAudioRepository @Inject constructor(
                 // health is unrelated.
                 if (response.code == 429) noteLegacyRateLimited()
                 android.util.Log.e("RemoteAudio", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
+                com.suvojeet.suvmusic.util.HqDiagnostics.log("legacy", "HTTP ${response.code} from ${request.url.host}${request.url.encodedPath}")
             } else {
                 noteLegacySuccess()
                 android.util.Log.d("RemoteAudio", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
