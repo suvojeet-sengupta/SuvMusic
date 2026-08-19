@@ -191,14 +191,14 @@ object TTMLParser {
                     val parts = timeStr.split(":")
                     when (parts.size) {
                         2 -> {
-                            val minutes = parts[0].toDoubleOrNull() ?: 0.0
-                            val seconds = parts[1].toDoubleOrNull() ?: 0.0
+                            val minutes = parts[0].toDoubleOrNull() ?: return 0.0
+                            val seconds = parts[1].toDoubleOrNull() ?: return 0.0
                             minutes * 60 + seconds
                         }
                         3 -> {
-                            val hours = parts[0].toDoubleOrNull() ?: 0.0
-                            val minutes = parts[1].toDoubleOrNull() ?: 0.0
-                            val seconds = parts[2].toDoubleOrNull() ?: 0.0
+                            val hours = parts[0].toDoubleOrNull() ?: return 0.0
+                            val minutes = parts[1].toDoubleOrNull() ?: return 0.0
+                            val seconds = parts[2].toDoubleOrNull() ?: return 0.0
                             hours * 3600 + minutes * 60 + seconds
                         }
                         else -> timeStr.toDoubleOrNull() ?: 0.0

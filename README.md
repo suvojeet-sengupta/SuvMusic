@@ -13,7 +13,7 @@
   "description": "High-Fidelity Music Streaming for Android with Native C++ Audio Engine.",
   "url": "https://github.com/suvojeet-sengupta/SuvMusic",
   "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases",
-  "softwareVersion": "2.6.3.0",
+  "softwareVersion": "2.6.4.0",
   "author": {
     "@type": "Person",
     "name": "Suvojeet Sengupta",

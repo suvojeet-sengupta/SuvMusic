@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.4.0] - 2026-08-19
+
+### Added
+- **Truth-Based Audio Source Toggle**: Replaced the previous single switch chip with a reactive two-state YouTube ⇄ HQ Audio toggle (in player controls and bottom capsule) showing real-time streaming CDN state with animated transition, smooth audio handover preserving playback position, and distinct cache keys per rendition.
+- **Corroborated HQ Song Matching**: Upgraded HQ search matching engine (`HqSongMatcher`) with strict multi-factor corroboration across artists, composers, lyricists, labels, and album/film titles. Features transliteration-tolerant token matching, tag consistency checks, and comprehensive unit tests.
+- **HQ Source Diagnostics Recorder**: Added temporary session-based diagnostics tool under Playback Settings with instant export to Android share sheet for troubleshooting hybrid playback decisions.
+
+### Fixed & Improved
+- **Regex Compatibility on Android**: Fixed ICU regex pattern syntax error on closing braces (`}`) that caused false rate-limit fallbacks on real Android devices.
+- **API Fallback Rate-Limit Isolation**: Prevented fallback host 429 rate-limiting from falsely masking primary HQ server health, added 5-minute fallback cooldown, and isolated legacy/home feed backoff gates from HQ playback streams.
+- **Snackbar Spam Prevention**: Debounced 'HQ source busy' snackbar notifications to once per 30 seconds and eliminated doomed queued API requests during active backoff windows.
+- **CI/CD Workflow Optimization**: Refactored and improved GitHub Actions build workflow formatting and step execution.
+
 ## [2.6.3.0] - 2026-08-13
 
 ### Added

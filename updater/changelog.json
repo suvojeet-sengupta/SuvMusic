@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.6.4.0",
+      "versionCode": 43,
+      "date": "August 19, 2026",
+      "description": "• Truth-Based Audio Source Toggle: Reactive YouTube ⇄ HQ Audio toggle with seamless audio handover, position preservation, and distinct cache keys.\n• Corroborated HQ Matching Engine: Multi-factor matching engine with artist, album, label, and transliteration-tolerant token corroboration.\n• HQ Diagnostics Tool: Session-based diagnostics recorder in Playback Settings with direct export to share sheet.\n• Backend Rate-Limit Isolation & Stability: Isolated fallback host 429 errors, split backoff gates, debounced busy snackbars, and fixed Android ICU regex engine crash.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.6.3.0",
       "versionCode": 42,
       "date": "August 13, 2026",

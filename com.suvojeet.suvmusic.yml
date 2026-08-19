@@ -79,5 +79,5 @@ MaintainerNotes: The app requires NonFreeNet due to interaction with third-party
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 2.6.3.0
-CurrentVersionCode: 42
+CurrentVersion: 2.6.4.0
+CurrentVersionCode: 43

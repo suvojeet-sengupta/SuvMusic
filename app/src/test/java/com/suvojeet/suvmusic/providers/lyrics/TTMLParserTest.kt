@@ -75,8 +75,8 @@ class TTMLParserTest {
         assertNotNull(line.words)
         assertEquals(2, line.words.size)
         assertEquals("Word1", line.words[0].text)
-        assertEquals(10000L, line.words[0].startTimeMs)
+        assertEquals(10.0, line.words[0].startTime, 0.01)
         assertEquals("Word2", line.words[1].text)
-        assertEquals(10500L, line.words[1].startTimeMs)
+        assertEquals(10.5, line.words[1].startTime, 0.01)
     }
 }
