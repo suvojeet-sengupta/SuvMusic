@@ -91,7 +91,16 @@ class RemoteAudioRepository @Inject constructor(
     @Volatile private var rateLimitedUntilMs = 0L
     @Volatile private var rateLimitStreak = 0
 
+    // Separate gate for the legacy endpoints (home charts / trending / featured …) which
+    // live on a different, third-party host. That host throttles routinely; its 429s used
+    // to arm the SAME gate as the HQ API, so a throttled home screen froze HQ playback
+    // ("HQ source busy" on every song) while the HQ backend was perfectly healthy.
+    @Volatile private var legacyRateLimitedUntilMs = 0L
+    @Volatile private var legacyRateLimitStreak = 0
+
     private fun isRateLimited(): Boolean = System.currentTimeMillis() < rateLimitedUntilMs
+
+    private fun isLegacyRateLimited(): Boolean = System.currentTimeMillis() < legacyRateLimitedUntilMs
 
     // TTL rather than audioQualityFlow: the flow only re-emits on DataStore writes, so it
     // would miss the isOnWifi() switch that getAudioQuality() re-checks per call.
@@ -157,6 +166,22 @@ class RemoteAudioRepository @Inject constructor(
         if (rateLimitStreak != 0 || rateLimitedUntilMs != 0L) {
             rateLimitStreak = 0
             rateLimitedUntilMs = 0L
+        }
+    }
+
+    @Synchronized
+    private fun noteLegacyRateLimited() {
+        legacyRateLimitStreak = (legacyRateLimitStreak + 1).coerceAtMost(6)
+        val backoff = (15_000L shl (legacyRateLimitStreak - 1)).coerceAtMost(5 * 60_000L)
+        legacyRateLimitedUntilMs = System.currentTimeMillis() + backoff
+        android.util.Log.w("RemoteAudio", "BACKOFF(legacy): 429 — pausing legacy endpoints for ${backoff / 1000}s (streak=$legacyRateLimitStreak)")
+    }
+
+    @Synchronized
+    private fun noteLegacySuccess() {
+        if (legacyRateLimitStreak != 0 || legacyRateLimitedUntilMs != 0L) {
+            legacyRateLimitStreak = 0
+            legacyRateLimitedUntilMs = 0L
         }
     }
 
@@ -1133,8 +1158,8 @@ class RemoteAudioRepository @Inject constructor(
     suspend fun getFeaturedPlaylists(): List<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<com.suvojeet.suvmusic.core.model.PlaylistDisplayItem>()
 
-        if (isRateLimited()) {
-            android.util.Log.w("RemoteAudio", "getFeaturedPlaylists SKIP backoff active")
+        if (isLegacyRateLimited()) {
+            android.util.Log.w("RemoteAudio", "getFeaturedPlaylists SKIP legacy backoff active")
             return@withContext playlists
         }
 
@@ -1216,6 +1241,9 @@ class RemoteAudioRepository @Inject constructor(
     // ==================== Private Helpers ====================
     
     private fun makeRequest(url: String): String {
+        if (isLegacyRateLimited()) {
+            throw java.io.IOException("legacy endpoint backoff active")
+        }
         val request = Request.Builder()
             .url(url)
             .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36")
@@ -1228,13 +1256,13 @@ class RemoteAudioRepository @Inject constructor(
         return boundedHttpClient.newCall(request).execute().use { response ->
             val body = response.body?.string() ?: ""
             if (!response.isSuccessful) {
-                // Legacy endpoints go through this raw path (not Retrofit), so a 429 here
-                // never reached the typed is429() check — arm the shared backoff directly
-                // so these callers stop hammering a rate-limited backend too.
-                if (response.code == 429) noteRateLimited()
+                // Legacy endpoints live on their own (third-party) host, so a 429 here
+                // arms the LEGACY backoff only — it must never pause the HQ API, whose
+                // health is unrelated.
+                if (response.code == 429) noteLegacyRateLimited()
                 android.util.Log.e("RemoteAudio", "HTTP ${response.code} for ${request.url.host}${request.url.encodedPath} (body ${body.length} chars)")
             } else {
-                noteSuccess()
+                noteLegacySuccess()
                 android.util.Log.d("RemoteAudio", "HTTP ${response.code} ${request.url.host} — ${body.length} chars")
             }
             body
