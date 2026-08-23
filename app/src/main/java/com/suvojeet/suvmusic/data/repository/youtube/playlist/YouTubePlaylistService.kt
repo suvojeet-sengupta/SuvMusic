@@ -221,18 +221,21 @@ class YouTubePlaylistService @Inject constructor(
                 val continuationResponse = apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parser.parseLikedSongs(continuationResponse)
-                if (newSongs.isEmpty()) break
+                // A continuation page can contain metadata or a shelf that has no playable
+                // rows. Keep following its token instead of truncating a large library.
                 songs.addAll(newSongs)
 
                 // Emitting every page would redraw a huge list constantly; every fourth
                 // keeps the UI moving without thrashing it.
-                if (pageCount % 4 == 0) {
+                if (newSongs.isNotEmpty() && pageCount % 4 == 0) {
                     playlist = playlist.copy(songs = songs.toList())
                     emit(playlist)
                 }
 
                 currentJson = JSONObject(continuationResponse)
-                continuationToken = jsonParser.extractContinuationToken(currentJson)
+                val nextContinuationToken = jsonParser.extractContinuationToken(currentJson)
+                if (nextContinuationToken == continuationToken) break
+                continuationToken = nextContinuationToken
                 pageCount++
             }
 
@@ -407,11 +410,14 @@ class YouTubePlaylistService @Inject constructor(
                 val response = apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl)
                 if (response.isEmpty()) break
                 val newSongs = parser.parseLikedSongs(response)
-                if (newSongs.isEmpty()) break
+                // Do not stop on an empty parsed page: the response may still carry a
+                // continuation token leading to the next batch of library tracks.
                 songs.addAll(newSongs)
 
                 currentJson = JSONObject(response)
-                continuationToken = jsonParser.extractContinuationToken(currentJson)
+                val nextContinuationToken = jsonParser.extractContinuationToken(currentJson)
+                if (nextContinuationToken == continuationToken) break
+                continuationToken = nextContinuationToken
                 pageCount++
             } catch (e: Exception) {
                 break
