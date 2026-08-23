@@ -1441,6 +1441,7 @@ class MusicPlayer @Inject constructor(
         }
 
     private var sourceSwitchJob: Job? = null
+    private var videoToggleJob: Job? = null
 
     /**
      * Flip the current song between YouTube and HQ Audio, keeping the playback
@@ -1463,6 +1464,7 @@ class MusicPlayer @Inject constructor(
             hqNoticeShown.remove(song.id)
         }
         invalidatePreload()
+        videoToggleJob?.cancel()
         _playerState.update { it.copy(isSwitchingSource = true, error = null) }
 
         currentResolutionJob?.cancel()
@@ -3465,12 +3467,14 @@ class MusicPlayer @Inject constructor(
         val newVideoMode = !state.isVideoMode
         
         _playerState.update { it.copy(isLoading = true, isVideoMode = newVideoMode, videoNotFound = false) }
+        sourceSwitchJob?.cancel()
+        videoToggleJob?.cancel()
 
         // A mode flip invalidates any preload: a prefetched audio URL must not be
         // applied to a transition that now expects video, and vice versa.
         invalidatePreload()
 
-        scope.launch {
+        videoToggleJob = scope.launch {
             try {
                 var streamUrl: String? = null
                 var audioStreamUrl: String? = null
@@ -3485,8 +3489,8 @@ class MusicPlayer @Inject constructor(
                         resolvedVideoIds[song.id] ?: run {
                             val query = "${song.title} ${song.artist} official video"
                             try {
-                                val results = youTubeRepository.search(query)
-                                val bestMatch = results.firstOrNull()
+                                val results = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                                val bestMatch = HqSongMatcher.pickBest(song, results)
                                 bestMatch?.id?.also { resolvedVideoIds.put(song.id, it) }
                             } catch (e: Exception) {
                                 null
@@ -3519,6 +3523,13 @@ class MusicPlayer @Inject constructor(
                     }
                 }
                 
+                // Resolution is asynchronous. Do not apply a result belonging to a
+                // previous song or an earlier mode toggle to the current media item.
+                val currentState = _playerState.value
+                if (currentState.currentSong?.id != song.id || currentState.isVideoMode != newVideoMode) {
+                    return@launch
+                }
+
                 if (streamUrl == null) {
                     // Fallback - revert state
                     _playerState.update { 

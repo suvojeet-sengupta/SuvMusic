@@ -307,26 +307,30 @@ fun AlbumArtwork(
             ) {
             // Main artwork image
             if (!imageUrl.isNullOrEmpty()) {
-                // Try high-res first, fallback to original on error
-                var model by remember(imageUrl) { mutableStateOf<Any?>(getHighResThumbnail(imageUrl)) }
+                // Key the image request to the song as well as the URL. This prevents
+                // Coil's previous request state from briefly resurfacing on slower devices.
+                androidx.compose.runtime.key(songId, imageUrl) {
+                    // Try high-res first, fallback to original on error
+                    var model by remember(imageUrl) { mutableStateOf<Any?>(getHighResThumbnail(imageUrl)) }
 
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(model)
-                        .crossfade(true)
-                        .size(600)
-                        .listener(
-                            onError = { _, _ ->
-                                if (model != imageUrl) {
-                                    model = imageUrl
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(model)
+                            .crossfade(false)
+                            .size(600)
+                            .listener(
+                                onError = { _, _ ->
+                                    if (model != imageUrl) {
+                                        model = imageUrl
+                                    }
                                 }
-                            }
-                        )
-                        .build(),
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                            )
+                            .build(),
+                        contentDescription = title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             } else {
                 // Fallback: try to use YouTube thumbnail if songId looks like a video ID
                 val fallbackUrl = remember(songId) {
@@ -338,25 +342,27 @@ fun AlbumArtwork(
                 }
 
                 if (fallbackUrl != null) {
-                    var model by remember(fallbackUrl) { mutableStateOf<Any?>(fallbackUrl) }
+                    androidx.compose.runtime.key(songId, fallbackUrl) {
+                        var model by remember(fallbackUrl) { mutableStateOf<Any?>(fallbackUrl) }
 
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(model)
-                            .crossfade(true)
-                            .size(600)
-                            .listener(
-                                onError = { _, _ ->
-                                    if (model == fallbackUrl) {
-                                        model = null // Will show icon fallback
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(model)
+                                .crossfade(false)
+                                .size(600)
+                                .listener(
+                                    onError = { _, _ ->
+                                        if (model == fallbackUrl) {
+                                            model = null // Will show icon fallback
+                                        }
                                     }
-                                }
-                            )
-                            .build(),
-                        contentDescription = title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                                )
+                                .build(),
+                            contentDescription = title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 } else {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
