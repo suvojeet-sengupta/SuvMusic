@@ -205,7 +205,7 @@ class YouTubePlaylistService @Inject constructor(
         try {
             val hl = YouTubeLocale.hl(sessionManager)
             val response = apiClient.fetchInternalApi("FEmusic_liked_videos", hl = hl)
-            val songs = parser.parseSongs(response).toMutableList()
+            val songs = parser.parseLikedSongs(response).toMutableList()
 
             var playlist = empty.copy(
                 thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
@@ -219,7 +219,7 @@ class YouTubePlaylistService @Inject constructor(
             while (continuationToken != null && pageCount < 200) { // ~20k songs
                 val continuationResponse = apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl)
                 if (continuationResponse.isEmpty()) break
-                val newSongs = parser.parseSongs(continuationResponse)
+                val newSongs = parser.parseLikedSongs(continuationResponse)
                 if (newSongs.isEmpty()) break
                 songs.addAll(newSongs)
 

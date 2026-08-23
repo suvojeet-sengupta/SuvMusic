@@ -35,13 +35,24 @@ class YouTubeContentParser @Inject constructor(
     // Songs
     // ============================================================================================
 
-    fun parseSongs(response: String): List<Song> {
+    fun parseSongs(response: String): List<Song> = parseSongs(response, includeTwoRowItems = true)
+
+    /**
+     * Parses the user's liked-track feed without collecting musicTwoRowItemRenderer shelves.
+     * Those shelves represent albums/playlists and can contain playable related tracks that
+     * are not individually liked.
+     */
+    fun parseLikedSongs(response: String): List<Song> = parseSongs(response, includeTwoRowItems = false)
+
+    private fun parseSongs(response: String, includeTwoRowItems: Boolean): List<Song> {
         val songs = mutableListOf<Song>()
         try {
             val root = JSONObject(response)
             val items = mutableListOf<JSONObject>()
             json.findAllObjects(root, "musicResponsiveListItemRenderer", items)
-            json.findAllObjects(root, "musicTwoRowItemRenderer", items)
+            if (includeTwoRowItems) {
+                json.findAllObjects(root, "musicTwoRowItemRenderer", items)
+            }
             json.findAllObjects(root, "videoRenderer", items) // Support for main YouTube history
 
             items.forEach { item ->
