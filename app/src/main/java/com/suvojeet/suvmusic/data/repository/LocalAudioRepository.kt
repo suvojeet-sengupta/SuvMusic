@@ -118,7 +118,8 @@ class LocalAudioRepository @Inject constructor(
                         album = album,
                         duration = duration,
                         albumArtUri = albumArtUri,
-                        contentUri = contentUri
+                        contentUri = contentUri,
+                        albumId = albumId
                     ).copy(
                         customFolderPath = path?.substringBeforeLast("/"),
                         addedAt = dateAdded
@@ -254,7 +255,18 @@ class LocalAudioRepository @Inject constructor(
                 val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                 val albumArtUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId)
                 
-                songs.add(Song.fromLocal(id, title, artist, album, duration, albumArtUri, contentUri))
+                songs.add(
+                    Song.fromLocal(
+                        id = id,
+                        title = title,
+                        artist = artist,
+                        album = album,
+                        duration = duration,
+                        albumArtUri = albumArtUri,
+                        contentUri = contentUri,
+                        albumId = albumId
+                    )
+                )
             }
         }
         songs

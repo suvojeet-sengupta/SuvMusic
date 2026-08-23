@@ -60,6 +60,7 @@ fun AlbumScreen(
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val album = uiState.album
+    val focusedSongId = viewModel.selectedSongId ?: currentSong?.id
     val haptic = LocalHapticFeedback.current
 
     // Check if we are in dark theme based on background luminance
@@ -101,6 +102,15 @@ fun AlbumScreen(
         }
     }
     
+    // When an album is opened, bring the active track into view. The same effect
+    // also follows track changes while the user remains on this album.
+    LaunchedEffect(album?.id, focusedSongId, album?.songs?.size) {
+        val currentIndex = album?.songs?.indexOfFirst { it.id == focusedSongId } ?: -1
+        if (currentIndex >= 0) {
+            listState.scrollToItem(currentIndex + 1) // item 0 is the album header
+        }
+    }
+
     val isTopBarVisible = !isScrolled || !isScrollingDown
     
     // Dialog/Menu states
@@ -245,6 +255,7 @@ fun AlbumScreen(
                             index = index,
                             totalSongs = album.songs.size,
                             isSelected = isSelected,
+                            isCurrentlyPlaying = song.id == currentSong?.id,
                             isSelectionMode = uiState.isSelectionMode,
                             onReorder = { from, to -> viewModel.reorderSong(from, to) },
                             onClick = { 

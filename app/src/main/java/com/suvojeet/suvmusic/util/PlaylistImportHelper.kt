@@ -136,6 +136,168 @@ class PlaylistImportHelper @Inject constructor(
     }
 
     /**
+     * Parse a CSV playlist export from a Uri.
+     *
+     * Supports common Spotify-style headers (`Track Name`, `Artist Name(s)`,
+     * `Album Name`, `Duration (ms)`) and simpler exports (`Title`, `Artist`,
+     * `Album`, `Duration`). Rows remain in source order and are not
+     * deduplicated, so the imported count matches the source file.
+     */
+    suspend fun parseCSV(uri: Uri): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {
+        val tracks = mutableListOf<ImportTrack>()
+        val playlistName = uri.lastPathSegment
+            ?.substringBeforeLast(".")
+            ?.takeIf { it.isNotBlank() }
+            ?: "CSV Import"
+
+        try {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
+                    val records = csvRecords(reader).iterator()
+                    if (!records.hasNext()) return@use
+
+                    val firstRow = records.next()
+                    val headerIndexes = csvHeaderIndexes(firstRow)
+                    val hasHeader = headerIndexes.titleIndex != null || headerIndexes.artistIndex != null
+
+                    fun addTrack(row: List<String>) {
+                        val titleIndex = headerIndexes.titleIndex ?: 0
+                        val artistIndex = headerIndexes.artistIndex ?: 1
+                        val durationIndex = headerIndexes.durationIndex
+                        val sourceIdIndex = headerIndexes.sourceIdIndex
+                        val title = row.getOrNull(titleIndex)?.trim().orEmpty()
+                        if (title.isBlank()) return
+
+                        val artist = row.getOrNull(artistIndex)?.trim()
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "Unknown Artist"
+                        val sourceId = sourceIdIndex
+                            ?.let { row.getOrNull(it) }
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() }
+
+                        tracks += ImportTrack(
+                            title = title,
+                            artist = artist,
+                            durationMs = parseCsvDuration(durationIndex?.let { row.getOrNull(it) }),
+                            sourceId = sourceId,
+                        )
+                    }
+
+                    if (!hasHeader) addTrack(firstRow)
+                    while (records.hasNext()) addTrack(records.next())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("PlaylistImportHelper", "CSV parse failed", e)
+        }
+
+        playlistName to tracks
+    }
+
+    private data class CsvHeaderIndexes(
+        val titleIndex: Int? = null,
+        val artistIndex: Int? = null,
+        val durationIndex: Int? = null,
+        val sourceIdIndex: Int? = null,
+    )
+
+    private fun csvHeaderIndexes(row: List<String>): CsvHeaderIndexes {
+        fun normalized(value: String): String = value
+            .removePrefix("\uFEFF")
+            .trim()
+            .lowercase(java.util.Locale.ROOT)
+            .replace(Regex("[^a-z0-9]"), "")
+
+        fun find(vararg names: String): Int? {
+            val accepted = names.toSet()
+            return row.indexOfFirst { normalized(it) in accepted }.takeIf { it >= 0 }
+        }
+
+        return CsvHeaderIndexes(
+            titleIndex = find("trackname", "title", "song", "songname", "tracktitle"),
+            artistIndex = find("artistnames", "artist", "artists", "artistname", "performer"),
+            durationIndex = find("durationms", "duration", "length", "durationmillis"),
+            sourceIdIndex = find("youtubeid", "videoid", "youtubevideoid"),
+        )
+    }
+
+    private fun parseCsvDuration(value: String?): Long {
+        val raw = value?.trim().orEmpty()
+        if (raw.isBlank()) return 0L
+        raw.toLongOrNull()?.let { numeric ->
+            // Exporters commonly use milliseconds; small plain values are usually seconds.
+            return if (numeric >= 10_000L) numeric else numeric * 1000L
+        }
+        val parts = raw.split(":")
+        if (parts.size == 2) {
+            val minutes = parts[0].toLongOrNull() ?: return 0L
+            val seconds = parts[1].toLongOrNull() ?: return 0L
+            return (minutes * 60 + seconds) * 1000L
+        }
+        return 0L
+    }
+
+    /** Reads CSV records without splitting a quoted field at an embedded newline. */
+    private fun csvRecords(reader: BufferedReader): Sequence<List<String>> = sequence {
+        val record = StringBuilder()
+        var insideQuotes = false
+
+        while (true) {
+            val line = reader.readLine() ?: break
+            if (record.isNotEmpty()) record.append('\n')
+            record.append(line)
+
+            var index = 0
+            while (index < line.length) {
+                if (line[index] == '"') {
+                    if (index + 1 < line.length && line[index + 1] == '"') {
+                        index++
+                    } else {
+                        insideQuotes = !insideQuotes
+                    }
+                }
+                index++
+            }
+
+            if (!insideQuotes) {
+                yield(parseCsvRow(record.toString()))
+                record.clear()
+            }
+        }
+
+        if (record.isNotBlank()) yield(parseCsvRow(record.toString()))
+    }
+
+    private fun parseCsvRow(record: String): List<String> {
+        val fields = mutableListOf<String>()
+        val field = StringBuilder()
+        var insideQuotes = false
+        var index = 0
+
+        while (index < record.length) {
+            when (val character = record[index]) {
+                '"' -> {
+                    if (insideQuotes && index + 1 < record.length && record[index + 1] == '"') {
+                        field.append('"')
+                        index++
+                    } else {
+                        insideQuotes = !insideQuotes
+                    }
+                }
+                ',' -> if (insideQuotes) field.append(character) else {
+                    fields += field.toString().trim()
+                    field.clear()
+                }
+                else -> field.append(character)
+            }
+            index++
+        }
+        fields += field.toString().trim()
+        return fields
+    }
+
+    /**
      * Parse an .suv file from a Uri.
      */
     suspend fun parseSUV(uri: Uri): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {

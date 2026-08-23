@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +62,7 @@ fun LazyItemScope.ReorderableSongRow(
     index: Int = 0,
     totalSongs: Int = 0,
     isSelected: Boolean = false,
+    isCurrentlyPlaying: Boolean = false,
     isSelectionMode: Boolean = false,
     onReorder: ((from: Int, to: Int) -> Unit)? = null,
     onLongClick: () -> Unit = {},
@@ -93,6 +95,7 @@ fun LazyItemScope.ReorderableSongRow(
         targetValue = when {
             isDragging -> draggingSurface
             isSelected -> selectionTint
+            isCurrentlyPlaying -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             else -> Color.Transparent
         },
         label = "ItemSelectionBackground"
@@ -181,6 +184,16 @@ fun LazyItemScope.ReorderableSongRow(
                 color = subtitleColor.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Current playback marker remains independent from manual selection mode.
+        if (isCurrentlyPlaying && !isSelectionMode) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Currently playing",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
             )
         }
 

@@ -456,6 +456,19 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun importCSV(uri: Uri) {
+        val context = appContext
+        val intent = Intent(context, PlaylistImportService::class.java).apply {
+            action = PlaylistImportService.ACTION_START
+            putExtra(PlaylistImportService.EXTRA_CSV_URI, uri)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
     fun importSUV(uri: Uri) {
         val context = appContext
         val intent = Intent(context, PlaylistImportService::class.java).apply {

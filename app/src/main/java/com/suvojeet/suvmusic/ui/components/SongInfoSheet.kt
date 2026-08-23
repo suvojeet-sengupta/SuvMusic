@@ -46,6 +46,7 @@ fun SongInfoSheet(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onArtistClick: (String) -> Unit = {},
+    onAlbumClick: (String, String?) -> Unit = { _, _ -> },
     audioCodec: String? = null,
     audioBitrate: Int? = null,
     dominantColors: DominantColors? = null,
@@ -65,6 +66,7 @@ fun SongInfoSheet(
     
     // Extract dominant colors
     val finalDominantColors = dominantColors ?: rememberDominantColors(highResThumbnail, isDarkTheme)
+    val albumId = song.collectionId?.takeIf { it.isNotBlank() && !it.startsWith("folder_") }
     
     LaunchedEffect(isVisible, song.artist, song.id) {
         if (isVisible) {
@@ -275,7 +277,19 @@ fun SongInfoSheet(
 
                             if (!song.album.isNullOrBlank()) {
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
-                                InfoRow(Icons.Default.Album, "Album", song.album!!, isDarkTheme)
+                                InfoRow(
+                                    icon = Icons.Default.Album,
+                                    label = "Album",
+                                    value = song.album,
+                                    isDarkTheme = isDarkTheme,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(enabled = albumId != null) {
+                                            albumId?.let { onAlbumClick(it, song.id) }
+                                        }
+                                        .padding(vertical = 4.dp)
+                                )
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.05f))
                             InfoRow(Icons.Default.Copyright, "Copyright", remoteAudioMetadata?.copyright ?: "© ${song.artist}", isDarkTheme)
@@ -365,8 +379,17 @@ private fun ArtistRow(
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, label: String, value: String, isDarkTheme: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun InfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    isDarkTheme: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = null,

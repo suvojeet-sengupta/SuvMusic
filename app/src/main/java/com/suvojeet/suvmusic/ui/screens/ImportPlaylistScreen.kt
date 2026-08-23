@@ -45,6 +45,7 @@ fun ImportPlaylistScreen(
     onDismiss: () -> Unit,
     onImport: (url: String) -> Unit,
     onImportM3U: (android.net.Uri) -> Unit,
+    onImportCSV: (android.net.Uri) -> Unit,
     onImportSUV: (android.net.Uri) -> Unit,
     onCancel: () -> Unit,
     onReset: () -> Unit
@@ -100,7 +101,7 @@ fun ImportPlaylistScreen(
                     label = "ImportState"
                 ) { state ->
                     when (state) {
-                        is ImportState.Idle -> InputView(onImport, onImportM3U, onImportSUV)
+                        is ImportState.Idle -> InputView(onImport, onImportM3U, onImportCSV, onImportSUV)
                         is ImportState.Loading -> LoadingView(onCancel)
                         is ImportState.Processing -> ProcessingView(state, onCancel)
                         is ImportState.Success -> SuccessView(
@@ -131,6 +132,7 @@ fun ImportPlaylistScreen(
 private fun InputView(
     onImport: (String) -> Unit, 
     onImportM3U: (android.net.Uri) -> Unit,
+    onImportCSV: (android.net.Uri) -> Unit,
     onImportSUV: (android.net.Uri) -> Unit
 ) {
     var url by remember { mutableStateOf("") }
@@ -145,6 +147,14 @@ private fun InputView(
         }
     }
     
+    val csvPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            onImportCSV(uri)
+        }
+    }
+
     val suvPicker = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri ->
@@ -232,7 +242,7 @@ private fun InputView(
         )
 
         Text(
-            text = "SuvMusic supports importing from Spotify, YouTube Music, and .m3u or .suv files.",
+            text = "SuvMusic supports Spotify and YouTube Music links, plus .m3u, .csv, and .suv playlist files.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -302,6 +312,18 @@ private fun InputView(
             
             Spacer(modifier = Modifier.width(12.dp))
             
+            OutlinedButton(
+                onClick = { csvPicker.launch("*/*") },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = SquircleShape
+            ) {
+                Text("Import .csv", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             OutlinedButton(
                 onClick = { suvPicker.launch("*/*") },
                 modifier = Modifier

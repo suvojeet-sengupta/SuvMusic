@@ -18,7 +18,8 @@ fun Song.Companion.fromLocal(
     duration: Long,
     albumArtUri: Uri?,
     contentUri: Uri,
-    releaseDate: String? = null
+    releaseDate: String? = null,
+    albumId: Long? = null
 ): Song = Song(
     id = id.toString(),
     title = title,
@@ -28,5 +29,7 @@ fun Song.Companion.fromLocal(
     thumbnailUrl = albumArtUri?.toString(),
     source = SongSource.LOCAL,
     localUri = contentUri.toString(),
-    releaseDate = releaseDate
+    releaseDate = releaseDate,
+    collectionId = albumId?.toString(),
+    collectionName = album
 )

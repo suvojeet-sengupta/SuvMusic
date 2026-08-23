@@ -1128,6 +1128,17 @@ fun SuvMusicApp(
                         onCollapse()
                         navController.navigate(Destination.Album(albumId = albumId, name = null, thumbnailUrl = null))
                     },
+                    onAlbumClickWithSong = { albumId, songId ->
+                        onCollapse()
+                        navController.navigate(
+                            Destination.Album(
+                                albumId = albumId,
+                                name = null,
+                                thumbnailUrl = null,
+                                selectedSongId = songId
+                            )
+                        )
+                    },
                     onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                     onLyricsProviderChange = { playerViewModel.switchLyricsProvider(it) },
                     onImportLyrics = { playerViewModel.importLyrics(it) },

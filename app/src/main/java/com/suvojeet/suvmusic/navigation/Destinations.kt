@@ -105,12 +105,14 @@ sealed class Destination {
     data class Album(
         val albumId: String,
         val name: String? = null,
-        val thumbnailUrl: String? = null
+        val thumbnailUrl: String? = null,
+        val selectedSongId: String? = null
     ) : Destination() {
         companion object {
             const val ARG_ALBUM_ID = "albumId"
             const val ARG_NAME = "name"
             const val ARG_THUMBNAIL = "thumbnailUrl"
+            const val ARG_SELECTED_SONG_ID = "selectedSongId"
         }
     }
 

@@ -70,11 +70,14 @@ class PlaylistImportService : Service() {
             ACTION_START -> {
                 val url = intent.getStringExtra(EXTRA_URL)
                 val m3uUri = intent.getParcelableExtra<Uri>(EXTRA_M3U_URI)
+                val csvUri = intent.getParcelableExtra<Uri>(EXTRA_CSV_URI)
                 val suvUri = intent.getParcelableExtra<Uri>(EXTRA_SUV_URI)
                 if (url != null) {
                     startImport(url = url)
                 } else if (m3uUri != null) {
                     startImport(m3uUri = m3uUri)
+                } else if (csvUri != null) {
+                    startImport(csvUri = csvUri)
                 } else if (suvUri != null) {
                     startImport(suvUri = suvUri)
                 }
@@ -86,7 +89,12 @@ class PlaylistImportService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startImport(url: String? = null, m3uUri: Uri? = null, suvUri: Uri? = null) {
+    private fun startImport(
+        url: String? = null,
+        m3uUri: Uri? = null,
+        csvUri: Uri? = null,
+        suvUri: Uri? = null,
+    ) {
         if (currentJob?.isActive == true) return
 
         startForeground(NOTIFICATION_ID, buildNotification("Preparing import...", 0, 0, true))
@@ -105,6 +113,9 @@ class PlaylistImportService : Service() {
                     }
                     m3uUri != null -> {
                         playlistImportHelper.parseM3U(m3uUri)
+                    }
+                    csvUri != null -> {
+                        playlistImportHelper.parseCSV(csvUri)
                     }
                     suvUri != null -> {
                         playlistImportHelper.parseSUV(suvUri)
@@ -296,6 +307,7 @@ class PlaylistImportService : Service() {
         const val ACTION_CANCEL = "com.suvojeet.suvmusic.action.CANCEL_IMPORT"
         const val EXTRA_URL = "com.suvojeet.suvmusic.extra.URL"
         const val EXTRA_M3U_URI = "com.suvojeet.suvmusic.extra.M3U_URI"
+        const val EXTRA_CSV_URI = "com.suvojeet.suvmusic.extra.CSV_URI"
         const val EXTRA_SUV_URI = "com.suvojeet.suvmusic.extra.SUV_URI"
 
         private val _importState = MutableStateFlow(ImportStatus())

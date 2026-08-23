@@ -133,6 +133,7 @@ data class PlayerScreenActions(
     val onDismissVideoError: () -> Unit,
     val onArtistClick: (String) -> Unit,
     val onAlbumClick: (String) -> Unit,
+    val onAlbumClickWithSong: (String, String?) -> Unit = { albumId, _ -> onAlbumClick(albumId) },
     val onPlayFromQueue: (Int) -> Unit,
     val onToggleAutoplay: () -> Unit,
     val onLoadMoreRadioSongs: () -> Unit,
@@ -917,8 +918,12 @@ fun BoxScope.OverlaysContent(
     if (song != null) {
         SongInfoSheet(
             song = song, isVisible = activeOverlay is PlayerOverlay.SongInfo, onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, 
-            onArtistClick = actions.onArtistClick, audioCodec = playerState.audioCodec, audioBitrate = playerState.audioBitrate,
-            dominantColors = dominantColors, isDarkTheme = isAppInDarkTheme
+            onArtistClick = actions.onArtistClick,
+            onAlbumClick = actions.onAlbumClickWithSong,
+            audioCodec = playerState.audioCodec,
+            audioBitrate = playerState.audioBitrate,
+            dominantColors = dominantColors,
+            isDarkTheme = isAppInDarkTheme
         )
     }
 

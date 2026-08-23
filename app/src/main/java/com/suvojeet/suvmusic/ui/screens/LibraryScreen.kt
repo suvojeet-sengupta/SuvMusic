@@ -351,6 +351,9 @@ fun LibraryScreen(
             onImportM3U = { uri ->
                 viewModel.importM3U(uri)
             },
+            onImportCSV = { uri ->
+                viewModel.importCSV(uri)
+            },
             onImportSUV = { uri ->
                 viewModel.importSUV(uri)
             },

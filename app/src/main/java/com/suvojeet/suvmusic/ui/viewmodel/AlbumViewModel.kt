@@ -44,6 +44,7 @@ class AlbumViewModel @Inject constructor(
     private val initialThumbnail: String? = savedStateHandle.get<String>(Destination.Album.ARG_THUMBNAIL)?.let {
         try { java.net.URLDecoder.decode(it, "UTF-8").takeIf { decoded -> decoded.isNotBlank() } } catch (e: Exception) { null }
     }
+    val selectedSongId: String? = savedStateHandle.get<String>(Destination.Album.ARG_SELECTED_SONG_ID)
     
     private val _uiState = MutableStateFlow(AlbumUiState())
     val uiState: StateFlow<AlbumUiState> = _uiState.asStateFlow()
@@ -138,9 +139,18 @@ class AlbumViewModel @Inject constructor(
                      } else null
                 }
                 
-                _uiState.update { 
+                val albumWithSongContext = finalAlbum?.copy(
+                    songs = finalAlbum.songs.map { song ->
+                        if (song.collectionId.isNullOrBlank() || song.collectionId?.startsWith("folder_") == true) {
+                            song.copy(collectionId = albumId, collectionName = finalAlbum.title)
+                        } else {
+                            song
+                        }
+                    }
+                )
+                _uiState.update {
                     it.copy(
-                        album = finalAlbum,
+                        album = albumWithSongContext,
                         isLoading = false
                     )
                 }
