@@ -1429,7 +1429,11 @@ class DownloadRepository @Inject constructor(
         if (!canDownload) return@withContext true
 
         try {
-            val muxedUrl = youTubeRepository.getMuxedVideoStreamUrlForDownload(song.id, maxResolution)
+            val videoId = when (song.source) {
+                SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> song.id
+                else -> youTubeRepository.getBestVideoId(song)
+            }
+            val muxedUrl = youTubeRepository.getMuxedVideoStreamUrlForDownload(videoId, maxResolution)
             if (muxedUrl == null) {
                 downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
                 return@withContext false
@@ -1443,15 +1447,23 @@ class DownloadRepository @Inject constructor(
                 return@withContext false
             }
 
+            val contentType = response.body.contentType()?.toString()?.lowercase().orEmpty()
+            if (contentType.contains("image/")) {
+                response.close()
+                downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
+                return@withContext false
+            }
+            val extension = if (contentType.contains("webm")) "webm" else "mp4"
+            val mimeType = if (extension == "webm") "video/webm" else "video/mp4"
             val contentLength = response.body.contentLength()
             _downloadProgress.update { it + (videoKey to 0f) }
 
-            val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.mp4"
+            val fileName = "${sanitizeFileName(song.title)} - ${sanitizeFileName(song.artist)}.$extension"
             val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val relativePath = "${Environment.DIRECTORY_MOVIES}/SuvMusic"
                 val contentValues = ContentValues().apply {
                     put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
-                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                    put(MediaStore.Video.Media.MIME_TYPE, mimeType)
                     put(MediaStore.Video.Media.RELATIVE_PATH, relativePath)
                     put(MediaStore.Video.Media.IS_PENDING, 1)
                 }
