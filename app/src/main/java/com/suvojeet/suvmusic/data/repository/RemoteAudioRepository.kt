@@ -1296,6 +1296,19 @@ class RemoteAudioRepository @Inject constructor(
             .ifBlank { "Unknown Artist" }
     }
 
+    private fun artistDisplayName(
+        artists: com.suvojeet.suvmusic.data.repository.remote.ArtistGroup?
+    ): String {
+        val credits = artists?.primary.orEmpty()
+            .ifEmpty { artists?.all.orEmpty() }
+            .ifEmpty { artists?.featured.orEmpty() }
+        return credits
+            .mapNotNull { it.name?.decodeHtml()?.takeIf(String::isNotBlank) }
+            .distinct()
+            .joinToString()
+            .ifBlank { "Unknown Artist" }
+    }
+
     private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioSongDto): Song? {
         return try {
             val downloadUrlsMap = dto.downloadUrl?.mapNotNull { item ->
