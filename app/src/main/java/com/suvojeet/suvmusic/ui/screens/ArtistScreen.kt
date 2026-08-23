@@ -145,8 +145,9 @@ fun ArtistScreen(
                             },
                             onShuffle = {
                                 if (currentArtist.songs.isNotEmpty()) {
-                                    val randomIndex = currentArtist.songs.indices.random()
-                                    onSongClick(currentArtist.songs, randomIndex)
+                                    // Shuffle the queue itself so every loaded artist track
+                                    // remains eligible instead of only randomizing the start.
+                                    onSongClick(currentArtist.songs.shuffled(), 0)
                                 }
                             },
                             onSubscribe = viewModel::toggleSubscribe,

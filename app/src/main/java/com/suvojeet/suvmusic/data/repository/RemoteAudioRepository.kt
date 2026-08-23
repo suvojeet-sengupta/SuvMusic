@@ -1283,6 +1283,19 @@ class RemoteAudioRepository @Inject constructor(
         }
     }
     
+    private fun artistDisplayName(
+        artists: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioArtistsDto?
+    ): String {
+        val credits = artists?.primary.orEmpty()
+            .ifEmpty { artists?.all.orEmpty() }
+            .ifEmpty { artists?.featured.orEmpty() }
+        return credits
+            .mapNotNull { it.name?.decodeHtml()?.takeIf(String::isNotBlank) }
+            .distinct()
+            .joinToString()
+            .ifBlank { "Unknown Artist" }
+    }
+
     private fun parseSongDto(dto: com.suvojeet.suvmusic.data.repository.remote.RemoteAudioSongDto): Song? {
         return try {
             val downloadUrlsMap = dto.downloadUrl?.mapNotNull { item ->
@@ -1319,7 +1332,7 @@ class RemoteAudioRepository @Inject constructor(
             Song.fromRemoteAudio(
                 songId = dto.id ?: return null,
                 title = (dto.name ?: "Unknown").decodeHtml(),
-                artist = dto.artists?.primary?.joinToString { it.name ?: "" }?.decodeHtml() ?: "Unknown Artist",
+                artist = artistDisplayName(dto.artists),
                 album = dto.album?.name?.decodeHtml() ?: "",
                 duration = (dto.duration ?: 0L) * 1000,
                 thumbnailUrl = dto.image?.lastOrNull()?.url,
@@ -1369,7 +1382,7 @@ class RemoteAudioRepository @Inject constructor(
             Song.fromRemoteAudio(
                 songId = songId,
                 title = dto.name.orEmpty().decodeHtml(),
-                artist = dto.artists?.primary.orEmpty().joinToString { it.name.orEmpty() }.decodeHtml().ifBlank { "Unknown Artist" },
+                artist = artistDisplayName(dto.artists),
                 album = dto.album?.name.orEmpty().decodeHtml(),
                 duration = (dto.duration?.toLong() ?: 0L) * 1000,
                 thumbnailUrl = dto.image?.lastOrNull()?.url,
