@@ -4,7 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -55,7 +55,7 @@ fun AppLogo(
     colorFilter: ColorFilter? = null,
 ) {
     val sessionManager: SessionManager = koinInject()
-    val variant by sessionManager.logoVariantFlow.collectAsState(initial = LogoVariant.DEFAULT)
+    val variant by sessionManager.logoVariantFlow.collectAsStateWithLifecycle(initialValue = LogoVariant.DEFAULT)
     Image(
         painter = painterResource(id = variant.drawableRes()),
         contentDescription = contentDescription,

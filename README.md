@@ -1,240 +1,203 @@
-<!-- 
-  SEO METADATA
-  Keywords: SuvMusic, Suvojeet Sengupta, Music Streaming, Android, Jetpack Compose, Native Audio Engine, High-Resolution Audio, Open Source, C++ JNI, WSOLA, Parametric EQ, Spatial Audio, Material 3, Listen Together, Spotify Migration, ACRA, NewPipe Extractor
-  Description: SuvMusic is a premium, open-source high-fidelity music streaming application for Android by Suvojeet Sengupta.
+# SuvMusic
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "SuvMusic",
-  "operatingSystem": "Android",
-  "applicationCategory": "MusicApplication",
-  "description": "High-Fidelity Music Streaming for Android with Native C++ Audio Engine.",
-  "url": "https://github.com/suvojeet-sengupta/SuvMusic",
-  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases",
-  "softwareVersion": "2.6.4.0",
-  "author": {
-    "@type": "Person",
-    "name": "Suvojeet Sengupta",
-    "url": "https://suvojeetsengupta.in",
-    "sameAs": [
-      "https://github.com/suvojeet-sengupta",
-      "https://www.linkedin.com/in/suvojeet-sengupta/"
-    ],
-    "jobTitle": "Senior Android Engineer"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
-  }
-}
-</script>
--->
+> **A focused music player for listeners who care about sound, control, and a calm interface.**
 
-<div align="center">
-  <img src="screenshots/suvmusic_banner.png" alt="SuvMusic Banner" width="100%" />
+[![Latest release](https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?display_name=tag&style=flat-square&label=latest%20release)](https://github.com/suvojeet-sengupta/SuvMusic/releases/latest)
+[![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/about/versions/oreo)
+[![License](https://img.shields.io/badge/license-GPL--3.0-4C8BF5?style=flat-square)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-Android-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)](https://developer.android.com/compose)
 
-  <br />
-  <br />
+SuvMusic is an open-source Android music application developed by **Suvojeet Sengupta**. It brings streaming, local playback, synchronized lyrics, downloads, personalization, and detailed audio controls into one thoughtful listening experience. The project combines a modern Compose interface with a native C++ audio layer, while keeping the application modular enough to evolve across Android and desktop targets.
 
-  <h1>SuvMusic</h1>
-  <h3>High-Fidelity Music Streaming for Android</h3>
+The default visual identity is the **Pulse** logo. It is used consistently in the Android splash screen, launcher icon, and in-app branding, while the Appearance settings still let users choose from the available SuvMusic logo variants.
 
-  <p align="center">
-    <strong>SuvMusic</strong> is a premium, open-source music streaming application designed for high-resolution audio enthusiasts. Built with <strong>Jetpack Compose Multiplatform</strong> and a custom <strong>C++ Native Audio Engine</strong>, it provides an ad-free experience with advanced features bridging the gap between cloud streaming and professional local playback. Now featuring <strong>HQ Audio (320 kbps)</strong> as the default streaming source.
-  </p>
+## Why SuvMusic
 
-  <!-- Status Badges -->
-  <div align="center">
-    <a href="https://github.com/suvojeet-sengupta/SuvMusic/releases/latest">
-      <img src="https://img.shields.io/github/v/release/suvojeet-sengupta/SuvMusic?style=for-the-badge&color=FA2D48&label=DOWNLOAD%20APK&logo=android" alt="Download APK" />
-    </a>
-    <a href="https://suvojeet-sengupta.github.io/SuvMusic-Website/">
-      <img src="https://img.shields.io/badge/Official_Website-SuvMusic-FF4081?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Official Website" />
-    </a>
-    <a href="https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html">
-      <img src="https://img.shields.io/badge/Privacy_Policy-Legal-9C27B0?style=for-the-badge&logo=legal&logoColor=white" alt="Privacy Policy" />
-    </a>
-    <a href="https://t.me/TechToli">
-      <img src="https://img.shields.io/badge/Join_Telegram-Community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram" />
-    </a>
-  </div>
+SuvMusic is designed around a simple idea: music software should give listeners useful control without making the listening experience feel complicated. The app keeps playback close at hand, treats local and streamed music as part of the same library, and exposes advanced tools only when they are useful.
 
-  <br />
+| Area | What SuvMusic provides |
+| --- | --- |
+| Listening | Stream music, play local files, manage queues, and continue playback in the background. |
+| Sound | High-quality playback, volume normalization, parametric equalization, spatial processing, and pitch or speed controls. |
+| Discovery | Home sections, search, recommendations, mood and genre discovery, and smart queue support. |
+| Personal library | Playlists, downloads, listening history, backups, and imported Spotify collections. |
+| Lyrics | Synchronized lyrics with multiple providers and configurable presentation options. |
+| Social playback | Listen Together rooms with synchronized playback and shared queue coordination. |
+| Personalization | Dynamic themes, album-art colors, player styles, logo variants, and adaptive layouts. |
 
-  <div align="center">
-    <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License" />
-    <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
-    <img src="https://img.shields.io/badge/UI-Jetpack_Compose-4285F4?style=flat-square&logo=android&logoColor=white" alt="Compose" />
-    <img src="https://img.shields.io/badge/Engine-Native_C++-00599C?style=flat-square&logo=c%2B%2B&logoColor=white" alt="C++" />
-  </div>
-</div>
+## Highlights
 
----
+### Playback and audio
 
-## Documentation
+- Media3-based background playback with a persistent media service.
+- High-quality audio sources, local file playback, and configurable playback behavior.
+- Native C++ DSP through JNI for low-latency audio processing.
+- Parametric equalization, spatial audio, bass enhancement, crossfeed, limiter processing, and pitch or speed adjustment.
+- Queue management, gapless playback support, sleep timers, output-device handling, and Picture-in-Picture support.
 
-Comprehensive documentation is available in the [`docs/`](docs/) directory:
+### Interface and accessibility
 
-| Document | Description |
-|----------|-------------|
-| [Project Overview](docs/Project%20Overview.md) | High-level project introduction and architecture overview |
-| [Getting Started](docs/Getting%20Started.md) | Setup and development environment configuration |
-| [Developer Guidelines](docs/Developer%20Guidelines.md) | Coding standards and best practices |
+- Material 3 and Jetpack Compose UI with responsive layouts for phones, tablets, foldables, Android TV, and desktop targets.
+- Dynamic album-art color theming, dark mode, pure-black mode, and configurable player presentation.
+- Gesture-aware video playback with seek, volume, brightness, and zoom controls.
+- Adaptive navigation and focused loading states for a smoother experience on different screen sizes.
 
-### Architecture & Design
+### Library and discovery
 
-| Document | Description |
-|----------|-------------|
-| [Application Architecture](docs/Application%20Architecture/Application%20Architecture.md) | Clean Architecture, MVVM, and modular design |
-| [Modular Architecture Design](docs/Application%20Architecture/Modular%20Architecture%20Design.md) | Multi-module project structure |
-| [Dependency Injection with Hilt](docs/Application%20Architecture/Dependency%20Injection%20with%20Hilt.md) | DI patterns and module organization |
-| [Data Flow and State Management](docs/Application%20Architecture/Data%20Flow%20and%20State%20Management.md) | Reactive state handling |
+- Home, search, albums, artists, playlists, library, downloads, and listening-history screens.
+- Smart recommendations, personalized sections, genre discovery, and a radio-style queue.
+- Synchronized lyrics from multiple providers, including local lyrics support.
+- Background downloads, caching, backup and restore, and playlist import workflows.
 
-### Core Systems
+### Connectivity and integrations
 
-| Document | Description |
-|----------|-------------|
-| [Music Playback System](docs/Music%20Playback%20System/Music%20Playback%20System.md) | Media3 ExoPlayer integration and playback architecture |
-| [Audio Processing Engine](docs/Audio%20Processing%20Engine/Audio%20Processing%20Engine.md) | Native C++ audio engine and DSP features |
-| [Multi-Source Streaming](docs/Multi-Source%20Streaming/Multi-Source%20Streaming.md) | YouTube, Remote Audio, and local audio integration |
-| [Lyrics System](docs/Lyrics%20System/Lyrics%20System.md) | Multi-provider lyrics fetching and display |
-| [Download Management](docs/Download%20Management/Download%20Management.md) | Background downloads and file management |
+- YouTube and other configured audio sources through repository-based integrations.
+- Last.fm scrobbling and Discord Rich Presence support.
+- Android media controls, widgets, deep links, and external audio-file handling.
+- Listen Together functionality with a dedicated synchronization protocol.
 
-### Advanced Features
+## Screenshots
 
-| Document | Description |
-|----------|-------------|
-| [Listen Together](docs/Social%20Features/Listen%20Together/Listen%20Together.md) | Real-time synchronized listening rooms |
-| [Personalization & Recommendations](docs/Personalization%20and%20Recommendations/Personalization%20and%20Recommendations.md) | Smart queue and recommendation algorithms |
-| [Social Features](docs/Social%20Features/Social%20Features.md) | Discord integration and Last.fm scrobbling |
+| Home | Player | Lyrics |
+| --- | --- | --- |
+| ![SuvMusic home screen](screenshots/Screenshot_20260128-151017.png) | ![SuvMusic player](screenshots/Screenshot_20260128-151100.png) | ![SuvMusic lyrics](screenshots/Screenshot_20260128-151110.png) |
 
-### Technical References
-
-| Document | Description |
-|----------|-------------|
-| [Native Integration](docs/Native%20Integration/Native%20Integration.md) | CMake, JNI bridge, and native audio processors |
-| [Data Management](docs/Data%20Management/Data%20Management.md) | Database schema, DAOs, and repositories |
-| [UI/UX System](docs/UI_UX%20System/UI_UX%20System.md) | Theming, navigation, and components |
-| [Testing Strategy](docs/Testing%20Strategy.md) | Unit, integration, and UI testing approaches |
-| [Performance Optimization](docs/Performance%20Optimization.md) | Optimization techniques and benchmarks |
-| [Security Considerations](docs/Security%20Considerations.md) | Security best practices and data protection |
-| [Build and Deployment](docs/Build%20and%20Deployment.md) | Build configuration and release process |
-
----
-
-## Core Features
-
-### Audio Engineering & Performance
-- **Native Audio Engine**: High-fidelity playback powered by a custom C++ JNI layer for low-latency digital signal processing.
-- **High-Quality (HQ) Audio by Default**: Stream pristine 320 kbps audio instantly. YouTube Music remains available as a secondary source.
-- **Spotify-Style Volume Normalization**: Intelligent loudness matching ensures consistent perceived volume across all tracks.
-- **WSOLA Time-Stretching**: High-quality pitch and speed adjustments (up to 5x) without digital artifacts or distortion.
-- **Parametric EQ & Spatial Audio**: 10-band ISO standard equalizer and real-time 3D sound positioning with adjustable spatial intensity.
-
-### UI & User Experience
-- **Material 3 Expressive**: Dynamic, premium "liquid glass" UI with custom squircle shapes and silky-smooth animations.
-- **Dynamic Floating Player**: Interactive, system-wide overlay for background playback control.
-- **Gesture Controls**: Integrated video player gestures—Double tap to seek, Vertical swipes for volume/brightness, and Pinch-to-zoom for fill/fit modes.
-- **Synchronized Lyrics**: Real-time, word-by-word lyrics integration from multiple providers with sticky headers and blur customization.
-
-### Advanced Functionality
-- **Listen Together 3.0**: Real-time synchronized listening rooms powered by a custom ultra-low latency Protobuf-based in-house backend.
-- **Comprehensive Cloud Backup**: Securely back up and restore your entire library, settings, and cache using the high-performance `.suv` format.
-- **Spotify Pro Import**: Direct playlist, album, and artist importing from Spotify accounts.
-- **Music Haptics**: Beat-synchronized tactile feedback for immersive listening.
-- **Smart Asset Management**: Batch download capabilities with background service support and persistent caching.
-- **Persistent Logging & Diagnostics**: Integrated file-based logging system with startup log capture and ACRA automated crash reporting.
-
----
-
-## Showcase
-
-<div align="center">
-  <table>
-    <tr>
-      <td width="33%"><img src="screenshots/Screenshot_20260128-151017.png" width="100%" alt="Home Screen"></td>
-      <td width="33%"><img src="screenshots/Screenshot_20260128-151100.png" width="100%" alt="Player Interface"></td>
-      <td width="33%"><img src="screenshots/Screenshot_20260128-151110.png" width="100%" alt="Lyrics View"></td>
-    </tr>
-    <tr>
-      <td><img src="screenshots/Screenshot_20260128-151115.png" width="100%" alt="Library"></td>
-      <td><img src="screenshots/Screenshot_20260128-151120.png" width="100%" alt="Settings"></td>
-      <td><img src="screenshots/Screenshot_20260128-151123.png" width="100%" alt="Search"></td>
-    </tr>
-  </table>
-</div>
-
----
-
-## F-Droid Anti-Features
-
-As an open-source project committed to transparency, SuvMusic discloses the following "Anti-Features" for users and F-Droid reviewers:
-
-- **Non-Free Network Services**: SuvMusic interacts with third-party, non-free network services (including YouTube, KuGou, LrcLib, and SimpMusic) to provide music streaming, metadata extraction (via **NewPipe Extractor**), and synchronized lyrics. These services are external to the app and governed by their respective terms of service.
-- **Tracking**: The app utilizes **ACRA (Application Crash Reports for Android)** for automated crash reporting. While ACRA is open-source, it is technically categorized as tracking by F-Droid because it sends diagnostic data (device info, stack traces) to the developer-controlled endpoint to improve app stability.
-
----
-
-## Technical Specifications
-
-SuvMusic is engineered using modern Android development standards.
-
-- **Frontend**: 100% **Jetpack Compose** for a reactive and fluid user interface with optimized list rendering for large datasets (currently migrating to Compose Multiplatform).
-- **Architecture**: Clean Architecture with MVVM, **Koin / Hilt Dependency Injection**, Room Database, and Kotlin Coroutines.
-- **Images & Caching**: Powered by **Coil 3** with aggressive disk/memory caching policies for offline-ready image loading.
-- **Audio Core**: Custom C23 Native Engine via JNI for high-performance DSP (Limiter, Soft Clipping, EQ).
-- **Networking**: Ktor and OkHttp with custom extractors for high-fidelity stream resolution.
-- **Error Reporting**: **ACRA (Application Crash Reports for Android)** for automated diagnostic collection.
-
----
+| Library | Settings | Search |
+| --- | --- | --- |
+| ![SuvMusic library](screenshots/Screenshot_20260128-151115.png) | ![SuvMusic settings](screenshots/Screenshot_20260128-151120.png) | ![SuvMusic search](screenshots/Screenshot_20260128-151123.png) |
 
 ## Installation
 
-1.  Navigate to the **[Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases)** page.
-2.  Download the latest stable APK file.
-3.  Install the APK on an Android device (Android 8.0 or higher required).
+The easiest way to install SuvMusic is to download the latest stable APK from the [GitHub Releases](https://github.com/suvojeet-sengupta/SuvMusic/releases) page.
 
----
+1. Open the latest release.
+2. Download the APK that matches your device architecture.
+3. Allow installation from the selected source if Android requests permission.
+4. Install the APK and open SuvMusic.
 
-## Acknowledgments
+SuvMusic targets Android 37 and supports Android 8.0 and newer. Release builds are optimized with code shrinking and resource shrinking enabled. APK availability may vary by release channel and device architecture.
 
-SuvMusic is an independent project featuring original UI/UX and a custom audio engine. The project utilizes specific core logic from the following open-source resources to maintain compatibility:
+## Build from source
 
-- **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)**: High-performance metadata extraction.
-- **[SimpMusic](https://github.com/SimpMusic/SimpMusic)**: Lyrics provider implementation logic.
-- **[kaif-00z](mailto:kaif-00z@proton.me)**: Original concept and architectural logic for the high-performance `.suv` native playlist format.
+### Requirements
 
----
+| Requirement | Version or note |
+| --- | --- |
+| Android Studio | A current stable version with Android SDK support for API 37 |
+| JDK | Java 21 |
+| Android SDK | Compile and target SDK 37 |
+| NDK | 27.0.12077973 for the native audio module |
+| CMake | 3.22.1 |
+| Git | Required for cloning the repository and submodules |
 
-## Developer
+Clone the repository and enter the project directory:
 
-**Suvojeet Sengupta**
-*Senior Android Engineer & Software Architect*
+```bash
+git clone https://github.com/suvojeet-sengupta/SuvMusic.git
+cd SuvMusic
+```
 
-[View Full Developer Profile & Portfolio](DEVELOPER.md)
+Create a `local.properties` file when you need optional service credentials that are not supplied through environment variables. Do not commit this file or any secret value.
 
-Suvojeet is a specialized Android engineer with a passion for high-performance mobile systems and audio engineering. With extensive experience in **Kotlin**, **Jetpack Compose**, and **C++ JNI**, he focuses on building low-latency applications that push the boundaries of the Android platform.
+Build the debug APK with the Gradle wrapper:
 
-### Expertise & Focus
-- **Mobile Systems**: Advanced Android architecture (Clean Architecture, Multi-module).
-- **Audio Engineering**: Custom DSP, JNI bridges, and native audio processing.
-- **Open Source**: Committed to building transparent, privacy-focused software for the global community.
+```bash
+./gradlew :app:assembleDebug
+```
 
-### Connect
-[![GitHub](https://img.shields.io/badge/GitHub-@suvojeet--sengupta-181717?style=for-the-badge&logo=github)](https://github.com/suvojeet-sengupta)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-@suvojeet--sengupta-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/suvojeet-sengupta/)
-[![Website](https://img.shields.io/badge/Personal_Site-Suvojeet.in-FF5722?style=for-the-badge&logo=google-chrome&logoColor=white)](https://suvojeetsengupta.in)
-[![Email](https://img.shields.io/badge/Email-suvojeet@suvojeetsengupta.in-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:suvojeet@suvojeetsengupta.in)
-[![Donate via Coindrop](https://img.shields.io/badge/Support-Coindrop-007BFF?style=for-the-badge&logo=heart&logoColor=white)](https://coindrop.to/suvojeet_sengupta)
+Run the unit tests with:
 
----
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+The generated debug APK is placed under `app/build/outputs/apk/debug/`. For a release build, provide the signing and optional service values through the environment and run:
+
+```bash
+./gradlew :app:assembleRelease
+```
+
+## Project structure
+
+SuvMusic uses a modular architecture so platform concerns, data access, domain logic, and user interface code can evolve independently.
+
+| Module or area | Responsibility |
+| --- | --- |
+| `app` | Android application entry point, services, Android resources, launcher aliases, and platform integration. |
+| `composeApp` | Shared Compose UI used by Android and desktop targets. |
+| `core:model` | Shared domain models and enums, including logo variants and playback state. |
+| `core:data` | Data access, persistence, and repository support. |
+| `core:domain` | Application-level use cases and business rules. |
+| `core:db` | Database definitions and local persistence. |
+| `media-source` | Media-source and streaming integration support. |
+| `extractor` | Metadata and stream extraction helpers. |
+| `lyric-*` | Lyrics provider implementations. |
+| `scrobbler` | Scrobbling integrations and listening history support. |
+| `updater` | Update-checking and release-update workflows. |
+
+The Android application follows a Compose-oriented MVVM structure, uses Kotlin coroutines and Flow for reactive state, and combines Hilt and Koin during the current modular migration. Media3 manages playback, Coil handles image loading, Room and DataStore support local state, and the native audio engine is connected through JNI and CMake.
+
+## Performance and stability
+
+Performance work in SuvMusic focuses on reducing unnecessary UI work while preserving playback responsiveness. The application keeps rapidly changing playback position state close to the components that need it, uses lifecycle-aware Flow collection for screen state, provides stable list keys and content types, and reuses cached image and audio resources where possible. Native processing is used for the time-sensitive audio path, while lower-priority discovery work is staged to avoid concentrating network and memory load during startup.
+
+Recent UI improvements also consolidate duplicate state collection in the Home screen, use lifecycle-aware collection in branding and Appearance surfaces, and keep the default logo and splash selection synchronized across fresh installs and user-selected variants.
+
+For the deeper design notes, see [Performance Optimization](docs/Performance%20Optimization.md) and [Security and Stability Audit](docs/SECURITY_AND_STABILITY_AUDIT.md).
+
+## Documentation
+
+The repository contains focused documentation for contributors and maintainers.
+
+| Topic | Guide |
+| --- | --- |
+| Getting started | [Getting Started](docs/Getting%20Started.md) |
+| Project orientation | [Project Overview](docs/Project%20Overview.md) |
+| Development conventions | [Developer Guidelines](docs/Developer%20Guidelines.md) |
+| Architecture | [Clean Architecture](docs/Application%20Architecture/Clean%20Architecture%20Implementation.md), [MVVM with Compose](docs/Application%20Architecture/MVVM%20Pattern%20with%20Jetpack%20Compose.md), and [Modular Architecture](docs/Application%20Architecture/Modular%20Architecture%20Design.md) |
+| Playback | [Music Playback System](docs/Music%20Playback%20System/Music%20Playback%20System.md) and [Media3 Integration](docs/Music%20Playback%20System/Media3%20ExoPlayer%20Integration.md) |
+| Audio engine | [Audio Processing Engine](docs/Audio%20Processing%20Engine/Audio%20Processing%20Engine.md) and [Native Integration](docs/Native%20Integration/Native%20Integration.md) |
+| Lyrics | [Lyrics System](docs/Lyrics%20System/Lyrics%20System.md) |
+| Downloads | [Download Management](docs/Download%20Management/Download%20Management.md) |
+| Listen Together | [Listen Together](docs/Social%20Features/Listen%20Together/Listen%20Together.md) |
+| Testing | [Testing Strategy](docs/Testing%20Strategy.md) |
+| Build and releases | [Build and Deployment](docs/Build%20and%20Deployment.md) |
+| Security | [Security Considerations](docs/Security%20Considerations.md) |
+
+## Privacy and third-party services
+
+SuvMusic is transparent about the services it uses. Depending on the feature and the user's configuration, the application may communicate with third-party services such as YouTube, Last.fm, Discord, lyrics providers, and configured audio or metadata sources. These services have their own availability, privacy policies, and terms of use.
+
+Crash diagnostics are provided through ACRA to help identify stability issues. Review the project's [Security Considerations](docs/Security%20Considerations.md) and the linked [privacy policy](https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html) before enabling services that transmit data outside the device.
+
+Users should only access, download, and share content in accordance with applicable law and the terms of the services they use.
+
+## Contributing
+
+Contributions are welcome when they improve the product for listeners and keep the codebase maintainable. Before opening a pull request, read the [Developer Guidelines](docs/Developer%20Guidelines.md), explain the motivation for the change, and include focused verification steps. For UI changes, screenshots or a short screen recording are helpful; for playback and native-audio changes, describe the device and audio path used for testing.
+
+Please keep pull requests focused, avoid committing credentials or generated build output, and update the relevant documentation when behavior or setup changes.
+
+## Support and project links
+
+| Resource | Link |
+| --- | --- |
+| Releases | [Download the latest release](https://github.com/suvojeet-sengupta/SuvMusic/releases) |
+| Issue tracker | [Report a bug or request an improvement](https://github.com/suvojeet-sengupta/SuvMusic/issues) |
+| Official website | [SuvMusic website](https://suvojeet-sengupta.github.io/SuvMusic-Website/) |
+| Privacy policy | [Read the privacy policy](https://suvojeet-sengupta.github.io/SuvMusic-Website/suvmusic-privacy.html) |
+| Developer | [Suvojeet Sengupta](https://suvojeet-sengupta.github.io/) |
+| Telegram community | [Join the community](https://t.me/TechToli) |
+
+## Acknowledgements
+
+SuvMusic builds on the work of open-source projects and contributors, including [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor), [SimpMusic](https://github.com/maxrave-dev/SimpMusic), and the maintainers of the libraries listed in the Gradle version catalog. Their work makes reliable media extraction, playback, lyrics, networking, and platform integration possible.
 
 ## License
 
-Copyright © 2026 Suvojeet Sengupta.
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
+SuvMusic is distributed under the [GNU General Public License v3.0](LICENSE).
 
-**Disclaimer**: This application is intended for educational and research purposes. It interacts with third-party services. Please respect intellectual property rights and applicable terms of service.
+Copyright © 2026 **Suvojeet Sengupta**.
+
+Developed by **Suvojeet Sengupta** with a focus on thoughtful Android engineering, capable audio systems, and an approachable open-source codebase.

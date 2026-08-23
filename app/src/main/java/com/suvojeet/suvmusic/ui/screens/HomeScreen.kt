@@ -652,15 +652,14 @@ fun HomeScreen(
             )
         }
 
-        // Add to Playlist Sheet
-        val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
-        
-        if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSongs.isNotEmpty()) {
+        // Add to Playlist Sheet. Reuse the state collected at the screen root
+        // instead of creating a second collector for the same StateFlow.
+        if (playlistMgmtState.showAddToPlaylistSheet && playlistMgmtState.selectedSongs.isNotEmpty()) {
             AddToPlaylistSheet(
-                songs = playlistUiState.selectedSongs,
+                songs = playlistMgmtState.selectedSongs,
                 isVisible = true,
-                playlists = playlistUiState.userPlaylists,
-                isLoading = playlistUiState.isLoadingPlaylists || playlistUiState.isAddingSong,
+                playlists = playlistMgmtState.userPlaylists,
+                isLoading = playlistMgmtState.isLoadingPlaylists || playlistMgmtState.isAddingSong,
                 onDismiss = { playlistViewModel.hideAddToPlaylistSheet() },
                 onAddToPlaylist = { playlistId ->
                     playlistViewModel.addSongsToPlaylist(playlistId)
