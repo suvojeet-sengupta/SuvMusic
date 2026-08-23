@@ -111,7 +111,7 @@ class YouTubePlaylistService @Inject constructor(
         try {
             val hl = YouTubeLocale.hl(sessionManager)
             val initialResponse = apiClient.fetchInternalApi("FEmusic_liked_videos", hl = hl)
-            val initialSongs = parser.parseSongs(initialResponse)
+            val initialSongs = parser.parseLikedSongs(initialResponse)
             if (initialSongs.isEmpty()) return@withContext false
 
             val allSongs = mutableListOf<Song>()
@@ -121,16 +121,17 @@ class YouTubePlaylistService @Inject constructor(
                 allSongs.addAll(paginate(initialResponse, hl, maxPages = 500))
             }
 
+            val distinctSongs = allSongs.distinctBy { it.setVideoId ?: it.id }
             libraryRepository.savePlaylist(
                 Playlist(
                     id = LIKED_ID,
                     title = "Your Likes",
                     author = "You",
-                    thumbnailUrl = allSongs.first().thumbnailUrl,
+                    thumbnailUrl = distinctSongs.first().thumbnailUrl,
                     songs = emptyList() // Metadata only
                 )
             )
-            libraryRepository.replacePlaylistSongs(LIKED_ID, allSongs)
+            libraryRepository.replacePlaylistSongs(LIKED_ID, distinctSongs)
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -405,7 +406,7 @@ class YouTubePlaylistService @Inject constructor(
             try {
                 val response = apiClient.fetchInternalApiWithContinuation(continuationToken, hl = hl)
                 if (response.isEmpty()) break
-                val newSongs = parser.parseSongs(response)
+                val newSongs = parser.parseLikedSongs(response)
                 if (newSongs.isEmpty()) break
                 songs.addAll(newSongs)
 
