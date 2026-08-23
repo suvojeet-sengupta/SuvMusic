@@ -609,8 +609,14 @@ fun DownloadsScreen(
                                 video.localUri?.let { uriString ->
                                     try {
                                         val uri = android.net.Uri.parse(uriString)
+                                        val mimeType = context.contentResolver.getType(uri)
+                                            ?: if (uriString.substringBefore('?').endsWith(".webm", ignoreCase = true)) {
+                                                "video/webm"
+                                            } else {
+                                                "video/mp4"
+                                            }
                                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, "video/mp4")
+                                            setDataAndType(uri, mimeType)
                                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         context.startActivity(intent)
