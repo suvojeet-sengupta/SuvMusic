@@ -25,6 +25,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.gson.JsonObject
+import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.youtube.account.YouTubeAccountService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,10 +55,31 @@ import org.koin.compose.koinInject
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SupportScreen(onBack: () -> Unit) {
+fun SupportScreen(
+    onBack: () -> Unit,
+    sessionManager: SessionManager,
+    accountService: YouTubeAccountService
+) {
     val context = LocalContext.current
     val okHttpClient: OkHttpClient = koinInject()
     val scope = rememberCoroutineScope()
+    var supportName by remember { mutableStateOf<String?>(null) }
+    var supportEmail by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(sessionManager, accountService) {
+        val storedAccount = sessionManager.getStoredAccounts().firstOrNull()
+        supportName = sessionManager.getUserName() ?: storedAccount?.name
+        supportEmail = storedAccount?.email?.takeIf { it.isNotBlank() }
+        if (sessionManager.isLoggedIn() && (supportName.isNullOrBlank() || supportEmail.isNullOrBlank())) {
+            accountService.fetchAccountInfo()?.let { account ->
+                supportName = account.name.takeIf { it.isNotBlank() }
+                supportEmail = account.email.takeIf { it.isNotBlank() }
+                if (account.email.isNotBlank()) {
+                    sessionManager.saveCurrentAccountToHistory(account.name, account.email, account.avatarUrl, account.authUserIndex)
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -74,6 +102,8 @@ fun SupportScreen(onBack: () -> Unit) {
             onOpenUri = { uri -> context.openUri(uri) },
             onCopyText = { text, label -> context.copyToClipboard(text, label) },
             onShareText = { text -> context.shareText(text) },
+            prefilledName = supportName,
+            prefilledEmail = supportEmail,
             onSubmitFeedback = { rating, category, message, userName, userEmail, onSuccess, onError ->
                 scope.launch {
                     try {

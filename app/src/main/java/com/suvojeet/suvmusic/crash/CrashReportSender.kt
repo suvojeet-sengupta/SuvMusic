@@ -4,6 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.google.gson.JsonObject
+import com.suvojeet.suvmusic.data.SessionManager
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.acra.ReportField
 import org.acra.data.CrashReportData
 import org.acra.sender.ReportSender
@@ -11,42 +17,108 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
- * Custom ACRA sender that saves the crash report to a file and opens
- * a share intent so the user can send it via Telegram or download it.
+ * Sends redacted crash diagnostics through the same support endpoint used by
+ * the in-app feedback and bug-report forms. If the device is offline or the
+ * endpoint is unavailable, the existing share flow remains available.
  */
 class CrashReportSender : ReportSender {
 
     companion object {
         private const val TELEGRAM_USERNAME = "suvojeet_sengupta"
-        private const val TELEGRAM_PACKAGE = "org.telegram.messenger"
+        private const val FEEDBACK_URL = "https://feedback.suvojeetsengupta.in/api/feedback"
+        private const val MAX_DIAGNOSTICS_CHARS = 160_000
     }
 
     override fun send(context: Context, errorContent: CrashReportData) {
         val reportFile = writeCrashReportFile(context, errorContent)
+        val sentDirectly = runCatching {
+            sendToFeedbackEndpoint(context, errorContent, reportFile)
+        }.getOrDefault(false)
+
+        if (!sentDirectly) {
+            shareCrashReport(context, reportFile)
+        }
+    }
+
+    private fun sendToFeedbackEndpoint(
+        context: Context,
+        data: CrashReportData,
+        reportFile: File
+    ): Boolean {
+        val identity = runCatching {
+            val sessionManager = SessionManager(context.applicationContext)
+            val account = sessionManager.getStoredAccounts().firstOrNull()
+            val name = sessionManager.getCachedUserName() ?: account?.name
+            name to account?.email
+        }.getOrDefault(null to null)
+
+        val diagnostics = redactSensitive(reportFile.readText().takeLast(MAX_DIAGNOSTICS_CHARS))
+        val json = JsonObject().apply {
+            addProperty("appName", "SuvMusic")
+            addProperty("appPackage", context.packageName)
+            addProperty("appVersion", data.getString(ReportField.APP_VERSION_NAME) ?: "unknown")
+            addProperty("rating", 0)
+            addProperty("category", "crash")
+            addProperty("message", "Automatic crash report submitted by SuvMusic.")
+            identity.first?.takeIf { it.isNotBlank() }?.let { addProperty("userName", it) }
+            identity.second?.takeIf { it.isNotBlank() }?.let { addProperty("userEmail", it) }
+            addProperty("deviceBrand", data.getString(ReportField.BRAND) ?: "unknown")
+            addProperty("deviceModel", data.getString(ReportField.PHONE_MODEL) ?: "unknown")
+            addProperty("osVersion", data.getString(ReportField.ANDROID_VERSION) ?: "unknown")
+            addProperty("sdkVersion", android.os.Build.VERSION.SDK_INT)
+            addProperty("diagnostics", diagnostics)
+        }
+
+        val request = Request.Builder()
+            .url(FEEDBACK_URL)
+            .post(json.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .writeTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .callTimeout(12, TimeUnit.SECONDS)
+            .build()
+
+        return client.newCall(request).execute().use { response -> response.isSuccessful }
+    }
+
+    private fun shareCrashReport(context: Context, reportFile: File) {
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.provider",
             reportFile
         )
-
-        val shareIntent = buildShareIntent(uri)
-        val chooserIntent = Intent.createChooser(shareIntent, "Share crash log via…").apply {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "SuvMusic crash report could not be sent automatically. Please share the attached report with support."
+            )
+            putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Crash Report")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooserIntent = Intent.createChooser(shareIntent, "Share crash report").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooserIntent)
     }
 
     /**
-     * Mask the value following any secret-looking key so tokens/cookies/keys don't
-     * leave the device in a shared crash report. Matches common shapes like
-     * `Authorization: Bearer xyz`, `api_key=xyz`, `"token":"xyz"`, `cookie: ...`.
+     * Mask secret-looking values before diagnostics leave the device.
      */
     private fun redactSensitive(text: String): String {
-        val pattern = Regex("(?i)(api[_-]?key|authorization|auth[_-]?token|token|secret|password|passwd|cookie|set-cookie|bearer)([\"'\\s:=]+)([^\\s\"',}&;]+)")
+        val pattern = Regex("(?i)(api[_-]?key|authorization|auth[_-]?token|token|secret|password|passwd|cookie|set-cookie|bearer)([\\\"'\\s:=]+)([^\\s\\\"',}&;]+)")
         return text.lineSequence().joinToString("\n") { line ->
-            pattern.replace(line) { m -> "${m.groupValues[1]}${m.groupValues[2]}***REDACTED***" }
+            pattern.replace(line) { match ->
+                "${match.groupValues[1]}${match.groupValues[2]}***REDACTED***"
+            }
         }
     }
 
@@ -65,14 +137,12 @@ class CrashReportSender : ReportSender {
             writer.appendLine("═══════════════════════════════════════")
             writer.appendLine()
 
-            // App info
             section(writer, "App Info") {
                 line("Package", data.getString(ReportField.PACKAGE_NAME))
                 line("Version", data.getString(ReportField.APP_VERSION_NAME))
                 line("Version Code", data.getString(ReportField.APP_VERSION_CODE))
             }
 
-            // Device info
             section(writer, "Device Info") {
                 line("Brand", data.getString(ReportField.BRAND))
                 line("Phone Model", data.getString(ReportField.PHONE_MODEL))
@@ -83,7 +153,6 @@ class CrashReportSender : ReportSender {
                 line("Available Mem", data.getString(ReportField.AVAILABLE_MEM_SIZE))
             }
 
-            // Crash details
             section(writer, "Crash Details") {
                 line("Crash Date", data.getString(ReportField.USER_CRASH_DATE))
             }
@@ -92,51 +161,20 @@ class CrashReportSender : ReportSender {
             writer.appendLine(redactSensitive(data.getString(ReportField.STACK_TRACE) ?: "N/A"))
             writer.appendLine()
 
-            // Logcat — redacted before writing: raw logcat can carry auth tokens,
-            // cookies, and API keys, and this report is shared via chooser.
-            val logcat = data.getString(ReportField.LOGCAT)
-            if (!logcat.isNullOrBlank()) {
+            data.getString(ReportField.LOGCAT)?.takeIf { it.isNotBlank() }?.let { logcat ->
                 writer.appendLine("── Logcat ──")
                 writer.appendLine(redactSensitive(logcat))
             }
 
             writer.appendLine()
             writer.appendLine("═══════════════════════════════════════")
-            writer.appendLine("  Please describe what you were doing")
-            writer.appendLine("  when the app crashed, to help fix it.")
-            writer.appendLine("  Telegram: @$TELEGRAM_USERNAME")
+            writer.appendLine("  This report was prepared for SuvMusic support.")
+            writer.appendLine("  Telegram fallback: @$TELEGRAM_USERNAME")
             writer.appendLine("═══════════════════════════════════════")
         }
 
         return file
     }
-
-    private fun buildShareIntent(fileUri: Uri): Intent {
-        val text = buildString {
-            appendLine("SuvMusic Crash Report 🐛")
-            appendLine("Please see the attached crash log.")
-            appendLine()
-            appendLine("Telegram: @$TELEGRAM_USERNAME")
-        }
-
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_STREAM, fileUri)
-            putExtra(Intent.EXTRA_TEXT, text)
-            putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Crash Report")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-            // Try Telegram first; falls back to chooser if not installed
-            try {
-                `package` = TELEGRAM_PACKAGE
-            } catch (_: Exception) {
-                `package` = null
-            }
-        }
-    }
-
-    // ── helpers ──
 
     private inline fun section(
         writer: java.io.BufferedWriter,
@@ -148,9 +186,9 @@ class CrashReportSender : ReportSender {
         writer.appendLine()
     }
 
-    private class SectionScope(private val w: java.io.BufferedWriter) {
+    private class SectionScope(private val writer: java.io.BufferedWriter) {
         fun line(label: String, value: String?) {
-            w.appendLine("  $label: ${value ?: "N/A"}")
+            writer.appendLine("  $label: ${value ?: "N/A"}")
         }
     }
 }

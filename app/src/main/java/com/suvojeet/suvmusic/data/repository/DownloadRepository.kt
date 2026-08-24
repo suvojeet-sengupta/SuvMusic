@@ -738,6 +738,21 @@ class DownloadRepository @Inject constructor(
         return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
     }
 
+    private fun nextAvailableFile(folder: File, fileName: String): File {
+        val original = File(folder, fileName)
+        if (!original.exists()) return original
+        val dot = fileName.lastIndexOf('.')
+        val stem = if (dot > 0) fileName.substring(0, dot) else fileName
+        val extension = if (dot > 0) fileName.substring(dot) else ""
+        var index = 2
+        var candidate = File(folder, "$stem ($index)$extension")
+        while (candidate.exists()) {
+            index++
+            candidate = File(folder, "$stem ($index)$extension")
+        }
+        return candidate
+    }
+
     private fun findFileRecursive(folder: File, fileName: String): File? {
         val files = folder.listFiles() ?: return null
         for (file in files) {
@@ -1428,6 +1443,7 @@ class DownloadRepository @Inject constructor(
         }
         if (!canDownload) return@withContext true
 
+        var pendingMediaStoreUri: Uri? = null
         try {
             val videoId = when (song.source) {
                 SongSource.YOUTUBE, SongSource.YOUTUBE_MUSIC -> song.id
@@ -1448,7 +1464,12 @@ class DownloadRepository @Inject constructor(
             }
 
             val contentType = response.body.contentType()?.toString()?.lowercase().orEmpty()
-            if (contentType.contains("image/")) {
+            val isVideoResponse = contentType.startsWith("video/") ||
+                contentType.contains("video/mp4") ||
+                contentType.contains("video/webm") ||
+                contentType.contains("octet-stream")
+            if (!isVideoResponse) {
+                Log.w(TAG, "Rejecting non-video response for ${song.id}: $contentType")
                 response.close()
                 downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
                 return@withContext false
@@ -1469,20 +1490,30 @@ class DownloadRepository @Inject constructor(
                 }
                 val resolver = context.contentResolver
                 val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+                pendingMediaStoreUri = uri
                 uri?.let { videoUri ->
-                    resolver.openOutputStream(videoUri)?.use { out ->
-                        copyWithProgress(response.body.byteStream(), out, contentLength) { p ->
-                            _downloadProgress.update { it + (videoKey to p) }
+                    try {
+                        val output = resolver.openOutputStream(videoUri)
+                            ?: error("Unable to open the video destination")
+                        output.use { out ->
+                            copyWithProgress(response.body.byteStream(), out, contentLength) { p ->
+                                _downloadProgress.update { it + (videoKey to p) }
+                            }
                         }
+                        contentValues.clear()
+                        contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
+                        resolver.update(videoUri, contentValues, null, null)
+                        pendingMediaStoreUri = null
+                    } catch (error: Throwable) {
+                        resolver.delete(videoUri, null, null)
+                        pendingMediaStoreUri = null
+                        throw error
                     }
-                    contentValues.clear()
-                    contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
-                    resolver.update(videoUri, contentValues, null, null)
                 }
                 uri
             } else {
                 val videosDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "SuvMusic").apply { mkdirs() }
-                val file = File(videosDir, fileName)
+                val file = nextAvailableFile(videosDir, fileName)
                 FileOutputStream(file).use { out ->
                     copyWithProgress(response.body.byteStream(), out, contentLength) { p ->
                         _downloadProgress.update { it + (videoKey to p) }
@@ -1524,6 +1555,10 @@ class DownloadRepository @Inject constructor(
             _downloadProgress.update { it - videoKey }
             true
         } catch (e: Exception) {
+            pendingMediaStoreUri?.let { uri ->
+                runCatching { context.contentResolver.delete(uri, null, null) }
+            }
+            Log.e(TAG, "Video download failed for ${song.id}", e)
             downloadMutex.withLock { _downloadingIds.update { it - videoKey } }
             _downloadProgress.update { it - videoKey }
             false

@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.fadeOut
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.repository.youtube.account.YouTubeAccountService
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.Artist
 import com.suvojeet.suvmusic.core.model.Album
@@ -62,6 +64,7 @@ fun NavGraph(
     playbackInfo: PlayerState,
     playerState: PlayerState,
     sessionManager: SessionManager,
+    youTubeAccountService: YouTubeAccountService,
     youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository,
     onPlaySong: (List<Song>, Int) -> Unit,
     onPlayPause: () -> Unit,
@@ -383,9 +386,11 @@ fun NavGraph(
             val targetSong = songInfoSong?.takeIf { it.id == route.songId }
                 ?: playbackInfo.currentSong?.takeIf { it.id == route.songId }
             if (targetSong != null) {
+                val returnToOrigin: () -> Unit = { navController.popBackStack() }
+                BackHandler(onBack = returnToOrigin)
                 SongInfoScreen(
                     song = targetSong,
-                    onBack = { navController.popBackStack() },
+                    onBack = returnToOrigin,
                     onArtistClick = { artistId -> navController.navigate(Destination.Artist(artistId)) },
                     onAlbumClick = { albumId, songId ->
                         navController.navigate(
@@ -535,7 +540,9 @@ fun NavGraph(
         
         composable<Destination.Support> {
             SupportScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                sessionManager = sessionManager,
+                accountService = youTubeAccountService
             )
         }
 
@@ -614,8 +621,18 @@ fun NavGraph(
                     // Show success message
                     com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Login Successful")
 
-                    // Mark onboarding as completed
+                    // Persist the active YouTube identity for feedback and bug reports.
                     scope.launch {
+                        youTubeAccountService.fetchAccountInfo()?.let { account ->
+                            if (account.email.isNotBlank()) {
+                                sessionManager.saveCurrentAccountToHistory(
+                                    account.name,
+                                    account.email,
+                                    account.avatarUrl,
+                                    account.authUserIndex
+                                )
+                            }
+                        }
                         sessionManager.setOnboardingCompleted(true)
                         // Fetch and sync history from YouTube to provide better recommendations immediately
                         youTubeRepository.fetchAndSyncHistory()

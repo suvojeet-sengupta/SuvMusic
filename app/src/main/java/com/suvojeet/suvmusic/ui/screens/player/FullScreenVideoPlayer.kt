@@ -131,6 +131,12 @@ fun FullScreenVideoPlayer(
     var videoDownloaded by remember { mutableStateOf(false) }
     val downloadSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    LaunchedEffect(playerState.currentSong?.id) {
+        val currentSongId = playerState.currentSong?.id
+        videoDownloaded = currentSongId?.let(viewModel::isVideoDownloaded) == true
+        isVideoDownloading = false
+    }
+
     // Double tap seeking indicators
     var showForwardIndicator by remember { mutableStateOf(false) }
     var showRewindIndicator by remember { mutableStateOf(false) }
@@ -517,7 +523,9 @@ fun FullScreenVideoPlayer(
                                 Icon(Icons.Filled.ScreenRotation, "Rotate", tint = Color.White, modifier = Modifier.size(22.dp).padding(8.dp))
                             }
                             
-                            BounceButton(onClick = { showDownloadSheet = true }) {
+                            BounceButton(onClick = {
+                                if (!videoDownloaded && !isVideoDownloading) showDownloadSheet = true
+                            }) {
                                 when {
                                     isVideoDownloading -> LoadingIndicator(color = dominantColors.primary, modifier = Modifier.size(18.dp))
                                     videoDownloaded -> Icon(Icons.Filled.CheckCircle, "Done", tint = dominantColors.accent, modifier = Modifier.size(24.dp).padding(8.dp))

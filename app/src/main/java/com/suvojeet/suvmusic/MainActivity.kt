@@ -125,6 +125,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository
+
+    @Inject
+    lateinit var youTubeAccountService: com.suvojeet.suvmusic.data.repository.youtube.account.YouTubeAccountService
     
     @Inject
     lateinit var downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
@@ -145,6 +148,7 @@ class MainActivity : ComponentActivity() {
 
     // Track whether Picture-in-Picture is enabled in settings
     private var isPipEnabled: Boolean = false
+    private var isEnteringPip: Boolean = false
     
     // Flow to emit volume key events to the UI
     private val _volumeKeyEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -304,7 +308,9 @@ class MainActivity : ComponentActivity() {
                         volumeKeyEvents = _volumeKeyEvents,
                         downloadRepository = downloadRepository,
                         sessionManager = sessionManager, // Pass the injected instance
+                        youTubeAccountService = youTubeAccountService,
                         youTubeRepository = youTubeRepository,
+
                         updateViewModel = updateViewModel,
                         onPlaybackStateChanged = { hasSong -> 
                             isSongPlaying = hasSong
@@ -415,20 +421,26 @@ class MainActivity : ComponentActivity() {
         
         // Disable video track for bandwidth optimization when backgrounded
         // but NOT when entering PiP mode (video needs to remain active for PiP)
-        if (!isInPictureInPictureMode) {
+        if (!isInPictureInPictureMode && !isEnteringPip && !isChangingConfigurations) {
             musicPlayer.optimizeBandwidth(true)
         }
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        
+
+        if (isFinishing || isChangingConfigurations || isInPictureInPictureMode || !isSongPlaying || !isPipEnabled) return
+        val state = musicPlayer.playerState.value
+        if (state.currentSong == null) return
+
+        isEnteringPip = true
         lifecycleScope.launch {
-            if (isSongPlaying && isPipEnabled) {
-                // Enter PiP (only if enabled in Settings -> General -> Picture-in-Picture)
-                val isVideoMode = musicPlayer.playerState.value.isVideoMode
-                pipHelper.enterPipIfEligible(this@MainActivity, forceVideoPip = isVideoMode, isPipEnabled = isPipEnabled)
-            }
+            val isVideoMode = musicPlayer.playerState.value.isVideoMode
+            pipHelper.enterPipIfEligible(
+                this@MainActivity,
+                forceVideoPip = isVideoMode,
+                isPipEnabled = isPipEnabled
+            )
         }
     }
 
@@ -437,14 +449,20 @@ class MainActivity : ComponentActivity() {
         newConfig: android.content.res.Configuration
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isEnteringPip = false
         mainViewModel.setPictureInPictureMode(isInPictureInPictureMode)
     }
     
     override fun onResume() {
         super.onResume()
         
-        // Re-enable video track when returning to foreground
-        musicPlayer.optimizeBandwidth(false)
+        // Re-enable the video track only after a real foreground return. During
+        // PiP entry, onResume may run before the mode-change callback and must not
+        // fight the transition by toggling bandwidth back and forth.
+        isEnteringPip = false
+        if (!isInPictureInPictureMode) {
+            musicPlayer.optimizeBandwidth(false)
+        }
         
         // Update PiP params (e.g., sync play/pause icon after returning from PiP)
         pipHelper.updatePipParams(this, isPipEnabled)
@@ -459,6 +477,7 @@ fun SuvMusicApp(
     volumeKeyEvents: SharedFlow<Unit>? = null,
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     sessionManager: SessionManager, // Injected instance passed from MainActivity
+    youTubeAccountService: com.suvojeet.suvmusic.data.repository.youtube.account.YouTubeAccountService,
     youTubeRepository: com.suvojeet.suvmusic.data.repository.YouTubeRepository,
     updateViewModel: com.suvojeet.suvmusic.updater.UpdateViewModel,
     onPlaybackStateChanged: (Boolean) -> Unit,
@@ -943,6 +962,7 @@ fun SuvMusicApp(
                             // the whole app shell on every position update.
                             playerState = playbackInfo,
                             sessionManager = sessionManager,
+                            youTubeAccountService = youTubeAccountService,
                             youTubeRepository = youTubeRepository,
                             onPlaySong = { songs, index ->
                                 if (songs.isNotEmpty() && index in songs.indices) {

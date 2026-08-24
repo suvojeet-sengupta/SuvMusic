@@ -36,6 +36,7 @@ import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -770,12 +772,16 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun toggleVideoMode() {
+        if (_isSwitchingMode.value || playerState.value.currentSong == null) return
         _isSwitchingMode.value = true
         musicPlayer.toggleVideoMode()
         viewModelScope.launch {
-            // Keep the loading state visible during the transition period
-            // to allow the player to re-buffer if necessary.
-            delay(1200) 
+            // Wait for the resolver/player replacement rather than hiding the loading
+            // state after a fixed delay. This prevents rapid taps from cancelling a
+            // still-running switch and avoids exposing stale audio/video controls.
+            withTimeoutOrNull(15_000L) {
+                playerState.first { !it.isLoading }
+            }
             _isSwitchingMode.value = false
         }
     }
@@ -793,6 +799,8 @@ class PlayerViewModel @Inject constructor(
      * Download the given song as a video (.mp4) at the specified max resolution.
      * Called from [FullScreenVideoPlayer] when the user taps the download button.
      */
+    fun isVideoDownloaded(songId: String): Boolean = downloadRepository.isVideoDownloaded(songId)
+
     suspend fun downloadCurrentVideo(song: Song, maxResolution: Int = 720): Boolean {
         return downloadRepository.downloadVideo(song, maxResolution)
     }

@@ -97,6 +97,8 @@ fun SupportScreen(
     ) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
+    prefilledName: String? = null,
+    prefilledEmail: String? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val primaryColor = colorScheme.primary
@@ -104,6 +106,7 @@ fun SupportScreen(
 
     var showTelegramOptions by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var feedbackCategory by remember { mutableStateOf("general") }
 
     if (showTelegramOptions) {
         AlertDialog(
@@ -286,9 +289,12 @@ fun SupportScreen(
                 SupportListItem(
                     icon = Icons.Default.Feedback,
                     title = "Send Feedback",
-                    subtitle = "Share your thoughts directly with us",
+                    subtitle = "Send directly to the SuvMusic support team",
                     accentColor = primaryColor,
-                    onClick = { showFeedbackDialog = true },
+                    onClick = {
+                        feedbackCategory = "general"
+                        showFeedbackDialog = true
+                    },
                 )
                 ThinDivider()
                 SupportListItem(
@@ -302,20 +308,22 @@ fun SupportScreen(
                 SupportListItem(
                     icon = Icons.Default.BugReport,
                     title = "Report a Bug",
-                    subtitle = "Open an issue on GitHub",
+                    subtitle = "Send a bug report with device context",
                     accentColor = primaryColor,
                     onClick = {
-                        onOpenUri("https://github.com/suvojeet-sengupta/SuvMusic/issues/new?template=bug_report.md")
+                        feedbackCategory = "bug"
+                        showFeedbackDialog = true
                     },
                 )
                 ThinDivider()
                 SupportListItem(
                     icon = Icons.Default.Lightbulb,
                     title = "Request a Feature",
-                    subtitle = "Suggest an improvement",
+                    subtitle = "Send a feature request directly to the team",
                     accentColor = primaryColor,
                     onClick = {
-                        onOpenUri("https://github.com/suvojeet-sengupta/SuvMusic/issues/new?template=feature_request.md")
+                        feedbackCategory = "feature"
+                        showFeedbackDialog = true
                     },
                 )
                 ThinDivider()
@@ -381,6 +389,9 @@ fun SupportScreen(
 
     if (showFeedbackDialog) {
         FeedbackDialog(
+            initialCategory = feedbackCategory,
+            initialUserName = prefilledName,
+            initialUserEmail = prefilledEmail,
             onDismiss = { showFeedbackDialog = false },
             onSubmit = onSubmitFeedback,
             onOpenUri = onOpenUri
@@ -424,6 +435,9 @@ private fun SupportListItem(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FeedbackDialog(
+    initialCategory: String,
+    initialUserName: String?,
+    initialUserEmail: String?,
     onDismiss: () -> Unit,
     onSubmit: (
         rating: Int,
@@ -437,10 +451,10 @@ private fun FeedbackDialog(
     onOpenUri: (String) -> Unit
 ) {
     var rating by remember { mutableStateOf(5) }
-    var category by remember { mutableStateOf("general") }
+    var category by remember(initialCategory) { mutableStateOf(initialCategory) }
     var message by remember { mutableStateOf("") }
-    var userName by remember { mutableStateOf("") }
-    var userEmail by remember { mutableStateOf("") }
+    var userName by remember(initialUserName) { mutableStateOf(initialUserName.orEmpty()) }
+    var userEmail by remember(initialUserEmail) { mutableStateOf(initialUserEmail.orEmpty()) }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
