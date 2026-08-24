@@ -532,14 +532,18 @@ private fun SuccessView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "All Done!",
+            text = if (state.failedSongs.isEmpty()) "Import complete" else "Import completed with skipped songs",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface
         )
         
         Text(
-            text = "Successfully imported ${state.successCount} of ${state.totalCount} songs.",
+            text = if (state.failedSongs.isEmpty()) {
+                "Successfully imported ${state.successCount} of ${state.totalCount} songs."
+            } else {
+                "Imported ${state.successCount} of ${state.totalCount} songs. ${state.failedSongs.size} songs were skipped."
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -556,7 +560,7 @@ private fun SuccessView(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Failed to match ${state.failedSongs.size} songs:",
+                        text = "Skipped ${state.failedSongs.size} songs that could not be added:",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         fontWeight = FontWeight.Bold

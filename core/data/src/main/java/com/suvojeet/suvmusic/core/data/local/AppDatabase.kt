@@ -30,7 +30,7 @@ import com.suvojeet.suvmusic.core.data.local.entity.SongGenre
         SongGenre::class,
         LyricsEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -60,6 +60,64 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        /**
+         * v12 → v13: allow repeated tracks in a playlist.
+         *
+         * The previous composite key (playlistId, songId) made Room's REPLACE
+         * strategy overwrite earlier occurrences when an import resolved two
+         * entries to the same video. Playlist position is the stable entry key;
+         * songId remains indexed for lookups and removal.
+         */
+        val MIGRATION_12_13: Migration = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE `playlist_songs_new` (
+                        `playlistId` TEXT NOT NULL,
+                        `songId` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `artist` TEXT NOT NULL,
+                        `album` TEXT,
+                        `thumbnailUrl` TEXT,
+                        `duration` INTEGER NOT NULL,
+                        `source` TEXT NOT NULL,
+                        `localUri` TEXT,
+                        `releaseDate` TEXT,
+                        `addedAt` INTEGER NOT NULL,
+                        `order` INTEGER NOT NULL,
+                        PRIMARY KEY(`playlistId`, `order`)
+                    )
+                    """.trimIndent()
+                )
+
+                // Re-number entries per playlist so even databases containing
+                // gaps or legacy order collisions migrate deterministically.
+                db.execSQL(
+                    """
+                    INSERT INTO `playlist_songs_new`
+                    (`playlistId`, `songId`, `title`, `artist`, `album`, `thumbnailUrl`,
+                     `duration`, `source`, `localUri`, `releaseDate`, `addedAt`, `order`)
+                    SELECT p.`playlistId`, p.`songId`, p.`title`, p.`artist`, p.`album`,
+                           p.`thumbnailUrl`, p.`duration`, p.`source`, p.`localUri`,
+                           p.`releaseDate`, p.`addedAt`,
+                           (
+                               SELECT COUNT(*) - 1
+                               FROM `playlist_songs` q
+                               WHERE q.`playlistId` = p.`playlistId`
+                                 AND (q.`order` < p.`order`
+                                      OR (q.`order` = p.`order` AND q.rowid <= p.rowid))
+                           )
+                    FROM `playlist_songs` p
+                    ORDER BY p.`playlistId`, p.`order`, p.rowid
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE `playlist_songs`")
+                db.execSQL("ALTER TABLE `playlist_songs_new` RENAME TO `playlist_songs`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_songs_playlistId` ON `playlist_songs` (`playlistId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_songs_playlistId_songId` ON `playlist_songs` (`playlistId`, `songId`)")
             }
         }
     }

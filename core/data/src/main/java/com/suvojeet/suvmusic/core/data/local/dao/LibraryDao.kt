@@ -66,6 +66,9 @@ interface LibraryDao {
     @Query("SELECT * FROM playlist_songs WHERE playlistId = :playlistId ORDER BY `order` ASC")
     fun getPlaylistSongsFlow(playlistId: String): Flow<List<PlaylistSongEntity>>
 
+    @Query("SELECT COALESCE(MAX(`order`), -1) FROM playlist_songs WHERE playlistId = :playlistId")
+    suspend fun getMaxPlaylistSongOrder(playlistId: String): Int
+
     @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId")
     suspend fun deleteSongFromPlaylist(playlistId: String, songId: String)
 

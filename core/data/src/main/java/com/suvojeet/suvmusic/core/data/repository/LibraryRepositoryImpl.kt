@@ -62,6 +62,10 @@ class LibraryRepositoryImpl @Inject constructor(
 
     override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) = withContext(Dispatchers.IO) {
         val currentTime = System.currentTimeMillis()
+        // Removing an item leaves a gap in the order column. Use the greater of the
+        // requested position and the current maximum so an append cannot replace a
+        // different entry when playlist positions are the primary key.
+        val firstOrder = maxOf(startOrder, libraryDao.getMaxPlaylistSongOrder(playlistId) + 1)
         val entities = songs.mapIndexed { index, song ->
             PlaylistSongEntity(
                 playlistId = playlistId,
@@ -75,7 +79,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 localUri = song.localUri,
                 releaseDate = song.releaseDate,
                 addedAt = if (song.addedAt > 0) song.addedAt else currentTime + index,
-                order = startOrder + index
+                order = firstOrder + index
             )
         }
         libraryDao.insertPlaylistSongs(entities)
@@ -164,8 +168,9 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addSongToPlaylist(playlistId: String, song: Song) {
-        val currentSongs = getCachedPlaylistSongs(playlistId)
-        appendPlaylistSongs(playlistId, listOf(song), currentSongs.size)
+        // appendPlaylistSongs computes the next safe order from the database, so
+        // adding one item does not need to materialize the whole playlist first.
+        appendPlaylistSongs(playlistId, listOf(song), 0)
     }
 
     override suspend fun saveAlbum(album: Album) {

@@ -27,7 +27,10 @@ object DatabaseModule {
             AppDatabase::class.java,
             "suvmusic_database"
         )
-        .addMigrations(AppDatabase.MIGRATION_11_12)
+        .addMigrations(
+            AppDatabase.MIGRATION_11_12,
+            AppDatabase.MIGRATION_12_13
+        )
         // No fallbackToDestructiveMigration(): a schema mismatch must fail loudly
         // (IllegalStateException at open) rather than silently wiping the user's
         // entire library/history/playlists DB. Every schema bump REQUIRES an
