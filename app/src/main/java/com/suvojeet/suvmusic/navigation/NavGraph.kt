@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -27,11 +28,14 @@ import com.suvojeet.suvmusic.ui.screens.ArtworkSizeScreen
 import com.suvojeet.suvmusic.ui.screens.CustomizationScreen
 import com.suvojeet.suvmusic.ui.screens.HomeScreen
 import com.suvojeet.suvmusic.ui.screens.LibraryScreen
+import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
+import com.suvojeet.suvmusic.ui.components.SongInfoScreen
 import com.suvojeet.suvmusic.ui.screens.player.PlayerScreen
 import com.suvojeet.suvmusic.ui.screens.PlaybackSettingsScreen
 import com.suvojeet.suvmusic.ui.screens.PlaylistScreen
 import com.suvojeet.suvmusic.ui.screens.RecentsScreen
 import com.suvojeet.suvmusic.ui.screens.SearchScreen
+import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewModel
 import com.suvojeet.suvmusic.ui.screens.SeekbarStyleScreen
 import com.suvojeet.suvmusic.ui.screens.SettingsScreen
 import com.suvojeet.suvmusic.ui.screens.StorageScreen
@@ -96,7 +100,8 @@ fun NavGraph(
     downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository? = null,
     startDestination: Any = Destination.Home,
     dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
-    snackbarHostState: androidx.compose.material3.SnackbarHostState? = null
+    snackbarHostState: androidx.compose.material3.SnackbarHostState? = null,
+    songInfoSong: Song? = null
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val formFactor = LocalDeviceFormFactor.current
@@ -350,8 +355,53 @@ fun NavGraph(
                 },
                 onDownloadsClick = {
                     navController.navigate(Destination.Downloads)
+                },
+                onImportPlaylist = {
+                    navController.navigate(Destination.ImportPlaylist)
                 }
             )
+        }
+
+        composable<Destination.ImportPlaylist> {
+            val libraryViewModel: LibraryViewModel = koinViewModel()
+            val libraryState = libraryViewModel.uiState.collectAsState().value
+            ImportPlaylistScreen(
+                isVisible = true,
+                importState = libraryState.importState,
+                onDismiss = { navController.popBackStack() },
+                onImport = libraryViewModel::importPlaylist,
+                onImportM3U = libraryViewModel::importM3U,
+                onImportCSV = libraryViewModel::importCSV,
+                onImportSUV = libraryViewModel::importSUV,
+                onCancel = libraryViewModel::cancelImport,
+                onReset = libraryViewModel::resetImportState
+            )
+        }
+
+        composable<Destination.SongInfo> { backStackEntry ->
+            val route = backStackEntry.toRoute<Destination.SongInfo>()
+            val targetSong = songInfoSong?.takeIf { it.id == route.songId }
+                ?: playbackInfo.currentSong?.takeIf { it.id == route.songId }
+            if (targetSong != null) {
+                SongInfoScreen(
+                    song = targetSong,
+                    onBack = { navController.popBackStack() },
+                    onArtistClick = { artistId -> navController.navigate(Destination.Artist(artistId)) },
+                    onAlbumClick = { albumId, songId ->
+                        navController.navigate(
+                            Destination.Album(
+                                albumId = albumId,
+                                name = targetSong.album,
+                                thumbnailUrl = targetSong.thumbnailUrl,
+                                selectedSongId = songId
+                            )
+                        )
+                    },
+                    audioCodec = if (targetSong.id == playbackInfo.currentSong?.id) playerState.audioCodec else null,
+                    audioBitrate = if (targetSong.id == playbackInfo.currentSong?.id) playerState.audioBitrate else null,
+                    dominantColors = dominantColors
+                )
+            }
         }
 
         composable<Destination.Downloads> {

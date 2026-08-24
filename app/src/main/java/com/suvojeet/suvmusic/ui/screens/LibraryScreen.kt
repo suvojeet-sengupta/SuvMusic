@@ -103,7 +103,6 @@ import com.suvojeet.suvmusic.ui.components.DeletePlaylistDialog
 import com.suvojeet.suvmusic.ui.components.ExportPlaylistDialog
 import com.suvojeet.suvmusic.ui.components.MusicCard
 import com.suvojeet.suvmusic.ui.components.stylishScrollbar
-import com.suvojeet.suvmusic.ui.screens.ImportPlaylistScreen
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryFilter
 import com.suvojeet.suvmusic.ui.viewmodel.LibrarySortOption
 import com.suvojeet.suvmusic.ui.viewmodel.LibraryViewMode
@@ -118,6 +117,7 @@ fun LibraryScreen(
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (Album) -> Unit = {},
     onDownloadsClick: () -> Unit = {},
+    onImportPlaylist: () -> Unit = {},
     viewModel: LibraryViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -133,7 +133,6 @@ fun LibraryScreen(
     // Dialog States
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var isCreatingPlaylist by remember { mutableStateOf(false) }
-    var showImportSpotifyDialog by remember { mutableStateOf(false) } // Keep logic but might hide UI entry for now
     
     // Playlist Menu State
     var showPlaylistMenu by remember { mutableStateOf(false) }
@@ -336,37 +335,7 @@ fun LibraryScreen(
         isLoggedIn = uiState.isLoggedIn
     )
     
-     // Import Spotify Dialog
-    if (showImportSpotifyDialog) {
-        ImportPlaylistScreen(
-            isVisible = showImportSpotifyDialog,
-            importState = uiState.importState,
-            onDismiss = { 
-                showImportSpotifyDialog = false
-                viewModel.resetImportState()
-            },
-            onImport = { url ->
-                viewModel.importPlaylist(url)
-            },
-            onImportM3U = { uri ->
-                viewModel.importM3U(uri)
-            },
-            onImportCSV = { uri ->
-                viewModel.importCSV(uri)
-            },
-            onImportSUV = { uri ->
-                viewModel.importSUV(uri)
-            },
-            onCancel = {
-                viewModel.cancelImport()
-            },
-            onReset = {
-                viewModel.resetImportState()
-            }
-        )
-    }
-
-    // Playlist Menu Bottom Sheet
+     // Playlist Menu Bottom Sheet
     if (showPlaylistMenu && selectedPlaylist != null) {
         val playlist = selectedPlaylist!!
         MediaMenuBottomSheet(
@@ -483,7 +452,7 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .clickable {
                             showAddMenu = false
-                            showImportSpotifyDialog = true
+                            onImportPlaylist()
                         }
                         .padding(horizontal = 24.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -500,7 +469,7 @@ fun LibraryScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("Import Playlist", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("Spotify, YouTube or .m3u", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Links, M3U, CSV or SuvMusic files", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

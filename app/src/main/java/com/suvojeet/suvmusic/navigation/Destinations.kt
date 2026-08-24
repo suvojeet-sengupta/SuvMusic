@@ -14,6 +14,8 @@ sealed class Destination {
     @Serializable
     data object Library : Destination()
     @Serializable
+    data object ImportPlaylist : Destination()
+    @Serializable
     data object Settings : Destination()
     @Serializable
     data object PlaybackSettings : Destination()
@@ -67,6 +69,13 @@ sealed class Destination {
     data object ListenTogether : Destination()
     @Serializable
     data object Changelog : Destination()
+
+    @Serializable
+    data class SongInfo(val songId: String) : Destination() {
+        companion object {
+            const val ARG_SONG_ID = "songId"
+        }
+    }
 
     @Serializable
     data class Playlist(

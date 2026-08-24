@@ -13,7 +13,6 @@ sealed interface PlayerOverlay {
     data object Lyrics : PlayerOverlay
     data object Related : PlayerOverlay
     data class Actions(val targetSong: Song? = null, val fromQueue: Boolean = false, val fromRelated: Boolean = false) : PlayerOverlay
-    data object SongInfo : PlayerOverlay
     data object SleepTimer : PlayerOverlay
     data object OutputDevice : PlayerOverlay
     data object PlaybackSpeed : PlayerOverlay

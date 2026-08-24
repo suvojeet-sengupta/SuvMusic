@@ -72,6 +72,7 @@ import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
 import com.suvojeet.suvmusic.core.model.ArtistCreditInfo
+import com.suvojeet.suvmusic.core.model.Song
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -691,6 +692,7 @@ fun SuvMusicApp(
     val destination = navBackStackEntry?.destination
     
     var currentDestination by remember { mutableStateOf<Destination>(Destination.Home) }
+    var pendingSongInfo by remember { mutableStateOf<Song?>(null) }
     
     // Restore Playback only if no deep link handled
     var restoreAttempted by remember { mutableStateOf(false) }
@@ -732,7 +734,11 @@ fun SuvMusicApp(
     // With bottom sheet, "Player screen" is just the expanded state.
     // We hide the sheet if the current route is one where we don't want player (e.g. login?)
     // or if dismissed.
-    val showMiniPlayer = !isMiniPlayerDismissed && destination?.hasRoute<Destination.YouTubeLogin>() != true && hasSong
+    val showMiniPlayer = !isMiniPlayerDismissed &&
+        destination?.hasRoute<Destination.YouTubeLogin>() != true &&
+        destination?.hasRoute<Destination.ImportPlaylist>() != true &&
+        destination?.hasRoute<Destination.SongInfo>() != true &&
+        hasSong
     
     // Don't show global volume indicator on PlayerScreen (it has its own)
     val showGlobalVolumeIndicator = hasSong && !isPlayerExpanded
@@ -985,7 +991,8 @@ fun SuvMusicApp(
                             startDestination = Destination.Home, // Always start at Home
                             // Removed sharedTransitionScope
                             dominantColors = currentDominantColors,
-                            snackbarHostState = snackbarHostState
+                            snackbarHostState = snackbarHostState,
+                            songInfoSong = pendingSongInfo
                         )
                     }
 
@@ -1158,6 +1165,11 @@ fun SuvMusicApp(
                     },
                     onAddRelatedToPlaylist = { songs ->
                         playlistManagementViewModel.showAddToPlaylistSheet(songs)
+                    },
+                    onOpenSongInfo = { selectedSong ->
+                        pendingSongInfo = selectedSong
+                        playerViewModel.collapsePlayer()
+                        navController.navigate(Destination.SongInfo(selectedSong.id))
                     },
                     onShowAIEqualizer = {
                         playerViewModel.collapsePlayer()

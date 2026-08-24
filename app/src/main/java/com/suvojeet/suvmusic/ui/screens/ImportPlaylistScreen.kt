@@ -31,8 +31,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.viewmodel.ImportState
@@ -55,73 +53,82 @@ fun ImportPlaylistScreen(
     val context = LocalContext.current
     val canDismiss = importState !is ImportState.Loading && importState !is ImportState.Processing
 
-    Dialog(
-        onDismissRequest = { if (canDismiss) onDismiss() },
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            topBar = {
-                if (canDismiss) {
-                    TopAppBar(
-                        title = {
-                             Text("Import Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = {
-                                onReset()
-                                onDismiss()
-                            }) {
-                                Icon(Icons.Default.Close, contentDescription = "Close")
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "Import Playlist",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    )
-                }
-            }
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                AnimatedContent(
-                    targetState = importState,
-                    transitionSpec = {
-                        fadeIn(tween(300)) + scaleIn(initialScale = 0.95f) togetherWith
-                                fadeOut(tween(300)) + scaleOut(targetScale = 1.05f)
-                    },
-                    label = "ImportState"
-                ) { state ->
-                    when (state) {
-                        is ImportState.Idle -> InputView(onImport, onImportM3U, onImportCSV, onImportSUV)
-                        is ImportState.Loading -> LoadingView(onCancel)
-                        is ImportState.Processing -> ProcessingView(state, onCancel)
-                        is ImportState.Success -> SuccessView(
-                            state = state,
-                            onDone = {
-                                onReset()
-                                onDismiss()
-                            },
-                            onShare = {
-                                val sendIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, "I just imported ${state.successCount} songs to SuvMusic! 🎵")
-                                    type = "text/plain"
-                                }
-                                val shareIntent = Intent.createChooser(sendIntent, "Share Import Stats")
-                                context.startActivity(shareIntent)
-                            }
-                        )
-                        is ImportState.Error -> ErrorView(state.message, onReset)
+                        if (importState is ImportState.Idle) {
+                            Text(
+                                "Bring your collection into SuvMusic",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            if (canDismiss) {
+                                onReset()
+                                onDismiss()
+                            } else {
+                                onCancel()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (canDismiss) Icons.Default.Close else Icons.Default.ArrowBack,
+                            contentDescription = if (canDismiss) "Close import" else "Cancel import"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedContent(
+                targetState = importState,
+                transitionSpec = {
+                    fadeIn(tween(300)) + scaleIn(initialScale = 0.97f) togetherWith
+                            fadeOut(tween(300)) + scaleOut(targetScale = 1.03f)
+                },
+                label = "ImportState"
+            ) { state ->
+                when (state) {
+                    is ImportState.Idle -> InputView(onImport, onImportM3U, onImportCSV, onImportSUV)
+                    is ImportState.Loading -> LoadingView(onCancel)
+                    is ImportState.Processing -> ProcessingView(state, onCancel)
+                    is ImportState.Success -> SuccessView(
+                        state = state,
+                        onDone = {
+                            onReset()
+                            onDismiss()
+                        },
+                        onShare = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "I just imported ${state.successCount} songs to SuvMusic.")
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share Import Stats"))
+                        }
+                    )
+                    is ImportState.Error -> ErrorView(state.message, onReset)
                 }
             }
         }
@@ -242,7 +249,7 @@ private fun InputView(
         )
 
         Text(
-            text = "SuvMusic supports Spotify and YouTube Music links, plus .m3u, .csv, and .suv playlist files.",
+            text = "Import a playlist link or choose a file exported from another music app.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -252,7 +259,7 @@ private fun InputView(
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text("Playlist Link") },
+            label = { Text("Playlist link") },
             placeholder = { Text("Spotify or YouTube Music URL") },
             singleLine = true,
             shape = SquircleShape,
@@ -261,7 +268,7 @@ private fun InputView(
             trailingIcon = {
                 if (url.isNotEmpty()) {
                     IconButton(onClick = { url = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                        Icon(Icons.Default.Close, contentDescription = "Clear link")
                     }
                 } else {
                     IconButton(onClick = {
@@ -270,7 +277,7 @@ private fun InputView(
                             if (clipText != null) url = clipText
                         }
                     }) {
-                        Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
+                        Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste link")
                     }
                 }
             },
@@ -283,7 +290,7 @@ private fun InputView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { onImport(url) },
+            onClick = { onImport(url.trim()) },
             enabled = isValidUrl(url),
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,45 +301,83 @@ private fun InputView(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Continue with Link", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
+            Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text("Continue with link", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
         }
         
+        Spacer(modifier = Modifier.height(28.dp))
+        Text(
+            text = "OR IMPORT A PLAYLIST FILE",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(12.dp))
-        
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { m3uPicker.launch("*/*") },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = SquircleShape
-            ) {
-                Text("Import .m3u", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            OutlinedButton(
-                onClick = { csvPicker.launch("*/*") },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = SquircleShape
-            ) {
-                Text("Import .csv", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            }
+        ImportFileButton(
+            icon = Icons.Default.QueueMusic,
+            title = "Import M3U playlist",
+            subtitle = ".m3u or .m3u8 playlist exported from another app",
+            onClick = { m3uPicker.launch("*/*") }
+        )
+        ImportFileButton(
+            icon = Icons.Default.TableChart,
+            title = "Import CSV playlist",
+            subtitle = "Song and artist rows from a spreadsheet export",
+            onClick = { csvPicker.launch("*/*") }
+        )
+        ImportFileButton(
+            icon = Icons.Default.FolderOpen,
+            title = "Import SuvMusic playlist",
+            subtitle = "Restore a previously exported .suv file",
+            onClick = { suvPicker.launch("*/*") }
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            OutlinedButton(
-                onClick = { suvPicker.launch("*/*") },
+@Composable
+private fun ImportFileButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        shape = SquircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = SquircleShape
+                    .size(44.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Import .suv", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = "Choose file", tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

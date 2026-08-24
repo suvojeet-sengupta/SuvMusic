@@ -87,7 +87,6 @@ import com.suvojeet.suvmusic.ui.screens.player.styles.LiquidGlassPlayerStyle
 
 import com.suvojeet.suvmusic.ui.screens.player.components.RelatedSheet
 import com.suvojeet.suvmusic.ui.components.SongActionsSheet
-import com.suvojeet.suvmusic.ui.components.SongInfoSheet
 import com.suvojeet.suvmusic.ui.components.SleepTimerSheet
 import com.suvojeet.suvmusic.ui.components.PlaybackSpeedSheet
 import com.suvojeet.suvmusic.ui.components.OutputDeviceSheet
@@ -152,6 +151,7 @@ data class PlayerScreenActions(
     val onAddRelatedToQueue: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
     val onAddRelatedToPlaylist: (List<com.suvojeet.suvmusic.core.model.Song>) -> Unit,
     val onPlayRelated: (com.suvojeet.suvmusic.core.model.Song) -> Unit,
+    val onOpenSongInfo: (com.suvojeet.suvmusic.core.model.Song) -> Unit = {},
     val onClearQueue: () -> Unit = {},
     val onSwitchAudioSource: () -> Unit = {}
 )
@@ -341,7 +341,6 @@ fun PlayerScreen(
     val showLyrics = activeOverlay is PlayerOverlay.Lyrics
     val showActionsSheet = activeOverlay is PlayerOverlay.Actions
     val selectedSongForMenu = (activeOverlay as? PlayerOverlay.Actions)?.targetSong
-    val showInfoSheet = activeOverlay is PlayerOverlay.SongInfo
     val showSleepTimerSheet = activeOverlay is PlayerOverlay.SleepTimer
     val showOutputDeviceSheet = activeOverlay is PlayerOverlay.OutputDevice
     val showPlaybackSpeedSheet = activeOverlay is PlayerOverlay.PlaybackSpeed
@@ -905,7 +904,7 @@ fun BoxScope.OverlaysContent(
             isFavorite = if (menuSong.id == song?.id) playerState.isLiked else false, isDisliked = if (menuSong.id == song?.id) playerState.isDisliked else false,
             onDownload = { if (menuSong.id == song?.id) actions.onDownload() else com.suvojeet.suvmusic.service.DownloadService.startDownload(context, menuSong) },
             onDeleteDownload = { playerViewModel.deleteDownload(menuSong.id) }, onPlayNext = { playerViewModel.playNext(menuSong) }, onAddToQueue = { playerViewModel.addToQueue(menuSong) },
-            onViewInfo = { onOverlayChange(PlayerOverlay.SongInfo) }, onAddToPlaylist = { onOverlayChange(PlayerOverlay.None); playlistViewModel.showAddToPlaylistSheet(menuSong) },
+            onViewInfo = { onOverlayChange(PlayerOverlay.None); actions.onOpenSongInfo(menuSong) }, onAddToPlaylist = { onOverlayChange(PlayerOverlay.None); playlistViewModel.showAddToPlaylistSheet(menuSong) },
             onSleepTimer = { onOverlayChange(PlayerOverlay.SleepTimer) }, onStartRadio = { actions.onStartRadio() },
             onListenTogether = { onOverlayChange(PlayerOverlay.None); actions.onListenTogetherClick() }, 
             onPlaybackSpeed = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.PlaybackSpeed) }, onEqualizerClick = { onOverlayChange(PlayerOverlay.None); onOverlayChange(PlayerOverlay.Equalizer) },
@@ -915,17 +914,6 @@ fun BoxScope.OverlaysContent(
         )
     }
 
-    if (song != null) {
-        SongInfoSheet(
-            song = song, isVisible = activeOverlay is PlayerOverlay.SongInfo, onDismiss = { if (currentOverlay is PlayerOverlay.SongInfo) onOverlayChange(PlayerOverlay.None) }, 
-            onArtistClick = actions.onArtistClick,
-            onAlbumClick = actions.onAlbumClickWithSong,
-            audioCodec = playerState.audioCodec,
-            audioBitrate = playerState.audioBitrate,
-            dominantColors = dominantColors,
-            isDarkTheme = isAppInDarkTheme
-        )
-    }
 
     if (playlistUiState.showAddToPlaylistSheet && playlistUiState.selectedSongs.isNotEmpty()) {
         AddToPlaylistSheet(songs = playlistUiState.selectedSongs, isVisible = true, playlists = playlistUiState.userPlaylists, isLoading = playlistUiState.isLoadingPlaylists, onDismiss = { playlistViewModel.hideAddToPlaylistSheet() }, onAddToPlaylist = { playlistViewModel.addSongsToPlaylist(it) }, onCreateNewPlaylist = { playlistViewModel.showCreatePlaylistDialog() })

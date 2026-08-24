@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.6.5.0",
+      "versionCode": 44,
+      "date": "August 24, 2026",
+      "description": "• Full-Screen Playlist Import: Rebuilt playlist importing as a dedicated screen with clear link, M3U/M3U8, CSV, and SuvMusic file actions.\n• Dedicated Song Info: Replaced the player’s modal Song Info sheet with a full-screen detail experience, preserving technical stats, artist credits, release metadata, and album navigation.\n• Navigation Polish: Added typed routes for import and song details, with the mini player hidden while these focused workflows are open.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.6.4.0",
       "versionCode": 43,
       "date": "August 19, 2026",

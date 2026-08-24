@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -41,10 +42,9 @@ import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SongInfoSheet(
+fun SongInfoScreen(
     song: Song,
-    isVisible: Boolean,
-    onDismiss: () -> Unit,
+    onBack: () -> Unit,
     onArtistClick: (String) -> Unit = {},
     onAlbumClick: (String, String?) -> Unit = { _, _ -> },
     audioCodec: String? = null,
@@ -53,7 +53,6 @@ fun SongInfoSheet(
     isDarkTheme: Boolean = isSystemInDarkTheme(),
     viewModel: SongInfoViewModel = koinViewModel()
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val artistCredits by viewModel.artistCredits.collectAsState()
     val releaseDate by viewModel.releaseDate.collectAsState()
     val remoteAudioMetadata by viewModel.remoteAudioMetadata.collectAsState()
@@ -68,8 +67,7 @@ fun SongInfoSheet(
     val finalDominantColors = dominantColors ?: rememberDominantColors(highResThumbnail, isDarkTheme)
     val albumId = song.collectionId?.takeIf { it.isNotBlank() && !it.startsWith("folder_") }
     
-    LaunchedEffect(isVisible, song.artist, song.id) {
-        if (isVisible) {
+    LaunchedEffect(song.artist, song.id) {
             val matchedId = viewModel.getMatchedRemoteId(song.id)
             val effectiveSource = if (matchedId != null) SongSource.REMOTE else song.source
             
@@ -78,41 +76,43 @@ fun SongInfoSheet(
                 viewModel.fetchArtistCredits(song.artist, effectiveSource)
             }
             viewModel.fetchSongDetails(song.id, song.source, song.originalSource)
-        }
     }
-    
-    if (isVisible) {
-        // Frosts against the now-playing artwork when opened from the player.
-        com.suvojeet.suvmusic.ui.components.glass.ArtGlassSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
-            fallbackContainerColor = if (isDarkTheme) Color.Black.copy(alpha = 0.95f) else MaterialTheme.colorScheme.surface,
-            contentColor = finalDominantColors.onBackground,
-            showDragHandle = true,
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-        ) {
-            // The sheet's own tint gradient ends opaque, which would paint over the
-            // frosted backdrop — so it only runs when there is no glass artwork behind.
-            val hasGlassBackdrop =
-                !com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork.current?.artworkUrl.isNullOrBlank()
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (hasGlassBackdrop) Modifier else Modifier.background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    finalDominantColors.primary.copy(alpha = if (isDarkTheme) 0.15f else 0.1f),
-                                    if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.surface
-                                )
-                            )
+
+    // Dedicated detail screen: no modal sheet or glass overlay.
+    val hasGlassBackdrop =
+        !com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork.current?.artworkUrl.isNullOrBlank()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                if (hasGlassBackdrop) Color.Transparent else MaterialTheme.colorScheme.background
+            )
+            .then(
+                if (hasGlassBackdrop) Modifier else Modifier.background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            finalDominantColors.primary.copy(alpha = if (isDarkTheme) 0.12f else 0.06f),
+                            if (isDarkTheme) Color.Black else MaterialTheme.colorScheme.background
                         )
                     )
-            ) {
-                Column(
+                )
+            )
+    ) {
+        TopAppBar(
+            title = { Text("Song info", fontWeight = FontWeight.ExtraBold) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+        Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // Keep content clear of the status bar when the sheet grows tall —
+                        .padding(top = 64.dp)
+                        // Keep content clear of the status bar when the screen grows tall —
                         // contentWindowInsets is zeroed above, so without this the header
                         // ran under / disturbed the status bar.
                         .statusBarsPadding()
@@ -310,8 +310,6 @@ fun SongInfoSheet(
                     )
                 }
             }
-        }
-    }
 }
 
 @Composable
