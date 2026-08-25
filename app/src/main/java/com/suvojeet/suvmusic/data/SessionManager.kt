@@ -247,6 +247,7 @@ class SessionManager @Inject constructor(
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
+        private val PLAYER_BACKGROUND_IMAGE_URI_KEY = stringPreferencesKey("player_background_image_uri")
         private val PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("player_glass_blur")
         private val PLAYER_GLASS_INTENSITY_KEY = floatPreferencesKey("player_glass_intensity")
         private val MINI_PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("mini_player_glass_blur")
@@ -869,6 +870,17 @@ class SessionManager @Inject constructor(
     suspend fun setPlayerBackgroundStyle(style: com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle) {
         context.dataStore.edit { preferences ->
             preferences[PLAYER_BACKGROUND_STYLE_KEY] = style.name
+        }
+    }
+
+    val playerBackgroundImageUriFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[PLAYER_BACKGROUND_IMAGE_URI_KEY]
+    }
+
+    suspend fun setPlayerBackgroundImageUri(uri: String?) {
+        context.dataStore.edit { preferences ->
+            if (uri.isNullOrBlank()) preferences.remove(PLAYER_BACKGROUND_IMAGE_URI_KEY)
+            else preferences[PLAYER_BACKGROUND_IMAGE_URI_KEY] = uri
         }
     }
 
@@ -1638,7 +1650,7 @@ class SessionManager @Inject constructor(
     }
 
     val playerGlassIntensityFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[PLAYER_GLASS_INTENSITY_KEY] ?: 1f
+        preferences[PLAYER_GLASS_INTENSITY_KEY] ?: 1.25f
     }
 
     suspend fun setPlayerGlassIntensity(value: Float) {

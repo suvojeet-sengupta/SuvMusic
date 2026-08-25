@@ -80,10 +80,11 @@ fun LiquidGlassPlayerStyle(
     aiStatus: String?,
     windowSizeClass: WindowSizeClass,
     blurRadius: Float = 60f,
-    intensity: Float = 1f
+    intensity: Float = 1f,
+    backgroundArtworkUrl: String? = null
 ) {
     val isDarkTheme = isSystemInDarkTheme()
-    val thumbnailUrl = song?.thumbnailUrl
+    val thumbnailUrl = backgroundArtworkUrl ?: song?.thumbnailUrl
     val scrimAlpha = if (isDarkTheme) 0.55f else 0.40f
     val scrimColor = if (isDarkTheme) Color.Black else Color.White
     val i = intensity.coerceIn(0.3f, 1.5f)

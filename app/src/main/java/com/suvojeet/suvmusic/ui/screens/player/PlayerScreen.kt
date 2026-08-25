@@ -247,6 +247,8 @@ fun PlayerScreen(
     val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
     val playerBackgroundStyle by sessionManager.playerBackgroundStyleFlow
         .collectAsStateWithLifecycle(initialValue = PlayerBackgroundStyle.AMBIENT)
+    val customBackgroundUri by sessionManager.playerBackgroundImageUriFlow
+        .collectAsStateWithLifecycle(initialValue = null)
 
     val isThemeDark = when (themeMode) {
         ThemeMode.LIGHT -> false
@@ -259,7 +261,7 @@ fun PlayerScreen(
     val isAppInDarkTheme = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.BLACK -> true
         PlayerBackgroundStyle.LIGHT -> false
-        PlayerBackgroundStyle.AMBIENT -> isThemeDark
+        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM -> isThemeDark
     }
 
     val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle()
@@ -389,7 +391,11 @@ fun PlayerScreen(
     val playerBackgroundColor = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.BLACK -> Color.Black
         PlayerBackgroundStyle.LIGHT -> Color(0xFFF7F7F9)
-        PlayerBackgroundStyle.AMBIENT -> if (isAppInDarkTheme) Color.Black else Color.White
+        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM -> if (isAppInDarkTheme) Color.Black else Color.White
+    }
+    val playerBackdropArtwork = when (playerBackgroundStyle) {
+        PlayerBackgroundStyle.CUSTOM -> customBackgroundUri ?: song?.thumbnailUrl
+        else -> song?.thumbnailUrl
     }
 
     if (isInPip) {
@@ -401,8 +407,9 @@ fun PlayerScreen(
         // against the same backdrop instead of painting its own flat slab over it.
         com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork provides
             com.suvojeet.suvmusic.ui.components.glass.GlassArtwork(
-                artworkUrl = song?.thumbnailUrl?.takeIf {
-                    !playerState.isVideoMode && playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT
+                artworkUrl = playerBackdropArtwork?.takeIf {
+                    !playerState.isVideoMode &&
+                        (playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT || playerBackgroundStyle == PlayerBackgroundStyle.CUSTOM)
                 },
                 colors = dominantColors,
                 isDarkTheme = isAppInDarkTheme
@@ -415,13 +422,13 @@ fun PlayerScreen(
             // full-screen backdrop, so it's skipped here.
             // A solid backdrop is the whole point of BLACK / LIGHT, so the ambient art
             // blur is skipped entirely rather than layered underneath it.
-            if (playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT) when (playerStyle) {
+            if (playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT || playerBackgroundStyle == PlayerBackgroundStyle.CUSTOM) when (playerStyle) {
                 PlayerStyle.LIQUID_GLASS -> {
                     // intentional: LiquidGlassPlayerStyle draws its own full-screen backdrop.
                 }
                 PlayerStyle.YT_MUSIC, PlayerStyle.CLASSIC -> {
                     com.suvojeet.suvmusic.ui.screens.player.components.GlassArtBackground(
-                        thumbnailUrl = song?.thumbnailUrl,
+                        thumbnailUrl = playerBackdropArtwork,
                         isDarkTheme = isAppInDarkTheme,
                         isVideoMode = playerState.isVideoMode,
                         dominantColors = dominantColors,
@@ -500,7 +507,8 @@ fun PlayerScreen(
                                 aiStatus = aiAutoStatus,
                                 windowSizeClass = windowSizeClass,
                                 blurRadius = playerGlassBlur,
-                                intensity = playerGlassIntensity
+                                intensity = playerGlassIntensity,
+                                backgroundArtworkUrl = playerBackdropArtwork
                             )
                         }
                         PlayerStyle.CLASSIC -> {

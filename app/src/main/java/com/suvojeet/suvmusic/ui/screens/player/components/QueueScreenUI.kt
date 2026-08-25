@@ -155,7 +155,11 @@ fun ModernQueueView(
                     }
                     Row {
                         IconButton(onClick = onSelectAll) {
-                            Icon(Icons.Default.SelectAll, null, tint = contentColor)
+                            Icon(
+                                Icons.Default.SelectAll,
+                                if (selectedQueueIndices.size == queue.size) "Deselect all" else "Select all",
+                                tint = contentColor
+                            )
                         }
                         
                         IconButton(onClick = { 

@@ -9,6 +9,7 @@ package com.suvojeet.suvmusic.core.model
  */
 enum class PlayerBackgroundStyle(val label: String, val description: String) {
     AMBIENT("Ambient", "Blurred album art fills the screen"),
+    CUSTOM("Custom image", "Use your own image as the player background"),
     BLACK("Black", "Solid black — easy on AMOLED screens"),
     LIGHT("Light", "Solid light surface with dark text"),
 }

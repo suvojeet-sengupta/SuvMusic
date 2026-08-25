@@ -104,6 +104,12 @@ fun CustomizationScreen(
 
     val currentPlayerBackground by sessionManager.playerBackgroundStyleFlow
         .collectAsStateWithLifecycle(initialValue = PlayerBackgroundStyle.AMBIENT)
+    val customBackgroundUri by sessionManager.playerBackgroundImageUriFlow
+        .collectAsStateWithLifecycle(initialValue = null)
+    val playerGlassBlur by sessionManager.playerGlassBlurFlow
+        .collectAsStateWithLifecycle(initialValue = 60f)
+    val playerGlassIntensity by sessionManager.playerGlassIntensityFlow
+        .collectAsStateWithLifecycle(initialValue = 1.25f)
 
     val miniPlayerAlpha = uiState.miniPlayerAlpha
     val navBarAlpha = uiState.navBarAlpha
@@ -117,6 +123,25 @@ fun CustomizationScreen(
     var showHomeSectionsSheet by remember { mutableStateOf(false) }
     var showPlayerBackgroundSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val customBackgroundPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Some providers do not support persistable permissions.
+            }
+            scope.launch {
+                sessionManager.setPlayerBackgroundImageUri(uri.toString())
+                sessionManager.setPlayerBackgroundStyle(PlayerBackgroundStyle.CUSTOM)
+                showPlayerBackgroundSheet = false
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -194,8 +219,27 @@ fun CustomizationScreen(
                     CustomizationNavigationItem(
                         icon = Icons.Default.Gradient,
                         title = "Player Background",
-                        subtitle = currentPlayerBackground.label,
+                        subtitle = if (currentPlayerBackground == PlayerBackgroundStyle.CUSTOM && customBackgroundUri != null) {
+                            "Custom image"
+                        } else currentPlayerBackground.label,
                         onClick = { showPlayerBackgroundSheet = true }
+                    )
+
+                    HorizontalDivider()
+
+                    CustomizationNavigationItem(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "Album Art Color Pulse",
+                        subtitle = if (uiState.albumArtColorFlashingEnabled) "Enhanced" else "Off",
+                        trailingContent = {
+                            Switch(
+                                checked = uiState.albumArtColorFlashingEnabled,
+                                onCheckedChange = viewModel::setAlbumArtColorFlashingEnabled
+                            )
+                        },
+                        onClick = {
+                            viewModel.setAlbumArtColorFlashingEnabled(!uiState.albumArtColorFlashingEnabled)
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -242,6 +286,28 @@ fun CustomizationScreen(
                         icon = Icons.Default.Layers,
                         alpha = navBarAlpha,
                         onAlphaChange = { viewModel.setNavBarAlpha(it) }
+                    )
+
+                    HorizontalDivider()
+
+                    BlurSliderItem(
+                        title = "Player Background Blur",
+                        icon = Icons.Default.BlurOn,
+                        blur = playerGlassBlur,
+                        onBlurChange = { value ->
+                            scope.launch { sessionManager.setPlayerGlassBlur(value) }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    IntensitySliderItem(
+                        title = "Album Art Pulse Intensity",
+                        icon = Icons.Default.BrightnessHigh,
+                        intensity = playerGlassIntensity,
+                        onIntensityChange = { value ->
+                            scope.launch { sessionManager.setPlayerGlassIntensity(value) }
+                        }
                     )
 
                 }
@@ -326,10 +392,14 @@ fun CustomizationScreen(
                             .fillMaxWidth()
                             .dpadFocusable(
                                 onClick = {
-                                    scope.launch {
-                                        sessionManager.setPlayerBackgroundStyle(style)
-                                        sheetState.hide()
-                                        showPlayerBackgroundSheet = false
+                                    if (style == PlayerBackgroundStyle.CUSTOM && customBackgroundUri.isNullOrBlank()) {
+                                        customBackgroundPicker.launch(arrayOf("image/*"))
+                                    } else {
+                                        scope.launch {
+                                            sessionManager.setPlayerBackgroundStyle(style)
+                                            sheetState.hide()
+                                            showPlayerBackgroundSheet = false
+                                        }
                                     }
                                 },
                                 shape = SquircleShape
@@ -657,7 +727,9 @@ private fun MiniPlayerPreview(alpha: Float, style: MiniPlayerStyle) {
             color = Color.Transparent,
             shape = shape
         ) {
-            val effectiveAlpha = alpha
+            // The setting stores transparency (0 = opaque, 1 = transparent),
+            // while the preview background needs the inverse paint alpha.
+            val effectiveAlpha = 1f - alpha
             Box(
                 modifier = Modifier
                     .then(
@@ -734,3 +806,60 @@ private fun formatSeekbarStyleName(style: SeekbarStyle): String {
 
 private fun String.titlecaseFirst(): String =
     replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+
+
+@Composable
+private fun IntensitySliderItem(
+    title: String,
+    icon: ImageVector,
+    intensity: Float,
+    onIntensityChange: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SquircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "${(intensity * 100).toInt()}%",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Slider(
+            value = intensity,
+            onValueChange = onIntensityChange,
+            valueRange = 0.3f..1.5f,
+            steps = 0,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+}

@@ -3275,58 +3275,58 @@ class MusicPlayer @Inject constructor(
      */
     fun removeFromQueue(indices: List<Int>) {
         if (indices.isEmpty()) return
-        val sortedIndices = indices.sortedDescending()
-        val queue = _playerState.value.queue.toMutableList()
-        val controller = mediaController ?: return
 
-        // Capture the current playing index BEFORE mutating, and detect whether
-        // any removed index is the one currently playing. After removeMediaItem
-        // returns, controller.currentMediaItemIndex may still report the stale
-        // pre-removal index (Media3's index update crosses an IPC boundary), so
-        // computing currentSong directly off it produced a blank player UI when
-        // the user swiped-to-remove the playing track.
-        val originalCurrentIndex = controller.currentMediaItemIndex
+        val state = _playerState.value
+        val sortedIndices = indices
+            .distinct()
+            .filter { it in state.queue.indices }
+            .sortedDescending()
+        if (sortedIndices.isEmpty()) return
+
+        val queue = state.queue.toMutableList()
+        val controller = mediaController
+        // Prefer the state index because it is updated synchronously with the UI;
+        // Media3 may briefly expose a stale index while an IPC removal is pending.
+        val originalCurrentIndex = state.currentIndex.takeIf { it in state.queue.indices }
+            ?: controller?.currentMediaItemIndex?.takeIf { it in state.queue.indices }
+            ?: -1
         val currentWasRemoved = sortedIndices.any { it == originalCurrentIndex }
 
-        sortedIndices.forEach { index ->
-            if (index in queue.indices) {
-                queue.removeAt(index)
-                controller.removeMediaItem(index)
-            }
-        }
-
+        // Update the Compose-facing state before calling Media3. This makes a
+        // swipe removal visible immediately instead of waiting for the queue
+        // overlay to be closed and recreated.
+        sortedIndices.forEach { index -> queue.removeAt(index) }
         if (queue.isEmpty()) {
             _playerState.update {
                 it.copy(
                     queue = emptyList(),
                     currentIndex = -1,
                     currentSong = null,
-                    isPlaying = false,
+                    isPlaying = false
                 )
             }
-            return
-        }
-
-        // If the playing track was removed, Media3 auto-transitions to the
-        // next track but we can't trust controller.currentMediaItemIndex
-        // immediately after the IPC removal call. Land on a deterministic
-        // "next" index (the same slot, or last if we removed the tail) and
-        // let onMediaItemTransition correct us if it disagrees.
-        val newIndex = if (currentWasRemoved) {
-            originalCurrentIndex.coerceAtMost(queue.size - 1).coerceAtLeast(0)
         } else {
-            // Current track survived; its position may have shifted left if any
-            // earlier indices were removed.
-            val shift = sortedIndices.count { it < originalCurrentIndex }
-            (originalCurrentIndex - shift).coerceIn(0, queue.size - 1)
+            val newIndex = if (currentWasRemoved) {
+                originalCurrentIndex.coerceAtMost(queue.size - 1).coerceAtLeast(0)
+            } else {
+                val shift = sortedIndices.count { it < originalCurrentIndex }
+                (originalCurrentIndex - shift).coerceIn(0, queue.size - 1)
+            }
+            _playerState.update {
+                it.copy(
+                    queue = queue,
+                    currentIndex = newIndex,
+                    currentSong = queue[newIndex]
+                )
+            }
         }
 
-        _playerState.update {
-            it.copy(
-                queue = queue,
-                currentIndex = newIndex,
-                currentSong = queue[newIndex],
-            )
+        // Keep the player timeline in sync after the UI has already reflected the
+        // removal. Removing from highest to lowest prevents index shifts.
+        sortedIndices.forEach { index ->
+            if (controller != null && index < controller.mediaItemCount) {
+                controller.removeMediaItem(index)
+            }
         }
     }
 
@@ -3414,15 +3414,43 @@ class MusicPlayer @Inject constructor(
     }
     
     fun clearQueue() {
-        mediaController?.clearMediaItems()
-        _playerState.update { 
+        val state = _playerState.value
+        val currentSong = state.currentSong ?: state.queue.getOrNull(state.currentIndex)
+        val controller = mediaController
+
+        if (currentSong != null && controller != null) {
+            val currentMediaItem = controller.currentMediaItem
+            val currentIndex = controller.currentMediaItemIndex
+            // Keep the current Media3 item in place and remove only history and
+            // upcoming items. This preserves playback position and avoids the
+            // player disappearing when the user clears the queue.
+            if (currentIndex in 0 until controller.mediaItemCount) {
+                if (currentIndex + 1 < controller.mediaItemCount) {
+                    controller.removeMediaItems(currentIndex + 1, controller.mediaItemCount)
+                }
+                if (currentIndex > 0) {
+                    controller.removeMediaItems(0, currentIndex)
+                }
+            } else {
+                controller.clearMediaItems()
+                currentMediaItem?.let {
+                    controller.setMediaItem(it)
+                    controller.prepare()
+                    if (state.isPlaying) controller.play()
+                }
+            }
+        } else {
+            controller?.clearMediaItems()
+        }
+
+        _playerState.update {
             it.copy(
-                queue = emptyList(),
-                currentIndex = -1,
-                currentSong = null,
-                isPlaying = false,
-                currentPosition = 0
-            ) 
+                queue = currentSong?.let(::listOf).orEmpty(),
+                currentIndex = if (currentSong != null) 0 else -1,
+                currentSong = currentSong,
+                isPlaying = currentSong != null && it.isPlaying,
+                currentPosition = it.currentPosition
+            )
         }
     }
 

@@ -719,7 +719,12 @@ class PlayerViewModel @Inject constructor(
 
     fun selectAllQueueItems() {
         val queueSize = playerState.value.queue.size
-        _selectedQueueIndices.value = (0 until queueSize).toSet()
+        val allIndices = (0 until queueSize).toSet()
+        _selectedQueueIndices.value = if (_selectedQueueIndices.value == allIndices) {
+            emptySet()
+        } else {
+            allIndices
+        }
     }
 
     fun clearQueueSelection() {
@@ -727,6 +732,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun clearQueue() {
+        // Clearing the queue also ends the current radio session. Autoplay may
+        // repopulate it afterward; with autoplay disabled the current song stays
+        // alone and no radio recommendations are added.
+        _isRadioMode.value = false
+        radioBaseSongId = null
+        musicPlayer.updateRadioMode(false)
         musicPlayer.clearQueue()
         clearQueueSelection()
     }
@@ -856,14 +867,20 @@ class PlayerViewModel @Inject constructor(
             // Notify recommendation engine of the new context
             recommendationEngine.onSongPlayed(song)
             
-            // For a "Radio" feel, we want a fresh start. 
-            // If the song is already playing, we'll still 'restart' it with a new radio queue
-            // to ensure it feels like a fresh generation session.
-            if (initialQueue != null && initialQueue.isNotEmpty()) {
-                val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                musicPlayer.playSong(song, initialQueue, index)
-            } else {
-                musicPlayer.playSong(song)
+            val currentState = playerState.value
+            val isCurrentSong = currentState.currentSong?.id == song.id && currentState.currentIndex >= 0
+
+            // If the requested seed is already playing, do not call playSong(): it
+            // pauses, rebuilds, prepares, and starts the current item again. Build
+            // the new radio queue in the background and let replaceQueue preserve
+            // the current Media3 item and playback position instead.
+            if (!isCurrentSong) {
+                if (initialQueue != null && initialQueue.isNotEmpty()) {
+                    val index = initialQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                    musicPlayer.playSong(song, initialQueue, index)
+                } else {
+                    musicPlayer.playSong(song)
+                }
             }
             
             try {
@@ -1563,7 +1580,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun selectAllRelated() {
-        _selectedRelatedIndices.value = _relatedSongsState.value.indices.toSet()
+        val allIndices = _relatedSongsState.value.indices.toSet()
+        _selectedRelatedIndices.value = if (_selectedRelatedIndices.value == allIndices) {
+            emptySet()
+        } else {
+            allIndices
+        }
     }
 
     fun clearRelatedSelection() {
