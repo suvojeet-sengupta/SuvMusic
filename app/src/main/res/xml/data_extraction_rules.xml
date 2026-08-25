@@ -18,6 +18,7 @@
         <!-- Device-to-device transfer can include app data, including the local
              Room database that stores imported and user-created playlists. -->
         <include domain="root" path="."/>
+        <include domain="sharedpref" path="."/>
         <!-- Never transfer keystore-bound or fallback plaintext session secrets. -->
         <exclude domain="sharedpref" path="suvmusic_secure_session.xml"/>
         <exclude domain="sharedpref" path="suvmusic_secure_session_fallback.xml"/>
