@@ -461,6 +461,24 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
+    fun updatePlaylistThumbnail(thumbnailUrl: String?) {
+        if (!playlistId.startsWith("local_")) return
+
+        viewModelScope.launch {
+            try {
+                libraryRepository.updatePlaylistThumbnail(playlistId, thumbnailUrl)
+                _uiState.update { state ->
+                    state.copy(
+                        playlist = state.playlist?.copy(thumbnailUrl = thumbnailUrl),
+                        successMessage = "Playlist cover updated"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to update playlist cover") }
+            }
+        }
+    }
+
     fun renamePlaylist(newName: String) {
         if (newName.isBlank()) return
         

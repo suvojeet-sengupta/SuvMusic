@@ -9,7 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -71,7 +72,18 @@ fun PlaylistScreen(
     val batchProgress by viewModel.batchProgress.collectAsState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    var playlistSearchQuery by rememberSaveable { mutableStateOf("") }
     val playlist = uiState.playlist
+    val filteredSongs = remember(playlist?.songs, playlistSearchQuery) {
+        playlist?.songs.orEmpty()
+            .mapIndexed { index, song -> index to song }
+            .filter { (_, song) ->
+                val query = playlistSearchQuery.trim()
+                query.isBlank() || song.title.contains(query, ignoreCase = true) ||
+                    song.artist.contains(query, ignoreCase = true) ||
+                    song.album.contains(query, ignoreCase = true)
+            }
+    }
 
     // Check if we are in dark theme based on background luminance (consistent with PlayerScreen)
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -123,6 +135,22 @@ fun PlaylistScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showMediaMenu by remember { mutableStateOf(false) }
+
+    val coverArtPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Some document providers do not offer persistable permissions.
+            }
+            viewModel.updatePlaylistThumbnail(uri.toString())
+        }
+    }
     
     // Song Menu State
     var showSongMenu by remember { mutableStateOf(false) }
@@ -271,6 +299,9 @@ fun PlaylistScreen(
                         onDownload = { viewModel.downloadPlaylist(playlist) },
                         onShare = { sharePlaylist(playlist) },
                         onMoreClick = { showMediaMenu = true },
+                        onEditArtwork = if (uiState.isEditable && playlist.id.startsWith("local_")) {
+                            { coverArtPicker.launch(arrayOf("image/*")) }
+                        } else null,
                         isLoadingMore = uiState.isLoadingMore,
                         totalSongCount = uiState.totalSongCount,
                         contentColor = contentColor,
@@ -279,6 +310,19 @@ fun PlaylistScreen(
                     )
                 }
                 
+                if (playlist.songs.isNotEmpty()) {
+                    item {
+                        PlaylistSearchField(
+                            query = playlistSearchQuery,
+                            onQueryChange = { playlistSearchQuery = it },
+                            resultCount = filteredSongs.size,
+                            totalCount = playlist.songs.size,
+                            contentColor = contentColor,
+                            secondaryContentColor = secondaryContentColor
+                        )
+                    }
+                }
+
                 // Empty State or Song List
                 if (playlist.songs.isEmpty()) {
                     item {
@@ -345,22 +389,37 @@ fun PlaylistScreen(
                             }
                         }
                     }
+                } else if (filteredSongs.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No songs match \"${playlistSearchQuery.trim()}\"",
+                            color = secondaryContentColor,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 48.dp)
+                        )
+                    }
                 } else {
-                    // Song List
-                    itemsIndexed(playlist.songs, key = { _, song -> song.setVideoId ?: song.id }) { index, song ->
+                    // Keep original indices so playback and editing still target
+                    // the correct entry while search is active.
+                    items(filteredSongs, key = { it.first }) { (originalIndex, song) ->
                         val isSelected = uiState.selectedSongIds.contains(song.setVideoId ?: song.id)
                         ReorderableSongRow(
                             song = song,
                             isSelected = isSelected,
                             isSelectionMode = uiState.isSelectionMode,
-                            onReorder = { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) },
-                            index = index,
+                            onReorder = if (playlistSearchQuery.isBlank()) {
+                                { fromIndex, toIndex -> viewModel.reorderSong(fromIndex, toIndex) }
+                            } else null,
+                            index = originalIndex,
                             totalSongs = playlist.songs.size,
-                            onClick = { 
+                            onClick = {
                                 if (uiState.isSelectionMode) {
                                     viewModel.toggleSongSelection(song)
                                 } else {
-                                    onSongClick(playlist.songs, index) 
+                                    onSongClick(playlist.songs, originalIndex)
                                 }
                             },
                             onLongClick = {
@@ -665,6 +724,7 @@ private fun PlaylistHeader(
     onDownload: () -> Unit,
     onShare: () -> Unit,
     onMoreClick: () -> Unit,
+    onEditArtwork: (() -> Unit)? = null,
     isLoadingMore: Boolean = false,
     totalSongCount: Int? = null,
     contentColor: Color,
@@ -708,6 +768,24 @@ private fun PlaylistHeader(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+            }
+
+            if (onEditArtwork != null) {
+                Surface(
+                    onClick = onEditArtwork,
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.65f),
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit playlist cover art",
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
             }
         }
 
@@ -1076,4 +1154,48 @@ fun SelectionTopBar(
             )
         }
     }
+}
+
+
+@Composable
+private fun PlaylistSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    resultCount: Int,
+    totalCount: Int,
+    contentColor: Color,
+    secondaryContentColor: Color
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        singleLine = true,
+        placeholder = { Text("Search songs in this playlist") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search playlist"
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Default.Clear, contentDescription = "Clear playlist search")
+                }
+            }
+        },
+        supportingText = if (query.isNotBlank()) {
+            { Text("Showing $resultCount of $totalCount songs") }
+        } else null,
+        shape = SquircleShape,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = contentColor,
+            unfocusedTextColor = contentColor,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = secondaryContentColor.copy(alpha = 0.35f)
+        )
+    )
 }

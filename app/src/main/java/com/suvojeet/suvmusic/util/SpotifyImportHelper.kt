@@ -412,25 +412,77 @@ class SpotifyImportHelper @Inject constructor(
         name to tracks
     }
 
+    /**
+     * Finds the same recording instead of accepting the first result for an artist.
+     *
+     * Search APIs often return popular songs by the requested artist before the
+     * requested track. The old final `firstOrNull()` fallback therefore imported a
+     * different song whenever title matching failed. A match must now have a strong
+     * title similarity; artist and duration are used to rank otherwise valid results.
+     */
     suspend fun findMatch(title: String, artist: String, durationMs: Long = 0): Song? {
         return try {
-            val query = "$title $artist"
-            val searchResults = youTubeRepository.search(query)
+            val searchResults = youTubeRepository.search("$title $artist")
             if (searchResults.isEmpty()) return null
-            
-            var bestMatch = searchResults.find { result ->
-                val titleMatch = result.title.contains(title, ignoreCase = true) || title.contains(result.title, ignoreCase = true)
-                val durationMatch = if (durationMs > 0 && result.duration > 0) kotlin.math.abs(result.duration - durationMs) < 10000 else true
-                titleMatch && durationMatch
-            }
 
-            if (bestMatch == null && durationMs > 0) {
-                bestMatch = searchResults.take(3).find { result -> kotlin.math.abs(result.duration - durationMs) < 5000 }
+            val sourceTitle = normalizedTrackTokens(title)
+            val sourceArtist = normalizedTrackTokens(artist)
+            val hasKnownArtist = sourceArtist.isNotEmpty() &&
+                sourceArtist != setOf("unknown", "artist")
+
+            searchResults.mapNotNull { result ->
+                val titleScore = tokenSimilarity(sourceTitle, normalizedTrackTokens(result.title))
+                val artistScore = tokenSimilarity(sourceArtist, normalizedTrackTokens(result.artist))
+                val durationScore = when {
+                    durationMs <= 0L || result.duration <= 0L -> 0.5
+                    kotlin.math.abs(result.duration - durationMs) <= 10_000L -> 1.0
+                    kotlin.math.abs(result.duration - durationMs) <= 30_000L -> 0.5
+                    else -> 0.0
+                }
+
+                // Never use an artist-only or duration-only match. This is the
+                // important guard against importing another popular song by the same artist.
+                val titleIsStrong = titleScore >= 0.75
+                val artistIsCompatible = !hasKnownArtist || artistScore >= 0.25
+                if (!titleIsStrong || !artistIsCompatible) {
+                    null
+                } else {
+                    val score = titleScore * 0.65 + artistScore * 0.25 + durationScore * 0.10
+                    result to score
+                }
             }
-            bestMatch ?: searchResults.firstOrNull()
+                .maxByOrNull { it.second }
+                ?.first
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun normalizedTrackTokens(value: String): Set<String> {
+        val normalized = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+            .replace("\\p{Mn}+".toRegex(), "")
+            .lowercase(java.util.Locale.ROOT)
+            .replace("&", " and ")
+            .replace("[^a-z0-9]+".toRegex(), " ")
+            .trim()
+
+        val noise = setOf(
+            "official", "video", "audio", "lyrics", "lyric", "visualizer",
+            "topic", "hd", "hq", "4k"
+        )
+        return normalized.split(Regex("\\s+"))
+            .filter { it.isNotBlank() && it !in noise }
+            .toSet()
+    }
+
+    private fun tokenSimilarity(left: Set<String>, right: Set<String>): Double {
+        if (left.isEmpty() || right.isEmpty()) return 0.0
+        if (left == right) return 1.0
+        val overlap = left.intersect(right).size.toDouble()
+        // Jaccard-style similarity penalizes extra title tokens; dividing by the
+        // smaller set would incorrectly score "Song Remix" as an exact match for
+        // a CSV title of just "Song".
+        return overlap / maxOf(left.size, right.size).toDouble()
     }
 
     companion object {
