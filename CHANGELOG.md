@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.6.6.0] - 2026-08-26
+
+### Fixed
+- **Shuffle Next Playback**: Fixed the Next action when shuffle is enabled so resolved shuffled tracks reliably start playing, improved placeholder detection, and removed stale audio/video preload cache-key state.
+- **Source Switching Stability**: Prevented HQ Audio → YouTube playback failures from cascading into repeated automatic queue skips; the current song now remains selected with retry/source-switch feedback.
+- **Playlist Persistence**: Preserved local and imported playlists across logout, retained cached remote playlist metadata, and refreshed the authenticated YouTube library automatically after login.
+- **Backup & Restore**: Enabled supported Android Auto Backup and device-transfer recovery for local playlist data while excluding secure session and cookie stores.
+- **Playlist Management**: Preserved duplicate CSV/import entries, improved strict song matching, added playlist search, and added local playlist cover editing.
+- **Player & Queue Reliability**: Improved queue deletion, clear-queue behavior, radio transitions, player customization controls, and crash-report handling.
+
 ## [2.6.4.0] - 2026-08-19
 
 ### Added
