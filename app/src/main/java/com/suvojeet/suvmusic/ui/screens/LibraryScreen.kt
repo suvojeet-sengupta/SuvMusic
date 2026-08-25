@@ -1009,7 +1009,7 @@ fun OtherContentList(
 
         when (filter) {
             LibraryFilter.SONGS -> {
-                items(songs.size, key = { index -> songs[index].id }) { index ->
+                items(songs.size, key = { index -> "library_song_${index}_${songs[index].id}" }) { index ->
                     val song = songs[index]
                     MusicCard(song = song, onClick = { onSongClick(songs, index) })
                 }

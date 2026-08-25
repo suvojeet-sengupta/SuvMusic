@@ -248,7 +248,7 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs, key = { _, song -> song.id }) { index, song ->
+                    itemsIndexed(album.songs, key = { index, song -> "album_song_${index}_${song.id}" }) { index, song ->
                         val isSelected = uiState.selectedSongIds.contains(song.id)
                         ReorderableSongRow(
                             song = song,

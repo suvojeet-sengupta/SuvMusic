@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.crash
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -29,7 +30,9 @@ class CrashReportSender : ReportSender {
     companion object {
         private const val TELEGRAM_USERNAME = "suvojeet_sengupta"
         private const val FEEDBACK_URL = "https://feedback.suvojeetsengupta.in/api/feedback"
-        private const val MAX_DIAGNOSTICS_CHARS = 160_000
+        // Keep the crash payload below common reverse-proxy request limits. The
+        // complete report remains available through the attached local file.
+        private const val MAX_DIAGNOSTICS_CHARS = 32_000
     }
 
     override fun send(context: Context, errorContent: CrashReportData) {
@@ -101,6 +104,7 @@ class CrashReportSender : ReportSender {
                 "SuvMusic crash report could not be sent automatically. Please share the attached report with support."
             )
             putExtra(Intent.EXTRA_SUBJECT, "SuvMusic Crash Report")
+            clipData = ClipData.newRawUri("SuvMusic crash report", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

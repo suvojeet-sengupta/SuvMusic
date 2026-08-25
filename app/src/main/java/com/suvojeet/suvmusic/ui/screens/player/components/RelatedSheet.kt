@@ -168,7 +168,7 @@ fun RelatedSheet(
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                         )
                     }
-                    itemsIndexed(relatedSongs, key = { _, song -> song.id }) { index, song ->
+                    itemsIndexed(relatedSongs, key = { index, song -> "related_song_${index}_${song.id}" }) { index, song ->
                         ModernRelatedListItem(
                             song = song,
                             isSelected = selectedIndices.contains(index),

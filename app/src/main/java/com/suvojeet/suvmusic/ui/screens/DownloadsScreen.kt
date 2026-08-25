@@ -601,7 +601,7 @@ fun DownloadsScreen(
                         }
                     }
                 } else {
-                    itemsIndexed(downloadedVideos, key = { _, video -> video.id }) { index, video ->
+                    itemsIndexed(downloadedVideos, key = { index, video -> "download_${index}_${video.id}" }) { index, video ->
                         VideoDownloadCard(
                             video = video,
                             index = index + 1,
