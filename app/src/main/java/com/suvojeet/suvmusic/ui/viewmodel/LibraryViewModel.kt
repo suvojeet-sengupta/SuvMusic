@@ -26,6 +26,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -115,12 +117,55 @@ class LibraryViewModel @Inject constructor(
     init {
         _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
         loadData()
+        observeAuthState()
         observeDownloads()
         observeLibraryPlaylists()
         observeImportService()
         observeLikedSongs()
         observeSettings() // Renamed for broader scope
         schedulePeriodicSync()
+    }
+
+    /**
+     * Authentication changes must refresh the remote playlist snapshot. Previously
+     * the library loaded only during ViewModel creation, so logging out and back in
+     * left the screen with an empty/stale remote list until the user manually
+     * refreshed it. Local/imported playlists remain in the Room-backed userPlaylists
+     * collection when the remote snapshot is cleared.
+     */
+    private fun observeAuthState() {
+        viewModelScope.launch {
+            var hasEmittedInitialState = false
+            sessionManager.isLoggedInFlow
+                .distinctUntilChanged()
+                .collect { loggedIn ->
+                    val cachedRemote = if (!loggedIn) {
+                        sessionManager.getCachedLibraryPlaylistsSync()
+                    } else {
+                        emptyList()
+                    }
+                    _uiState.update { state ->
+                        if (loggedIn) {
+                            state.copy(isLoggedIn = true)
+                        } else {
+                            // Keep a read-only snapshot of the last account's remote
+                            // playlists visible while signed out. Local/imported rows
+                            // remain independently stored in Room and are merged too.
+                            val combined = (cachedRemote + state.userPlaylists).distinctBy { it.id }
+                            rawPlaylists = combined
+                            state.copy(
+                                isLoggedIn = false,
+                                remotePlaylists = cachedRemote,
+                                playlists = presentPlaylists(combined, state.sortOption, state.librarySearchQuery)
+                            )
+                        }
+                    }
+                    if (loggedIn && hasEmittedInitialState) {
+                        loadData(forceRefresh = true)
+                    }
+                    hasEmittedInitialState = true
+                }
+        }
     }
 
     private fun observeSettings() {

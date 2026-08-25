@@ -111,6 +111,9 @@ class SessionManager @Inject constructor(
         private val LAST_FETCH_TIME_REMOTE_KEY = longPreferencesKey("last_fetch_time_remote")
         
         private val LIBRARY_PLAYLISTS_CACHE_KEY = stringPreferencesKey("library_playlists_cache")
+        // Unlike the legacy cache in encrypted prefs, this snapshot is eligible for
+        // Android Auto Backup and can restore playlist metadata after reinstall.
+        private val LIBRARY_PLAYLISTS_BACKUP_KEY = stringPreferencesKey("library_playlists_backup")
         private val LIBRARY_LIKED_SONGS_CACHE_KEY = stringPreferencesKey("library_liked_songs_cache")
         
         private val MUSIC_SOURCE_KEY = stringPreferencesKey("music_source")
@@ -3007,13 +3010,20 @@ class SessionManager @Inject constructor(
              array.toString()
         }
         withContext(Dispatchers.IO) {
+            // Keep the encrypted copy for older app versions, but also write a
+            // non-secret backup snapshot so supported reinstalls can restore it.
             encryptedPrefs.edit().putString("library_playlists_cache", json).apply()
         }
-        context.dataStore.edit { it.remove(LIBRARY_PLAYLISTS_CACHE_KEY) }
+        context.dataStore.edit {
+            it[LIBRARY_PLAYLISTS_BACKUP_KEY] = json
+            it.remove(LIBRARY_PLAYLISTS_CACHE_KEY)
+        }
     }
 
     suspend fun getCachedLibraryPlaylistsSync(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
-        val json = encryptedPrefs.getString("library_playlists_cache", null) ?: return@withContext emptyList()
+        val json = context.dataStore.data.first()[LIBRARY_PLAYLISTS_BACKUP_KEY]
+            ?: encryptedPrefs.getString("library_playlists_cache", null)
+            ?: return@withContext emptyList()
         withContext(Dispatchers.Default) {
             try {
                 val array = JSONArray(json)

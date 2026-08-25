@@ -756,6 +756,13 @@ class MusicPlayer @Inject constructor(
             
             if (playbackState == Player.STATE_READY) {
                 startPositionUpdates()
+                // A source switch must be considered complete only after the new
+                // Media3 item reaches READY. Keeping this state until then prevents
+                // a transient SOURCE_ERROR from entering the normal auto-skip path.
+                if (sourceSwitchPendingSongId == mediaController?.currentMediaItem?.mediaId) {
+                    sourceSwitchPendingSongId = null
+                    _playerState.update { it.copy(isSwitchingSource = false) }
+                }
                 // Update audio format info when playback is ready
                 updateAudioFormatInfo()
             }
@@ -1179,6 +1186,23 @@ class MusicPlayer @Inject constructor(
             val isInvalidPlaceholder = currentUri != null && currentUri.contains("placeholder.invalid")
 
             if (isExpiredUrl || isNetworkError || isDecoderError || isAudioSinkError || isParseError || isYouTubePlaceholder || isInvalidPlaceholder) {
+                // A stream failure immediately after an explicit source switch is
+                // not an ordinary queue failure. Do not advance to the next item:
+                // keep the user on the selected song and let them retry or switch
+                // back to the previous source.
+                if (sourceSwitchPendingSongId == _playerState.value.currentSong?.id) {
+                    sourceSwitchPendingSongId = null
+                    mediaController?.pause()
+                    _playerState.update {
+                        it.copy(
+                            isSwitchingSource = false,
+                            isLoading = false,
+                            error = "YouTube could not play this song. Tap retry or switch source."
+                        )
+                    }
+                    return
+                }
+
                 // CRITICAL FIX (Shuffle cascade prevention):
                 // Pause player immediately on placeholder errors to prevent ExoPlayer
                 // from auto-advancing to the next item (which is also a placeholder
@@ -1441,6 +1465,7 @@ class MusicPlayer @Inject constructor(
         }
 
     private var sourceSwitchJob: Job? = null
+    private var sourceSwitchPendingSongId: String? = null
     private var videoToggleJob: Job? = null
 
     /**
@@ -1453,6 +1478,7 @@ class MusicPlayer @Inject constructor(
         if (_playerState.value.isSwitchingSource) return
         val song = _playerState.value.currentSong ?: return
         val current = computeActiveAudioSource(song) ?: return
+        sourceSwitchPendingSongId = song.id
         val target = if (current == MusicSource.REMOTE) MusicSource.YOUTUBE else MusicSource.REMOTE
         val targetLabel = if (target == MusicSource.REMOTE) "HQ Audio" else "YouTube"
 
@@ -1475,6 +1501,7 @@ class MusicPlayer @Inject constructor(
                     withContext(Dispatchers.IO) { resolveStreamForSource(song, target) }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
+                if (sourceSwitchPendingSongId == song.id) sourceSwitchPendingSongId = null
                 _playerState.update { it.copy(isSwitchingSource = false) }
                 throw e
             } catch (e: Exception) {
@@ -1490,6 +1517,7 @@ class MusicPlayer @Inject constructor(
                 com.suvojeet.suvmusic.util.HqDiagnostics.log("switch", "switch of '${song.title}' to ${target.name} FAILED (${if (streamUrl == null) "no stream" else "landed on ${landed?.name}"})")
                 // Nothing to switch to — put the song back on the source it was on.
                 songSourceOverrides.put(song.id, current)
+                if (sourceSwitchPendingSongId == song.id) sourceSwitchPendingSongId = null
                 _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = current) }
                 com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
                     if (target == MusicSource.REMOTE) "No HQ version found for “${song.title}”"
@@ -1506,6 +1534,7 @@ class MusicPlayer @Inject constructor(
             ) {
                 // The user moved on while we were resolving; the override still applies the
                 // next time this song comes around.
+                if (sourceSwitchPendingSongId == song.id) sourceSwitchPendingSongId = null
                 _playerState.update { it.copy(isSwitchingSource = false) }
                 return@launch
             }
@@ -1516,28 +1545,43 @@ class MusicPlayer @Inject constructor(
             val wasPlaying = controller.playWhenReady
             val cacheKey = audioCacheKey(song, streamUrl)
 
-            controller.replaceMediaItem(
-                index,
-                MediaItem.Builder()
-                    .setUri(streamUrl)
-                    .setMediaId(song.id)
-                    .setCustomCacheKey(cacheKey)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(song.title)
-                            .setArtist(song.artist)
-                            .setAlbumTitle(song.album)
-                            .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
-                            .setIsPlayable(true)
-                            .setIsBrowsable(false)
-                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                            .build()
+            try {
+                controller.replaceMediaItem(
+                    index,
+                    MediaItem.Builder()
+                        .setUri(streamUrl)
+                        .setMediaId(song.id)
+                        .setCustomCacheKey(cacheKey)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setTitle(song.title)
+                                .setArtist(song.artist)
+                                .setAlbumTitle(song.album)
+                                .setArtworkUri(getHighResThumbnail(song.thumbnailUrl)?.let { android.net.Uri.parse(it) })
+                                .setIsPlayable(true)
+                                .setIsBrowsable(false)
+                                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                                .build()
+                        )
+                        .build()
+                )
+                controller.prepare()
+                controller.seekTo(resumePosition)
+                if (wasPlaying) controller.play()
+            } catch (e: Exception) {
+                if (sourceSwitchPendingSongId == song.id) sourceSwitchPendingSongId = null
+                songSourceOverrides.put(song.id, current)
+                _playerState.update {
+                    it.copy(
+                        isSwitchingSource = false,
+                        isLoading = false,
+                        activeAudioSource = current,
+                        error = "Could not switch to $targetLabel. Try again."
                     )
-                    .build()
-            )
-            controller.prepare()
-            controller.seekTo(resumePosition)
-            if (wasPlaying) controller.play()
+                }
+                android.util.Log.w("MusicPlayer", "Source switch playback failed", e)
+                return@launch
+            }
 
             noteResolvedStream(song, streamUrl)
             hqFallbackReason.put(song.id, HqFallbackReason.NONE)
@@ -1557,7 +1601,10 @@ class MusicPlayer @Inject constructor(
             )
 
             com.suvojeet.suvmusic.util.HqDiagnostics.log("switch", "switch of '${song.title}' to ${target.name} OK")
-            _playerState.update { it.copy(isSwitchingSource = false, activeAudioSource = target) }
+            // Keep isSwitchingSource true until Media3 reports READY; this closes
+            // the race where prepare() emits a transient error and the generic
+            // recovery code skips the current song.
+            _playerState.update { it.copy(activeAudioSource = target) }
             com.suvojeet.suvmusic.util.SnackbarUtil.showMessage(
                 "Playing “${song.title}” from $targetLabel",
                 com.suvojeet.suvmusic.util.SnackbarUtil.Duration.SHORT
