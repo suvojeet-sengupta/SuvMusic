@@ -2539,7 +2539,7 @@ class MusicPlayer @Inject constructor(
                     //
                     // In non-shuffle mode, replace the item normally for true gapless playback.
                     if (!state.shuffleEnabled) {
-                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl, isVideoMode)
                     }
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
@@ -2566,14 +2566,19 @@ class MusicPlayer @Inject constructor(
     /**
      * Update the next media item in the player with the preloaded stream URL.
      */
-    private fun updateNextMediaItemWithPreloadedUrl(index: Int, song: Song, streamUrl: String) {
+    private fun updateNextMediaItemWithPreloadedUrl(
+        index: Int,
+        song: Song,
+        streamUrl: String,
+        isVideoMode: Boolean = _playerState.value.isVideoMode,
+    ) {
         mediaController?.let { controller ->
             if (index < controller.mediaItemCount) {
                 val newMediaItem = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
                     .setCustomCacheKey(
-                    if (preloadedIsVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" 
+                    if (isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}"
                     else audioCacheKey(song, streamUrl)
                 ) // CRITICAL: Stable cache key matching video/audio mode
                     .setMediaMetadata(
@@ -2944,8 +2949,7 @@ class MusicPlayer @Inject constructor(
             val nextUri = nextMediaItem.localConfiguration?.uri?.toString()
             val nextNeedsResolution = nextUri.isNullOrBlank() ||
                 nextUri.contains("placeholder.invalid") ||
-                nextUri.contains("youtube.com/watch") ||
-                nextUri.contains("youtu.be/")
+                isYouTubeWatchPlaceholder(nextUri)
 
             if (nextNeedsResolution) {
                 val nextSong = queue.firstOrNull { it.id == nextMediaItem.mediaId }
@@ -2980,7 +2984,12 @@ class MusicPlayer @Inject constructor(
                                 // Bug Fix: Set preloaded state AFTER updateNextMediaItemWithPreloadedUrl.
                                 // If the update fails, the item still has a placeholder URI — setting
                                 // preloadedNextSongId first would fool the gapless trigger into firing.
-                                updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl)
+                                updateNextMediaItemWithPreloadedUrl(
+                                    nextIndex,
+                                    nextSong,
+                                    streamUrl,
+                                    _playerState.value.isVideoMode,
+                                )
                                 preloadedNextSongId = nextSong.id
                                 preloadedStreamUrl = streamUrl
                                 preloadedIsVideoMode = _playerState.value.isVideoMode
@@ -2996,8 +3005,12 @@ class MusicPlayer @Inject constructor(
                     return
                 }
             }
-            // Next item already has a resolved URL — safe to seek immediately
+            // Next item already has a resolved URL — safe to seek immediately.
+            // Explicit Next is a play command in SuvMusic: queue navigation must
+            // also resume playback when the current item was paused (which can
+            // happen after a previous source/stream error).
             controller.seekToNextMediaItem()
+            controller.play()
         } else {
             // End of queue logic
              if (state.repeatMode == RepeatMode.ALL) {
