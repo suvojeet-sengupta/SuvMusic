@@ -97,10 +97,10 @@ jobs:
           extract_dir="$RUNNER_TEMP/suvmusic-rpm-root"
           mkdir -p "$extract_dir"
           rpm2cpio "$rpm_file" | (cd "$extract_dir" && cpio -idm --quiet)
-          runtime_java="$(find "$extract_dir" -type f -path '*/lib/runtime/bin/java' -print -quit)"
+          runtime_java="$(find "$extract_dir" -path '*/lib/runtime/bin/java' -print -quit)"
           if [ -z "$runtime_java" ]; then
             echo "Bundled runtime executable was not found in RPM payload; runtime files:"
-            find "$extract_dir" -type f -path '*/runtime/*' -print | head -80 || true
+            find "$extract_dir" -type f -path '*/runtime/*' -print || true
             exit 1
           fi
           "$runtime_java" --list-modules | grep -E '^java\\.sql(@|$)'
