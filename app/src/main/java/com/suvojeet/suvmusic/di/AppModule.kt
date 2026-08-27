@@ -11,6 +11,8 @@ import com.suvojeet.suvmusic.di.ApplicationScope
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
+import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
+import com.suvojeet.suvmusic.updater.UpdateChecker
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -115,6 +117,10 @@ object AppModule {
             .build()
     }
     
+    @Provides
+    @Singleton
+    fun provideUpdateChecker(): UpdateChecker = UpdateChecker(createLyricsHttpClient())
+
     @Provides
     @Singleton
     fun provideGson(): Gson {

@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.android.kotlin.multiplatform.library)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -59,10 +58,6 @@ kotlin {
             }
         }
     }
-}
-
-dependencies {
-    add("kspAndroid", libs.hilt.compiler)
 }
 
 composeCompiler {
