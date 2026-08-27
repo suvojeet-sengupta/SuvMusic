@@ -3,11 +3,30 @@ package com.suvojeet.suvmusic.core.db
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 
-/**
- * Shared persistence facade for the KMP hosts. Generated SQLDelight models stay
- * internal to this module, while both Android and desktop use the same queries.
- */
+/** Stable common model exposed by the KMP library store. */
+data class LibraryEntry(
+    val id: String,
+    val title: String,
+    val subtitle: String?,
+    val thumbnailUrl: String?,
+    val type: String,
+    val timestamp: Long,
+)
+
+/** Stable common model exposed by the KMP listening-history store. */
+data class HistoryEntry(
+    val songId: String,
+    val songTitle: String,
+    val artist: String,
+    val thumbnailUrl: String?,
+    val duration: Long,
+    val playCount: Long,
+    val lastPlayed: Long,
+)
+
+/** Shared persistence facade for Android and the JVM desktop host. */
 class LibraryStore(database: SuvMusicDatabase) {
     private val queries = database.libraryItemsQueries
 
@@ -15,11 +34,17 @@ class LibraryStore(database: SuvMusicDatabase) {
         .selectAllItems()
         .asFlow()
         .mapToList(Dispatchers.Default)
+        .map { rows -> rows.map { row ->
+            LibraryEntry(row.id, row.title, row.subtitle, row.thumbnailUrl, row.type, row.timestamp)
+        } }
 
     fun observeByType(type: String) = queries
         .selectItemsByType(type)
         .asFlow()
         .mapToList(Dispatchers.Default)
+        .map { rows -> rows.map { row ->
+            LibraryEntry(row.id, row.title, row.subtitle, row.thumbnailUrl, row.type, row.timestamp)
+        } }
 
     fun save(
         id: String,
@@ -48,11 +73,33 @@ class ListeningHistoryStore(database: SuvMusicDatabase) {
         .selectAll()
         .asFlow()
         .mapToList(Dispatchers.Default)
+        .map { rows -> rows.map { row ->
+            HistoryEntry(
+                songId = row.songId,
+                songTitle = row.songTitle,
+                artist = row.artist,
+                thumbnailUrl = row.thumbnailUrl,
+                duration = row.duration,
+                playCount = row.playCount,
+                lastPlayed = row.lastPlayed,
+            )
+        } }
 
     fun observeRecent(limit: Long) = queries
         .selectRecentByLastPlayed(limit)
         .asFlow()
         .mapToList(Dispatchers.Default)
+        .map { rows -> rows.map { row ->
+            HistoryEntry(
+                songId = row.songId,
+                songTitle = row.songTitle,
+                artist = row.artist,
+                thumbnailUrl = row.thumbnailUrl,
+                duration = row.duration,
+                playCount = row.playCount,
+                lastPlayed = row.lastPlayed,
+            )
+        } }
 
     fun count(): Long = queries.countAll().executeAsOne()
 

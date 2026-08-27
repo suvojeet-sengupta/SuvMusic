@@ -1,12 +1,16 @@
 package com.suvojeet.suvmusic.composeapp
 
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.suvojeet.suvmusic.composeapp.newpipe.YouTubeSearch
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
+import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
+import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
 import java.awt.FileDialog
@@ -22,12 +26,15 @@ fun main() = application {
         title = "SuvMusic",
         state = rememberWindowState(size = DpSize(1024.dp, 720.dp)),
     ) {
+        val database = remember { buildDatabase(DatabaseDriverFactory()) }
+        val libraryStore = remember(database) { LibraryStore(database) }
         App(
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
             onPickAudioFile = ::pickAudioFile,
             onSearchYouTube = ::searchYouTube,
             onResolveStreamSong = ::resolveStreamSong,
+            libraryStore = libraryStore,
         )
     }
 }

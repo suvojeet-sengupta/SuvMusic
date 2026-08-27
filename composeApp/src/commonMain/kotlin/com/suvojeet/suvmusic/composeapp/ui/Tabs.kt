@@ -37,8 +37,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.launch
 
 /**
@@ -201,7 +203,10 @@ fun SearchTab(
 @Composable
 fun LibraryTab(
     onPickFile: () -> Unit,
+    libraryStore: LibraryStore? = null,
 ) {
+    val entries = libraryStore?.observeAll()?.collectAsState(initial = emptyList())?.value.orEmpty()
+
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -211,11 +216,38 @@ fun LibraryTab(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Folder scanning lands in a future update. For now, pick individual files.",
+            text = if (entries.isEmpty()) {
+                "Folder scanning lands in a future update. For now, pick individual files."
+            } else {
+                "Saved library items"
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.widthIn(max = 600.dp),
         )
+        entries.take(12).forEach { entry ->
+            Card(
+                modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = entry.subtitle ?: entry.type,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,

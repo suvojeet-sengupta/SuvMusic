@@ -52,6 +52,7 @@ kotlin {
                 // Android until Phase 4.2 wires the existing Media3
                 // player. Brings in kotlinx-coroutines transitively.
                 implementation(project(":core:domain"))
+                implementation(project(":core:db"))
             }
         }
 

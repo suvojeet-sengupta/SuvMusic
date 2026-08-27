@@ -57,6 +57,7 @@ import com.suvojeet.suvmusic.composeapp.ui.SearchTab
 import com.suvojeet.suvmusic.composeapp.ui.PlaybackEngineUnavailableBanner
 import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
 import com.suvojeet.suvmusic.composeapp.ui.formatMs
+import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.model.Song
 
@@ -84,6 +85,7 @@ fun App(
     onPickAudioFile: () -> String? = { null },
     onSearchYouTube: (suspend (String) -> List<RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
+    libraryStore: LibraryStore? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -149,6 +151,7 @@ fun App(
                                         val path = onPickAudioFile() ?: return@LibraryTab
                                         musicPlayer.setQueue(listOf(audioFileToSong(path)))
                                     },
+                                    libraryStore = libraryStore,
                                 )
                                 Tab.Lyrics -> LyricsTab(player = musicPlayer)
                                 Tab.About -> AboutTab(
