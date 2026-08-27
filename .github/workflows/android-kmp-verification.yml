@@ -65,7 +65,8 @@ jobs:
 
       - name: Install Android build dependencies
         run: |
-          sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
+          # API 37 is currently published as the preview package android-37.0.
+          sdkmanager --channel=1 "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
 
       - name: Install Protobuf compiler
         run: |
