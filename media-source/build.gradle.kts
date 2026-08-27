@@ -1,84 +1,47 @@
-import java.util.Properties
-
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.serialization)
 }
 
-android {
-    namespace = "com.suvojeet.suvmusic.mediasource"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-
-        // Load Last.fm keys from local.properties or environment
-        val localProperties = Properties()
-        val localFile = rootProject.file("local.properties")
-        if (localFile.exists()) {
-            localFile.inputStream().use { localProperties.load(it) }
-        }
-
-        val lastFmApiKey = System.getenv("LAST_FM_API_KEY") ?: localProperties.getProperty("LAST_FM_API_KEY") ?: ""
-        val lastFmSecret = System.getenv("LAST_FM_SHARED_SECRET") ?: localProperties.getProperty("LAST_FM_SHARED_SECRET") ?: ""
-
-        buildConfigField("String", "LAST_FM_API_KEY", "\"$lastFmApiKey\"")
-        buildConfigField("String", "LAST_FM_SHARED_SECRET", "\"$lastFmSecret\"")
-        
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            // Library modules are not minified — only :app runs R8. Dead proguardFiles()
-            // config removed; isMinifyEnabled=false is the library default.
-            isMinifyEnabled = false
-        }
-    }
-    buildFeatures {
-        buildConfig = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-}
-
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.mediasource"
+        compileSdk = 37
+        minSdk = 26
     }
-}
 
-dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    
-    // Ktor
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    jvm("desktop") {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                }
+            }
+        }
+    }
 
-    // Kotlinx Serialization
-    implementation(libs.kotlinx.serialization.json)
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+            }
+        }
 
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    
-    // Jsoup (if needed, e.g. for scraping)
-    implementation(libs.jsoup)
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.hilt.android)
+            }
+        }
 
-    api(project(":core:model"))
+        val desktopMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.cio)
+            }
+        }
+    }
 }
