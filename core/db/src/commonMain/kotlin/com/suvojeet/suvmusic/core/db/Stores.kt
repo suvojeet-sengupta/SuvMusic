@@ -128,7 +128,7 @@ class LibraryStore(database: SuvMusicDatabase) {
         .mapToOne(Dispatchers.Default)
 
     fun nextPlaylistOrder(playlistId: String): Long =
-        (queries.maxPlaylistOrder(playlistId).executeAsOne() ?: -1L) + 1L
+        queries.nextPlaylistOrder(playlistId).executeAsOne()
 
     fun observePlaylistSongs(playlistId: String) = queries
         .selectPlaylistSongs(playlistId)
