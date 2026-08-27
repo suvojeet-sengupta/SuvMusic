@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.composeapp.newpipe
 
+import com.suvojeet.suvmusic.core.domain.repository.YouTubeSearchResult
+import com.suvojeet.suvmusic.core.domain.repository.YouTubeSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +27,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
  * synchronous network/parse operations — wrapping in withContext keeps
  * them off the Compose UI thread.
  */
-object YouTubeSearch {
+object YouTubeSearch : YouTubeSource {
 
     @Volatile
     private var initialized = false
@@ -40,7 +42,7 @@ object YouTubeSearch {
         }
     }
 
-    suspend fun search(query: String): List<SearchResult> = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String): List<YouTubeSearchResult> = withContext(Dispatchers.IO) {
         ensureInitialized()
         if (query.isBlank()) return@withContext emptyList()
         val service = ServiceList.YouTube
@@ -51,7 +53,7 @@ object YouTubeSearch {
         info.relatedItems
             .filterIsInstance<StreamInfoItem>()
             .map { item ->
-                SearchResult(
+                YouTubeSearchResult(
                     title = item.name.orEmpty(),
                     uploader = item.uploaderName.orEmpty(),
                     durationSeconds = item.duration,
@@ -61,7 +63,7 @@ object YouTubeSearch {
             }
     }
 
-    suspend fun resolveStreamSong(result: SearchResult): Song? = withContext(Dispatchers.IO) {
+    override suspend fun resolveStreamSong(result: YouTubeSearchResult): Song? = withContext(Dispatchers.IO) {
         ensureInitialized()
         val info: StreamInfo = StreamInfo.getInfo(result.url)
         val audioStream = info.audioStreams
@@ -81,10 +83,4 @@ object YouTubeSearch {
     }
 }
 
-data class SearchResult(
-    val title: String,
-    val uploader: String,
-    val durationSeconds: Long,
-    val url: String,
-    val thumbnailUrl: String?,
-)
+typealias SearchResult = YouTubeSearchResult
