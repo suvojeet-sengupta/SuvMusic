@@ -97,6 +97,9 @@ compose.desktop {
         }
 
         nativeDistributions {
+            // SQLDelight's JDBC driver uses java.sql.DriverManager. Compose's
+            // trimmed runtime omits it unless the module is declared explicitly.
+            modules("java.sql")
             // Build native packages for the supported desktop environments. The
             // Android APK remains owned by :app and is not changed by this module.
             targetFormats(
