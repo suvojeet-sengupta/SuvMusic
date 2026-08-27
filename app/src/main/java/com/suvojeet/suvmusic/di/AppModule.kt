@@ -127,7 +127,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideLastFmConfig(): LastFmConfig = LastFmConfigImpl()
+    fun provideLastFmConfig(): LastFmConfig = LastFmConfigImpl(
+        apiKey = com.suvojeet.suvmusic.BuildConfig.LAST_FM_API_KEY,
+        sharedSecret = com.suvojeet.suvmusic.BuildConfig.LAST_FM_SHARED_SECRET,
+    )
 
     @Provides
     @Singleton
