@@ -101,7 +101,7 @@ jobs:
           test -n "$modules_file"
           "$JAVA_HOME/bin/jimage" list "$modules_file" | awk '
             /Module: java.sql/ { in_sql = 1 }
-            in_sql && /java\\/sql\\/DriverManager.class/ { found = 1 }
+            in_sql && /java\/sql\/DriverManager.class/ { found = 1 }
             END { exit found ? 0 : 1 }
           '
 
