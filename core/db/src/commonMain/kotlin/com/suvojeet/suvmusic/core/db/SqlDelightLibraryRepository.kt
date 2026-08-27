@@ -46,27 +46,36 @@ class SqlDelightLibraryRepository(
     override suspend fun isSongInPlaylist(playlistId: String, songId: String) =
         libraryStore.isSongInPlaylist(playlistId, songId)
 
-    override suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?) =
+    override suspend fun updatePlaylistThumbnail(playlistId: String, thumbnailUrl: String?) {
         libraryStore.updatePlaylistThumbnail(playlistId, thumbnailUrl)
+    }
 
-    override suspend fun updatePlaylistName(playlistId: String, name: String) =
+    override suspend fun updatePlaylistName(playlistId: String, name: String) {
         libraryStore.renamePlaylist(playlistId, name)
+    }
 
     override suspend fun replacePlaylistSongs(playlistId: String, songs: List<Song>) =
         savePlaylistSongs(playlistId, songs)
 
-    override suspend fun removePlaylist(playlistId: String) = libraryStore.deletePlaylist(playlistId)
+    override suspend fun removePlaylist(playlistId: String) {
+        libraryStore.deletePlaylist(playlistId)
+    }
 
-    override suspend fun removeSongFromPlaylist(playlistId: String, songId: String) =
+    override suspend fun removeSongFromPlaylist(playlistId: String, songId: String) {
         libraryStore.deleteSongFromPlaylist(playlistId, songId)
+    }
 
-    override suspend fun addSongToPlaylist(playlistId: String, song: Song) =
+    override suspend fun addSongToPlaylist(playlistId: String, song: Song) {
         libraryStore.insertPlaylistSong(song.toEntry(playlistId, 0))
+    }
 
-    override suspend fun saveAlbum(album: Album) =
+    override suspend fun saveAlbum(album: Album) {
         libraryStore.save(album.id, album.title, album.artist, album.thumbnailUrl, "ALBUM", 0L)
+    }
 
-    override suspend fun removeAlbum(albumId: String) = libraryStore.delete(albumId)
+    override suspend fun removeAlbum(albumId: String) {
+        libraryStore.delete(albumId)
+    }
 
     override fun isPlaylistSaved(playlistId: String): Flow<Boolean> = flow {
         emit(libraryStore.isSaved(playlistId))
@@ -95,10 +104,13 @@ class SqlDelightLibraryRepository(
         rows.map { it.toLibraryItem() }
     }
 
-    override suspend fun saveArtist(artist: Artist) =
+    override suspend fun saveArtist(artist: Artist) {
         libraryStore.save(artist.id, artist.name, artist.subscribers, artist.thumbnailUrl, "ARTIST", 0L)
+    }
 
-    override suspend fun removeArtist(artistId: String) = libraryStore.delete(artistId)
+    override suspend fun removeArtist(artistId: String) {
+        libraryStore.delete(artistId)
+    }
 
     override fun getSavedArtists(): Flow<List<LibraryItem>> = libraryStore.observeByType("ARTIST").map { rows ->
         rows.map { it.toLibraryItem() }
