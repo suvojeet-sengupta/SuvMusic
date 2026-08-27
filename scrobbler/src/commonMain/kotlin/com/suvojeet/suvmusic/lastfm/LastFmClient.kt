@@ -2,7 +2,7 @@ package com.suvojeet.suvmusic.lastfm
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.*
@@ -13,9 +13,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.security.MessageDigest
-import javax.inject.Inject
-import javax.inject.Singleton
 
 interface LastFmConfig {
     val apiKey: String
@@ -26,8 +23,7 @@ interface LastFmConfig {
 // Singleton so the owned ktor HttpClient (CIO) below exists exactly once for the
 // whole app instead of one engine per injection site — it lives for the process
 // lifetime and is never explicitly closed, so it must not be allowed to multiply.
-@Singleton
-class LastFmClient @Inject constructor(
+class LastFmClient(
     private val config: LastFmConfig
 ) {
 
@@ -36,7 +32,7 @@ class LastFmClient @Inject constructor(
         ignoreUnknownKeys = true
     }
 
-    private val client = HttpClient(CIO) {
+    private val client = createLyricsHttpClient().config {
         install(ContentNegotiation) {
             json(json)
         }
@@ -50,8 +46,7 @@ class LastFmClient @Inject constructor(
     private fun Map<String, String>.apiSig(secret: String): String {
         val sorted = toSortedMap()
         val toHash = sorted.entries.joinToString("") { it.key + it.value } + secret
-        val digest = MessageDigest.getInstance("MD5").digest(toHash.toByteArray())
-        return digest.joinToString("") { "%02x".format(it) }
+        return md5Hex(toHash)
     }
 
     private fun HttpRequestBuilder.lastfmParams(
@@ -228,7 +223,7 @@ class LastFmClient @Inject constructor(
     }
     
     fun getAuthUrl(): String {
-        val callback = java.net.URLEncoder.encode("suvmusic://lastfm-auth", "UTF-8")
+        val callback = "suvmusic%3A%2F%2Fsuvmusic-auth"
         return "https://www.last.fm/api/auth/?api_key=${config.apiKey}&cb=$callback"
     }
 }

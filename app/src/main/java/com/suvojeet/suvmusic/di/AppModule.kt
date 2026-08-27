@@ -13,6 +13,10 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
 import com.suvojeet.suvmusic.updater.UpdateChecker
+import com.suvojeet.suvmusic.lastfm.LastFmClient
+import com.suvojeet.suvmusic.lastfm.LastFmConfig
+import com.suvojeet.suvmusic.lastfm.LastFmConfigImpl
+import com.suvojeet.suvmusic.lastfm.LastFmRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -120,6 +124,18 @@ object AppModule {
     @Provides
     @Singleton
     fun provideUpdateChecker(): UpdateChecker = UpdateChecker(createLyricsHttpClient())
+
+    @Provides
+    @Singleton
+    fun provideLastFmConfig(): LastFmConfig = LastFmConfigImpl()
+
+    @Provides
+    @Singleton
+    fun provideLastFmClient(config: LastFmConfig): LastFmClient = LastFmClient(config)
+
+    @Provides
+    @Singleton
+    fun provideLastFmRepository(client: LastFmClient): LastFmRepository = LastFmRepository(client)
 
     @Provides
     @Singleton
