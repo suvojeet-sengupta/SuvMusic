@@ -50,14 +50,19 @@ kotlin {
             implementation(libs.okhttp)
             implementation(libs.hilt.android)
             implementation(libs.hilt.navigation.compose)
-            ksp(libs.hilt.compiler)
         }
 
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.ktor.client.cio)
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.ktor.client.cio)
+            }
         }
     }
+}
+
+dependencies {
+    add("kspAndroid", libs.hilt.compiler)
 }
 
 composeCompiler {
