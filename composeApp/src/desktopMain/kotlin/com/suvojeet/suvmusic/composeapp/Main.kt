@@ -19,7 +19,7 @@ import java.awt.Frame
 import java.io.File
 import java.net.URI
 
-private const val APP_VERSION = "2.5.4.0"
+private const val APP_VERSION = "2.6.6.0"
 
 fun main() = application {
     Window(
