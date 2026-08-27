@@ -56,7 +56,11 @@ class ListeningHistoryStore(database: SuvMusicDatabase) {
 
     fun count(): Long = queries.countAll().executeAsOne()
 
-    fun totalListeningTimeMs(): Long = queries.sumTotalListeningTime().executeAsOne() ?: 0L
+    fun totalListeningTimeMs(): Long = when (val total = queries.sumTotalListeningTime().executeAsOne()) {
+        is Long -> total
+        is Int -> total.toLong()
+        else -> 0L
+    }
 
     fun clear() = queries.deleteAll()
 }
