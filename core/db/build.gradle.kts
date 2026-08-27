@@ -27,6 +27,8 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.sqldelight.coroutines)
+                implementation(project(":core:model"))
+                implementation(project(":core:domain"))
             }
         }
 

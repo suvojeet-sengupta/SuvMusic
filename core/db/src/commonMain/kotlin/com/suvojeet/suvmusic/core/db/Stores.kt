@@ -70,6 +70,11 @@ class LibraryStore(database: SuvMusicDatabase) {
             LibraryEntry(row.id, row.title, row.subtitle, row.thumbnailUrl, row.type, row.timestamp)
         } }
 
+    fun getById(id: String): LibraryEntry? = queries
+        .selectItemById(id)
+        .executeAsOneOrNull()
+        ?.let { row -> LibraryEntry(row.id, row.title, row.subtitle, row.thumbnailUrl, row.type, row.timestamp) }
+
     fun observePlaylists() = queries
         .selectItemsByTypeWithSongCount("PLAYLIST")
         .asFlow()
@@ -93,6 +98,26 @@ class LibraryStore(database: SuvMusicDatabase) {
         queries.updateItemThumbnail(thumbnailUrl, id)
 
     fun delete(id: String) = queries.deleteItemById(id)
+
+    fun deletePlaylist(id: String) = queries.transaction {
+        queries.deletePlaylistSongs(id)
+        queries.deleteItemById(id)
+    }
+
+    fun insertPlaylistSong(song: PlaylistSongEntry) = queries.insertOrReplacePlaylistSong(
+        song.playlistId,
+        song.songId,
+        song.title,
+        song.artist,
+        song.album,
+        song.thumbnailUrl,
+        song.duration,
+        song.source,
+        song.localUri,
+        song.releaseDate,
+        song.addedAt,
+        song.order,
+    )
 
     fun isSaved(id: String): Boolean = queries.isItemSaved(id).executeAsOne()
 
