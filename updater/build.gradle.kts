@@ -42,7 +42,6 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.materialIconsExtended)
             implementation(compose.animation)
-            implementation(compose.animationCore)
             implementation(libs.okhttp)
             implementation(libs.hilt.android)
             implementation(libs.hilt.navigation.compose)
