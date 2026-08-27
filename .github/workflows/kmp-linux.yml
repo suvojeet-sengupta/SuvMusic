@@ -93,8 +93,12 @@ jobs:
       - name: Verify bundled runtime modules
         run: |
           set -euo pipefail
-          runtime_java="$(find composeApp/build/compose -type f -path '*/lib/runtime/bin/java' -print -quit)"
-          test -n "$runtime_java"
+          runtime_java="$(find composeApp/build/compose -type f -path '*/runtime/bin/java' -print -quit)"
+          if [ -z "$runtime_java" ]; then
+            echo "Bundled runtime executable was not found; available runtime paths:"
+            find composeApp/build/compose -type f -name java -print || true
+            exit 1
+          fi
           "$runtime_java" --list-modules | grep -E '^java\\.sql(@|$)'
 
       - name: Upload Linux packages
