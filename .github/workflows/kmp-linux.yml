@@ -97,13 +97,13 @@ jobs:
           extract_dir="$RUNNER_TEMP/suvmusic-rpm-root"
           mkdir -p "$extract_dir"
           rpm2cpio "$rpm_file" | (cd "$extract_dir" && cpio -idm --quiet)
-          runtime_java="$(find "$extract_dir" -path '*/lib/runtime/bin/java' -print -quit)"
-          if [ -z "$runtime_java" ]; then
-            echo "Bundled runtime executable was not found in RPM payload; runtime files:"
-            find "$extract_dir" -type f -path '*/runtime/*' -print || true
-            exit 1
-          fi
-          "$runtime_java" --list-modules | grep -E '^java\\.sql(@|$)'
+          modules_file="$(find "$extract_dir" -path '*/lib/runtime/lib/modules' -print -quit)"
+          test -n "$modules_file"
+          "$JAVA_HOME/bin/jimage" list "$modules_file" | awk '
+            /Module: java.sql/ { in_sql = 1 }
+            in_sql && /java\\/sql\\/DriverManager.class/ { found = 1 }
+            END { exit found ? 0 : 1 }
+          '
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
