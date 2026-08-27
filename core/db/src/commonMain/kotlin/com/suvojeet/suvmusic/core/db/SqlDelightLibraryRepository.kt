@@ -11,7 +11,6 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -22,17 +21,19 @@ class SqlDelightLibraryRepository(
     private val libraryStore: LibraryStore,
 ) : LibraryRepository {
     override suspend fun savePlaylist(playlist: Playlist) {
-        libraryStore.save(playlist.id, playlist.title, playlist.author, playlist.thumbnailUrl, "PLAYLIST", 0L)
+        libraryStore.save(playlist.id, playlist.title, playlist.author, playlist.thumbnailUrl, "PLAYLIST", nowMillis())
         savePlaylistSongs(playlist.id, playlist.songs)
     }
 
     override suspend fun savePlaylistSongs(playlistId: String, songs: List<Song>) =
         libraryStore.replacePlaylistSongs(playlistId, songs.mapIndexed { index, song -> song.toEntry(playlistId, index) })
 
-    override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) =
+    override suspend fun appendPlaylistSongs(playlistId: String, songs: List<Song>, startOrder: Int) {
+        val firstOrder = maxOf(startOrder.toLong(), libraryStore.nextPlaylistOrder(playlistId))
         songs.forEachIndexed { index, song ->
-            libraryStore.insertPlaylistSong(song.toEntry(playlistId, startOrder + index))
+            libraryStore.insertPlaylistSong(song.toEntry(playlistId, (firstOrder + index).toInt()))
         }
+    }
 
     override suspend fun getCachedPlaylistSongs(playlistId: String): List<Song> =
         libraryStore.observePlaylistSongs(playlistId).firstValue().map(::toSong)
@@ -66,24 +67,20 @@ class SqlDelightLibraryRepository(
     }
 
     override suspend fun addSongToPlaylist(playlistId: String, song: Song) {
-        libraryStore.insertPlaylistSong(song.toEntry(playlistId, 0))
+        libraryStore.insertPlaylistSong(song.toEntry(playlistId, libraryStore.nextPlaylistOrder(playlistId).toInt()))
     }
 
     override suspend fun saveAlbum(album: Album) {
-        libraryStore.save(album.id, album.title, album.artist, album.thumbnailUrl, "ALBUM", 0L)
+        libraryStore.save(album.id, album.title, album.artist, album.thumbnailUrl, "ALBUM", nowMillis())
     }
 
     override suspend fun removeAlbum(albumId: String) {
         libraryStore.delete(albumId)
     }
 
-    override fun isPlaylistSaved(playlistId: String): Flow<Boolean> = flow {
-        emit(libraryStore.isSaved(playlistId))
-    }
+    override fun isPlaylistSaved(playlistId: String): Flow<Boolean> = libraryStore.observeSaved(playlistId)
 
-    override fun isAlbumSaved(albumId: String): Flow<Boolean> = flow {
-        emit(libraryStore.isSaved(albumId))
-    }
+    override fun isAlbumSaved(albumId: String): Flow<Boolean> = libraryStore.observeSaved(albumId)
 
     override suspend fun getPlaylistById(id: String): LibraryItem? = libraryStore.getById(id)?.toLibraryItem()
 
@@ -105,7 +102,7 @@ class SqlDelightLibraryRepository(
     }
 
     override suspend fun saveArtist(artist: Artist) {
-        libraryStore.save(artist.id, artist.name, artist.subscribers, artist.thumbnailUrl, "ARTIST", 0L)
+        libraryStore.save(artist.id, artist.name, artist.subscribers, artist.thumbnailUrl, "ARTIST", nowMillis())
     }
 
     override suspend fun removeArtist(artistId: String) {
@@ -116,9 +113,7 @@ class SqlDelightLibraryRepository(
         rows.map { it.toLibraryItem() }
     }
 
-    override fun isArtistSaved(artistId: String): Flow<Boolean> = flow {
-        emit(libraryStore.isSaved(artistId))
-    }
+    override fun isArtistSaved(artistId: String): Flow<Boolean> = libraryStore.observeSaved(artistId)
 
     private fun Song.toEntry(playlistId: String, order: Int) = PlaylistSongEntry(
         playlistId = playlistId,
@@ -131,7 +126,7 @@ class SqlDelightLibraryRepository(
         source = source.name,
         localUri = localUri,
         releaseDate = releaseDate,
-        addedAt = addedAt,
+        addedAt = addedAt.takeIf { it > 0L } ?: nowMillis(),
         order = order.toLong(),
     )
 

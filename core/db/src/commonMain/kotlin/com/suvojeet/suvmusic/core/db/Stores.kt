@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.core.db
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOne
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 
@@ -120,6 +121,14 @@ class LibraryStore(database: SuvMusicDatabase) {
     )
 
     fun isSaved(id: String): Boolean = queries.isItemSaved(id).executeAsOne()
+
+    fun observeSaved(id: String) = queries
+        .isItemSaved(id)
+        .asFlow()
+        .mapToOne(Dispatchers.Default)
+
+    fun nextPlaylistOrder(playlistId: String): Long =
+        (queries.maxPlaylistOrder(playlistId).executeAsOne() ?: -1L) + 1L
 
     fun observePlaylistSongs(playlistId: String) = queries
         .selectPlaylistSongs(playlistId)

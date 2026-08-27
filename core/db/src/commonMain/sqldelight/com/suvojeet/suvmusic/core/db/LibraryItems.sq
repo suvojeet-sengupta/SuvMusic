@@ -83,6 +83,8 @@ ORDER BY "order" ASC;
 
 countPlaylistSongs:
 SELECT COUNT(*) FROM playlist_songs WHERE playlistId = ?;
+maxPlaylistOrder:
+SELECT MAX("order") FROM playlist_songs WHERE playlistId = ?;
 
 isSongInPlaylist:
 SELECT EXISTS(SELECT 1 FROM playlist_songs WHERE playlistId = ? AND songId = ?);
