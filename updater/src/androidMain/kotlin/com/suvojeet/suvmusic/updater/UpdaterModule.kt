@@ -1,10 +1,10 @@
 package com.suvojeet.suvmusic.updater
 
+import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
@@ -13,7 +13,5 @@ object UpdaterModule {
 
     @Provides
     @Singleton
-    fun provideUpdateChecker(okHttpClient: OkHttpClient): UpdateChecker {
-        return UpdateChecker(okHttpClient)
-    }
+    fun provideUpdateChecker(): UpdateChecker = UpdateChecker(createLyricsHttpClient())
 }

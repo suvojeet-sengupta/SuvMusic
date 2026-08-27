@@ -1,78 +1,65 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
 
-android {
-    namespace = "com.suvojeet.suvmusic.updater"
-    compileSdk = 37
-
-    defaultConfig {
+kotlin {
+    androidLibrary {
+        namespace = "com.suvojeet.suvmusic.updater"
+        compileSdk = 37
         minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            // Library modules are not minified — only :app runs R8. Dead proguardFiles()
-            // config removed; isMinifyEnabled=false is the library default.
-            isMinifyEnabled = false
+    jvm("desktop") {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                }
+            }
         }
     }
-    
-    buildFeatures {
-        compose = true
-        buildConfig = true
-    }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.ktor.client.core)
+            implementation(project(":media-source"))
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.lifecycle.runtime.ktx)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.activity.compose)
+            implementation(platform(libs.androidx.compose.bom))
+            implementation(libs.androidx.compose.ui)
+            implementation(libs.androidx.compose.ui.graphics)
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.compose.material)
+            implementation(libs.androidx.compose.material.icons.core)
+            implementation(libs.androidx.compose.material.icons.extended)
+            implementation(libs.androidx.compose.animation)
+            implementation(libs.androidx.compose.animation.core)
+            implementation(libs.androidx.compose.ui.tooling.preview)
+            implementation(libs.okhttp)
+            implementation(libs.hilt.android)
+            implementation(libs.hilt.navigation.compose)
+            ksp(libs.hilt.compiler)
+        }
+
+        desktopMain.dependencies {
+            implementation(compose.desktop.currentOs)
+            implementation(libs.ktor.client.cio)
+        }
     }
 }
 
 composeCompiler {
     stabilityConfigurationFile = rootProject.file("compose-stability.conf")
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-    }
-}
-
-dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.compose.material.icons.core)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.compose.animation)
-    implementation(libs.androidx.compose.animation.core)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-
-    // Networking
-    implementation(libs.okhttp)
-    
-    // Serialization
-    implementation(libs.kotlinx.serialization.json)
-
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
-
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
