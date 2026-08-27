@@ -61,7 +61,7 @@ jobs:
       - name: Install Linux packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y fakeroot rpm libfuse2
+          sudo apt-get install --no-install-recommends -y fakeroot rpm cpio libfuse2
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -93,10 +93,14 @@ jobs:
       - name: Verify bundled runtime modules
         run: |
           set -euo pipefail
-          runtime_java="$(find composeApp/build/compose -type f -path '*/runtime/bin/java' -print -quit)"
+          rpm_file="$(find composeApp/build/compose/binaries -type f -name '*.rpm' -print -quit)"
+          extract_dir="$RUNNER_TEMP/suvmusic-rpm-root"
+          mkdir -p "$extract_dir"
+          rpm2cpio "$rpm_file" | (cd "$extract_dir" && cpio -idm --quiet)
+          runtime_java="$(find "$extract_dir" -type f -path '*/lib/runtime/bin/java' -print -quit)"
           if [ -z "$runtime_java" ]; then
-            echo "Bundled runtime executable was not found; available runtime paths:"
-            find composeApp/build/compose -type f -name java -print || true
+            echo "Bundled runtime executable was not found in RPM payload; runtime files:"
+            find "$extract_dir" -type f -path '*/runtime/*' -print | head -80 || true
             exit 1
           fi
           "$runtime_java" --list-modules | grep -E '^java\\.sql(@|$)'
