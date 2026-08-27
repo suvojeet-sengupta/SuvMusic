@@ -11,6 +11,7 @@ import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.settings.DesktopAppSettingsStore
 import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
@@ -30,6 +31,7 @@ fun main() = application {
         val database = remember { buildDatabase(DatabaseDriverFactory()) }
         val libraryStore = remember(database) { LibraryStore(database) }
         val historyStore = remember(database) { ListeningHistoryStore(database) }
+        val settingsStore = remember { DesktopAppSettingsStore() }
         App(
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
@@ -38,6 +40,7 @@ fun main() = application {
             onResolveStreamSong = ::resolveStreamSong,
             libraryStore = libraryStore,
             historyStore = historyStore,
+            settingsStore = settingsStore,
         )
     }
 }

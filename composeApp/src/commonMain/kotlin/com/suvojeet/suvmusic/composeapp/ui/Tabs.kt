@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
+import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import androidx.compose.runtime.collectAsState
@@ -276,6 +278,65 @@ fun LibraryTab(
                     Text("Browse")
                 }
             }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------
+// Settings tab — shared typed settings backed by Android DataStore or Linux
+// Preferences through AppSettingsStore.
+// ----------------------------------------------------------------------
+
+@Composable
+fun SettingsTab(settingsStore: AppSettingsStore) {
+    val scope = rememberCoroutineScope()
+    val quality by settingsStore.videoQuality.collectAsState(initial = VideoQuality.MEDIUM)
+    val betterLyrics by settingsStore.betterLyricsEnabled.collectAsState(initial = true)
+    val simpMusic by settingsStore.simpMusicEnabled.collectAsState(initial = true)
+    val kuGou by settingsStore.kuGouEnabled.collectAsState(initial = true)
+    val provider by settingsStore.preferredLyricsProvider.collectAsState(initial = "BetterLyrics")
+
+    Column(
+        modifier = Modifier.widthIn(max = 720.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Shared settings for Android and Linux", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SettingRow("Video quality", quality.label) {
+            val next = VideoQuality.entries[(VideoQuality.entries.indexOf(quality) + 1) % VideoQuality.entries.size]
+            scope.launch { settingsStore.setVideoQuality(next) }
+        }
+        SettingRow("BetterLyrics", if (betterLyrics) "Enabled" else "Disabled") {
+            scope.launch { settingsStore.setBetterLyricsEnabled(!betterLyrics) }
+        }
+        SettingRow("SimpMusic lyrics", if (simpMusic) "Enabled" else "Disabled") {
+            scope.launch { settingsStore.setSimpMusicEnabled(!simpMusic) }
+        }
+        SettingRow("KuGou lyrics", if (kuGou) "Enabled" else "Disabled") {
+            scope.launch { settingsStore.setKuGouEnabled(!kuGou) }
+        }
+        SettingRow("Preferred lyrics provider", provider) {
+            val next = if (provider == "BetterLyrics") "LRCLIB" else "BetterLyrics"
+            scope.launch { settingsStore.setPreferredLyricsProvider(next) }
+        }
+    }
+}
+
+@Composable
+private fun SettingRow(title: String, value: String, onToggle: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onToggle) { Text("Change") }
         }
     }
 }

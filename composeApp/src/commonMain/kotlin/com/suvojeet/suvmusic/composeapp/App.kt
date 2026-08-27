@@ -54,12 +54,14 @@ import com.suvojeet.suvmusic.composeapp.ui.LyricsTab
 import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.composeapp.ui.SearchTab
+import com.suvojeet.suvmusic.composeapp.ui.SettingsTab
 import com.suvojeet.suvmusic.composeapp.ui.PlaybackEngineUnavailableBanner
 import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
 import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.Song
 
 /**
@@ -88,6 +90,7 @@ fun App(
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
     libraryStore: LibraryStore? = null,
     historyStore: ListeningHistoryStore? = null,
+    settingsStore: AppSettingsStore? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -161,6 +164,11 @@ fun App(
                                     appVersion = appVersion,
                                     onOpenUrl = onOpenUrl,
                                 )
+                                Tab.Settings -> if (settingsStore != null) {
+                                    SettingsTab(settingsStore)
+                                } else {
+                                    Text("Settings are not wired on this host.")
+                                }
                             }
                         }
                     }
@@ -182,6 +190,7 @@ private enum class Tab(val label: String) {
     Library("Library"),
     Lyrics("Lyrics"),
     About("About"),
+    Settings("Settings"),
 }
 
 @Composable
@@ -232,6 +241,12 @@ private fun AppNavRail(
             onClick = { onSelect(Tab.About) },
             icon = { Icon(Icons.Outlined.Info, contentDescription = "About") },
             label = { Text("About") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.Settings,
+            onClick = { onSelect(Tab.Settings) },
+            icon = { Icon(Icons.Outlined.Info, contentDescription = "Settings") },
+            label = { Text("Settings") },
         )
     }
 }
