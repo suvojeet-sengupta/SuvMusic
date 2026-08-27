@@ -1,6 +1,6 @@
 package com.suvojeet.suvmusic.kugou
 
-import io.ktor.client.HttpClient
+import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
@@ -11,25 +11,24 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.decodeBase64String
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import java.lang.Integer.min
+import kotlin.math.min
 import kotlin.math.abs
 
 @OptIn(ExperimentalSerializationApi::class)
-private val client = HttpClient {
-    expectSuccess = true
-
-    install(ContentNegotiation) {
-        val json = Json {
-            ignoreUnknownKeys = true
-            explicitNulls = false
-            encodeDefaults = true
+private val client by lazy {
+    createLyricsHttpClient().config {
+        expectSuccess = true
+        install(ContentNegotiation) {
+            val json = Json {
+                ignoreUnknownKeys = true
+                explicitNulls = false
+                encodeDefaults = true
+            }
+            json(json)
+            json(json, ContentType.Text.Html)
+            json(json, ContentType.Text.Plain)
         }
-        json(json)
-        json(json, ContentType.Text.Html)
-        json(json, ContentType.Text.Plain)
     }
-
-
 }
 
 private const val PAGE_SIZE = 8
