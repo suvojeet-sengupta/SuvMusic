@@ -28,7 +28,7 @@ sudo apt install vlc libvlc5 libvlccore9
 
 ### Fedora runtime
 
-Install VLC from the enabled RPM Fusion repositories, then launch the RPM or AppImage:
+Install VLC from the enabled Fedora RPM Fusion repositories, then launch the RPM package or unpacked desktop distribution:
 
 ```bash
 sudo dnf install vlc
@@ -46,6 +46,16 @@ Local Gradle builds are intentionally not part of the migration procedure. GitHu
 | `.github/workflows/android-kmp-verification.yml` | Assemble the existing Android debug APK after KMP changes | `gh workflow run android-kmp-verification.yml --ref feat/kmp-linux-desktop-migration` |
 
 A successful migration change requires both workflows to complete successfully. The release workflow remains unchanged and is not used for feature-branch verification.
+
+## Current migration ledger
+
+| Shared capability | KMP status | Android compatibility | Linux desktop status |
+|---|---|---|---|
+| TTML parsing and BetterLyrics | `commonMain` client/parser with Android and desktop HTTP engines | Verified by Android APK CI | Compiled through Linux package CI |
+| SimpMusic lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
+| KuGou lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
+| LRCLIB lyrics | `commonMain` client with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
+| Persistence, downloads, playback services, notifications, updater, and account integrations | Still Android-owned | Protected by existing `:app` path | Not yet ported |
 
 ## Incremental end state
 
