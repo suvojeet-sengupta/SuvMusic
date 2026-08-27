@@ -96,15 +96,27 @@ compose.desktop {
         }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+            // Build native packages for the supported desktop environments. The
+            // Android APK remains owned by :app and is not changed by this module.
+            targetFormats(
+                TargetFormat.Deb,
+                TargetFormat.Rpm,
+                TargetFormat.AppImage,
+                TargetFormat.Msi,
+                TargetFormat.Exe,
+            )
             packageName = "SuvMusic"
-            // Tracks app/build.gradle.kts versionName (2.6.4.0) — kept in sync so
-            // Windows MSI upgrade chains see new builds as upgrades. MSI versions
-            // are major.minor.patch only (the 4th app field is ignored by Windows
-            // Installer anyway), so the meaningful prefix is mirrored here.
-            packageVersion = "2.5.9"
-            description = "SuvMusic Desktop"
+            // Keep desktop packages aligned with app/build.gradle.kts versionName
+            // (2.6.6.0). Linux/Windows installers use the three-part prefix.
+            packageVersion = "2.6.6"
+            description = "SuvMusic Desktop — developed by Suvojeet Sengupta"
             vendor = "Suvojeet Sengupta"
+
+            linux {
+                packageName = "suvmusic"
+                debMaintainer = "suvojeet@suvojeetsengupta.in"
+                menuGroup = "AudioVideo"
+            }
 
             windows {
                 menu = true

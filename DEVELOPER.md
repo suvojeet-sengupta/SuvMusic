@@ -44,7 +44,7 @@ modules below must be migrated before bumping AGP to 10.
 | `:core:model` | AGP 9 KMP-aware | ✅ migrated |
 | `:app` | legacy `com.android.application` | n/a (application module) |
 | `:core:data` | legacy | ⏳ pending |
-| `:core:domain` | legacy | ⏳ pending |
+| `:core:domain` | AGP 9 KMP-aware | ✅ migrated |
 | `:extractor` | legacy | ⏳ pending |
 | `:media-source` | legacy | ⏳ pending |
 | `:scrobbler` | legacy | ⏳ pending |

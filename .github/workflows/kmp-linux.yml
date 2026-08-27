@@ -1,0 +1,94 @@
+name: KMP Linux Desktop
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - feat/kmp-linux-desktop-migration
+    paths:
+      - 'composeApp/**'
+      - 'core/**'
+      - 'gradle/**'
+      - 'gradle/libs.versions.toml'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/kmp-linux.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'composeApp/**'
+      - 'core/**'
+      - 'gradle/**'
+      - 'gradle/libs.versions.toml'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/kmp-linux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-desktop:
+    name: Build Linux desktop packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install Linux packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fakeroot rpm libfuse2
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Compile shared and desktop code
+        run: ./gradlew :composeApp:compileKotlinDesktop --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: -Dorg.gradle.workers.max=2
+
+      - name: Build Debian, RPM, and AppImage packages
+        run: >-
+          ./gradlew
+          :composeApp:packageReleaseDeb
+          :composeApp:packageReleaseRpm
+          :composeApp:packageReleaseAppImage
+          --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: -Dorg.gradle.workers.max=2
+
+      - name: Validate generated artifacts
+        run: |
+          set -euo pipefail
+          test -n "$(find composeApp/build/compose/binaries -type f -name '*.deb' -print -quit)"
+          test -n "$(find composeApp/build/compose/binaries -type f -name '*.rpm' -print -quit)"
+          test -n "$(find composeApp/build/compose/binaries -type f -name '*.AppImage' -print -quit)"
+          find composeApp/build/compose/binaries -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -print
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: SuvMusic-Linux-${{ github.run_number }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            composeApp/build/compose/binaries/**/*.deb
+            composeApp/build/compose/binaries/**/*.rpm
+            composeApp/build/compose/binaries/**/*.AppImage
