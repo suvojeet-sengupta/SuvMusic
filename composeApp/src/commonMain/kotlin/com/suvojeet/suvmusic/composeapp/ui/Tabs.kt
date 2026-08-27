@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.Song
@@ -206,8 +207,21 @@ fun SearchTab(
 fun LibraryTab(
     onPickFile: () -> Unit,
     libraryStore: LibraryStore? = null,
+    localMediaSource: LocalMediaSource? = null,
+    onPlaySong: (Song) -> Unit = {},
 ) {
     val entries = libraryStore?.observeAll()?.collectAsState(initial = emptyList())?.value.orEmpty()
+    var localSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(localMediaSource) {
+        if (localMediaSource == null) return@LaunchedEffect
+        try {
+            localSongs = localMediaSource.getAllLocalSongs()
+            scanError = null
+        } catch (t: Throwable) {
+            scanError = t.message ?: "Unable to scan local music"
+        }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -218,7 +232,7 @@ fun LibraryTab(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = if (entries.isEmpty()) {
+            text = if (entries.isEmpty() && localSongs.isEmpty()) {
                 "Folder scanning lands in a future update. For now, pick individual files."
             } else {
                 "Saved library items"
@@ -227,6 +241,28 @@ fun LibraryTab(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.widthIn(max = 600.dp),
         )
+        scanError?.let { message ->
+            Text(message, color = MaterialTheme.colorScheme.error)
+        }
+        localSongs.take(24).forEach { song ->
+            Card(
+                onClick = { onPlaySong(song) },
+                modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(song.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { onPlaySong(song) }) { Text("Play") }
+                }
+            }
+        }
         entries.take(12).forEach { entry ->
             Card(
                 modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),

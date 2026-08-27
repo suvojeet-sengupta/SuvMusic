@@ -61,6 +61,7 @@ import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
+import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.Song
 
@@ -91,6 +92,7 @@ fun App(
     libraryStore: LibraryStore? = null,
     historyStore: ListeningHistoryStore? = null,
     settingsStore: AppSettingsStore? = null,
+    localMediaSource: LocalMediaSource? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -158,6 +160,8 @@ fun App(
                                         musicPlayer.setQueue(listOf(audioFileToSong(path)))
                                     },
                                     libraryStore = libraryStore,
+                                    localMediaSource = localMediaSource,
+                                    onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
                                 )
                                 Tab.Lyrics -> LyricsTab(player = musicPlayer)
                                 Tab.About -> AboutTab(
