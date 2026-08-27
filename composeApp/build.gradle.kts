@@ -101,7 +101,6 @@ compose.desktop {
             targetFormats(
                 TargetFormat.Deb,
                 TargetFormat.Rpm,
-                TargetFormat.AppImage,
                 TargetFormat.Msi,
                 TargetFormat.Exe,
             )

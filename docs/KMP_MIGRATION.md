@@ -15,11 +15,11 @@ This branch establishes the safe KMP path for SuvMusic without replacing the pro
 
 ## Desktop targets
 
-The Compose Multiplatform desktop module now declares Debian, RPM, and AppImage outputs in addition to the existing Windows installers. The Linux executable uses VLCJ and therefore expects a system VLC/LibVLC installation at runtime. The package workflow validates artifact creation; runtime playback should be smoke-tested on a Fedora or Ubuntu desktop with VLC installed.
+The Compose Multiplatform desktop module now declares Debian and RPM outputs in addition to the existing Windows installers. The Linux executable uses VLCJ and therefore expects a system VLC/LibVLC installation at runtime. The package workflow validates artifact creation; runtime playback should be smoke-tested on a Fedora or Ubuntu desktop with VLC installed.
 
 ### Ubuntu/Debian runtime
 
-Install VLC before launching the AppImage or Debian package:
+Install VLC before launching the Debian package or the unpacked desktop distribution:
 
 ```bash
 sudo apt update
@@ -42,7 +42,7 @@ Local Gradle builds are intentionally not part of the migration procedure. GitHu
 
 | Workflow | Purpose | Manual trigger |
 |---|---|---|
-| `.github/workflows/kmp-linux.yml` | Compile shared/desktop code and build `.deb`, `.rpm`, and `.AppImage` artifacts | `gh workflow run kmp-linux.yml --ref feat/kmp-linux-desktop-migration` |
+| `.github/workflows/kmp-linux.yml` | Compile shared/desktop code and build `.deb` and `.rpm` artifacts | `gh workflow run kmp-linux.yml --ref feat/kmp-linux-desktop-migration` |
 | `.github/workflows/android-kmp-verification.yml` | Assemble the existing Android debug APK after KMP changes | `gh workflow run android-kmp-verification.yml --ref feat/kmp-linux-desktop-migration` |
 
 A successful migration change requires both workflows to complete successfully. The release workflow remains unchanged and is not used for feature-branch verification.

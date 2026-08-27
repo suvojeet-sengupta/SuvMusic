@@ -64,12 +64,11 @@ jobs:
         env:
           GRADLE_OPTS: -Dorg.gradle.workers.max=2
 
-      - name: Build Debian, RPM, and AppImage packages
+      - name: Build Debian and RPM packages
         run: >-
           ./gradlew
           :composeApp:packageReleaseDeb
           :composeApp:packageReleaseRpm
-          :composeApp:packageReleaseAppImage
           --no-daemon --stacktrace
         env:
           GRADLE_OPTS: -Dorg.gradle.workers.max=2
@@ -79,8 +78,7 @@ jobs:
           set -euo pipefail
           test -n "$(find composeApp/build/compose/binaries -type f -name '*.deb' -print -quit)"
           test -n "$(find composeApp/build/compose/binaries -type f -name '*.rpm' -print -quit)"
-          test -n "$(find composeApp/build/compose/binaries -type f -name '*.AppImage' -print -quit)"
-          find composeApp/build/compose/binaries -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) -print
+          find composeApp/build/compose/binaries -type f \( -name '*.deb' -o -name '*.rpm' \) -print
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
@@ -91,4 +89,4 @@ jobs:
           path: |
             composeApp/build/compose/binaries/**/*.deb
             composeApp/build/compose/binaries/**/*.rpm
-            composeApp/build/compose/binaries/**/*.AppImage
+
