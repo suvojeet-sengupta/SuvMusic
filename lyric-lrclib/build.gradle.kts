@@ -33,6 +33,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.hilt.android)
+                implementation(libs.okhttp)
             }
         }
 
