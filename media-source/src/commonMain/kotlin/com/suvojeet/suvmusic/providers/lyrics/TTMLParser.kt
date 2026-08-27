@@ -61,7 +61,7 @@ object TTMLParser {
             }.toList()
 
             val words = mergeSpansIntoWords(timedSpans)
-            val fallbackText = stripTags(content).decodeEntities().trim().replace(Regex("\\s+"), " ")
+            val fallbackText = decodeEntities(stripTags(content)).trim().replace(Regex("\\s+"), " ")
             val lineText = if (words.isEmpty()) fallbackText else words.joinToString(" ") { it.text }
             if (lineText.isEmpty()) null else ParsedLine(lineText, parseTime(begin), words)
         }.toList()
@@ -130,5 +130,4 @@ object TTMLParser {
         .replace("&quot;", "\"")
         .replace("&apos;", "'")
 
-    private fun String.decodeEntities(): String = decodeEntities(this)
 }
