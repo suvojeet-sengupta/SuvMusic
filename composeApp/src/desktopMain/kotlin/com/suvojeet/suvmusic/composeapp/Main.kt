@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.composeapp.newpipe.YouTubeSearch
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
@@ -28,6 +29,7 @@ fun main() = application {
     ) {
         val database = remember { buildDatabase(DatabaseDriverFactory()) }
         val libraryStore = remember(database) { LibraryStore(database) }
+        val historyStore = remember(database) { ListeningHistoryStore(database) }
         App(
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
@@ -35,6 +37,7 @@ fun main() = application {
             onSearchYouTube = ::searchYouTube,
             onResolveStreamSong = ::resolveStreamSong,
             libraryStore = libraryStore,
+            historyStore = historyStore,
         )
     }
 }

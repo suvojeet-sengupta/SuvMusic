@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -76,9 +77,11 @@ fun HomeTab(
     onGoToSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
     onExpandPlayer: () -> Unit,
+    historyStore: ListeningHistoryStore? = null,
 ) {
     val currentSong by player.currentSong.collectAsState()
     val isPlaying by player.isPlaying.collectAsState()
+    val recentHistory = historyStore?.observeRecent(8)?.collectAsState(initial = emptyList())?.value.orEmpty()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -96,6 +99,44 @@ fun HomeTab(
                     isPlaying = isPlaying,
                     onClick = onExpandPlayer,
                 )
+            }
+        }
+
+        if (recentHistory.isNotEmpty()) {
+            item { SectionTitle("Recently played") }
+            items(recentHistory) { entry ->
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AlbumArt(
+                            thumbnailUrl = entry.thumbnailUrl,
+                            contentDescription = entry.songTitle,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = entry.songTitle,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = "${entry.artist} · ${entry.playCount} plays",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
             }
         }
 

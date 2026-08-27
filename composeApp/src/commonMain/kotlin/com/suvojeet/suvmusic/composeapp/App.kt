@@ -58,6 +58,7 @@ import com.suvojeet.suvmusic.composeapp.ui.PlaybackEngineUnavailableBanner
 import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
 import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.model.Song
 
@@ -86,6 +87,7 @@ fun App(
     onSearchYouTube: (suspend (String) -> List<RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
     libraryStore: LibraryStore? = null,
+    historyStore: ListeningHistoryStore? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -137,6 +139,7 @@ fun App(
                                         selectedTab = Tab.Search
                                     },
                                     onExpandPlayer = { playerExpanded = true },
+                                    historyStore = historyStore,
                                 )
                                 Tab.Search -> SearchTab(
                                     onSearch = onSearchYouTube,
