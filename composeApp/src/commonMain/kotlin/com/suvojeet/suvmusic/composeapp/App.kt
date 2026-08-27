@@ -62,6 +62,7 @@ import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
+import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.Song
 
