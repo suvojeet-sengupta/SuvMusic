@@ -9,6 +9,11 @@ on:
     paths:
       - 'composeApp/**'
       - 'core/**'
+      - 'media-source/**'
+      - 'lyric-*/**'
+      - 'extractor/**'
+      - 'scrobbler/**'
+      - 'updater/**'
       - 'gradle/**'
       - 'gradle/libs.versions.toml'
       - 'settings.gradle.kts'
@@ -20,6 +25,11 @@ on:
     paths:
       - 'composeApp/**'
       - 'core/**'
+      - 'media-source/**'
+      - 'lyric-*/**'
+      - 'extractor/**'
+      - 'scrobbler/**'
+      - 'updater/**'
       - 'gradle/**'
       - 'gradle/libs.versions.toml'
       - 'settings.gradle.kts'
