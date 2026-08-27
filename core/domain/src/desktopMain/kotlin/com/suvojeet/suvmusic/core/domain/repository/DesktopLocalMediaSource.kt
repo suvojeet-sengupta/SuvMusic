@@ -31,7 +31,9 @@ class DesktopLocalMediaSource(
         roots.forEach { root ->
             if (!Files.exists(root)) return@forEach
             Files.walk(root).use { paths ->
-                paths.filter { it.isRegularFile() && it.extension.lowercase() in AUDIO_EXTENSIONS }
+                paths.filter { path ->
+                    path.isRegularFile() && path.fileName.toString().substringAfterLast('.', "").lowercase() in AUDIO_EXTENSIONS
+                }
                     .forEach { path -> add(path.toSong()) }
             }
         }
