@@ -55,10 +55,11 @@ A successful migration change requires both workflows to complete successfully. 
 | SimpMusic lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
 | KuGou lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
 | LRCLIB lyrics | `commonMain` client with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
-| Persistence, downloads, playback services, notifications, updater, and account integrations | Still Android-owned | Protected by existing `:app` path | Not yet ported |
+| Library and recent listening history stores | Common SQLDelight facade consumed by desktop UI | Existing Room path remains protected | Linux desktop UI reads the per-user SQLDelight database |
+| Persistence migration beyond the shared store facade, downloads, playback services, notifications, updater, and account integrations | Still Android-owned | Protected by existing `:app` path | Not yet ported |
 
 ## Incremental end state
 
-The final architecture is reached through feature slices rather than a single risky rewrite. First, pure models, parsers, repositories, and UI state move to `commonMain`. Next, Android and desktop implementations are supplied for media playback, persistence, networking, file selection, notifications, downloads, and account integrations. Finally, `:app` is reduced to a thin Android host and the desktop host is kept thin as well. No legacy Android module is deleted until all consumers have moved and both platform workflows pass.
+The current branch has completed the lyrics-provider KMP slices and the first database-backed desktop UI surfaces. The final architecture is reached through feature slices rather than a single risky rewrite. First, pure models, parsers, repositories, and UI state move to `commonMain`. Next, Android and desktop implementations are supplied for media playback, persistence, networking, file selection, notifications, downloads, and account integrations. Finally, `:app` is reduced to a thin Android host and the desktop host is kept thin as well. No legacy Android module is deleted until all consumers have moved and both platform workflows pass.
 
 > A KMP port is complete only when the same feature contract is exercised from both Android and Linux hosts; copying source files into `commonMain` without platform implementations is not considered complete.
