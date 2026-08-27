@@ -90,6 +90,13 @@ jobs:
           test -n "$(find composeApp/build/compose/binaries -type f -name '*.rpm' -print -quit)"
           find composeApp/build/compose/binaries -type f \( -name '*.deb' -o -name '*.rpm' \) -print
 
+      - name: Verify bundled runtime modules
+        run: |
+          set -euo pipefail
+          runtime_java="$(find composeApp/build/compose -type f -path '*/lib/runtime/bin/java' -print -quit)"
+          test -n "$runtime_java"
+          "$runtime_java" --list-modules | grep -E '^java\\.sql(@|$)'
+
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
