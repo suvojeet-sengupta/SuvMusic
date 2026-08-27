@@ -1,6 +1,11 @@
 package com.suvojeet.suvmusic.composeapp
 
 import androidx.compose.runtime.Composable
+import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
+import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 
 /**
  * Android entry point for the shared composeApp UI. The existing :app module
@@ -9,6 +14,28 @@ import androidx.compose.runtime.Composable
  * Kotlin file and compiles.
  */
 @Composable
-fun AndroidAppEntry() {
-    App()
+fun AndroidAppEntry(
+    appVersion: String = "0.0.0-dev",
+    onOpenUrl: (String) -> Unit = {},
+    onPickAudioFile: () -> String? = { null },
+    onSearchYouTube: (suspend (String) -> List<com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult>)? = null,
+    onResolveStreamSong: (suspend (com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult) -> com.suvojeet.suvmusic.core.model.Song?)? = null,
+    libraryStore: LibraryStore? = null,
+    historyStore: ListeningHistoryStore? = null,
+    settingsStore: AppSettingsStore? = null,
+    localMediaSource: LocalMediaSource? = null,
+    recommendationSource: RecommendationSource? = null,
+) {
+    App(
+        appVersion = appVersion,
+        onOpenUrl = onOpenUrl,
+        onPickAudioFile = onPickAudioFile,
+        onSearchYouTube = onSearchYouTube,
+        onResolveStreamSong = onResolveStreamSong,
+        libraryStore = libraryStore,
+        historyStore = historyStore,
+        settingsStore = settingsStore,
+        localMediaSource = localMediaSource,
+        recommendationSource = recommendationSource,
+    )
 }
