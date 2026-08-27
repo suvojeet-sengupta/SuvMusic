@@ -93,6 +93,7 @@ fun App(
     historyStore: ListeningHistoryStore? = null,
     settingsStore: AppSettingsStore? = null,
     localMediaSource: LocalMediaSource? = null,
+    recommendationSource: RecommendationSource? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -145,6 +146,8 @@ fun App(
                                     },
                                     onExpandPlayer = { playerExpanded = true },
                                     historyStore = historyStore,
+                                    recommendationSource = recommendationSource,
+                                    onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
                                 )
                                 Tab.Search -> SearchTab(
                                     onSearch = onSearchYouTube,

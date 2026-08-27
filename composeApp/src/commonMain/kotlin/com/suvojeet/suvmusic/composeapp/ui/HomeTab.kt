@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
+import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -78,10 +80,16 @@ fun HomeTab(
     onSearchQuery: (String) -> Unit,
     onExpandPlayer: () -> Unit,
     historyStore: ListeningHistoryStore? = null,
+    recommendationSource: RecommendationSource? = null,
+    onPlaySong: (Song) -> Unit = {},
 ) {
     val currentSong by player.currentSong.collectAsState()
     val isPlaying by player.isPlaying.collectAsState()
     val recentHistory = historyStore?.observeRecent(8)?.collectAsState(initial = emptyList())?.value.orEmpty()
+    var recommendations by remember { androidx.compose.runtime.mutableStateOf<List<Song>>(emptyList()) }
+    androidx.compose.runtime.LaunchedEffect(recommendationSource) {
+        recommendations = recommendationSource?.getPersonalizedRecommendations(8).orEmpty()
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -134,6 +142,33 @@ fun HomeTab(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (recommendations.isNotEmpty()) {
+            item { SectionTitle("Recommended for you") }
+            items(recommendations) { song ->
+                Card(
+                    onClick = { onPlaySong(song) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AlbumArt(
+                            thumbnailUrl = song.thumbnailUrl,
+                            contentDescription = song.title,
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(song.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                            Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
