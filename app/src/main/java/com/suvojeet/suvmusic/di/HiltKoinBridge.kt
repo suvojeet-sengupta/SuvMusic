@@ -114,6 +114,7 @@ interface HiltKoinBridgeEntryPoint {
     fun dislikedItemDao(): DislikedItemDao
     fun songGenreDao(): SongGenreDao
     fun libraryRepository(): LibraryRepository
+    fun libraryFeatureController(): com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 
     // scrobbler
     fun lastFmConfig(): LastFmConfig

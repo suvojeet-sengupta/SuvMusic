@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.di.ApplicationScope
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
 import com.suvojeet.suvmusic.updater.UpdateChecker
@@ -29,6 +30,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
     
+    @Provides
+    @Singleton
+    fun provideLibraryFeatureController(
+        libraryRepository: LibraryRepository,
+    ): LibraryFeatureController = LibraryFeatureController(libraryRepository)
+
     @Provides
     @Singleton
     fun provideSessionManager(
