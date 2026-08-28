@@ -150,6 +150,32 @@ actual class MusicPlayer {
         loadCurrent(autoPlay = true)
     }
 
+    actual fun addToQueue(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        queueList = queueList + songs
+        regenerateShuffleOrder()
+        _queue.value = queueList
+        if (_currentIndex.value < 0) {
+            canonicalIndex = 0
+            _currentIndex.value = 0
+            loadCurrent(autoPlay = true)
+        }
+    }
+
+    actual fun clearQueue() {
+        queueList = emptyList()
+        canonicalIndex = -1
+        shuffleOrder = emptyList()
+        shuffleCursor = -1
+        _queue.value = emptyList()
+        _currentIndex.value = -1
+        _currentSong.value = null
+        _positionMs.value = 0L
+        _durationMs.value = 0L
+        mediaPlayer?.controls()?.stop()
+        _isPlaying.value = false
+    }
+
     actual fun playAt(index: Int) {
         if (index !in queueList.indices) return
         canonicalIndex = index

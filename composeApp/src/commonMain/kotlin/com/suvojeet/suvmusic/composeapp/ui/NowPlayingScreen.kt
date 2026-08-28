@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -251,12 +252,18 @@ fun NowPlayingScreen(
 
             if (queue.isNotEmpty()) {
                 Spacer(Modifier.height(20.dp))
-                Text(
-                    text = "Queue · ${queue.size} track(s)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                Row(
                     modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "Queue · ${queue.size} track(s)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    TextButton(onClick = { player.clearQueue() }) { Text("Clear") }
+                }
                 LazyColumn(
                     modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().weight(1f, fill = false),
                     verticalArrangement = Arrangement.spacedBy(4.dp),

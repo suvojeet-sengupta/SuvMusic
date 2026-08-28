@@ -58,6 +58,10 @@ expect class MusicPlayer {
     val currentIndex: StateFlow<Int>
 
     fun setQueue(songs: List<Song>, startIndex: Int = 0)
+    /** Append tracks to the canonical queue without interrupting playback. */
+    fun addToQueue(songs: List<Song>)
+    /** Stop playback and remove all queued tracks. */
+    fun clearQueue()
     fun play()
     fun pause()
     fun togglePlayPause()

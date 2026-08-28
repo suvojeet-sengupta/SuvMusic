@@ -108,6 +108,36 @@ actual class MusicPlayer {
         loadCurrent(autoPlay = true)
     }
 
+    actual fun addToQueue(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        synchronized(queueLock) {
+            queueList = queueList + songs
+            regenerateShuffleOrderLocked()
+        }
+        _queue.value = queueList
+        if (_currentIndex.value < 0) {
+            canonicalIndex = 0
+            _currentIndex.value = 0
+            loadCurrent(autoPlay = true)
+        }
+    }
+
+    actual fun clearQueue() {
+        synchronized(queueLock) {
+            queueList = emptyList()
+            canonicalIndex = -1
+            shuffleOrder = emptyList()
+            shuffleCursor = -1
+        }
+        _queue.value = emptyList()
+        _currentIndex.value = -1
+        _currentSong.value = null
+        _positionMs.value = 0L
+        _durationMs.value = 0L
+        runOnMain { exoPlayer?.stop() }
+        _isPlaying.value = false
+    }
+
     actual fun playAt(index: Int) {
         synchronized(queueLock) {
             if (index !in queueList.indices) return
