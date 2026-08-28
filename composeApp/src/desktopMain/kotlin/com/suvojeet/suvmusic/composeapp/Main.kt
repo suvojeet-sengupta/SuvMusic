@@ -12,6 +12,8 @@ import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.db.SqlDelightListeningHistorySource
+import com.suvojeet.suvmusic.core.db.SqlDelightLibraryRepository
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.domain.notification.AppNotification
 import com.suvojeet.suvmusic.core.domain.notification.DesktopNotificationSink
 import com.suvojeet.suvmusic.core.domain.repository.DesktopDownloadManager
@@ -39,6 +41,9 @@ fun main() = application {
     ) {
         val database = remember { buildDatabase(DatabaseDriverFactory()) }
         val libraryStore = remember(database) { LibraryStore(database) }
+        val libraryController = remember(libraryStore) {
+            LibraryFeatureController(SqlDelightLibraryRepository(libraryStore))
+        }
         val historyStore = remember(database) { ListeningHistoryStore(database) }
         val historySource = remember(historyStore) { SqlDelightListeningHistorySource(historyStore) }
         val settingsStore = remember { DesktopAppSettingsStore() }
@@ -74,6 +79,7 @@ fun main() = application {
             onSearchYouTube = ::searchYouTube,
             onResolveStreamSong = ::resolveStreamSong,
             libraryStore = libraryStore,
+            libraryController = libraryController,
             historyStore = historyStore,
             historySource = historySource,
             settingsStore = settingsStore,

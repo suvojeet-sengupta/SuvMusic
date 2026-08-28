@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaRootManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
@@ -225,10 +226,14 @@ fun LibraryTab(
     onPickFile: () -> Unit,
     onPickMusicFolder: (() -> String?)? = null,
     libraryStore: LibraryStore? = null,
+    libraryController: LibraryFeatureController? = null,
     localMediaSource: LocalMediaSource? = null,
     onPlaySong: (Song) -> Unit = {},
 ) {
     val entries = libraryStore?.observeAll()?.collectAsState(initial = emptyList())?.value.orEmpty()
+    val controllerPlaylists = libraryController?.savedPlaylists?.collectAsState(initial = emptyList())?.value.orEmpty()
+    val controllerAlbums = libraryController?.savedAlbums?.collectAsState(initial = emptyList())?.value.orEmpty()
+    val controllerArtists = libraryController?.savedArtists?.collectAsState(initial = emptyList())?.value.orEmpty()
     var localSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var scanError by remember { mutableStateOf<String?>(null) }
     var scanVersion by remember { mutableStateOf(0) }
@@ -274,6 +279,14 @@ fun LibraryTab(
                 }
             }
         }
+        if (libraryController != null) {
+            Text(
+                text = "Saved playlists: ${controllerPlaylists.size} · albums: ${controllerAlbums.size} · artists: ${controllerArtists.size}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.widthIn(max = 720.dp),
+            )
+        }
         if (rootManager != null) {
             Text(
                 text = "Scanning: ${rootManager.configuredRoots().joinToString(" • ")}",
@@ -316,7 +329,19 @@ fun LibraryTab(
                 }
             }
         }
-        entries.take(12).forEach { entry ->
+        if (controllerPlaylists.isNotEmpty()) {
+            controllerPlaylists.take(12).forEach { playlist ->
+                Card(
+                    modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(playlist.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text("${playlist.uploaderName} · ${playlist.songCount} songs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        } else entries.take(12).forEach { entry ->
             Card(
                 modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
                 colors = CardDefaults.cardColors(

@@ -63,6 +63,7 @@ import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.history.ListeningHistorySource
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
@@ -96,6 +97,7 @@ fun App(
     onSearchYouTube: (suspend (String) -> List<RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
     libraryStore: LibraryStore? = null,
+    libraryController: LibraryFeatureController? = null,
     historyStore: ListeningHistoryStore? = null,
     historySource: ListeningHistorySource? = null,
     settingsStore: AppSettingsStore? = null,
@@ -190,6 +192,7 @@ fun App(
                                     },
                                     onPickMusicFolder = onPickMusicFolder,
                                     libraryStore = libraryStore,
+                                    libraryController = libraryController,
                                     localMediaSource = localMediaSource,
                                     onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
                                 )

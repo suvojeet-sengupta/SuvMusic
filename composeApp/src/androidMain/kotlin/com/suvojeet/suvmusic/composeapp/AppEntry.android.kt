@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.history.ListeningHistorySource
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
@@ -24,6 +25,7 @@ fun AndroidAppEntry(
     onSearchYouTube: (suspend (String) -> List<com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult) -> com.suvojeet.suvmusic.core.model.Song?)? = null,
     libraryStore: LibraryStore? = null,
+    libraryController: LibraryFeatureController? = null,
     historyStore: ListeningHistoryStore? = null,
     historySource: ListeningHistorySource? = null,
     settingsStore: AppSettingsStore? = null,
@@ -39,6 +41,7 @@ fun AndroidAppEntry(
         onSearchYouTube = onSearchYouTube,
         onResolveStreamSong = onResolveStreamSong,
         libraryStore = libraryStore,
+        libraryController = libraryController,
         historyStore = historyStore,
         historySource = historySource,
         settingsStore = settingsStore,
