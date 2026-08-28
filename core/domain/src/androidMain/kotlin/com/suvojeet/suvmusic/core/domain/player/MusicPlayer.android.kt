@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -342,7 +344,17 @@ actual class MusicPlayer {
 
     @OptIn(UnstableApi::class)
     private fun buildExoPlayer(context: Context): ExoPlayer {
-        return ExoPlayer.Builder(context.applicationContext).build()
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+        return ExoPlayer.Builder(context.applicationContext)
+            .build()
+            .also { player ->
+                // Let Media3 coordinate focus loss and ducking with calls,
+                // navigation, and other audio apps.
+                player.setAudioAttributes(audioAttributes, true)
+            }
     }
 
     private fun buildListener(): Player.Listener = object : Player.Listener {
