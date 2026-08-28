@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.core.model.Album
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -34,6 +35,7 @@ class AlbumViewModel @Inject constructor(
     private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer,
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     private val libraryRepository: LibraryRepository,
+    private val libraryFeatureController: LibraryFeatureController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -73,7 +75,7 @@ class AlbumViewModel @Inject constructor(
 
     private fun checkLibraryStatus() {
         viewModelScope.launch {
-            libraryRepository.isAlbumSaved(albumId).collect { isSaved ->
+            libraryFeatureController.isAlbumSaved(albumId).collect { isSaved ->
                 _uiState.update { it.copy(isSaved = isSaved) }
             }
         }
@@ -83,7 +85,7 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch {
             val album = _uiState.value.album ?: return@launch
             if (_uiState.value.isSaved) {
-                libraryRepository.removeAlbum(album.id)
+                libraryFeatureController.removeAlbum(album.id)
             } else {
                 libraryRepository.saveAlbum(album)
             }
