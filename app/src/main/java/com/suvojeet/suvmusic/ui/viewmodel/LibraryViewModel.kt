@@ -13,6 +13,7 @@ import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -104,6 +105,7 @@ class LibraryViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val spotifyImportHelper: SpotifyImportHelper,
     private val playlistImportHelper: PlaylistImportHelper,
+    private val libraryFeatureController: LibraryFeatureController,
     private val libraryRepository: LibraryRepository,
     private val musicPlayer: MusicPlayer,
     private val workManager: androidx.work.WorkManager,
@@ -383,7 +385,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeLibraryPlaylists() {
         viewModelScope.launch {
-            libraryRepository.getSavedPlaylists().collect { displayItems ->
+            libraryFeatureController.savedPlaylists.collect { displayItems ->
                 _uiState.update { state ->
                     // Combined list is always remote playlists + saved/local playlists from
                     // the DB, so a deletion in either place shows up straight away.
