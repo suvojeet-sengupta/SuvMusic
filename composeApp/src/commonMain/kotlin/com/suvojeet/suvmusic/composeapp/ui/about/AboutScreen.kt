@@ -110,7 +110,7 @@ private fun UpdateStatusCard(
             Text("Updates", style = MaterialTheme.typography.titleMedium)
             Text("Current version: $appVersion", style = MaterialTheme.typography.bodySmall)
             Text(
-                update?.let { "Version ${it.versionName} is available" } ?: status,
+                update?.versionName?.let { version -> "Version $version is available" } ?: status,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
