@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.composeapp.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -71,6 +74,8 @@ fun NowPlayingScreen(
     val durationMs by player.durationMs.collectAsState()
     val repeatMode by player.repeatMode.collectAsState()
     val shuffleEnabled by player.shuffleEnabled.collectAsState()
+    val queue by player.queue.collectAsState()
+    val currentIndex by player.currentIndex.collectAsState()
 
     val isDark = isSystemInDarkTheme()
     val dominant = rememberDominantColors(currentSong?.thumbnailUrl, isDarkTheme = isDark)
@@ -242,6 +247,46 @@ fun NowPlayingScreen(
                         player.setRepeatMode(nextMode)
                     },
                 )
+            }
+
+            if (queue.isNotEmpty()) {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "Queue · ${queue.size} track(s)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(),
+                )
+                LazyColumn(
+                    modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().weight(1f, fill = false),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    itemsIndexed(queue.take(30), key = { _, song -> song.id }) { index, song ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { player.playAt(index) }
+                                .background(
+                                    if (index == currentIndex) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.35f)
+                                    },
+                                )
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (index == currentIndex) {
+                                Text("Playing", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
