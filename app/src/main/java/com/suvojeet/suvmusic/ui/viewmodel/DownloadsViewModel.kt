@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class DownloadsViewModel @Inject constructor(
-    private val downloadRepository: DownloadRepository
+    private val downloadRepository: DownloadRepository,
+    private val downloadManager: DownloadManager,
 ) : ViewModel() {
     
     private val _pendingIntent = MutableStateFlow<android.app.PendingIntent?>(null)
@@ -24,10 +26,10 @@ class DownloadsViewModel @Inject constructor(
         _pendingIntent.value = null
     }
     
-    val downloadedSongs: StateFlow<List<Song>> = downloadRepository.downloadedSongs
+    val downloadedSongs: StateFlow<List<Song>> = downloadManager.downloadedSongs
     val queueState: StateFlow<List<Song>> = downloadRepository.queueState
-    val downloadingIds: StateFlow<Set<String>> = downloadRepository.downloadingIds
-    val downloadProgress: StateFlow<Map<String, Float>> = downloadRepository.downloadProgress
+    val downloadingIds: StateFlow<Set<String>> = downloadManager.downloadingIds
+    val downloadProgress: StateFlow<Map<String, Float>> = downloadManager.downloadProgress
     val downloadFailures: StateFlow<Map<String, com.suvojeet.suvmusic.data.repository.DownloadFailure>> =
         downloadRepository.downloadFailures
 
