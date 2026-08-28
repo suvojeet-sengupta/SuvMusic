@@ -5,6 +5,8 @@ import androidx.media3.datasource.cache.Cache
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.SuvMusicDatabase
 import com.suvojeet.suvmusic.core.db.buildDatabase
+import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
@@ -58,6 +60,8 @@ private val hiltBridgedModule: Module = module {
     // app/di AppModule equivalents
     single { bridge(androidContext()).sessionManager() }
     single<AccountSessionStore> { bridge(androidContext()).accountSessionStore() }
+    single<DownloadManager> { bridge(androidContext()).downloadManager() }
+    single<NotificationSink> { bridge(androidContext()).notificationSink() }
     single { bridge(androidContext()).okHttpClient() }
     single { bridge(androidContext()).gson() }
     single { bridge(androidContext()).remoteAudioRepository() }

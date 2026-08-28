@@ -10,6 +10,8 @@ import com.suvojeet.suvmusic.core.data.local.dao.DislikedItemDao
 import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
+import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.data.SessionManager
@@ -78,6 +80,8 @@ interface HiltKoinBridgeEntryPoint {
     // app/di — AppModule
     fun sessionManager(): SessionManager
     fun accountSessionStore(): AccountSessionStore
+    fun downloadManager(): DownloadManager
+    fun notificationSink(): NotificationSink
     fun youTubeRepository(): YouTubeRepository
     fun localAudioRepository(): LocalAudioRepository
     fun okHttpClient(): OkHttpClient

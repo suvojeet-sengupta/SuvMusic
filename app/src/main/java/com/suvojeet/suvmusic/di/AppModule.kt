@@ -10,8 +10,13 @@ import com.suvojeet.suvmusic.player.MusicPlayer
 import com.suvojeet.suvmusic.di.ApplicationScope
 import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.data.AndroidAccountSessionStore
+import com.suvojeet.suvmusic.data.AndroidNotificationSink
+import com.suvojeet.suvmusic.data.repository.AndroidDownloadManager
+import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
@@ -51,6 +56,18 @@ object AppModule {
     fun provideAccountSessionStore(
         sessionManager: SessionManager,
     ): AccountSessionStore = AndroidAccountSessionStore(sessionManager)
+
+    @Provides
+    @Singleton
+    fun provideDownloadManager(
+        repository: DownloadRepository,
+    ): DownloadManager = AndroidDownloadManager(repository)
+
+    @Provides
+    @Singleton
+    fun provideNotificationSink(
+        sink: AndroidNotificationSink,
+    ): NotificationSink = sink
     
     @Provides
     @Singleton
