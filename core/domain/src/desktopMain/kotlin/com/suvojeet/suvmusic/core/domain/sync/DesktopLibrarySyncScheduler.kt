@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /** Linux/JVM periodic scheduler for desktop-owned background synchronization. */
@@ -38,5 +39,12 @@ class DesktopLibrarySyncScheduler(
     override fun cancel() {
         periodicTask?.cancel(false)
         periodicTask = null
+    }
+
+    /** Stop scheduled work and release the desktop executor during app shutdown. */
+    fun close() {
+        cancel()
+        scope.cancel()
+        executor.shutdownNow()
     }
 }

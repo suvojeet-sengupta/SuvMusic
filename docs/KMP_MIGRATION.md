@@ -59,11 +59,11 @@ A successful migration change requires both workflows to complete successfully. 
 | Update metadata/checking | Common update models/checker; Android installer remains host-specific | Existing Android installer/API compatibility retained | Common checker compiles; desktop installer UX remains |
 | Last.fm/scrobbler protocol | Common client/models with KMP MD5 actuals | Credentials/config supplied by Android app host | JVM signing/client path compiles |
 | YouTube extraction boundary | Shared `YouTubeSource` contract; Android and desktop NewPipe adapters remain host-specific | Existing Android search/stream services remain source of truth | Desktop NewPipe façade implements the contract |
-| Downloads | Shared `DownloadManager` contract; Android adapter delegates to existing repository | Existing MediaStore/download queue remains protected | Linux file downloader implementation remains |
+| Downloads | Shared `DownloadManager` contract plus optional shared Home/Search actions and status UI | Existing MediaStore/download queue remains protected; shared host seam is additive | Linux downloader is wired into desktop Main, persists metadata atomically, and exposes progress/status; full Downloads screen parity remains |
 | Settings and account session | Typed common settings/session contracts with Android and desktop adapters | Existing DataStore/encrypted session storage remains protected | Settings persist through JVM Preferences; opaque account session is process-local until Secret Service support |
-| Local media scanning | Shared `LocalMediaSource`; Android MediaStore adapter and Linux recursive filesystem scanner | Existing MediaStore queries remain protected | Music/Downloads roots feed shared Library UI |
+| Local media scanning | Shared `LocalMediaSource` plus optional common root-management capability | Existing MediaStore queries remain protected | Music/Downloads roots feed shared Library UI; native folder picker, persisted roots, and rescan controls are wired |
 | Recommendations | Shared personalized/up-next contract; Android engine adapter and Linux offline local adapter | Existing RecommendationEngine remains source of truth | Home UI displays offline local recommendations |
-| Library sync scheduling | Shared `LibrarySyncScheduler`; Android WorkManager adapter | Existing `LikedSongsSyncWorker` remains protected | Desktop scheduler still requires host integration |
+| Library sync scheduling | Shared `LibrarySyncScheduler`; Android WorkManager adapter and Linux scheduled-executor adapter | Existing `LikedSongsSyncWorker` remains protected | Desktop scheduler is host-wired to a periodic local scan with lifecycle shutdown; active only while the app runs |
 | Persistence migration beyond these shared contracts, playback feature parity, notifications, installer UX, and final Android host wiring | Still incomplete | Protected by existing `:app` path | Not yet fully ported |
 
 ## Incremental end state

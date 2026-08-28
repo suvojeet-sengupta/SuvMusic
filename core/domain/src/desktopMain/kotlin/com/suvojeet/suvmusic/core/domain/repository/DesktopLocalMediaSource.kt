@@ -10,13 +10,14 @@ import kotlin.io.path.isRegularFile
 
 /**
  * Linux/JVM local-media adapter. Roots are persisted as a delimited preference
- * and can later be connected to the desktop folder-picker UI.
+ * and managed from the shared desktop Library folder-picker UI.
  */
 class DesktopLocalMediaSource(
-    roots: List<String> = readRoots(),
+    roots: List<String>? = null,
 ) : LocalMediaSource, LocalMediaRootManager {
     @Volatile
-    private var roots: List<Path> = roots.mapNotNull { runCatching { Paths.get(it) }.getOrNull() }
+    private var roots: List<Path> = (roots ?: readRoots().ifEmpty { defaultRoots() })
+        .mapNotNull { runCatching { Paths.get(it) }.getOrNull() }
 
     /** Replace configured folders and persist them for the next desktop launch. */
     @Synchronized
@@ -81,6 +82,11 @@ class DesktopLocalMediaSource(
         private fun readRoots(): List<String> = preferences.get("local_roots", "")
             .split(FileSystemSeparator)
             .filter(String::isNotBlank)
+
+        private fun defaultRoots(): List<String> = listOf(
+            Paths.get(System.getProperty("user.home"), "Music").toString(),
+            Paths.get(System.getProperty("user.home"), "Downloads").toString(),
+        )
 
         private const val FileSystemSeparator = "\u001f"
     }

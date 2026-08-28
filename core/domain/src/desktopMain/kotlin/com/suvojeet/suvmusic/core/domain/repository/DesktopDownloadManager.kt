@@ -1,5 +1,7 @@
 package com.suvojeet.suvmusic.core.domain.repository
 
+import com.suvojeet.suvmusic.core.domain.notification.AppNotification
+import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
 import java.net.URI
@@ -27,6 +29,7 @@ import kotlinx.coroutines.launch
 /** Linux file-download adapter for remote stream URLs and local files. */
 class DesktopDownloadManager(
     private val root: Path = Paths.get(System.getProperty("user.home"), "Music", "SuvMusic", "Downloads"),
+    private val notificationSink: NotificationSink? = null,
 ) : DownloadManager {
     private val executor = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + executor)
@@ -92,6 +95,13 @@ class DesktopDownloadManager(
                 )
             }
             persistSongs(_downloadedSongs.value)
+            notificationSink?.show(
+                AppNotification(
+                    id = song.id.hashCode(),
+                    title = "Download complete",
+                    body = song.title,
+                ),
+            )
         } finally {
             activeIds.remove(song.id)
             _downloadingIds.update { it - song.id }

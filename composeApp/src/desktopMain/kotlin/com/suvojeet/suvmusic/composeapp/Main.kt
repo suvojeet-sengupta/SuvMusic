@@ -11,10 +11,13 @@ import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.notification.AppNotification
+import com.suvojeet.suvmusic.core.domain.notification.DesktopNotificationSink
 import com.suvojeet.suvmusic.core.domain.repository.DesktopDownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.DesktopLocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.DesktopRecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.DesktopAppSettingsStore
+import com.suvojeet.suvmusic.core.domain.sync.DesktopLibrarySyncScheduler
 import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
@@ -25,6 +28,7 @@ import javax.swing.JFileChooser
 import java.net.URI
 
 private const val APP_VERSION = "2.6.6.0"
+private const val LIBRARY_SYNC_NOTIFICATION_ID = 42001
 
 fun main() = application {
     Window(
@@ -36,17 +40,29 @@ fun main() = application {
         val libraryStore = remember(database) { LibraryStore(database) }
         val historyStore = remember(database) { ListeningHistoryStore(database) }
         val settingsStore = remember { DesktopAppSettingsStore() }
-        val downloadManager = remember { DesktopDownloadManager() }
-        val localMediaSource = remember {
-            DesktopLocalMediaSource(
-                roots = listOf(
-                    File(System.getProperty("user.home"), "Music").absolutePath,
-                    File(System.getProperty("user.home"), "Downloads").absolutePath,
-                ),
-            )
+        val notificationSink = remember { DesktopNotificationSink() }
+        val downloadManager = remember(notificationSink) {
+            DesktopDownloadManager(notificationSink = notificationSink)
         }
+        val localMediaSource = remember { DesktopLocalMediaSource() }
         val recommendationSource = remember(localMediaSource) {
             DesktopRecommendationSource(localMediaSource)
+        }
+        val librarySyncScheduler = remember(localMediaSource, notificationSink) {
+            DesktopLibrarySyncScheduler {
+                val count = localMediaSource.getAllLocalSongs().size
+                notificationSink.show(
+                    AppNotification(
+                        id = LIBRARY_SYNC_NOTIFICATION_ID,
+                        title = "Library scan complete",
+                        body = "$count local track(s) available",
+                    ),
+                )
+            }
+        }
+        androidx.compose.runtime.DisposableEffect(librarySyncScheduler) {
+            librarySyncScheduler.schedulePeriodic(intervalHours = 24)
+            onDispose { librarySyncScheduler.close() }
         }
         App(
             appVersion = APP_VERSION,
