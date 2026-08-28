@@ -2,6 +2,7 @@ package com.suvojeet.suvmusic.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.HomeSection
 import com.suvojeet.suvmusic.core.model.HomeItem
@@ -76,6 +77,7 @@ class HomeViewModel @Inject constructor(
     private val remoteAudioRepository: RemoteAudioRepository,
     private val sessionManager: SessionManager,
     private val recommendationEngine: RecommendationEngine,
+    private val recommendationSource: RecommendationSource,
     private val lastFmRepository: LastFmRepository,
     private val musicPlayer: MusicPlayer,
     private val downloadRepository: DownloadRepository
@@ -335,8 +337,9 @@ class HomeViewModel @Inject constructor(
     private fun loadRecommendations() {
         viewModelScope.launch {
             try {
-                // Use the enhanced recommendation engine for Quick Picks
-                val recommendations = recommendationEngine.getPersonalizedRecommendations(20)
+                // Shared contract-backed Quick Picks; section-specific enhancements
+                // continue to use RecommendationEngine until those models are common.
+                val recommendations = recommendationSource.getPersonalizedRecommendations(20)
                 _uiState.update { it.copy(recommendations = recommendations) }
                 
                 // Save to cache
@@ -434,7 +437,7 @@ class HomeViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isLoading = true) }
                 // Fetch a broader pool of recommendations (e.g., 50 songs)
-                val recommendations = recommendationEngine.getPersonalizedRecommendations(50)
+                val recommendations = recommendationSource.getPersonalizedRecommendations(50)
                 if (recommendations.isNotEmpty()) {
                     val shuffled = recommendations.shuffled()
                     musicPlayer.playSong(shuffled[0], shuffled, 0)

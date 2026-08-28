@@ -12,11 +12,13 @@ import com.suvojeet.suvmusic.player.SpatialAudioProcessor
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
+import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.data.AndroidAccountSessionStore
 import com.suvojeet.suvmusic.data.AndroidNotificationSink
 import com.suvojeet.suvmusic.data.repository.AndroidDownloadManager
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
+import com.suvojeet.suvmusic.recommendation.AndroidRecommendationSource
 import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.core.data.local.dao.LyricsDao
 import com.suvojeet.suvmusic.providers.lyrics.createLyricsHttpClient
@@ -68,6 +70,12 @@ object AppModule {
     fun provideNotificationSink(
         sink: AndroidNotificationSink,
     ): NotificationSink = sink
+
+    @Provides
+    @Singleton
+    fun provideRecommendationSource(
+        source: AndroidRecommendationSource,
+    ): RecommendationSource = source
     
     @Provides
     @Singleton
