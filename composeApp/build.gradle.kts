@@ -53,6 +53,7 @@ kotlin {
                 // player. Brings in kotlinx-coroutines transitively.
                 implementation(project(":core:domain"))
                 implementation(project(":core:db"))
+                implementation(project(":updater"))
             }
         }
 
