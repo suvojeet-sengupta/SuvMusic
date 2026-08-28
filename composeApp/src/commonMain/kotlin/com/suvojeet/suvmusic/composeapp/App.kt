@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
@@ -50,6 +51,7 @@ import com.suvojeet.suvmusic.composeapp.ui.AboutTab
 import com.suvojeet.suvmusic.composeapp.ui.AlbumArt
 import com.suvojeet.suvmusic.composeapp.ui.HomeTab
 import com.suvojeet.suvmusic.composeapp.ui.LibraryTab
+import com.suvojeet.suvmusic.composeapp.ui.DownloadsTab
 import com.suvojeet.suvmusic.composeapp.ui.LyricsTab
 import com.suvojeet.suvmusic.composeapp.ui.NowPlayingScreen
 import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
@@ -173,6 +175,14 @@ fun App(
                                     },
                                     seedQuery = searchSeedQuery,
                                 )
+                                Tab.Downloads -> if (downloadManager != null) {
+                                    DownloadsTab(
+                                        downloadManager = downloadManager,
+                                        onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
+                                    )
+                                } else {
+                                    Text("Downloads are not wired on this host.")
+                                }
                                 Tab.Library -> LibraryTab(
                                     onPickFile = {
                                         val path = onPickAudioFile() ?: return@LibraryTab
@@ -212,6 +222,7 @@ private enum class Tab(val label: String) {
     Home("Home"),
     Search("Search"),
     Library("Library"),
+    Downloads("Downloads"),
     Lyrics("Lyrics"),
     About("About"),
     Settings("Settings"),
@@ -253,6 +264,12 @@ private fun AppNavRail(
             onClick = { onSelect(Tab.Library) },
             icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = "Library") },
             label = { Text("Library") },
+        )
+        NavigationRailItem(
+            selected = selected == Tab.Downloads,
+            onClick = { onSelect(Tab.Downloads) },
+            icon = { Icon(Icons.Filled.Download, contentDescription = "Downloads") },
+            label = { Text("Downloads") },
         )
         NavigationRailItem(
             selected = selected == Tab.Lyrics,

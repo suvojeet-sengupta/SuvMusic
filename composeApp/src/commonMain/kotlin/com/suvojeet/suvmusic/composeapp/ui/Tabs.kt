@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaRootManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
@@ -363,6 +365,86 @@ fun LibraryTab(
                 }
                 Button(onClick = onPickFile) {
                     Text("Browse")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DownloadsTab(
+    downloadManager: DownloadManager,
+    onPlaySong: (Song) -> Unit = {},
+) {
+    val scope = rememberCoroutineScope()
+    val songs by downloadManager.downloadedSongs.collectAsState()
+    val downloadingIds by downloadManager.downloadingIds.collectAsState()
+    val progress by downloadManager.downloadProgress.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Text("Downloads", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Saved for offline playback", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (songs.isNotEmpty()) {
+                TextButton(onClick = { scope.launch { downloadManager.deleteAll() } }) {
+                    Text("Clear all")
+                }
+            }
+        }
+
+        if (downloadingIds.isNotEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Downloading ${downloadingIds.size} track(s)…", fontWeight = FontWeight.Medium)
+                    downloadingIds.forEach { id ->
+                        Text("${id.take(42)} · ${((progress[id] ?: 0f) * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
+        if (songs.isEmpty()) {
+            Text(
+                "No downloads yet. Save a resolved track from Search or Home.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.widthIn(max = 720.dp).fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(songs, key = { it.id }) { song ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            AlbumArt(
+                                thumbnailUrl = song.thumbnailUrl,
+                                contentDescription = song.title,
+                                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)),
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(song.title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick = { onPlaySong(song) }) { Text("Play") }
+                            TextButton(onClick = { scope.launch { downloadManager.delete(song.id) } }) { Text("Delete") }
+                        }
+                    }
                 }
             }
         }
