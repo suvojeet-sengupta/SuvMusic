@@ -62,7 +62,7 @@ private val hiltBridgedModule: Module = module {
     // app/di AppModule equivalents
     single { bridge(androidContext()).sessionManager() }
     single<AccountSessionStore> { bridge(androidContext()).accountSessionStore() }
-    single<AndroidAppSettingsStore> { bridge(androidContext()).androidAppSettingsStore() }
+    single<AndroidAppSettingsStore> { AndroidAppSettingsStore(get()) }
     single<DownloadManager> { bridge(androidContext()).downloadManager() }
     single<NotificationSink> { bridge(androidContext()).notificationSink() }
     single<RecommendationSource> { bridge(androidContext()).recommendationSource() }
