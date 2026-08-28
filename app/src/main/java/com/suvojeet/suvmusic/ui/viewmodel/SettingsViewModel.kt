@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.suvojeet.suvmusic.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
-import com.suvojeet.suvmusic.data.AndroidAppSettingsStore
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.core.model.AudioQuality
 import com.suvojeet.suvmusic.core.model.VideoQuality
@@ -162,7 +162,7 @@ data class SettingsUiState(
 
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
-    private val appSettingsStore: AndroidAppSettingsStore,
+    private val appSettingsStore: AppSettingsStore,
     private val youtubeRepository: YouTubeRepository,
     private val lastFmRepository: LastFmRepository,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
