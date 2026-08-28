@@ -20,6 +20,7 @@ import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import javax.swing.JFileChooser
 import java.net.URI
 
 private const val APP_VERSION = "2.6.6.0"
@@ -49,6 +50,7 @@ fun main() = application {
             appVersion = APP_VERSION,
             onOpenUrl = ::openInBrowser,
             onPickAudioFile = ::pickAudioFile,
+            onPickMusicFolder = ::pickMusicFolder,
             onSearchYouTube = ::searchYouTube,
             onResolveStreamSong = ::resolveStreamSong,
             libraryStore = libraryStore,
@@ -109,6 +111,19 @@ private fun openInBrowser(url: String) {
  * built-in file picker, so this is the cleanest option without pulling
  * in a third-party library like FileKit.
  */
+private fun pickMusicFolder(): String? {
+    val chooser = JFileChooser().apply {
+        dialogTitle = "Select music folder"
+        fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+        isAcceptAllFileFilterUsed = false
+    }
+    return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+        chooser.selectedFile?.absolutePath
+    } else {
+        null
+    }
+}
+
 private fun pickAudioFile(): String? {
     val dialog = FileDialog(null as Frame?, "Select audio file", FileDialog.LOAD).apply {
         // OS-dependent filter hint. Windows ignores it; macOS NSOpenPanel

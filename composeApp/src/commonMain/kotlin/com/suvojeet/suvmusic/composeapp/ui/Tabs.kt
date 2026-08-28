@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.LibraryStore
+import com.suvojeet.suvmusic.core.domain.repository.LocalMediaRootManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.VideoQuality
@@ -206,6 +207,7 @@ fun SearchTab(
 @Composable
 fun LibraryTab(
     onPickFile: () -> Unit,
+    onPickMusicFolder: (() -> String?)? = null,
     libraryStore: LibraryStore? = null,
     localMediaSource: LocalMediaSource? = null,
     onPlaySong: (Song) -> Unit = {},
@@ -213,7 +215,9 @@ fun LibraryTab(
     val entries = libraryStore?.observeAll()?.collectAsState(initial = emptyList())?.value.orEmpty()
     var localSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var scanError by remember { mutableStateOf<String?>(null) }
-    androidx.compose.runtime.LaunchedEffect(localMediaSource) {
+    var scanVersion by remember { mutableStateOf(0) }
+    val rootManager = localMediaSource as? LocalMediaRootManager
+    androidx.compose.runtime.LaunchedEffect(localMediaSource, scanVersion) {
         if (localMediaSource == null) return@LaunchedEffect
         try {
             localSongs = localMediaSource.getAllLocalSongs()
@@ -226,16 +230,49 @@ fun LibraryTab(
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
-            text = "Library",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = "Library",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = { scanVersion++ },
+                    enabled = localMediaSource != null,
+                ) { Text("Rescan") }
+                if (rootManager != null && onPickMusicFolder != null) {
+                    Button(
+                        onClick = {
+                            val folder = onPickMusicFolder()
+                            if (!folder.isNullOrBlank()) {
+                                rootManager.updateRoots((rootManager.configuredRoots() + folder).distinct())
+                                scanVersion++
+                            }
+                        },
+                    ) { Text("Add folder") }
+                }
+            }
+        }
+        if (rootManager != null) {
+            Text(
+                text = "Scanning: ${rootManager.configuredRoots().joinToString(" • ")}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.widthIn(max = 720.dp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             text = if (entries.isEmpty() && localSongs.isEmpty()) {
-                "Folder scanning lands in a future update. For now, pick individual files."
+                "No local tracks found yet. Add a music folder or pick an individual file."
             } else {
-                "Saved library items"
+                "Saved library items and local tracks"
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

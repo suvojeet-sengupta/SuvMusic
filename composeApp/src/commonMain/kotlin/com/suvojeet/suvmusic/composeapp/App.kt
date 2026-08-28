@@ -88,6 +88,7 @@ fun App(
     appVersion: String = "0.0.0-dev",
     onOpenUrl: (String) -> Unit = {},
     onPickAudioFile: () -> String? = { null },
+    onPickMusicFolder: (() -> String?)? = null,
     onSearchYouTube: (suspend (String) -> List<RemoteSearchResult>)? = null,
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
     libraryStore: LibraryStore? = null,
@@ -163,6 +164,7 @@ fun App(
                                         val path = onPickAudioFile() ?: return@LibraryTab
                                         musicPlayer.setQueue(listOf(audioFileToSong(path)))
                                     },
+                                    onPickMusicFolder = onPickMusicFolder,
                                     libraryStore = libraryStore,
                                     localMediaSource = localMediaSource,
                                     onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },

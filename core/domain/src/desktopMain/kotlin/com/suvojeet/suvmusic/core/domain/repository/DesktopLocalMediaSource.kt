@@ -14,8 +14,23 @@ import kotlin.io.path.isRegularFile
  */
 class DesktopLocalMediaSource(
     roots: List<String> = readRoots(),
-) : LocalMediaSource {
-    private val roots = roots.mapNotNull { runCatching { Paths.get(it) }.getOrNull() }
+) : LocalMediaSource, LocalMediaRootManager {
+    @Volatile
+    private var roots: List<Path> = roots.mapNotNull { runCatching { Paths.get(it) }.getOrNull() }
+
+    /** Replace configured folders and persist them for the next desktop launch. */
+    @Synchronized
+    override fun updateRoots(rootPaths: List<String>) {
+        roots = rootPaths
+            .mapNotNull { runCatching { Paths.get(it).toAbsolutePath().normalize() }.getOrNull() }
+            .distinct()
+        saveRoots(roots.map(Path::toString))
+    }
+
+    override fun configuredRoots(): List<String> = roots.map(Path::toString)
+
+    @Synchronized
+    private fun rootsSnapshot(): List<Path> = roots.toList()
 
     override suspend fun getAllLocalSongs(): List<Song> = scan().sortedBy { it.title.lowercase() }
 
@@ -28,7 +43,7 @@ class DesktopLocalMediaSource(
     }
 
     private fun scan(): List<Song> = buildList {
-        roots.forEach { root ->
+        rootsSnapshot().forEach { root ->
             if (!Files.exists(root)) return@forEach
             Files.walk(root).use { paths ->
                 paths.filter { path ->
