@@ -8,6 +8,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SortOrder
 import com.suvojeet.suvmusic.core.model.SortType
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.util.PlaylistExportHelper
@@ -60,6 +61,7 @@ class PlaylistViewModel @Inject constructor(
     private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
     private val localAudioRepository: com.suvojeet.suvmusic.data.repository.LocalAudioRepository,
     private val libraryRepository: LibraryRepository,
+    private val libraryFeatureController: LibraryFeatureController,
     private val cache: androidx.media3.datasource.cache.Cache,
     private val listeningHistoryDao: com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao,
     savedStateHandle: SavedStateHandle
@@ -133,7 +135,7 @@ class PlaylistViewModel @Inject constructor(
 
     private fun checkLibraryStatus() {
         viewModelScope.launch {
-            libraryRepository.isPlaylistSaved(playlistId).collect { isSaved ->
+            libraryFeatureController.isPlaylistSaved(playlistId).collect { isSaved ->
                 _uiState.update { it.copy(isSaved = isSaved) }
             }
         }
