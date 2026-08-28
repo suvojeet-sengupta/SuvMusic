@@ -11,6 +11,7 @@ import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.db.SqlDelightListeningHistorySource
 import com.suvojeet.suvmusic.core.domain.notification.AppNotification
 import com.suvojeet.suvmusic.core.domain.notification.DesktopNotificationSink
 import com.suvojeet.suvmusic.core.domain.repository.DesktopDownloadManager
@@ -39,6 +40,7 @@ fun main() = application {
         val database = remember { buildDatabase(DatabaseDriverFactory()) }
         val libraryStore = remember(database) { LibraryStore(database) }
         val historyStore = remember(database) { ListeningHistoryStore(database) }
+        val historySource = remember(historyStore) { SqlDelightListeningHistorySource(historyStore) }
         val settingsStore = remember { DesktopAppSettingsStore() }
         val notificationSink = remember { DesktopNotificationSink() }
         val downloadManager = remember(notificationSink) {
@@ -73,6 +75,7 @@ fun main() = application {
             onResolveStreamSong = ::resolveStreamSong,
             libraryStore = libraryStore,
             historyStore = historyStore,
+            historySource = historySource,
             settingsStore = settingsStore,
             localMediaSource = localMediaSource,
             recommendationSource = recommendationSource,

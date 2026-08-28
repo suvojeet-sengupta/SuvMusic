@@ -46,6 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.history.ListeningHistoryItem
+import com.suvojeet.suvmusic.core.domain.history.ListeningHistorySource
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.model.Song
@@ -83,13 +85,27 @@ fun HomeTab(
     onSearchQuery: (String) -> Unit,
     onExpandPlayer: () -> Unit,
     historyStore: ListeningHistoryStore? = null,
+    historySource: ListeningHistorySource? = null,
     recommendationSource: RecommendationSource? = null,
     downloadManager: DownloadManager? = null,
     onPlaySong: (Song) -> Unit = {},
 ) {
     val currentSong by player.currentSong.collectAsState()
     val isPlaying by player.isPlaying.collectAsState()
-    val recentHistory = historyStore?.observeRecent(8)?.collectAsState(initial = emptyList())?.value.orEmpty()
+    val recentHistory = historySource?.observeRecent(8)?.collectAsState(initial = emptyList())?.value
+        ?: historyStore?.observeRecent(8)?.collectAsState(initial = emptyList())?.value
+            ?.map { row ->
+                ListeningHistoryItem(
+                    songId = row.songId,
+                    songTitle = row.songTitle,
+                    artist = row.artist,
+                    thumbnailUrl = row.thumbnailUrl,
+                    duration = row.duration,
+                    playCount = row.playCount,
+                    lastPlayed = row.lastPlayed,
+                )
+            }
+            .orEmpty()
     val downloadingIds = downloadManager?.downloadingIds?.collectAsState()?.value.orEmpty()
     val downloadedSongs = downloadManager?.downloadedSongs?.collectAsState()?.value.orEmpty()
     val downloadProgress = downloadManager?.downloadProgress?.collectAsState()?.value.orEmpty()

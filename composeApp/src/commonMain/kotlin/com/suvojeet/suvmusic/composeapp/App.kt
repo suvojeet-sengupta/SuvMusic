@@ -60,6 +60,7 @@ import com.suvojeet.suvmusic.composeapp.ui.audioFileToSong
 import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.history.ListeningHistorySource
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
@@ -94,6 +95,7 @@ fun App(
     onResolveStreamSong: (suspend (RemoteSearchResult) -> Song?)? = null,
     libraryStore: LibraryStore? = null,
     historyStore: ListeningHistoryStore? = null,
+    historySource: ListeningHistorySource? = null,
     settingsStore: AppSettingsStore? = null,
     localMediaSource: LocalMediaSource? = null,
     recommendationSource: RecommendationSource? = null,
@@ -150,6 +152,7 @@ fun App(
                                     },
                                     onExpandPlayer = { playerExpanded = true },
                                     historyStore = historyStore,
+                                    historySource = historySource,
                                     recommendationSource = recommendationSource,
                                     downloadManager = downloadManager,
                                     onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
