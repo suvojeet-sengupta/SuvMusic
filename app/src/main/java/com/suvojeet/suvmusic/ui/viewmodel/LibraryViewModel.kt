@@ -14,6 +14,7 @@ import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
 import com.suvojeet.suvmusic.core.domain.library.LibraryFeatureController
+import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.LocalAudioRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
@@ -105,6 +106,7 @@ class LibraryViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val spotifyImportHelper: SpotifyImportHelper,
     private val playlistImportHelper: PlaylistImportHelper,
+    private val accountSessionStore: AccountSessionStore,
     private val libraryFeatureController: LibraryFeatureController,
     private val libraryRepository: LibraryRepository,
     private val musicPlayer: MusicPlayer,
@@ -117,7 +119,7 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     
     init {
-        _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
+        _uiState.update { it.copy(isLoggedIn = accountSessionStore.hasSession()) }
         loadData()
         observeAuthState()
         observeDownloads()
@@ -138,7 +140,7 @@ class LibraryViewModel @Inject constructor(
     private fun observeAuthState() {
         viewModelScope.launch {
             var hasEmittedInitialState = false
-            sessionManager.isLoggedInFlow
+            accountSessionStore.isLoggedIn
                 .distinctUntilChanged()
                 .collect { loggedIn ->
                     val cachedRemote = if (!loggedIn) {

@@ -11,6 +11,7 @@ import com.suvojeet.suvmusic.core.data.local.dao.LibraryDao
 import com.suvojeet.suvmusic.core.data.local.dao.ListeningHistoryDao
 import com.suvojeet.suvmusic.core.data.local.dao.SongGenreDao
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
@@ -76,6 +77,7 @@ import okhttp3.OkHttpClient
 interface HiltKoinBridgeEntryPoint {
     // app/di — AppModule
     fun sessionManager(): SessionManager
+    fun accountSessionStore(): AccountSessionStore
     fun youTubeRepository(): YouTubeRepository
     fun localAudioRepository(): LocalAudioRepository
     fun okHttpClient(): OkHttpClient

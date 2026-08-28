@@ -6,6 +6,7 @@ import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.SuvMusicDatabase
 import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
+import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import com.suvojeet.suvmusic.ui.screens.wrapped.WrappedViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
@@ -56,6 +57,7 @@ internal const val Q_APPLICATION_SCOPE = "ApplicationScope"
 private val hiltBridgedModule: Module = module {
     // app/di AppModule equivalents
     single { bridge(androidContext()).sessionManager() }
+    single<AccountSessionStore> { bridge(androidContext()).accountSessionStore() }
     single { bridge(androidContext()).okHttpClient() }
     single { bridge(androidContext()).gson() }
     single { bridge(androidContext()).remoteAudioRepository() }
