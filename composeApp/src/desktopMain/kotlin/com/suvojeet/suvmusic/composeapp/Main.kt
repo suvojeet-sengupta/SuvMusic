@@ -11,6 +11,7 @@ import com.suvojeet.suvmusic.composeapp.ui.RemoteSearchResult
 import com.suvojeet.suvmusic.core.db.DatabaseDriverFactory
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.repository.DesktopDownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.DesktopLocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.DesktopRecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.DesktopAppSettingsStore
@@ -35,6 +36,7 @@ fun main() = application {
         val libraryStore = remember(database) { LibraryStore(database) }
         val historyStore = remember(database) { ListeningHistoryStore(database) }
         val settingsStore = remember { DesktopAppSettingsStore() }
+        val downloadManager = remember { DesktopDownloadManager() }
         val localMediaSource = remember {
             DesktopLocalMediaSource(
                 roots = listOf(
@@ -58,6 +60,7 @@ fun main() = application {
             settingsStore = settingsStore,
             localMediaSource = localMediaSource,
             recommendationSource = recommendationSource,
+            downloadManager = downloadManager,
         )
     }
 }

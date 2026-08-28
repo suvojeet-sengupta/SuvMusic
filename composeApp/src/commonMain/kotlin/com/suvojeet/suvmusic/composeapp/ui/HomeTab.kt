@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
@@ -82,11 +84,15 @@ fun HomeTab(
     onExpandPlayer: () -> Unit,
     historyStore: ListeningHistoryStore? = null,
     recommendationSource: RecommendationSource? = null,
+    downloadManager: DownloadManager? = null,
     onPlaySong: (Song) -> Unit = {},
 ) {
     val currentSong by player.currentSong.collectAsState()
     val isPlaying by player.isPlaying.collectAsState()
     val recentHistory = historyStore?.observeRecent(8)?.collectAsState(initial = emptyList())?.value.orEmpty()
+    val downloadingIds = downloadManager?.downloadingIds?.collectAsState()?.value.orEmpty()
+    val downloadedSongs = downloadManager?.downloadedSongs?.collectAsState()?.value.orEmpty()
+    val downloadProgress = downloadManager?.downloadProgress?.collectAsState()?.value.orEmpty()
     var recommendations by remember { androidx.compose.runtime.mutableStateOf<List<Song>>(emptyList()) }
     androidx.compose.runtime.LaunchedEffect(recommendationSource) {
         recommendations = recommendationSource?.getPersonalizedRecommendations(8).orEmpty()
@@ -171,8 +177,25 @@ fun HomeTab(
                             Text(song.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                             Text(song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        if (downloadManager != null && song.streamUrl != null) {
+                            TextButton(
+                                onClick = { downloadManager.enqueue(song) },
+                                enabled = song.id !in downloadingIds,
+                            ) { Text(if (song.id in downloadingIds) "Saving…" else "Save") }
+                        }
                     }
                 }
+            }
+        }
+
+        if (downloadManager != null && (downloadingIds.isNotEmpty() || downloadedSongs.isNotEmpty())) {
+            item { SectionTitle("Downloads") }
+            item {
+                DownloadStatusCard(
+                    downloadingIds = downloadingIds,
+                    downloadedSongs = downloadedSongs,
+                    progress = downloadProgress,
+                )
             }
         }
 
@@ -277,6 +300,31 @@ private fun NowPlayingCard(
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun DownloadStatusCard(
+    downloadingIds: Set<String>,
+    downloadedSongs: List<Song>,
+    progress: Map<String, Float>,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (downloadingIds.isNotEmpty()) {
+                Text("Saving ${downloadingIds.size} track(s)…", fontWeight = FontWeight.Medium)
+                downloadingIds.take(3).forEach { id ->
+                    val value = (progress[id] ?: 0f).coerceIn(0f, 1f)
+                    Text("${id.take(36)} · ${(value * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            if (downloadedSongs.isNotEmpty()) {
+                Text("${downloadedSongs.size} track(s) saved for offline playback", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

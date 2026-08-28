@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.composeapp
 import androidx.compose.runtime.Composable
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
@@ -26,6 +27,7 @@ fun AndroidAppEntry(
     settingsStore: AppSettingsStore? = null,
     localMediaSource: LocalMediaSource? = null,
     recommendationSource: RecommendationSource? = null,
+    downloadManager: DownloadManager? = null,
 ) {
     App(
         appVersion = appVersion,
@@ -39,5 +41,6 @@ fun AndroidAppEntry(
         settingsStore = settingsStore,
         localMediaSource = localMediaSource,
         recommendationSource = recommendationSource,
+        downloadManager = downloadManager,
     )
 }

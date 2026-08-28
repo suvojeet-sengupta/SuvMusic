@@ -67,6 +67,7 @@ import kotlinx.coroutines.launch
 fun SearchTab(
     onSearch: (suspend (String) -> List<RemoteSearchResult>)?,
     onPlayResult: suspend (RemoteSearchResult) -> Unit,
+    onDownloadResult: (suspend (RemoteSearchResult) -> Unit)? = null,
     seedQuery: String = "",
 ) {
     if (onSearch == null) {
@@ -191,6 +192,19 @@ fun SearchTab(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                        if (onDownloadResult != null) {
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            onDownloadResult(result)
+                                        } catch (t: Throwable) {
+                                            errorMessage = "Download failed: ${t.message}"
+                                        }
+                                    }
+                                },
+                            ) { Text("Save") }
                         }
                     }
                 }

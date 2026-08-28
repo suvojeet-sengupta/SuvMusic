@@ -61,6 +61,7 @@ import com.suvojeet.suvmusic.composeapp.ui.formatMs
 import com.suvojeet.suvmusic.core.db.LibraryStore
 import com.suvojeet.suvmusic.core.db.ListeningHistoryStore
 import com.suvojeet.suvmusic.core.domain.player.MusicPlayer
+import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
@@ -96,6 +97,7 @@ fun App(
     settingsStore: AppSettingsStore? = null,
     localMediaSource: LocalMediaSource? = null,
     recommendationSource: RecommendationSource? = null,
+    downloadManager: DownloadManager? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -149,6 +151,7 @@ fun App(
                                     onExpandPlayer = { playerExpanded = true },
                                     historyStore = historyStore,
                                     recommendationSource = recommendationSource,
+                                    downloadManager = downloadManager,
                                     onPlaySong = { song -> musicPlayer.setQueue(listOf(song)) },
                                 )
                                 Tab.Search -> SearchTab(
@@ -156,6 +159,14 @@ fun App(
                                     onPlayResult = { result ->
                                         val song = onResolveStreamSong?.invoke(result) ?: return@SearchTab
                                         musicPlayer.setQueue(listOf(song))
+                                    },
+                                    onDownloadResult = if (downloadManager != null) {
+                                        { result ->
+                                            val song = onResolveStreamSong?.invoke(result)
+                                            if (song != null) downloadManager.enqueue(song)
+                                        }
+                                    } else {
+                                        null
                                     },
                                     seedQuery = searchSeedQuery,
                                 )
