@@ -12,9 +12,8 @@ import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 
 /**
  * Android entry point for the shared composeApp UI. The existing :app module
- * does not yet host this — it will be wired in during Phase 5 (UI to commonMain).
- * For Phase 0 this exists only so the androidMain source set has at least one
- * Kotlin file and compiles.
+ * does not yet host this as the production root. It remains an opt-in seam while
+ * Room-to-SQLDelight migration and Media3 service integration are completed.
  */
 @Composable
 fun AndroidAppEntry(

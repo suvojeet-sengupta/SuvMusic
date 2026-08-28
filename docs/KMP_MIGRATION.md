@@ -55,7 +55,7 @@ A successful migration change requires both workflows to complete successfully. 
 | SimpMusic lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
 | KuGou lyrics | `commonMain` client/models with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
 | LRCLIB lyrics | `commonMain` client with Android DI adapter | Verified by Android APK CI | Compiled through Linux package CI |
-| Library and recent listening history stores | Common SQLDelight facade plus shared `ListeningHistorySource`; recent history is consumed by shared Home UI | Existing Room path remains protected; Android adapter is available and legacy Room remains storage source | Linux desktop UI reads the per-user SQLDelight database through shared history/library facades |
+| Library and recent listening history stores | Common SQLDelight facade plus shared `ListeningHistorySource`; recent history is consumed by shared Home UI; Android Library/Playlist/Album consumers adopt shared controller reads incrementally | Existing Room path remains protected; Android adapter is available and legacy Room remains storage source | Linux desktop UI reads the per-user SQLDelight database through shared history/library facades |
 | Update metadata/checking | Common update models/checker; Android installer remains host-specific | Existing Android installer/API compatibility retained | Common checker compiles; desktop installer UX remains |
 | Last.fm/scrobbler protocol | Common client/models with KMP MD5 actuals | Credentials/config supplied by Android app host | JVM signing/client path compiles |
 | YouTube extraction boundary | Shared `YouTubeSource` contract; Android and desktop NewPipe adapters remain host-specific | Existing Android search/stream services remain source of truth | Desktop NewPipe façade implements the contract |
@@ -65,7 +65,7 @@ A successful migration change requires both workflows to complete successfully. 
 | Recommendations | Shared personalized/up-next contract; Android engine adapter and Linux offline local adapter | Existing RecommendationEngine remains source of truth | Home UI displays offline local recommendations |
 | Library sync scheduling | Shared `LibrarySyncScheduler`; Android WorkManager adapter and Linux scheduled-executor adapter | Existing `LikedSongsSyncWorker` remains protected | Desktop scheduler is host-wired to a periodic local scan with lifecycle shutdown; active only while the app runs |
 | Playback queue mutation and shared controls | Common player queue, repeat/shuffle, transport, append/clear, and queue-selection controls | Shared Media3 actual is compile-verified; legacy service still owns audio focus, MediaSession, Android Auto, persistence, and rich commands | VLCJ actual and shared Now Playing queue controls are compile/package verified; real GUI playback remains untested |
-| Persistence migration beyond these shared contracts, richer playback parity, installer UX, and final Android host wiring | Still incomplete | Protected by existing `:app` path | Not yet fully ported |
+| Persistence migration beyond these shared contracts, richer playback parity, installer UX, and final Android host wiring | Still incomplete; SettingsViewModel adoption is deferred after a reproducible KSP regression and safe revert | Protected by existing `:app` path | Not yet fully ported |
 
 ## Incremental end state
 
