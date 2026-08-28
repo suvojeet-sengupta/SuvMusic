@@ -44,6 +44,7 @@ import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaRootManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
+import com.suvojeet.suvmusic.updater.UpdateChecker
 import com.suvojeet.suvmusic.core.model.VideoQuality
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.core.model.SongSource
@@ -545,10 +546,12 @@ private fun SettingRow(title: String, value: String, onToggle: () -> Unit) {
 fun AboutTab(
     appVersion: String,
     onOpenUrl: (String) -> Unit,
+    updateChecker: UpdateChecker? = null,
 ) {
     com.suvojeet.suvmusic.composeapp.ui.about.AboutScreen(
         appVersion = appVersion,
         onOpenUri = onOpenUrl,
+        updateChecker = updateChecker,
     )
 }
 

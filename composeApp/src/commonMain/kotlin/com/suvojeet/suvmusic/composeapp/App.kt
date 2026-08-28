@@ -70,6 +70,7 @@ import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.Song
+import com.suvojeet.suvmusic.updater.UpdateChecker
 
 /**
  * Top-level Desktop app shell. Three regions:
@@ -104,6 +105,7 @@ fun App(
     localMediaSource: LocalMediaSource? = null,
     recommendationSource: RecommendationSource? = null,
     downloadManager: DownloadManager? = null,
+    updateChecker: UpdateChecker? = null,
 ) {
     setSingletonImageLoaderFactory { context -> buildAppImageLoader(context) }
 
@@ -200,6 +202,7 @@ fun App(
                                 Tab.About -> AboutTab(
                                     appVersion = appVersion,
                                     onOpenUrl = onOpenUrl,
+                                    updateChecker = updateChecker,
                                 )
                                 Tab.Settings -> if (settingsStore != null) {
                                     SettingsTab(settingsStore)

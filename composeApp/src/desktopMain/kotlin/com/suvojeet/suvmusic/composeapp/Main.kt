@@ -21,6 +21,7 @@ import com.suvojeet.suvmusic.core.domain.repository.DesktopLocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.DesktopRecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.DesktopAppSettingsStore
 import com.suvojeet.suvmusic.core.domain.sync.DesktopLibrarySyncScheduler
+import com.suvojeet.suvmusic.updater.UpdateChecker
 import com.suvojeet.suvmusic.core.db.buildDatabase
 import com.suvojeet.suvmusic.core.model.Song
 import java.awt.Desktop
@@ -47,6 +48,7 @@ fun main() = application {
         val historyStore = remember(database) { ListeningHistoryStore(database) }
         val historySource = remember(historyStore) { SqlDelightListeningHistorySource(historyStore) }
         val settingsStore = remember { DesktopAppSettingsStore() }
+        val updateChecker = remember { UpdateChecker() }
         val notificationSink = remember { DesktopNotificationSink() }
         val downloadManager = remember(notificationSink) {
             DesktopDownloadManager(notificationSink = notificationSink)
@@ -86,6 +88,7 @@ fun main() = application {
             localMediaSource = localMediaSource,
             recommendationSource = recommendationSource,
             downloadManager = downloadManager,
+            updateChecker = updateChecker,
         )
     }
 }

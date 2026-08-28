@@ -9,6 +9,7 @@ import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LocalMediaSource
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
+import com.suvojeet.suvmusic.updater.UpdateChecker
 
 /**
  * Android entry point for the shared composeApp UI. The existing :app module
@@ -31,6 +32,7 @@ fun AndroidAppEntry(
     localMediaSource: LocalMediaSource? = null,
     recommendationSource: RecommendationSource? = null,
     downloadManager: DownloadManager? = null,
+    updateChecker: UpdateChecker? = null,
 ) {
     App(
         appVersion = appVersion,
@@ -47,5 +49,6 @@ fun AndroidAppEntry(
         localMediaSource = localMediaSource,
         recommendationSource = recommendationSource,
         downloadManager = downloadManager,
+        updateChecker = updateChecker,
     )
 }
