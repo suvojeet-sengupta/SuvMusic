@@ -10,6 +10,7 @@ import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.ui.screens.viewmodel.RecentsViewModel
 import com.suvojeet.suvmusic.ui.screens.wrapped.WrappedViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.AboutViewModel
@@ -61,6 +62,7 @@ private val hiltBridgedModule: Module = module {
     // app/di AppModule equivalents
     single { bridge(androidContext()).sessionManager() }
     single<AccountSessionStore> { bridge(androidContext()).accountSessionStore() }
+    single<AppSettingsStore> { bridge(androidContext()).appSettingsStore() }
     single<DownloadManager> { bridge(androidContext()).downloadManager() }
     single<NotificationSink> { bridge(androidContext()).notificationSink() }
     single<RecommendationSource> { bridge(androidContext()).recommendationSource() }

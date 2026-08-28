@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
 import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.data.SessionManager
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
 import com.suvojeet.suvmusic.data.repository.RemoteAudioRepository
@@ -81,6 +82,7 @@ interface HiltKoinBridgeEntryPoint {
     // app/di — AppModule
     fun sessionManager(): SessionManager
     fun accountSessionStore(): AccountSessionStore
+    fun appSettingsStore(): AppSettingsStore
     fun downloadManager(): DownloadManager
     fun notificationSink(): NotificationSink
     fun recommendationSource(): RecommendationSource

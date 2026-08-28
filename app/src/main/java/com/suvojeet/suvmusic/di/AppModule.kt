@@ -13,8 +13,9 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.core.domain.notification.NotificationSink
 import com.suvojeet.suvmusic.core.domain.repository.DownloadManager
 import com.suvojeet.suvmusic.core.domain.repository.RecommendationSource
-import com.suvojeet.suvmusic.core.domain.session.AccountSessionStore
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.data.AndroidAccountSessionStore
+import com.suvojeet.suvmusic.data.AndroidAppSettingsStore
 import com.suvojeet.suvmusic.data.AndroidNotificationSink
 import com.suvojeet.suvmusic.data.repository.AndroidDownloadManager
 import com.suvojeet.suvmusic.data.repository.DownloadRepository
@@ -58,6 +59,12 @@ object AppModule {
     fun provideAccountSessionStore(
         sessionManager: SessionManager,
     ): AccountSessionStore = AndroidAccountSessionStore(sessionManager)
+
+    @Provides
+    @Singleton
+    fun provideAppSettingsStore(
+        store: AndroidAppSettingsStore,
+    ): AppSettingsStore = store
 
     @Provides
     @Singleton

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.suvojeet.suvmusic.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.core.domain.settings.AppSettingsStore
 import com.suvojeet.suvmusic.core.model.AppTheme
 import com.suvojeet.suvmusic.core.model.AudioQuality
 import com.suvojeet.suvmusic.core.model.VideoQuality
@@ -161,6 +162,7 @@ data class SettingsUiState(
 
 class SettingsViewModel @Inject constructor(
     private val sessionManager: SessionManager,
+    private val appSettingsStore: AppSettingsStore,
     private val youtubeRepository: YouTubeRepository,
     private val lastFmRepository: LastFmRepository,
     private val audioARManager: com.suvojeet.suvmusic.player.AudioARManager,
@@ -264,7 +266,7 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.videoQualityFlow.collect { quality ->
+            appSettingsStore.videoQuality.collect { quality ->
                 _uiState.update { it.copy(videoQuality = quality) }
             }
         }
@@ -288,19 +290,19 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.enableBetterLyricsFlow.collect { enabled ->
+            appSettingsStore.betterLyricsEnabled.collect { enabled ->
                 _uiState.update { it.copy(betterLyricsEnabled = enabled) }
             }
         }
 
         viewModelScope.launch {
-            sessionManager.enableSimpMusicFlow.collect { enabled ->
+            appSettingsStore.simpMusicEnabled.collect { enabled ->
                 _uiState.update { it.copy(simpMusicEnabled = enabled) }
             }
         }
 
         viewModelScope.launch {
-            sessionManager.enableKuGouFlow.collect { enabled ->
+            appSettingsStore.kuGouEnabled.collect { enabled ->
                 _uiState.update { it.copy(kuGouEnabled = enabled) }
             }
         }
@@ -415,7 +417,7 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            sessionManager.preferredLyricsProviderFlow.collect { provider ->
+            appSettingsStore.preferredLyricsProvider.collect { provider ->
                 _uiState.update { it.copy(preferredLyricsProvider = provider) }
             }
         }
@@ -1281,7 +1283,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setVideoQuality(quality: VideoQuality) {
         viewModelScope.launch {
-            sessionManager.setVideoQuality(quality)
+            appSettingsStore.setVideoQuality(quality)
             _uiState.update { it.copy(videoQuality = quality) }
         }
     }
@@ -1377,21 +1379,21 @@ class SettingsViewModel @Inject constructor(
 
     fun setBetterLyricsEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            sessionManager.setEnableBetterLyrics(enabled)
+            appSettingsStore.setBetterLyricsEnabled(enabled)
             _uiState.update { it.copy(betterLyricsEnabled = enabled) }
         }
     }
 
     fun setSimpMusicEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            sessionManager.setEnableSimpMusic(enabled)
+            appSettingsStore.setSimpMusicEnabled(enabled)
             _uiState.update { it.copy(simpMusicEnabled = enabled) }
         }
     }
 
     fun setKuGouEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            sessionManager.setEnableKuGou(enabled)
+            appSettingsStore.setKuGouEnabled(enabled)
             _uiState.update { it.copy(kuGouEnabled = enabled) }
         }
     }
@@ -1508,7 +1510,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setPreferredLyricsProvider(provider: String) {
         viewModelScope.launch {
-            sessionManager.setPreferredLyricsProvider(provider)
+            appSettingsStore.setPreferredLyricsProvider(provider)
             _uiState.update { it.copy(preferredLyricsProvider = provider) }
         }
     }
