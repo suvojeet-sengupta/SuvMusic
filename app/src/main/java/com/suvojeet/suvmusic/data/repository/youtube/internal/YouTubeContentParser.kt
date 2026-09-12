@@ -480,36 +480,52 @@ class YouTubeContentParser @Inject constructor(
         val subtitle: String?
     )
 
-    private fun <T> parseLibraryGrid(response: String, map: (LibraryGridItem) -> T): List<T> {
+    /**
+     * Collects the cards of a library shelf.
+     *
+     * YouTube serves these as a grid of `musicTwoRowItemRenderer` cards or — when the user
+     * has the list layout, and on some continuation pages — as a `musicShelfRenderer` of
+     * `musicResponsiveListItemRenderer` rows. Walking the whole response for both shapes
+     * covers every layout instead of only the grid one.
+     */
+    private fun <T : Any> parseLibraryGrid(response: String, map: (LibraryGridItem) -> T?): List<T> {
         val results = mutableListOf<T>()
         try {
-            val contents = browseSectionContents(JSONObject(response)) ?: return results
+            val root = JSONObject(response)
 
-            for (i in 0 until contents.length()) {
-                val item = contents.optJSONObject(i)
-                val gridItems = item?.optJSONObject("gridRenderer")?.optJSONArray("items")
-                    ?: item?.optJSONObject("itemSectionRenderer")?.optJSONArray("contents")
-                    ?: continue
+            val twoRowItems = mutableListOf<JSONObject>()
+            json.findAllObjects(root, "musicTwoRowItemRenderer", twoRowItems)
+            val responsiveItems = mutableListOf<JSONObject>()
+            json.findAllObjects(root, "musicResponsiveListItemRenderer", responsiveItems)
 
-                for (j in 0 until gridItems.length()) {
-                    val renderer = gridItems.optJSONObject(j)
-                        ?.optJSONObject("musicTwoRowItemRenderer") ?: continue
-                    val title = json.getRunText(renderer.optJSONObject("title")) ?: continue
-                    val browseId = renderer.optJSONObject("navigationEndpoint")
-                        ?.optJSONObject("browseEndpoint")?.optString("browseId") ?: ""
-                    if (browseId.isEmpty()) continue
+            val seen = mutableSetOf<String>()
 
-                    results.add(
-                        map(
-                            LibraryGridItem(
-                                browseId = browseId,
-                                title = title,
-                                thumbnailUrl = json.extractThumbnail(renderer),
-                                subtitle = json.getRunText(renderer.optJSONObject("subtitle"))
-                            )
-                        )
-                    )
-                }
+            fun add(browseId: String?, title: String?, thumbnailUrl: String?, subtitle: String?) {
+                if (browseId.isNullOrEmpty() || title.isNullOrBlank()) return
+                if (!seen.add(browseId)) return
+                map(LibraryGridItem(browseId, title, thumbnailUrl, subtitle))?.let(results::add)
+            }
+
+            twoRowItems.forEach { renderer ->
+                add(
+                    browseId = renderer.optJSONObject("navigationEndpoint")
+                        ?.optJSONObject("browseEndpoint")?.optString("browseId"),
+                    title = json.getRunText(renderer.optJSONObject("title")),
+                    thumbnailUrl = json.extractThumbnail(renderer),
+                    subtitle = json.getRunText(renderer.optJSONObject("subtitle"))
+                )
+            }
+
+            responsiveItems.forEach { renderer ->
+                // A row that plays something is a track, not a library card.
+                val navEndpoint = renderer.optJSONObject("navigationEndpoint")
+                if (navEndpoint?.has("watchEndpoint") == true) return@forEach
+                add(
+                    browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId"),
+                    title = json.extractTitle(renderer).takeIf { it.isNotBlank() && it != "Unknown" },
+                    thumbnailUrl = json.extractThumbnail(renderer),
+                    subtitle = json.extractFullSubtitle(renderer)
+                )
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -519,6 +535,9 @@ class YouTubeContentParser @Inject constructor(
 
     fun parseLibraryArtists(response: String): List<Artist> =
         parseLibraryGrid(response) { item ->
+            if (isAlbumBrowseId(item.browseId) || isPlaylistBrowseId(item.browseId)) {
+                return@parseLibraryGrid null
+            }
             Artist(
                 id = item.browseId,
                 name = item.title,
@@ -529,8 +548,12 @@ class YouTubeContentParser @Inject constructor(
 
     fun parseLibraryAlbums(response: String): List<Album> =
         parseLibraryGrid(response) { item ->
-            // Subtitle is usually "Artist • Year".
-            val parts = (item.subtitle ?: "").split("•").map { it.trim() }
+            if (!isAlbumBrowseId(item.browseId)) return@parseLibraryGrid null
+            // Subtitle is usually "Artist • Year" — but "Album • Artist • Year" on the
+            // liked-albums shelf, where the first run is the content type.
+            val parts = (item.subtitle ?: "").split("•")
+                .map { it.trim() }
+                .filter { it.isNotBlank() && !it.equals("Album", true) && !it.equals("Single", true) && !it.equals("EP", true) }
             Album(
                 id = item.browseId,
                 title = item.title,

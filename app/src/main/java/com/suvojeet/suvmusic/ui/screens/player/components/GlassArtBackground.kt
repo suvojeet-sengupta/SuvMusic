@@ -26,7 +26,7 @@ fun GlassArtBackground(
     isVideoMode: Boolean,
     dominantColors: DominantColors,
     modifier: Modifier = Modifier,
-    blurRadius: Float = 60f,
+    blurRadius: Float = 80f,
     intensity: Float = 1f
 ) {
     Box(modifier = modifier.fillMaxSize()) {

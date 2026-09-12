@@ -141,7 +141,7 @@ data class SettingsUiState(
     val eqEnabled: Boolean = false,
     val eqBands: FloatArray = FloatArray(10) { 0f },
     val forceMaxRefreshRateEnabled: Boolean = true,
-    val navBarAlpha: Float = 1.0f,
+    val navBarAlpha: Float = 0f,
     val navBarBlur: Float = 60.0f,
     val iosLiquidGlassEnabled: Boolean = false,
     val miniPlayerAlpha: Float = 0f,

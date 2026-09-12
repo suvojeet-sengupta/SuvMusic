@@ -49,16 +49,18 @@ fun ArtworkBlurBackdrop(
     isDarkTheme: Boolean,
     dominantColors: DominantColors,
     modifier: Modifier = Modifier,
-    blurRadius: Float = 60f,
+    blurRadius: Float = MAX_BLUR_RADIUS,
     intensity: Float = 1f,
     scrimAlpha: Float = if (isDarkTheme) 0.55f else 0.40f
 ) {
     val i = intensity.coerceIn(0.3f, 1.5f)
 
-    // Cap and cache both the radius and the RenderEffect — building one is expensive and
-    // this recomposes with playback state.
-    val radius = remember(blurRadius) { (blurRadius * 1.4f).coerceAtMost(80f) }
-    val fallbackBlurDp = remember(blurRadius) { blurRadius * 0.9f }
+    // Cache the RenderEffect — building one is expensive and this recomposes with
+    // playback state. The radius is used as-is (the slider is labelled in px, and the
+    // old 1.4x-then-cap-at-80 made everything above ~57 px produce identical output),
+    // and the pre-S fallback uses the same number so both paths agree.
+    val radius = remember(blurRadius) { blurRadius.coerceIn(0f, MAX_BLUR_RADIUS) }
+    val fallbackBlurDp = radius
     val blurEffect = remember(radius) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             android.graphics.RenderEffect.createBlurEffect(
@@ -130,3 +132,6 @@ fun ArtworkBlurBackdrop(
         )
     }
 }
+
+/** Beyond this a Gaussian blur costs more without looking different. */
+const val MAX_BLUR_RADIUS = 80f

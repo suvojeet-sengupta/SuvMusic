@@ -262,8 +262,8 @@ fun RecentsScreen(
             isVisible = true,
             onDismiss = { showSongMenu = false },
             song = selectedSong!!,
-            onPlayNext = { /* handled by navigation/player */ },
-            onAddToQueue = { /* handled by navigation/player */ },
+            onPlayNext = { viewModel.playNext(selectedSong!!) },
+            onAddToQueue = { viewModel.addToQueue(selectedSong!!) },
             onAddToPlaylist = { playlistViewModel.showAddToPlaylistSheet(selectedSong!!) },
             onDownload = { viewModel.downloadSong(selectedSong!!) },
             onShare = { 

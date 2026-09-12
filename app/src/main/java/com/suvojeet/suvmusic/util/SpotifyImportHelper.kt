@@ -412,50 +412,110 @@ class SpotifyImportHelper @Inject constructor(
         name to tracks
     }
 
+    /** Outcome of a single track lookup, so a throttled search isn't mistaken for a miss. */
+    sealed interface MatchResult {
+        data class Found(val song: Song) : MatchResult
+        data object NoMatch : MatchResult
+        data object SearchFailed : MatchResult
+    }
+
     /**
      * Finds the same recording instead of accepting the first result for an artist.
      *
-     * Search APIs often return popular songs by the requested artist before the
-     * requested track. The old final `firstOrNull()` fallback therefore imported a
-     * different song whenever title matching failed. A match must now have a strong
-     * title similarity; artist and duration are used to rank otherwise valid results.
+     * Search APIs often return popular songs by the requested artist before the requested
+     * track, so a match must have a strong title similarity; artist and duration are used
+     * to rank otherwise valid results.
+     *
+     * Titles are compared on their *core* — the part left after stripping "(feat. X)",
+     * "- Remastered 2011", "(From \"Movie\")" and friends — because exporters and YouTube
+     * Music disagree constantly about those suffixes, and comparing raw titles rejected a
+     * large share of a big playlist. Variant tags that really do mean a different recording
+     * (remix, live, acoustic, instrumental, cover, sped up …) are kept and must match on
+     * both sides.
      */
-    suspend fun findMatch(title: String, artist: String, durationMs: Long = 0): Song? {
-        return try {
-            val searchResults = youTubeRepository.search("$title $artist")
-            if (searchResults.isEmpty()) return null
+    suspend fun findMatchResult(title: String, artist: String, durationMs: Long = 0): MatchResult {
+        val coreTitle = coreTitleOf(title)
+        val featured = featuredArtistsOf(title)
+        val primaryArtist = artist.substringBefore(",").trim()
 
-            val sourceTitle = normalizedTrackTokens(title)
-            val sourceArtist = normalizedTrackTokens(artist)
-            val hasKnownArtist = sourceArtist.isNotEmpty() &&
-                sourceArtist != setOf("unknown", "artist")
-
-            searchResults.mapNotNull { result ->
-                val titleScore = tokenSimilarity(sourceTitle, normalizedTrackTokens(result.title))
-                val artistScore = tokenSimilarity(sourceArtist, normalizedTrackTokens(result.artist))
-                val durationScore = when {
-                    durationMs <= 0L || result.duration <= 0L -> 0.5
-                    kotlin.math.abs(result.duration - durationMs) <= 10_000L -> 1.0
-                    kotlin.math.abs(result.duration - durationMs) <= 30_000L -> 0.5
-                    else -> 0.0
-                }
-
-                // Never use an artist-only or duration-only match. This is the
-                // important guard against importing another popular song by the same artist.
-                val titleIsStrong = titleScore >= 0.75
-                val artistIsCompatible = !hasKnownArtist || artistScore >= 0.25
-                if (!titleIsStrong || !artistIsCompatible) {
-                    null
-                } else {
-                    val score = titleScore * 0.65 + artistScore * 0.25 + durationScore * 0.10
-                    result to score
-                }
+        val queries = buildList {
+            if (coreTitle.isNotBlank()) {
+                add(listOfNotNull(coreTitle, primaryArtist.takeIf { it.isNotBlank() }).joinToString(" ") to YouTubeRepository.FILTER_SONGS)
             }
-                .maxByOrNull { it.second }
-                ?.first
-        } catch (e: Exception) {
-            null
+            val raw = "$title $artist".trim()
+            if (raw.isNotBlank() && !raw.equals("$coreTitle $primaryArtist".trim(), ignoreCase = true)) {
+                add(raw to YouTubeRepository.FILTER_SONGS)
+            }
+            if (coreTitle.isNotBlank()) {
+                add(coreTitle to YouTubeRepository.FILTER_SONGS)
+                add("$coreTitle $primaryArtist".trim() to YouTubeRepository.FILTER_VIDEOS)
+            }
+        }.distinctBy { it.first.lowercase(java.util.Locale.ROOT) to it.second }
+
+        var reachedSearch = false
+        for ((query, filter) in queries) {
+            val results = youTubeRepository.searchOrNull(query, filter) ?: continue
+            reachedSearch = true
+            pickBest(title, coreTitle, artist, featured, durationMs, results)
+                ?.let { return MatchResult.Found(it) }
         }
+        return if (reachedSearch) MatchResult.NoMatch else MatchResult.SearchFailed
+    }
+
+    suspend fun findMatch(title: String, artist: String, durationMs: Long = 0): Song? =
+        (findMatchResult(title, artist, durationMs) as? MatchResult.Found)?.song
+
+    private fun pickBest(
+        rawTitle: String,
+        coreTitle: String,
+        artist: String,
+        featured: Set<String>,
+        durationMs: Long,
+        results: List<Song>
+    ): Song? {
+        val sourceTitle = normalizedTrackTokens(coreTitle)
+        if (sourceTitle.isEmpty()) return null
+        val sourceVariants = variantTagsOf(rawTitle)
+        val sourceArtist = normalizedTrackTokens(artist) + featured
+        val hasKnownArtist = sourceArtist.isNotEmpty() && sourceArtist != setOf("unknown", "artist")
+
+        return results.mapNotNull { result ->
+            // A remix / live / acoustic / instrumental cut on one side only is a
+            // different recording however well the rest lines up.
+            if (variantTagsOf(result.title) != sourceVariants) return@mapNotNull null
+
+            // YouTube titles very often repeat the performer ("Ed Sheeran - Shape of You"),
+            // which drags a plain token overlap below the threshold. Score the title both
+            // as-is and with the artist's own words removed, and keep the better of the two.
+            val resultArtistOnly = normalizedTrackTokens(result.artist)
+            val resultTitle = normalizedTrackTokens(coreTitleOf(result.title))
+            val titleScore = maxOf(
+                tokenSimilarity(sourceTitle, resultTitle),
+                tokenSimilarity(sourceTitle, resultTitle - resultArtistOnly - sourceArtist)
+            )
+            if (titleScore < 0.75) return@mapNotNull null
+
+            // The performer may be credited in the artist field or only in the title.
+            val resultArtistTokens = resultArtistOnly +
+                normalizedTrackTokens(result.title) +
+                featuredArtistsOf(result.title)
+            val artistScore = tokenSimilarity(sourceArtist, resultArtistOnly)
+            val artistIsCompatible = !hasKnownArtist ||
+                artistScore >= 0.25 ||
+                sourceArtist.any { it.length >= 4 && it in resultArtistTokens }
+            if (!artistIsCompatible) return@mapNotNull null
+
+            val durationScore = when {
+                durationMs <= 0L || result.duration <= 0L -> 0.5
+                kotlin.math.abs(result.duration - durationMs) <= 10_000L -> 1.0
+                kotlin.math.abs(result.duration - durationMs) <= 30_000L -> 0.5
+                else -> 0.0
+            }
+
+            result to (titleScore * 0.65 + artistScore * 0.25 + durationScore * 0.10)
+        }
+            .maxByOrNull { it.second }
+            ?.first
     }
 
     private fun normalizedTrackTokens(value: String): Set<String> {
@@ -479,13 +539,73 @@ class SpotifyImportHelper @Inject constructor(
         if (left.isEmpty() || right.isEmpty()) return 0.0
         if (left == right) return 1.0
         val overlap = left.intersect(right).size.toDouble()
-        // Jaccard-style similarity penalizes extra title tokens; dividing by the
-        // smaller set would incorrectly score "Song Remix" as an exact match for
-        // a CSV title of just "Song".
+        // Jaccard-style similarity penalizes extra tokens; dividing by the smaller set
+        // would incorrectly score "Song Remix" as an exact match for a title of "Song".
         return overlap / maxOf(left.size, right.size).toDouble()
     }
 
+    /**
+     * The title with exporter/platform decoration removed: bracketed asides, a trailing
+     * " - Remastered 2011" style qualifier, and any "feat. …" tail.
+     */
+    private fun coreTitleOf(title: String): String {
+        var core = title
+        // "(feat. X)", "[Remastered]", "(From \"Movie\")" …
+        core = core.replace(Regex("[\\(\\[\\{][^\\)\\]\\}]*[\\)\\]\\}]"), " ")
+        // "Song - Remastered 2011", "Song - Radio Edit" — only when the tail is a qualifier,
+        // never for "Artist - Song" style titles.
+        val dashIndex = core.lastIndexOf(" - ")
+        if (dashIndex > 0) {
+            val tail = core.substring(dashIndex + 3).lowercase(java.util.Locale.ROOT)
+            if (QUALIFIER_WORDS.any { it.containsMatchIn(tail) }) core = core.substring(0, dashIndex)
+        }
+        core = core.replace(FEAT_REGEX, " ")
+        // Variant words are compared separately by [variantTagsOf]; leaving them in the
+        // token set would also make "Yesterday - Live" and "Yesterday (Live)" score 0.5.
+        VARIANT_WORDS.forEach { (_, pattern) -> core = core.replace(pattern, " ") }
+        return core.trim().ifBlank { title.trim() }
+    }
+
+    /** Names credited in a "feat. …" segment, which the artist field often omits. */
+    private fun featuredArtistsOf(title: String): Set<String> {
+        val match = FEAT_CAPTURE_REGEX.find(title) ?: return emptySet()
+        return normalizedTrackTokens(match.groupValues[1])
+    }
+
+    /**
+     * Words that mark a genuinely different recording. Both sides must carry the same set
+     * or the candidate is rejected outright.
+     */
+    private fun variantTagsOf(title: String): Set<String> {
+        val normalized = title.lowercase(java.util.Locale.ROOT)
+        return VARIANT_WORDS
+            .filter { (_, pattern) -> pattern.containsMatchIn(normalized) }
+            .mapTo(mutableSetOf()) { (word, _) -> word }
+    }
+
     companion object {
+        /** Whole-word matcher, so "edit" never fires on "editor" or "live" on "alive". */
+        private fun wordRegex(word: String) =
+            Regex("(?<![a-z0-9])" + Regex.escape(word) + "(?![a-z0-9])", RegexOption.IGNORE_CASE)
+
+        private val QUALIFIER_WORDS = listOf(
+            "remaster", "remastered", "radio edit", "single version", "album version",
+            "mono", "stereo", "deluxe", "bonus track", "anniversary", "edit",
+            "original mix", "explicit", "clean", "reissue", "digital"
+        ).map(::wordRegex)
+
+        private val VARIANT_WORDS = listOf(
+            "remix", "live", "acoustic", "instrumental", "karaoke", "cover",
+            "unplugged", "lofi", "lo-fi", "slowed", "reverb", "sped up",
+            "8d", "mashup", "demo"
+        ).map { it to wordRegex(it) }
+
+        private val FEAT_REGEX =
+            Regex("\\b(feat\\.?|ft\\.?|featuring)\\b.*$", RegexOption.IGNORE_CASE)
+
+        private val FEAT_CAPTURE_REGEX =
+            Regex("\\b(?:feat\\.?|ft\\.?|featuring)\\s+([^\\)\\]\\-]+)", RegexOption.IGNORE_CASE)
+
         /**
          * Rotating cipher used by Spotify's web player to derive the TOTP secret.
          * If token fetching starts failing again (imports capped at 100), replace

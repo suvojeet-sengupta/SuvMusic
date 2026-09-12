@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.update
 
 class RecentsViewModel @Inject constructor(
     private val repository: ListeningHistoryRepository,
-    private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository
+    private val downloadRepository: com.suvojeet.suvmusic.data.repository.DownloadRepository,
+    private val musicPlayer: com.suvojeet.suvmusic.player.MusicPlayer
 ) : ViewModel() {
 
     val incognitoModeEnabled: StateFlow<Boolean> = repository.sessionManager.incognitoModeEnabledFlow
@@ -49,6 +50,14 @@ class RecentsViewModel @Inject constructor(
         viewModelScope.launch {
             downloadRepository.downloadSong(song)
         }
+    }
+
+    fun playNext(song: Song) {
+        musicPlayer.playNext(listOf(song))
+    }
+
+    fun addToQueue(song: Song) {
+        musicPlayer.addToQueue(listOf(song))
     }
 
     // Fetch history for the last 30 days (1 month)

@@ -42,6 +42,7 @@ data class LibraryUiState(
     val likedSongsCount: Int = 0,
     val libraryArtists: List<Artist> = emptyList(),
     val libraryAlbums: List<Album> = emptyList(),
+    val savedAlbums: List<Album> = emptyList(),
     val localArtists: List<Artist> = emptyList(),
     val localAlbums: List<Album> = emptyList(),
     val localFolders: Map<String, List<Song>> = emptyMap(),
@@ -120,6 +121,7 @@ class LibraryViewModel @Inject constructor(
         observeAuthState()
         observeDownloads()
         observeLibraryPlaylists()
+        observeSavedAlbums()
         observeImportService()
         observeLikedSongs()
         observeSettings() // Renamed for broader scope
@@ -379,6 +381,27 @@ class LibraryViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /**
+     * Albums the user saved with the heart button live in the Room library table and are
+     * not part of the YouTube library fetch, so without this they were written and never
+     * read back — the Albums tab simply never showed them.
+     */
+    private fun observeSavedAlbums() {
+        viewModelScope.launch {
+            libraryRepository.getSavedAlbums().collect { items ->
+                val albums = items.map { item ->
+                    Album(
+                        id = item.id,
+                        title = item.title,
+                        artist = item.subtitle,
+                        thumbnailUrl = item.thumbnailUrl
+                    )
+                }
+                _uiState.update { it.copy(savedAlbums = albums) }
+            }
+        }
     }
 
     private fun observeLibraryPlaylists() {

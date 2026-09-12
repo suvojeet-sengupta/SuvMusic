@@ -135,6 +135,9 @@ class MusicPlayer @Inject constructor(
     // Hybrid playback cache: YouTube songId -> resolved RemoteAudio HQ stream URL.
     // A blank value ("") is a negative cache marker meaning "searched, no confident
     // RemoteAudio match" so we don't repeat the search every play.
+    /** Anything longer than this is a podcast episode / mix / concert, not a catalogue song. */
+    private val longFormDurationMs = 15 * 60 * 1000L
+
     private val hybridRemoteIds = android.util.LruCache<String, String>(200)
 
     // Why a given song ended up NOT on RemoteAudio HQ, recorded by the last hybrid
@@ -782,6 +785,14 @@ class MusicPlayer @Inject constructor(
                     currentUri.contains("youtu.be/")
                 if (isPlaceholder) return
 
+                // Last track of the queue: there is no transition to consume the
+                // "end of song" timer, so it has to be honoured here — before autoplay
+                // or radio has a chance to append more songs.
+                if (sleepTimerManager.onSongEnded()) {
+                    controller.pause()
+                    return
+                }
+
                 val state = _playerState.value
                 val nextIndex = controller.nextMediaItemIndex
                 val queueSize = state.queue.size
@@ -879,6 +890,16 @@ class MusicPlayer @Inject constructor(
             if (!crossfadeController.isFadingIn) {
                 mediaController?.let { c -> if (c.volume < 1f) c.volume = 1f }
             }
+
+            // "End of song" has to be consumed before any of the resolve fast-paths below
+            // can return early, otherwise a preloaded next track skips the check entirely.
+            // REPEAT counts as a song ending too — repeat-one would never transition away.
+            val timerTriggered = when (reason) {
+                Player.MEDIA_ITEM_TRANSITION_REASON_AUTO,
+                Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> sleepTimerManager.onSongEnded()
+                else -> false
+            }
+            if (timerTriggered) mediaController?.pause()
 
             mediaItem?.let { item ->
                 val controller = mediaController ?: return@let
@@ -1041,20 +1062,13 @@ class MusicPlayer @Inject constructor(
                             }
     
                             // Ensure playback continues for SEEK transitions (notification controls)
-                            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK && !timerTriggered) {
                                 controller.play()
                             }
                             return@let
                         }
                         // Mode mismatch — fall through to re-resolve with correct mode
                         android.util.Log.d("MusicPlayer", "Preloaded mode mismatch: preloaded=$preloadedIsVideoMode, current=${_playerState.value.isVideoMode}")
-                    }
-                    
-                    // Check sleep timer (only for auto transitions)
-                    val timerTriggered = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                        sleepTimerManager.onSongEnded()
-                    } else {
-                        false
                     }
                     
                     // CRITICAL FIX (Shuffle cascade prevention):
@@ -1619,6 +1633,18 @@ class MusicPlayer @Inject constructor(
      * null so the caller falls back to the normal YouTube stream.
      */
     private suspend fun resolveHybridRemoteStream(song: Song): String? {
+        // Long-form content (podcast episodes, mixes, full concerts) has no counterpart in
+        // a music catalogue, and HqSongMatcher's 15s duration window means it could never
+        // match one anyway. Searching costs up to 8s per item and ends in a misleading
+        // "No HQ version found" notice, so skip straight to YouTube and say nothing.
+        if (song.duration > longFormDurationMs) {
+            com.suvojeet.suvmusic.util.HqDiagnostics.log(
+                "hybrid",
+                "'${song.title}' SKIPPED — ${song.duration / 60_000}min is long-form, not in the HQ music catalogue"
+            )
+            hqFallbackReason.put(song.id, HqFallbackReason.NONE)
+            return null
+        }
         // Positive/negative cache of the resolved HQ stream URL so we don't re-search on
         // every play. A blank value is the negative-cache marker ("searched, no match").
         hybridRemoteIds[song.id]?.let { cached ->
@@ -1858,18 +1884,25 @@ class MusicPlayer @Inject constructor(
                         if (resolvedUrl != null) {
                             streamUrl = resolvedUrl
                         } else {
-                            // If we didn't resolve remoteUrl within 800ms grace period, wait for whichever resolves first
-                            val firstResolved = select<Pair<String?, Boolean>> {
-                                remoteJob.onAwait { remote ->
-                                    if (remote != null) Pair(remote, true) else Pair(null, false)
-                                }
-                                ytJob.onAwait { yt ->
-                                    if (yt != null) Pair(yt, false) else Pair(null, false)
-                                }
+                            // Grace expired without a URL: take whichever finishes first, but a
+                            // null from that side must NOT end the race — the other job is still
+                            // working. Ending here on the first *completion* discarded an
+                            // in-flight YouTube resolve every time HQ reported "no match"
+                            // (always, for podcasts and anything outside the music catalogue),
+                            // leaving the track to fail or re-resolve from scratch.
+                            val first = select<Pair<String?, Boolean>> {
+                                remoteJob.onAwait { remote -> Pair(remote, true) }
+                                ytJob.onAwait { yt -> Pair(yt, false) }
                             }
-                            if (firstResolved.first != null) {
-                                streamUrl = firstResolved.first
-                                if (firstResolved.second) {
+                            var resolved = first.first
+                            var fromRemote = first.second
+                            if (resolved == null) {
+                                resolved = if (fromRemote) ytJob.await() else remoteJob.await()
+                                fromRemote = !fromRemote
+                            }
+                            if (resolved != null) {
+                                streamUrl = resolved
+                                if (fromRemote) {
                                     android.util.Log.d("MusicPlayer", "Race: Remote resolved eventually")
                                     com.suvojeet.suvmusic.util.HqDiagnostics.log("race", "'${song.title}' → HQ resolved after the grace, still used (YT wasn't ready)")
                                 } else {
@@ -3294,22 +3327,19 @@ class MusicPlayer @Inject constructor(
      */
     fun addToQueue(songs: List<Song>) {
         if (songs.isEmpty()) return
-        
+
         scope.launch {
-            val currentQueue = _playerState.value.queue.toMutableList()
-            val existingIds = currentQueue.map { it.id }.toSet()
-            
-            // Final de-duplication check to prevent duplicates from concurrent calls
-            val filteredSongs = songs.filter { it.id !in existingIds }
-            if (filteredSongs.isEmpty()) return@launch
-            
-            currentQueue.addAll(filteredSongs)
-            _playerState.update { it.copy(queue = currentQueue) }
-            
-            // Add media items to player
-            filteredSongs.forEach { song ->
-                val mediaItem = createMediaItem(song, resolveStream = false)
-                mediaController?.addMediaItem(mediaItem)
+            queueMutex.withLock {
+                val existingIds = _playerState.value.queue.map { it.id }.toSet()
+
+                // Final de-duplication check to prevent duplicates from concurrent calls
+                val filteredSongs = songs.filter { it.id !in existingIds }
+                if (filteredSongs.isEmpty()) return@withLock
+
+                val mediaItems = filteredSongs.map { createMediaItem(it, resolveStream = false) }
+
+                _playerState.update { state -> state.copy(queue = state.queue + filteredSongs) }
+                mediaController?.addMediaItems(mediaItems)
             }
         }
     }
@@ -3519,24 +3549,32 @@ class MusicPlayer @Inject constructor(
      */
     fun playNext(songs: List<Song>) {
         if (songs.isEmpty()) return
-        
+
         scope.launch {
-            val currentIndex = _playerState.value.currentIndex
-            // If nothing playing, just add to end (which is beginning)
-            val targetIndex = if (currentIndex < 0) 0 else currentIndex + 1
-            
-            val currentQueue = _playerState.value.queue.toMutableList()
-            // Safety check for index
-            val safeIndex = targetIndex.coerceAtMost(currentQueue.size)
-            
-            currentQueue.addAll(safeIndex, songs)
-            
-            _playerState.update { it.copy(queue = currentQueue) }
-            
-            // Add media items to player
-            songs.forEachIndexed { i, song ->
-                val mediaItem = createMediaItem(song, resolveStream = false)
-                mediaController?.addMediaItem(safeIndex + i, mediaItem)
+            queueMutex.withLock {
+                val controller = mediaController
+                // Media3's index is the ground truth for where the insert has to land; the
+                // state index can lag behind it while a transition is being processed.
+                val controllerIndex = controller?.let { c ->
+                    c.currentMediaItemIndex.takeIf { it in 0 until c.mediaItemCount }
+                }
+                val currentIndex = controllerIndex ?: _playerState.value.currentIndex
+                val queueSize = _playerState.value.queue.size
+                val insertAt = (if (currentIndex < 0) 0 else currentIndex + 1).coerceIn(0, queueSize)
+
+                // Build every item before touching either list so a failure part-way
+                // through can't leave the state queue and the timeline out of step.
+                val mediaItems = songs.map { createMediaItem(it, resolveStream = false) }
+
+                _playerState.update { state ->
+                    val queue = state.queue.toMutableList()
+                    queue.addAll(insertAt.coerceAtMost(queue.size), songs)
+                    state.copy(queue = queue)
+                }
+
+                controller?.let { c ->
+                    c.addMediaItems(insertAt.coerceAtMost(c.mediaItemCount), mediaItems)
+                }
             }
         }
     }

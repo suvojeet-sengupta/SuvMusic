@@ -1000,7 +1000,9 @@ fun OtherContentList(
     filterChips: @Composable () -> Unit
 ) {
     val songs = if (filter == LibraryFilter.SONGS) uiState.likedSongs + uiState.localSongs else emptyList()
-    val albums = if (filter == LibraryFilter.ALBUMS) (uiState.libraryAlbums + uiState.localAlbums).distinctBy { it.id } else emptyList()
+    val albums = if (filter == LibraryFilter.ALBUMS) {
+        (uiState.savedAlbums + uiState.libraryAlbums + uiState.localAlbums).distinctBy { it.id }
+    } else emptyList()
     val artists = if (filter == LibraryFilter.ARTISTS) (uiState.libraryArtists + uiState.localArtists).distinctBy { it.id } else emptyList()
     
     LazyColumn(contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -1110,7 +1112,8 @@ fun getCountForFilter(uiState: com.suvojeet.suvmusic.ui.viewmodel.LibraryUiState
     return when(uiState.selectedFilter) {
         LibraryFilter.PLAYLISTS -> "${uiState.playlists.size} playlists"
         LibraryFilter.SONGS -> "${uiState.likedSongsCount + uiState.localSongs.size} songs"
-        LibraryFilter.ALBUMS -> "${uiState.libraryAlbums.size + uiState.localAlbums.size} albums"
+        LibraryFilter.ALBUMS ->
+            "${(uiState.savedAlbums + uiState.libraryAlbums + uiState.localAlbums).distinctBy { it.id }.size} albums"
         LibraryFilter.ARTISTS -> "${uiState.libraryArtists.size + uiState.localArtists.size} artists"
         LibraryFilter.FOLDERS -> "${uiState.localFolders.size} folders"
     }

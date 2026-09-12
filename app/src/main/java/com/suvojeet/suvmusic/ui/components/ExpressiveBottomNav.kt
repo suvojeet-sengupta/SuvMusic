@@ -74,7 +74,7 @@ fun ExpressiveBottomNav(
     onDestinationChange: (Destination) -> Unit,
     onReClick: (Destination) -> Unit = {},
     modifier: Modifier = Modifier,
-    alpha: Float = 1.0f,
+    alpha: Float = 0f,
     iosLiquidGlassEnabled: Boolean = false,
     backgroundColor: Color? = null,
     iosNavBarBlur: Float = 60f
@@ -118,7 +118,7 @@ private fun LiquidGlassNavBar(
     onDestinationChange: (Destination) -> Unit,
     onReClick: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 1.0f,
+    alpha: Float = 0f,
     blurAmount: Float = 60f
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -390,16 +390,17 @@ private fun StandardNavBar(
     onDestinationChange: (Destination) -> Unit,
     onReClick: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    alpha: Float = 1.0f,
+    alpha: Float = 0f,
     backgroundColor: Color? = null
 ) {
     // Spotify-style translucent bar: transparent at the very top edge so the
     // scrolling content behind bleeds through faintly, deepening to a mostly-
     // opaque tint at the bottom. The base hue still follows the theme / dominant
-    // colour, and the user's navBarAlpha slider acts as an overall opacity
-    // multiplier (so it can be made fully solid again if desired).
+    // colour. `alpha` is the user's transparency slider (0 = solid, 1 = fully
+    // see-through), the same direction the glass bar and the mini player use, so
+    // it is inverted here to get an opacity multiplier.
     val base = backgroundColor ?: MaterialTheme.colorScheme.surface
-    val a = alpha.coerceIn(0f, 1f)
+    val a = 1f - alpha.coerceIn(0f, 1f)
     // Darker, denser bottom edge: blend the base toward black on the way down and
     // ramp opacity to near-solid at the very bottom, while the top edge stays
     // clear so scrolling content still bleeds through faintly.

@@ -134,6 +134,7 @@ class SessionManager @Inject constructor(
         private val VOLUME_NORMALIZATION_ENABLED_KEY = booleanPreferencesKey("volume_normalization_enabled")
         private val MINI_PLAYER_ALPHA_KEY = floatPreferencesKey("mini_player_alpha")
         private val NAV_BAR_ALPHA_KEY = floatPreferencesKey("nav_bar_alpha")
+        private val NAV_BAR_TRANSPARENCY_KEY = floatPreferencesKey("nav_bar_transparency")
         private val NAV_BAR_BLUR_KEY = floatPreferencesKey("nav_bar_blur")
         private val DOUBLE_TAP_SEEK_SECONDS_KEY = intPreferencesKey("double_tap_seek_seconds")
 
@@ -784,16 +785,27 @@ class SessionManager @Inject constructor(
         }
     }
 
-    suspend fun getNavBarAlpha(): Float = 
-        context.dataStore.data.first()[NAV_BAR_ALPHA_KEY] ?: 1.0f
+    /**
+     * Navigation bar *transparency*, matching the slider's label and the mini player's
+     * setting: 0 = solid, 1 = fully see-through.
+     *
+     * The old `nav_bar_alpha` key stored the opposite (opacity), which is why the standard
+     * navigation bar moved the wrong way while the glass one moved the right way. A stored
+     * legacy value is inverted on read so an existing preference keeps looking the same.
+     */
+    private fun Preferences.navBarTransparency(): Float =
+        this[NAV_BAR_TRANSPARENCY_KEY]
+            ?: this[NAV_BAR_ALPHA_KEY]?.let { legacyOpacity -> 1f - legacyOpacity }
+            ?: 0f
 
-    val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[NAV_BAR_ALPHA_KEY] ?: 1.0f
-    }
+    suspend fun getNavBarAlpha(): Float = context.dataStore.data.first().navBarTransparency()
+
+    val navBarAlphaFlow: Flow<Float> = context.dataStore.data.map { it.navBarTransparency() }
 
     suspend fun setNavBarAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
-            preferences[NAV_BAR_ALPHA_KEY] = alpha
+            preferences[NAV_BAR_TRANSPARENCY_KEY] = alpha
+            preferences.remove(NAV_BAR_ALPHA_KEY)
         }
     }
 
@@ -1644,8 +1656,10 @@ class SessionManager @Inject constructor(
 
     // --- Liquid Glass (Player + MiniPlayer) ---
 
+    // 80 was the effective default before the radius became 1:1 with the slider
+    // (the old code multiplied by 1.4 and capped at 80), so the look is unchanged.
     val playerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        preferences[PLAYER_GLASS_BLUR_KEY] ?: 60f
+        (preferences[PLAYER_GLASS_BLUR_KEY] ?: 80f).coerceIn(0f, 80f)
     }
 
     suspend fun setPlayerGlassBlur(value: Float) {

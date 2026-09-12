@@ -44,13 +44,22 @@ class YouTubeSearchService @Inject constructor(
     /**
      * Search for songs/videos on YouTube Music.
      */
-    suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> =
+        searchOrNull(query, filter) ?: emptyList()
+
+    /**
+     * Same as [search] but reports a failed network call as null instead of collapsing it
+     * into "no results". Bulk callers (playlist import) need that distinction: YouTube
+     * throttles a long run of searches, and treating a throttled call as an empty result
+     * silently drops tracks that do exist.
+     */
+    suspend fun searchOrNull(query: String, filter: String = FILTER_SONGS): List<Song>? = withContext(Dispatchers.IO) {
         // Namespaced per source+filter so YouTube song/video results never collide with
         // each other or with RemoteAudio's entries in the shared disk cache.
         val cacheKey = "yt:$filter:${query.trim().lowercase()}"
         try {
             val ytService = ServiceList.all().find { it.serviceInfo.name == "YouTube" }
-                ?: return@withContext emptyList()
+                ?: return@withContext emptyList<Song>()
 
             val searchExtractor = ytService.getSearchExtractor(query, listOf(filter), "")
             searchExtractor.fetchPage()
@@ -92,7 +101,7 @@ class YouTubeSearchService @Inject constructor(
             e.printStackTrace()
             Telemetry.report("search", "youtube", e.toAppError(), mapOf("qlen" to query.length.toString()))
             // Offline-first fallback: last-known results beat a blank screen.
-            OfflineCache.getSearch(cacheKey) ?: emptyList()
+            OfflineCache.getSearch(cacheKey)
         }
     }
 

@@ -516,18 +516,26 @@ fun DownloadsScreen(
 
             // Songs tab content
             if (selectedTab == 0) {
-                // List of Download Items (Collections + Singles)
-                itemsIndexed(downloadItems.filter { item ->
+                // List of Download Items (Collections + Singles). Collections share the list
+                // with singles, so the track number and the queue built on tap both have to
+                // come from the singles alone — using the mixed list's position numbered the
+                // first song after the collection cards and queued songs that aren't shown.
+                val audioItems = downloadItems.filter { item ->
                     when (item) {
                         is DownloadItem.SongItem -> !item.song.isVideo
                         is DownloadItem.CollectionItem -> true
                     }
-                }, key = { _, item ->
+                }
+                val visibleSingles = audioItems.filterIsInstance<DownloadItem.SongItem>().map { it.song }
+                val playableSingles = visibleSingles.filter { single ->
+                    downloadedSongs.any { it.id == single.id }
+                }
+                itemsIndexed(audioItems, key = { _, item ->
                     when (item) {
                         is DownloadItem.SongItem -> "song_${item.song.id}"
                         is DownloadItem.CollectionItem -> "col_${item.id}"
                     }
-                }) { index, item ->
+                }) { _, item ->
                     when (item) {
                         is DownloadItem.CollectionItem -> {
                             DownloadedCollectionCard(
@@ -540,7 +548,7 @@ fun DownloadsScreen(
                         is DownloadItem.SongItem -> {
                             DownloadedSongCard(
                                 song = item.song,
-                                index = index + 1,
+                                index = visibleSingles.indexOfFirst { it.id == item.song.id } + 1,
                                 isDownloading = item.isDownloading,
                                 progress = item.progress,
                                 failureReason = item.failureReason,
@@ -549,10 +557,9 @@ fun DownloadsScreen(
                                     if (isSelectionMode) {
                                         viewModel.toggleSelection(item.song.id)
                                     } else {
-                                        val audioSongs = downloadedSongs.filter { !it.isVideo }
-                                        val realIndex = audioSongs.indexOfFirst { it.id == item.song.id }
+                                        val realIndex = playableSingles.indexOfFirst { it.id == item.song.id }
                                         if (realIndex != -1) {
-                                            onSongClick(audioSongs, realIndex)
+                                            onSongClick(playableSingles, realIndex)
                                         }
                                     }
                                 },

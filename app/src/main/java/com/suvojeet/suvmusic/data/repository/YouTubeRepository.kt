@@ -118,6 +118,10 @@ class YouTubeRepository @Inject constructor(
     suspend fun search(query: String, filter: String = FILTER_SONGS): List<Song> =
         if (isOnline()) searchService.search(query, filter) else emptyList()
 
+    /** Null when the search could not be performed (offline / throttled), as opposed to no results. */
+    suspend fun searchOrNull(query: String, filter: String = FILTER_SONGS): List<Song>? =
+        if (isOnline()) searchService.searchOrNull(query, filter) else null
+
     suspend fun searchArtists(query: String): List<Artist> =
         if (isOnline()) searchService.searchArtists(query) else emptyList()
 

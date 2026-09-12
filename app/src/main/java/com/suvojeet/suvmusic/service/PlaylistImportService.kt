@@ -15,6 +15,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.util.PlaylistImportHelper
+import com.suvojeet.suvmusic.util.SpotifyImportHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +46,7 @@ class PlaylistImportService : Service() {
     lateinit var playlistImportHelper: PlaylistImportHelper
 
     @Inject
-    lateinit var spotifyImportHelper: com.suvojeet.suvmusic.util.SpotifyImportHelper
+    lateinit var spotifyImportHelper: SpotifyImportHelper
 
     @Inject
     lateinit var youTubeRepository: YouTubeRepository
@@ -167,7 +168,12 @@ class PlaylistImportService : Service() {
                     }
                     updateNotification("Imported $successCount songs", total, total, false)
                 } else {
-                    // Regular matching path
+                    // Regular matching path. YouTube throttles a long run of searches, and a
+                    // throttled search used to look exactly like "this track doesn't exist" —
+                    // which is why large playlists lost far more songs than small ones. Only
+                    // a transient failure is retried, and the pacing widens while the backend
+                    // is unhappy so the rest of the playlist isn't lost to the same throttle.
+                    var pacingMs = BASE_PACING_MS
                     importTracks.forEachIndexed { index, track ->
                         if (!isActive) return@forEachIndexed
                         val title = track.title
@@ -183,20 +189,39 @@ class PlaylistImportService : Service() {
                         }
                         updateNotification("Importing: $title", index + 1, total, false)
 
-                        // Find Match or use direct song/sourceId
-                        val match = when {
-                            track.song != null -> track.song
-                            track.sourceId != null -> youTubeRepository.getSongDetails(track.sourceId)
-                            else -> spotifyImportHelper.findMatch(title, artist, track.durationMs)
+                        var match: Song? = null
+                        var transient = false
+                        for (attempt in 0..MAX_TRANSIENT_RETRIES) {
+                            if (!isActive) return@forEachIndexed
+                            transient = false
+                            when {
+                                track.song != null -> match = track.song
+                                track.sourceId != null -> {
+                                    match = runCatching { youTubeRepository.getSongDetails(track.sourceId) }
+                                        .onFailure { transient = true }
+                                        .getOrNull()
+                                }
+                                else -> when (
+                                    val result = spotifyImportHelper.findMatchResult(title, artist, track.durationMs)
+                                ) {
+                                    is SpotifyImportHelper.MatchResult.Found -> match = result.song
+                                    SpotifyImportHelper.MatchResult.SearchFailed -> transient = true
+                                    SpotifyImportHelper.MatchResult.NoMatch -> Unit
+                                }
+                            }
+                            if (match != null || !transient) break
+                            pacingMs = (pacingMs * 2).coerceAtMost(MAX_PACING_MS)
+                            delay(TRANSIENT_BACKOFF_MS * (attempt + 1))
                         }
-                        
-                        if (match != null) {
-                             _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
+                        val resolved = match
+                        if (resolved != null) {
+                             pacingMs = (pacingMs / 2).coerceAtLeast(BASE_PACING_MS)
+                             _importState.update { it.copy(thumbnail = resolved.thumbnailUrl) }
                              val added = if (isLocal) {
-                                 libraryRepository.addSongToPlaylist(finalPlaylistId!!, match)
+                                 libraryRepository.addSongToPlaylist(finalPlaylistId, resolved)
                                  true
                              } else {
-                                 youTubeRepository.addSongToPlaylist(finalPlaylistId!!, match.id)
+                                 youTubeRepository.addSongToPlaylist(finalPlaylistId, resolved.id)
                              }
                              if (added) {
                                  successCount++
@@ -206,8 +231,8 @@ class PlaylistImportService : Service() {
                         } else {
                             failedSongs.add(title to artist)
                         }
-                        
-                        delay(50) 
+
+                        delay(pacingMs)
                     }
                 }
 
@@ -300,6 +325,11 @@ class PlaylistImportService : Service() {
     }
 
     companion object {
+        private const val BASE_PACING_MS = 50L
+        private const val MAX_PACING_MS = 2_000L
+        private const val TRANSIENT_BACKOFF_MS = 1_500L
+        private const val MAX_TRANSIENT_RETRIES = 3
+
         const val CHANNEL_ID = "playlist_import_channel"
         const val NOTIFICATION_ID = 1001
         

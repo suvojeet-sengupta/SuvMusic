@@ -61,6 +61,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import com.suvojeet.suvmusic.ui.components.SettingsCard
+import com.suvojeet.suvmusic.ui.components.glass.MAX_BLUR_RADIUS
 
 /**
  * Customization settings screen for player appearance with Material 3 Expressive design.
@@ -107,7 +108,7 @@ fun CustomizationScreen(
     val customBackgroundUri by sessionManager.playerBackgroundImageUriFlow
         .collectAsStateWithLifecycle(initialValue = null)
     val playerGlassBlur by sessionManager.playerGlassBlurFlow
-        .collectAsStateWithLifecycle(initialValue = 60f)
+        .collectAsStateWithLifecycle(initialValue = 80f)
     val playerGlassIntensity by sessionManager.playerGlassIntensityFlow
         .collectAsStateWithLifecycle(initialValue = 1.25f)
 
@@ -667,7 +668,7 @@ private fun BlurSliderItem(
         Slider(
             value = blur,
             onValueChange = onBlurChange,
-            valueRange = 0f..120f,
+            valueRange = 0f..MAX_BLUR_RADIUS,
             steps = 0,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,

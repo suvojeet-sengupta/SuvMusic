@@ -182,10 +182,15 @@ class LibraryRepositoryImpl @Inject constructor(
             type = "ALBUM"
         )
         libraryDao.insertItem(entity)
+        // Store the tracks too, keyed by the album id. Saving only the entity left the
+        // album with no songs in the library, so it had no song count and could not be
+        // opened offline.
+        if (album.songs.isNotEmpty()) replacePlaylistSongs(album.id, album.songs)
     }
 
     override suspend fun removeAlbum(albumId: String) {
         libraryDao.deleteItem(albumId)
+        libraryDao.deletePlaylistSongs(albumId)
     }
 
     override fun isPlaylistSaved(playlistId: String): Flow<Boolean> {

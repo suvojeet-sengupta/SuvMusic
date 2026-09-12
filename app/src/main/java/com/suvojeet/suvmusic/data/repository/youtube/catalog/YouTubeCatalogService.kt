@@ -64,14 +64,25 @@ class YouTubeCatalogService @Inject constructor(
         }
     }
 
+    /**
+     * Albums saved to the YouTube Music library.
+     *
+     * `FEmusic_liked_albums` is the shelf the "saved albums" grid is actually built from.
+     * `FEmusic_library_corpus_track_albums` only lists albums inferred from library *tracks*
+     * and is empty for most accounts, so it is kept purely as a fallback.
+     */
     suspend fun getLibraryAlbums(): List<Album> = withContext(Dispatchers.IO) {
-        if (!sessionManager.isLoggedIn()) return@withContext emptyList()
-        try {
-            parser.parseLibraryAlbums(apiClient.fetchInternalApi("FEmusic_library_corpus_track_albums"))
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
+        if (!sessionManager.isLoggedIn()) return@withContext emptyList<Album>()
+        for (browseId in listOf("FEmusic_liked_albums", "FEmusic_library_corpus_track_albums")) {
+            val albums: List<Album> = try {
+                parser.parseLibraryAlbums(apiClient.fetchInternalApi(browseId))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+            if (albums.isNotEmpty()) return@withContext albums
         }
+        emptyList<Album>()
     }
 
     suspend fun getArtistRadioId(artistId: String): String? = withContext(Dispatchers.IO) {

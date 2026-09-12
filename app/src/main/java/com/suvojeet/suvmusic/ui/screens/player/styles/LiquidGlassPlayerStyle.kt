@@ -25,6 +25,7 @@ import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import com.suvojeet.suvmusic.ui.screens.player.PlayerScreenActions
 import com.suvojeet.suvmusic.core.model.ArtworkShape
 import com.suvojeet.suvmusic.core.model.ArtworkSize
+import com.suvojeet.suvmusic.ui.components.glass.MAX_BLUR_RADIUS
 
 /**
  * iOS-style Liquid Glass player.
@@ -79,7 +80,7 @@ fun LiquidGlassPlayerStyle(
     isAIEnabled: Boolean,
     aiStatus: String?,
     windowSizeClass: WindowSizeClass,
-    blurRadius: Float = 60f,
+    blurRadius: Float = 80f,
     intensity: Float = 1f,
     backgroundArtworkUrl: String? = null
 ) {
@@ -88,6 +89,8 @@ fun LiquidGlassPlayerStyle(
     val scrimAlpha = if (isDarkTheme) 0.55f else 0.40f
     val scrimColor = if (isDarkTheme) Color.Black else Color.White
     val i = intensity.coerceIn(0.3f, 1.5f)
+    // Same radius on both code paths and the same scale as the slider's px label.
+    val glassBlurRadius = blurRadius.coerceIn(0f, MAX_BLUR_RADIUS)
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 1: Blurred album artwork as the entire backdrop
@@ -99,13 +102,13 @@ fun LiquidGlassPlayerStyle(
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             Modifier.graphicsLayer {
                                 renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                    blurRadius * 1.8f,
-                                    blurRadius * 1.8f,
+                                    glassBlurRadius,
+                                    glassBlurRadius,
                                     android.graphics.Shader.TileMode.CLAMP
                                 ).asComposeRenderEffect()
                             }
                         } else {
-                            Modifier.blur((blurRadius * 0.9f).dp)
+                            Modifier.blur(glassBlurRadius.dp)
                         }
                     )
             ) {
