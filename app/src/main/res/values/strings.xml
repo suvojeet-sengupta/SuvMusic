@@ -87,7 +87,7 @@
     <string name="label_downloaded">Downloaded</string>
     <string name="label_device_files">Device files</string>
 
-    <string name="msg_offline_banner">You\'re offline — downloads and cached music still play</string>
+    <string name="msg_offline_banner">Offline · downloads still play</string>
     <string name="msg_no_results">No results found for \"%1$s\"</string>
     <string name="msg_no_songs_yet">No songs yet</string>
     <string name="msg_add_songs_hint">Add songs to this playlist to start listening</string>

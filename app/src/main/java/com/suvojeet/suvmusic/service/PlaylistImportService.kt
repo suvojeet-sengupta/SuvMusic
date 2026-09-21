@@ -174,25 +174,14 @@ class PlaylistImportService : Service() {
                     // a transient failure is retried, and the pacing widens while the backend
                     // is unhappy so the rest of the playlist isn't lost to the same throttle.
                     var pacingMs = BASE_PACING_MS
-                    importTracks.forEachIndexed { index, track ->
-                        if (!isActive) return@forEachIndexed
-                        val title = track.title
-                        val artist = track.artist
+                    val resolvedSongs = arrayOfNulls<Song>(total)
+                    val throttled = mutableListOf<Int>()
 
-                        _importState.update { 
-                            it.copy(
-                                currentSong = title,
-                                currentArtist = artist,
-                                progress = index + 1,
-                                thumbnail = null
-                            )
-                        }
-                        updateNotification("Importing: $title", index + 1, total, false)
-
+                    suspend fun resolve(track: PlaylistImportHelper.ImportTrack): Pair<Song?, Boolean> {
                         var match: Song? = null
                         var transient = false
                         for (attempt in 0..MAX_TRANSIENT_RETRIES) {
-                            if (!isActive) return@forEachIndexed
+                            ensureActive()
                             transient = false
                             when {
                                 track.song != null -> match = track.song
@@ -202,7 +191,7 @@ class PlaylistImportService : Service() {
                                         .getOrNull()
                                 }
                                 else -> when (
-                                    val result = spotifyImportHelper.findMatchResult(title, artist, track.durationMs)
+                                    val result = spotifyImportHelper.findMatchResult(track.title, track.artist, track.durationMs)
                                 ) {
                                     is SpotifyImportHelper.MatchResult.Found -> match = result.song
                                     SpotifyImportHelper.MatchResult.SearchFailed -> transient = true
@@ -213,26 +202,58 @@ class PlaylistImportService : Service() {
                             pacingMs = (pacingMs * 2).coerceAtMost(MAX_PACING_MS)
                             delay(TRANSIENT_BACKOFF_MS * (attempt + 1))
                         }
-                        val resolved = match
-                        if (resolved != null) {
-                             pacingMs = (pacingMs / 2).coerceAtLeast(BASE_PACING_MS)
-                             _importState.update { it.copy(thumbnail = resolved.thumbnailUrl) }
-                             val added = if (isLocal) {
-                                 libraryRepository.addSongToPlaylist(finalPlaylistId, resolved)
-                                 true
-                             } else {
-                                 youTubeRepository.addSongToPlaylist(finalPlaylistId, resolved.id)
-                             }
-                             if (added) {
-                                 successCount++
-                             } else {
-                                 failedSongs.add(title to artist)
-                             }
-                        } else {
-                            failedSongs.add(title to artist)
-                        }
+                        return match to transient
+                    }
 
+                    importTracks.forEachIndexed { index, track ->
+                        ensureActive()
+                        _importState.update { 
+                            it.copy(
+                                currentSong = track.title,
+                                currentArtist = track.artist,
+                                progress = index + 1,
+                                thumbnail = null
+                            )
+                        }
+                        updateNotification("Importing: ${track.title}", index + 1, total, false)
+
+                        val (match, transient) = resolve(track)
+                        if (match != null) {
+                            pacingMs = (pacingMs / 2).coerceAtLeast(BASE_PACING_MS)
+                            resolvedSongs[index] = match
+                            _importState.update { it.copy(thumbnail = match.thumbnailUrl) }
+                            libraryRepository.addSongToPlaylist(finalPlaylistId, match)
+                        } else if (transient) {
+                            throttled += index
+                        }
                         delay(pacingMs)
+                    }
+
+                    // Tracks that only failed because YouTube was throttling get a second,
+                    // slower pass once the backend has had time to cool down.
+                    if (throttled.isNotEmpty()) {
+                        var recovered = false
+                        updateNotification("Retrying ${throttled.size} songs...", 0, 0, true)
+                        delay(RETRY_PASS_COOLDOWN_MS)
+                        throttled.forEach { index ->
+                            ensureActive()
+                            val track = importTracks[index]
+                            _importState.update { it.copy(currentSong = track.title, currentArtist = track.artist) }
+                            val (match, _) = resolve(track)
+                            if (match != null) {
+                                resolvedSongs[index] = match
+                                recovered = true
+                            }
+                            delay(RETRY_PASS_PACING_MS)
+                        }
+                        if (recovered) {
+                            libraryRepository.replacePlaylistSongs(finalPlaylistId, resolvedSongs.filterNotNull())
+                        }
+                    }
+
+                    importTracks.forEachIndexed { index, track ->
+                        if (resolvedSongs[index] != null) successCount++
+                        else failedSongs.add(track.title to track.artist)
                     }
                 }
 
@@ -329,6 +350,8 @@ class PlaylistImportService : Service() {
         private const val MAX_PACING_MS = 2_000L
         private const val TRANSIENT_BACKOFF_MS = 1_500L
         private const val MAX_TRANSIENT_RETRIES = 3
+        private const val RETRY_PASS_COOLDOWN_MS = 10_000L
+        private const val RETRY_PASS_PACING_MS = 1_000L
 
         const val CHANNEL_ID = "playlist_import_channel"
         const val NOTIFICATION_ID = 1001

@@ -453,12 +453,20 @@ class SpotifyImportHelper @Inject constructor(
         }.distinctBy { it.first.lowercase(java.util.Locale.ROOT) to it.second }
 
         var reachedSearch = false
+        val seen = mutableListOf<Song>()
         for ((query, filter) in queries) {
             val results = youTubeRepository.searchOrNull(query, filter) ?: continue
             reachedSearch = true
-            pickBest(title, coreTitle, artist, featured, durationMs, results)
+            seen += results
+            pickBest(title, coreTitle, artist, featured, durationMs, results, strict = true)
                 ?.let { return MatchResult.Found(it) }
         }
+        // Nothing cleared the strict bar across every query. Transliterated Hindi/Punjabi
+        // titles ("Tujh Mein" / "Tujhme") and YouTube titles padded with film names fail
+        // a plain token overlap, so give the pooled results one looser look before
+        // declaring the track missing.
+        pickBest(title, coreTitle, artist, featured, durationMs, seen.distinctBy { it.id }, strict = false)
+            ?.let { return MatchResult.Found(it) }
         return if (reachedSearch) MatchResult.NoMatch else MatchResult.SearchFailed
     }
 
@@ -471,7 +479,8 @@ class SpotifyImportHelper @Inject constructor(
         artist: String,
         featured: Set<String>,
         durationMs: Long,
-        results: List<Song>
+        results: List<Song>,
+        strict: Boolean
     ): Song? {
         val sourceTitle = normalizedTrackTokens(coreTitle)
         if (sourceTitle.isEmpty()) return null
@@ -489,11 +498,12 @@ class SpotifyImportHelper @Inject constructor(
             // as-is and with the artist's own words removed, and keep the better of the two.
             val resultArtistOnly = normalizedTrackTokens(result.artist)
             val resultTitle = normalizedTrackTokens(coreTitleOf(result.title))
+            val strippedResultTitle = resultTitle - resultArtistOnly - sourceArtist
             val titleScore = maxOf(
                 tokenSimilarity(sourceTitle, resultTitle),
-                tokenSimilarity(sourceTitle, resultTitle - resultArtistOnly - sourceArtist)
+                tokenSimilarity(sourceTitle, strippedResultTitle),
+                spellingSimilarity(sourceTitle, strippedResultTitle)
             )
-            if (titleScore < 0.75) return@mapNotNull null
 
             // The performer may be credited in the artist field or only in the title.
             val resultArtistTokens = resultArtistOnly +
@@ -503,14 +513,28 @@ class SpotifyImportHelper @Inject constructor(
             val artistIsCompatible = !hasKnownArtist ||
                 artistScore >= 0.25 ||
                 sourceArtist.any { it.length >= 4 && it in resultArtistTokens }
-            if (!artistIsCompatible) return@mapNotNull null
 
+            val durationKnown = durationMs > 0L && result.duration > 0L
+            val durationDelta = if (durationKnown) kotlin.math.abs(result.duration - durationMs) else Long.MAX_VALUE
             val durationScore = when {
-                durationMs <= 0L || result.duration <= 0L -> 0.5
-                kotlin.math.abs(result.duration - durationMs) <= 10_000L -> 1.0
-                kotlin.math.abs(result.duration - durationMs) <= 30_000L -> 0.5
+                !durationKnown -> 0.5
+                durationDelta <= 10_000L -> 1.0
+                durationDelta <= 30_000L -> 0.5
                 else -> 0.0
             }
+
+            val accepted = if (strict) {
+                artistIsCompatible && titleScore >= 0.75
+            } else {
+                // Every source word appears in the result title ("Tum Hi Ho" inside
+                // "Tum Hi Ho | Aashiqui 2 | Arijit Singh"), or the title is reasonably close
+                // and the running time agrees. Label uploads (T-Series, Saregama …) never
+                // credit the singer, so an exact running time stands in for the artist.
+                val contained = sourceTitle.all { it in resultTitle }
+                val titleFits = contained || (titleScore >= 0.5 && durationDelta <= 5_000L)
+                titleFits && (artistIsCompatible || (contained && durationDelta <= 3_000L))
+            }
+            if (!accepted) return@mapNotNull null
 
             result to (titleScore * 0.65 + artistScore * 0.25 + durationScore * 0.10)
         }
@@ -523,7 +547,7 @@ class SpotifyImportHelper @Inject constructor(
             .replace("\\p{Mn}+".toRegex(), "")
             .lowercase(java.util.Locale.ROOT)
             .replace("&", " and ")
-            .replace("[^a-z0-9]+".toRegex(), " ")
+            .replace("[^\\p{L}\\p{N}\\p{M}]+".toRegex(), " ")
             .trim()
 
         val noise = setOf(
@@ -542,6 +566,35 @@ class SpotifyImportHelper @Inject constructor(
         // Jaccard-style similarity penalizes extra tokens; dividing by the smaller set
         // would incorrectly score "Song Remix" as an exact match for a title of "Song".
         return overlap / maxOf(left.size, right.size).toDouble()
+    }
+
+    /**
+     * Character-level closeness of two titles with spacing ignored, so romanised spellings
+     * that split or merge words differently ("tujh mein" vs "tujhme") still line up.
+     */
+    private fun spellingSimilarity(left: Set<String>, right: Set<String>): Double {
+        val a = left.sorted().joinToString("")
+        val b = right.sorted().joinToString("")
+        if (a.isEmpty() || b.isEmpty()) return 0.0
+        val longest = maxOf(a.length, b.length)
+        if (kotlin.math.abs(a.length - b.length).toDouble() / longest > 0.25) return 0.0
+        return (1.0 - levenshtein(a, b).toDouble() / longest) * 0.95
+    }
+
+    private fun levenshtein(a: String, b: String): Int {
+        var previous = IntArray(b.length + 1) { it }
+        var current = IntArray(b.length + 1)
+        for (i in 1..a.length) {
+            current[0] = i
+            for (j in 1..b.length) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                current[j] = minOf(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost)
+            }
+            val swap = previous
+            previous = current
+            current = swap
+        }
+        return previous[b.length]
     }
 
     /**

@@ -758,6 +758,7 @@ class MusicPlayerService : MediaLibraryService() {
                     .add(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
                     .add(SessionCommand(COMMAND_STOP_RADIO, android.os.Bundle.EMPTY))
                     .add(androidx.media3.session.SessionCommand("SET_OUTPUT_DEVICE", android.os.Bundle.EMPTY))
+                    .add(SessionCommand(com.suvojeet.suvmusic.player.COMMAND_PLAY_NEXT_ORDER, android.os.Bundle.EMPTY))
                     .build()
                 
                 // Fix for Android Auto: Grant all player commands to ensure controls are visible.
@@ -857,6 +858,15 @@ class MusicPlayerService : MediaLibraryService() {
                     }
                     COMMAND_SHUFFLE -> {
                         session.player.shuffleModeEnabled = !session.player.shuffleModeEnabled
+                    }
+                    com.suvojeet.suvmusic.player.COMMAND_PLAY_NEXT_ORDER -> {
+                        (session.player as? ExoPlayer)?.let { player ->
+                            placeAfterCurrentInShuffle(
+                                player,
+                                args.getInt(com.suvojeet.suvmusic.player.EXTRA_INSERT_AT, -1),
+                                args.getInt(com.suvojeet.suvmusic.player.EXTRA_INSERT_COUNT, 0)
+                            )
+                        }
                     }
                     "SET_OUTPUT_DEVICE" -> {
                        val deviceId = args.getString("DEVICE_ID")
@@ -1876,6 +1886,33 @@ class MusicPlayerService : MediaLibraryService() {
                 throw e
             }
         }
+    }
+
+    /**
+     * Rebuilds the shuffle order so the freshly inserted window range plays right after
+     * the current item, keeping the rest of the shuffled sequence as it was.
+     */
+    private fun placeAfterCurrentInShuffle(player: ExoPlayer, insertAt: Int, count: Int) {
+        if (!player.shuffleModeEnabled || count <= 0) return
+        val timeline = player.currentTimeline
+        val size = timeline.windowCount
+        if (insertAt < 0 || insertAt + count > size) return
+
+        val order = ArrayList<Int>(size)
+        var index = timeline.getFirstWindowIndex(true)
+        while (index != C.INDEX_UNSET && order.size < size) {
+            order += index
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, true)
+        }
+        if (order.size != size) return
+
+        val inserted = (insertAt until insertAt + count).toList()
+        order.removeAll(inserted.toSet())
+        val after = order.indexOf(player.currentMediaItemIndex) + 1
+        order.addAll(after, inserted)
+        player.setShuffleOrder(
+            androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order.toIntArray(), System.nanoTime())
+        )
     }
 
     companion object {

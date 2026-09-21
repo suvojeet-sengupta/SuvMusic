@@ -83,7 +83,7 @@
     <string name="label_downloaded">ডাউনলোড করা</string>
     <string name="label_device_files">ডিভাইস ফাইল</string>
 
-    <string name="msg_offline_banner">আপনি অফলাইনে — ডাউনলোড ও ক্যাশ করা গান এখনও চলবে</string>
+    <string name="msg_offline_banner">অফলাইন · ডাউনলোড করা গান চলবে</string>
     <string name="msg_no_results">\"%1$s\" এর জন্য কোনো ফলাফল পাওয়া যায়নি</string>
     <string name="msg_no_songs_yet">এখনও কোনো গান নেই</string>
     <string name="msg_add_songs_hint">শোনা শুরু করতে এই প্লেলিস্টে গান যোগ করুন</string>

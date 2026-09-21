@@ -83,7 +83,7 @@
     <string name="label_downloaded">डाउनलोड किए गए</string>
     <string name="label_device_files">डिवाइस फ़ाइलें</string>
 
-    <string name="msg_offline_banner">आप ऑफ़लाइन हैं — डाउनलोड और कैश किया संगीत अब भी चलेगा</string>
+    <string name="msg_offline_banner">ऑफ़लाइन · डाउनलोड किए गाने चलेंगे</string>
     <string name="msg_no_results">\"%1$s\" के लिए कोई परिणाम नहीं मिला</string>
     <string name="msg_no_songs_yet">अभी कोई गाना नहीं</string>
     <string name="msg_add_songs_hint">सुनना शुरू करने के लिए इस प्लेलिस्ट में गाने जोड़ें</string>

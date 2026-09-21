@@ -853,8 +853,10 @@ fun SuvMusicApp(
                             val iosLiquidGlassEnabled by sessionManager.iosLiquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
                             
                             val isDarkTheme = androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f
-                            val navBarColor = if (showMiniPlayer) {
-                                if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC && isDarkTheme) {
+                            val navBarColor = if (showMiniPlayer && !isDarkTheme) {
+                                lerp(androidx.compose.material3.MaterialTheme.colorScheme.surface, currentDominantColors.primary, 0.08f)
+                            } else if (showMiniPlayer) {
+                                if (miniPlayerStyle == MiniPlayerStyle.YT_MUSIC) {
                                     lerp(currentDominantColors.primary, Color.Black, 0.45f)
                                 } else {
                                     currentDominantColors.primary
@@ -1021,41 +1023,50 @@ fun SuvMusicApp(
             }
         }
 
-    // Offline banner — slides in under the status bar whenever connectivity drops,
-    // so failures elsewhere in the app have visible context.
+    // Offline indicator — a small pill under the status bar that announces the drop
+    // and then gets out of the way instead of covering the top of the screen.
     val isOnline by mainViewModel.isOnline.collectAsStateWithLifecycle()
+    var showOfflinePill by remember { mutableStateOf(false) }
+    LaunchedEffect(isOnline) {
+        if (isOnline) {
+            showOfflinePill = false
+        } else {
+            showOfflinePill = true
+            delay(4_000)
+            showOfflinePill = false
+        }
+    }
     androidx.compose.animation.AnimatedVisibility(
-        visible = !isOnline,
+        visible = showOfflinePill,
         enter = androidx.compose.animation.slideInVertically { -it } + fadeIn(),
         exit = androidx.compose.animation.slideOutVertically { -it } + fadeOut(),
         modifier = Modifier
             .align(Alignment.TopCenter)
+            .statusBarsPadding()
+            .padding(top = 6.dp)
             .zIndex(10f)
     ) {
         androidx.compose.material3.Surface(
-            color = androidx.compose.material3.MaterialTheme.colorScheme.inverseSurface,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
-            modifier = Modifier.fillMaxWidth()
+            color = androidx.compose.material3.MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.92f),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            shadowElevation = 4.dp
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = androidx.compose.material.icons.Icons.Filled.CloudOff,
                     contentDescription = null,
                     tint = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(6.dp))
                 androidx.compose.material3.Text(
                     text = androidx.compose.ui.res.stringResource(R.string.msg_offline_banner),
-                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.inverseOnSurface,
+                    maxLines = 1
                 )
             }
         }

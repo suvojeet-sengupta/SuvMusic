@@ -401,16 +401,26 @@ private fun StandardNavBar(
     // it is inverted here to get an opacity multiplier.
     val base = backgroundColor ?: MaterialTheme.colorScheme.surface
     val a = 1f - alpha.coerceIn(0f, 1f)
-    // Darker, denser bottom edge: blend the base toward black on the way down and
-    // ramp opacity to near-solid at the very bottom, while the top edge stays
-    // clear so scrolling content still bleeds through faintly.
-    val bottomColor = androidx.compose.ui.graphics.lerp(base, Color.Black, 0.55f)
-    val scrimBrush = Brush.verticalGradient(
-        0.0f to base.copy(alpha = 0.0f),
-        0.35f to base.copy(alpha = 0.55f * a),
-        0.70f to bottomColor.copy(alpha = 0.85f * a),
-        1.0f to bottomColor.copy(alpha = 0.98f * a)
-    )
+    // Dark themes deepen toward black on the way down. On a light surface that same
+    // blend turned into a muddy grey band with artwork showing through the labels, so
+    // light themes keep the surface hue and go opaque much sooner instead.
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() >= 0.5f
+    val scrimBrush = if (isLightTheme) {
+        Brush.verticalGradient(
+            0.0f to base.copy(alpha = 0.0f),
+            0.18f to base.copy(alpha = 0.85f * a),
+            0.40f to base.copy(alpha = 0.97f * a),
+            1.0f to base.copy(alpha = 1.0f * a)
+        )
+    } else {
+        val bottomColor = androidx.compose.ui.graphics.lerp(base, Color.Black, 0.55f)
+        Brush.verticalGradient(
+            0.0f to base.copy(alpha = 0.0f),
+            0.35f to base.copy(alpha = 0.55f * a),
+            0.70f to bottomColor.copy(alpha = 0.85f * a),
+            1.0f to bottomColor.copy(alpha = 0.98f * a)
+        )
+    }
 
     Box(
         modifier = modifier

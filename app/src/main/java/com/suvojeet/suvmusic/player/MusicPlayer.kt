@@ -60,6 +60,10 @@ import com.suvojeet.suvmusic.glance.SuvMusicWidget
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal const val COMMAND_PLAY_NEXT_ORDER = "PLAY_NEXT_ORDER"
+internal const val EXTRA_INSERT_AT = "INSERT_AT"
+internal const val EXTRA_INSERT_COUNT = "INSERT_COUNT"
+
 /**
  * Wrapper around MediaController connected to MusicPlayerService.
  * This enables media notifications and proper audio focus handling.
@@ -1264,6 +1268,9 @@ class MusicPlayer @Inject constructor(
                             android.util.Log.w("MusicPlayer", "Shuffle mode: stopping instead of cascade-skipping")
                             _playerState.update { it.copy(error = "Could not play song. Tap next to skip.", isLoading = false) }
                             mediaController?.pause()
+                        } else if (!allowAutoSkip()) {
+                            _playerState.update { it.copy(error = "Several songs in a row failed to play. Check your connection and tap next.", isLoading = false) }
+                            mediaController?.pause()
                         } else {
                             _playerState.update { it.copy(error = "Skipping unplayable song", isLoading = false) }
                             seekToNext()
@@ -2180,6 +2187,21 @@ class MusicPlayer @Inject constructor(
     // rebuild is ALSO stuck for the same duration, give up and move to the next track.
     private val STUCK_REBUILD_AFTER_MS = 15_000L
     private var hasTriedStuckRebuildForCurrent = false
+
+    // On a flaky connection every following track fails the same way, and each
+    // automatic skip used to hand the problem to the next song — the queue raced
+    // past on its own. Past this many back-to-back automatic skips, stop instead.
+    private val MAX_CONSECUTIVE_AUTO_SKIPS = 3
+    private var consecutiveAutoSkips = 0
+
+    private fun allowAutoSkip(): Boolean {
+        if (consecutiveAutoSkips >= MAX_CONSECUTIVE_AUTO_SKIPS) {
+            consecutiveAutoSkips = 0
+            return false
+        }
+        consecutiveAutoSkips++
+        return true
+    }
     
     private fun startPositionUpdates() {
         positionUpdateJob?.cancel()
@@ -2210,6 +2232,10 @@ class MusicPlayer @Inject constructor(
                     // is usually a transient state during buffer underflows or internal re-connects.
                     if (controller.isPlaying && currentPos == 0L && currentState.currentPosition > 1000L) {
                         return@collect
+                    }
+
+                    if (consecutiveAutoSkips > 0 && controller.isPlaying && currentPos > 10_000L) {
+                        consecutiveAutoSkips = 0
                     }
 
                     val bufferedPercentage = controller.bufferedPercentage
@@ -2277,7 +2303,7 @@ class MusicPlayer @Inject constructor(
                                 // unplayable right now. Move on instead of spinning forever.
                                 android.util.Log.e("MusicPlayer", "Still stuck after stream rebuild — skipping unplayable track")
                                 bufferingStartWallTime = 0L
-                                if (controller.hasNextMediaItem()) {
+                                if (controller.hasNextMediaItem() && allowAutoSkip()) {
                                     _playerState.update { it.copy(error = "Track unavailable — skipped to next song") }
                                     controller.seekToNextMediaItem()
                                 } else {
@@ -2606,7 +2632,10 @@ class MusicPlayer @Inject constructor(
         isVideoMode: Boolean = _playerState.value.isVideoMode,
     ) {
         mediaController?.let { controller ->
-            if (index < controller.mediaItemCount) {
+            // The index was captured before the stream resolved. A play-next insert or a
+            // queue edit in between shifts items, and replacing blindly overwrote the song
+            // the user just queued (or even the one playing) with the stale next track.
+            if (index < controller.mediaItemCount && controller.getMediaItemAt(index).mediaId == song.id) {
                 val newMediaItem = MediaItem.Builder()
                     .setUri(streamUrl)
                     .setMediaId(song.id)
@@ -3573,8 +3602,22 @@ class MusicPlayer @Inject constructor(
                 }
 
                 controller?.let { c ->
-                    c.addMediaItems(insertAt.coerceAtMost(c.mediaItemCount), mediaItems)
+                    val controllerInsertAt = insertAt.coerceAtMost(c.mediaItemCount)
+                    c.addMediaItems(controllerInsertAt, mediaItems)
+                    // With shuffle on, Media3 drops inserted items at random spots in the
+                    // shuffle order, so "play next" often never came next. Ask the service
+                    // to slot them directly after the current track.
+                    if (c.shuffleModeEnabled) {
+                        c.sendCustomCommand(
+                            androidx.media3.session.SessionCommand(COMMAND_PLAY_NEXT_ORDER, android.os.Bundle.EMPTY),
+                            android.os.Bundle().apply {
+                                putInt(EXTRA_INSERT_AT, controllerInsertAt)
+                                putInt(EXTRA_INSERT_COUNT, mediaItems.size)
+                            }
+                        )
+                    }
                 }
+                invalidatePreload()
             }
         }
     }
