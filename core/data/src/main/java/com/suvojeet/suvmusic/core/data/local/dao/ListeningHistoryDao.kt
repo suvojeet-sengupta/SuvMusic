@@ -63,6 +63,9 @@ interface ListeningHistoryDao {
      */
     @Query("SELECT SUM(totalDurationMs) FROM listening_history")
     suspend fun getTotalListeningTime(): Long?
+
+    @Query("SELECT SUM(playCount) FROM listening_history")
+    suspend fun getTotalPlayCount(): Int?
     
     /**
      * Get all unique artists sorted by total play count.

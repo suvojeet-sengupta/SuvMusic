@@ -121,32 +121,12 @@ object AppModule {
         return Gson()
     }
 
-    /**
-     * OkHttp client for HQ Audio traffic only. The route interceptor rewrites the host per
-     * request so [com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider] can
-     * divert away from a failing edge at runtime; keeping it off the shared client means
-     * YouTube traffic never pays for it.
-     */
-    @Provides
-    @Singleton
-    @HqAudioClient
-    fun provideHqAudioOkHttpClient(
-        okHttpClient: OkHttpClient,
-        @ApplicationContext context: Context
-    ): OkHttpClient {
-        com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.init(context)
-        return okHttpClient.newBuilder()
-            .addInterceptor(com.suvojeet.suvmusic.data.repository.remote.HqAudioRouteInterceptor())
-            .build()
-    }
-
     @Provides
     @Singleton
     fun provideRemoteAudioApiService(
-        @HqAudioClient okHttpClient: OkHttpClient,
-        @ApplicationContext context: Context
+        okHttpClient: OkHttpClient
     ): com.suvojeet.suvmusic.data.repository.remote.RemoteAudioApiService {
-        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.getBaseUrl(context)
+        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.BASE_URL
         val primary = retrofit2.Retrofit.Builder()
             .baseUrl(primaryBaseUrl)
             .client(okHttpClient)
@@ -167,10 +147,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideHqAudioPlaylistApiService(
-        @HqAudioClient okHttpClient: OkHttpClient,
-        @ApplicationContext context: Context
+        okHttpClient: OkHttpClient
     ): com.suvojeet.suvmusic.data.repository.remote.HqAudioPlaylistApiService {
-        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.getBaseUrl(context)
+        val primaryBaseUrl = com.suvojeet.suvmusic.data.repository.remote.HqAudioUrlProvider.BASE_URL
         val primary = retrofit2.Retrofit.Builder()
             .baseUrl(primaryBaseUrl)
             .client(okHttpClient)

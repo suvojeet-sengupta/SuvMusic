@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +40,7 @@ import androidx.compose.material3.CircularProgressIndicator
  * Provided by PlayerScreen; consumed by [SongInfoSection] to render the download chip.
  */
 val LocalCurrentDownloadProgress = androidx.compose.runtime.compositionLocalOf<Float?> { null }
+val LocalCodecInfoLabel = androidx.compose.runtime.compositionLocalOf<String?> { null }
 
 @Composable
 fun SongInfoSection(
@@ -70,18 +72,21 @@ fun SongInfoSection(
     isSwitchingSource: Boolean = false,
     onSwitchAudioSource: () -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
+    val infoColumn: @Composable (Modifier) -> Unit = { infoModifier ->
+        Column(
+            modifier = infoModifier,
+            horizontalAlignment = if (isClassic) Alignment.CenterHorizontally else Alignment.Start
+        ) {
             // Title and Capsule Row (YT Music style uses this)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = if (isClassic) Arrangement.Center else Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = if (isClassic) Alignment.CenterHorizontally else Alignment.Start
+                ) {
                     AnimatedContent(
                         targetState = song?.id,
                         transitionSpec = {
@@ -90,10 +95,14 @@ fun SongInfoSection(
                             ) { it / 3 } + fadeIn()) togetherWith
                             (slideOutVertically { -it / 3 } + fadeOut())
                         },
-                        label = "songInfoTransition"
+                        label = "songInfoTransition",
+                        contentAlignment = if (isClassic) Alignment.TopCenter else Alignment.TopStart
                     ) { _ ->
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = if (isClassic) Arrangement.Center else Arrangement.Start
+                            ) {
                                 Box(
                                     modifier = Modifier.width(if (isLoading) (if (compact) 26.dp else 30.dp) else 0.dp),
                                     contentAlignment = Alignment.CenterStart
@@ -266,6 +275,7 @@ fun SongInfoSection(
                     color = dominantColors.onBackground.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    textAlign = if (isClassic) TextAlign.Center else TextAlign.Start,
                     modifier = Modifier
                         .weight(1f)
                         .basicMarquee(iterations = Int.MAX_VALUE)
@@ -406,10 +416,17 @@ fun SongInfoSection(
                 )
             }
         }
+    }
 
-        if (isClassic) {
-            Spacer(modifier = Modifier.width(12.dp))
-            
+    if (isClassic) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            infoColumn(Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(if (compact) 8.dp else 12.dp))
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -490,6 +507,13 @@ fun SongInfoSection(
                 }
             }
         }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            infoColumn(Modifier.weight(1f))
+        }
     }
 }
 
@@ -522,6 +546,22 @@ fun TimeLabelsWithQuality(
             style = MaterialTheme.typography.labelMedium,
             color = dominantColors.onBackground.copy(alpha = 0.7f)
         )
+
+        LocalCodecInfoLabel.current?.let { label ->
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.4.sp
+                ),
+                color = dominantColors.onBackground.copy(alpha = 0.75f),
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(dominantColors.onBackground.copy(alpha = 0.08f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
 
         Text(
             text = remainingText,

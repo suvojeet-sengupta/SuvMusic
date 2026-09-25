@@ -136,7 +136,7 @@ fun SettingsScreen(
         listOf(
             SettingsSearchEntry("Appearance", "Theme, dark mode, colors", "theme dark mode light colors dynamic material amoled gradient", Icons.Default.DarkMode, onAppearanceClick),
             SettingsSearchEntry("Playback", "Audio quality, gapless, equalizer", "audio quality bitrate gapless equalizer eq crossfade normalization loudness spatial pitch speed preload", Icons.Default.GraphicEq, onPlaybackClick),
-            SettingsSearchEntry("Customization", "Player UI, artwork style", "player ui artwork shape size seekbar style mini player vinyl glass", Icons.Default.Tune, onCustomizationClick),
+            SettingsSearchEntry("Customization", "Player style, artwork, seekbar", "player style yt music youtube classic suvmusic ui artwork shape size seekbar mini player vinyl glass background pulse blur", Icons.Default.Tune, onCustomizationClick),
             SettingsSearchEntry("AI Assistant", "OpenAI, Anthropic, Gemini", "ai assistant openai anthropic gemini equalizer smart", Icons.Default.Psychology, onAISettingsClick),
             SettingsSearchEntry("SponsorBlock", "Skip non-music segments", "sponsorblock skip segments intro outro sponsor", Icons.Default.FastForward, onSponsorBlockClick),
             SettingsSearchEntry("Last.fm", "Scrobbling", "lastfm last.fm scrobble scrobbling", Icons.Default.MusicNote, onLastFmClick),

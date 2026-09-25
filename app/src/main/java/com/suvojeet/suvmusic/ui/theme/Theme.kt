@@ -19,9 +19,11 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 
 import com.suvojeet.suvmusic.core.model.AppTheme
@@ -181,27 +183,53 @@ private fun createColorSchemeFromDominantColors(
             outlineVariant = colors.primary,
         )
     } else {
+        val lightPrimary = vividLightAccent(colors.accent)
         lightColorScheme(
-            primary = primary,
-            onPrimary = onPrimary,
-            primaryContainer = colors.secondary,
-            onPrimaryContainer = colors.onBackground,
-            secondary = colors.secondary,
-            onSecondary = colors.onBackground,
-            secondaryContainer = colors.secondary.copy(alpha = 0.3f),
-            onSecondaryContainer = colors.onBackground,
-            tertiary = colors.accent,
-            onTertiary = onPrimary,
-            background = colors.primary,
-            onBackground = colors.onBackground,
-            surface = colors.primary,
-            onSurface = colors.onBackground,
-            surfaceVariant = colors.secondary,
-            onSurfaceVariant = colors.onBackground,
-            outline = colors.secondary,
-            outlineVariant = colors.primary,
-        )
+            primary = lightPrimary,
+            onPrimary = Color.White,
+            primaryContainer = lerp(Color.White, lightPrimary, 0.16f),
+            onPrimaryContainer = lerp(lightPrimary, Color.Black, 0.55f),
+            secondary = lerp(lightPrimary, Neutral40, 0.5f),
+            onSecondary = Color.White,
+            secondaryContainer = lerp(Color.White, lightPrimary, 0.11f),
+            onSecondaryContainer = lerp(lightPrimary, Color.Black, 0.6f),
+            tertiary = lightPrimary,
+            onTertiary = Color.White,
+            onBackground = Neutral10,
+            onSurface = Neutral10,
+            onSurfaceVariant = NeutralVar30,
+        ).withTintedLightSurfaces(lightPrimary)
     }
+}
+
+private fun vividLightAccent(accent: Color): Color {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(accent.toArgb(), hsl)
+    if (hsl[1] < 0.08f) return Color(0xFF4A5568)
+    hsl[1] = hsl[1].coerceIn(0.45f, 0.85f)
+    hsl[2] = hsl[2].coerceIn(0.36f, 0.44f)
+    return Color(ColorUtils.HSLToColor(hsl))
+}
+
+private fun ColorScheme.withTintedLightSurfaces(tint: Color): ColorScheme {
+    val base = Color(0xFFFCFCFD)
+    return copy(
+        background = lerp(base, tint, 0.025f),
+        surface = lerp(base, tint, 0.025f),
+        surfaceBright = lerp(base, tint, 0.025f),
+        surfaceDim = lerp(Color(0xFFDCDCDF), tint, 0.06f),
+        surfaceContainerLowest = Color.White,
+        surfaceContainerLow = lerp(Color(0xFFF7F7F8), tint, 0.035f),
+        surfaceContainer = lerp(Color(0xFFF2F2F4), tint, 0.045f),
+        surfaceContainerHigh = lerp(Color(0xFFECECEF), tint, 0.055f),
+        surfaceContainerHighest = lerp(Color(0xFFE6E6EA), tint, 0.065f),
+        surfaceVariant = lerp(Color(0xFFE9E9ED), tint, 0.06f),
+        surfaceTint = tint,
+        outline = lerp(Color(0xFF7A7A80), tint, 0.08f),
+        outlineVariant = lerp(Color(0xFFCACACF), tint, 0.08f),
+        inverseSurface = Color(0xFF2F3033),
+        inverseOnSurface = Color(0xFFF1F1F3),
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -267,7 +295,7 @@ fun SuvMusicTheme(
             AppTheme.SUNSET -> SunsetLightColorScheme
             AppTheme.NATURE -> NatureLightColorScheme
             AppTheme.LOVE -> LoveLightColorScheme
-        }
+        }.let { it.withTintedLightSurfaces(it.primary) }
     }
 
     if (darkTheme && pureBlack) {

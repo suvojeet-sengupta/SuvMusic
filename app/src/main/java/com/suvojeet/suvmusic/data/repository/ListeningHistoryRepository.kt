@@ -92,6 +92,7 @@ class ListeningHistoryRepository @Inject constructor(
         }
         
         listeningHistoryDao.upsert(updated)
+        sessionManager.recordListeningActivity(System.currentTimeMillis(), durationListenedMs)
     }
     
     /**
@@ -192,13 +193,17 @@ class ListeningHistoryRepository @Inject constructor(
         val totalTimeMs = listeningHistoryDao.getTotalListeningTime() ?: 0L
         return ListeningStats(
             totalSongsPlayed = totalSongs,
-            totalListeningTimeMs = totalTimeMs
+            totalListeningTimeMs = totalTimeMs,
+            totalPlays = listeningHistoryDao.getTotalPlayCount() ?: 0
         )
     }
     
     /**
      * Get the first ever track played.
      */
+    suspend fun getListeningActivityLog(): com.suvojeet.suvmusic.data.ListeningActivityLog =
+        sessionManager.getListeningActivityLog()
+
     suspend fun getFirstEverTrack(): ListeningHistory? {
         return listeningHistoryDao.getFirstEverTrack()
     }
@@ -208,6 +213,7 @@ class ListeningHistoryRepository @Inject constructor(
      */
     suspend fun clearHistory() {
         listeningHistoryDao.clearAll()
+        sessionManager.clearListeningActivityLog()
     }
     
     /**
@@ -224,5 +230,6 @@ class ListeningHistoryRepository @Inject constructor(
  */
 data class ListeningStats(
     val totalSongsPlayed: Int,
-    val totalListeningTimeMs: Long
+    val totalListeningTimeMs: Long,
+    val totalPlays: Int = 0
 )

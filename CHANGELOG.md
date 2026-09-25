@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.6.7.0] - 2026-09-25
+
+### Changed
+- **HQ Audio Server**: HQ Audio now always uses the main hqaudio server; the Asia edge and its routing/circuit breaker were removed.
+- **Queue Reordering**: Dragging a song across the currently playing track no longer duplicates it; the playing index is kept in sync and rows stay within their section.
+- **Queue Swipe-to-Delete**: Swiped rows no longer get stuck as blank red delete tiles.
+- **Classic Player Layout**: Song title and artist are centred on their own row above the seek bar, with like/dislike, source and more actions in a row below.
+- **YT Music Player**: The audio/video switch is now centred in the top bar, and the '(New)' tag was removed from the player style name.
+- **Codec Info**: New Playback > Audio > Show Codec toggle displays the playing codec and bitrate (e.g. Opus · 160 kbps) on both player styles.
+- **Adaptive Player Colours**: With the Ambient background, text and icons switch to white over dark artwork (and dark over bright artwork) based on the real backdrop brightness.
+- **Album Art Pulse**: The pulse now uses the song's artwork colour, darkens on light backgrounds, and has a new Pulse Radius slider.
+- **Settings Cleanup**: Player Style moved to Customization; Background Blur and Pulse Intensity only show when the Ambient background is selected.
+- **Song Menu**: The song actions sheet uses a plain surface instead of the blurred ambient artwork.
+- **Light Theme**: Light mode uses clean near-white surfaces with a matching accent instead of mismatched beige/lavender tones and muddy accents.
+- **Listening Stats**: Weekly activity and time-of-day now use real listening time; added total plays, day streak, this-week vs last-week and peak listening hour.
+
 ## [2.6.6.0] - 2026-08-26
 
 ### Fixed

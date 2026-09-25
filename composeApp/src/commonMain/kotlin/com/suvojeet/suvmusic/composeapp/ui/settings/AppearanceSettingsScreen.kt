@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
  */
 val PlayerStyle.label: String
     get() = when (this) {
-        PlayerStyle.YT_MUSIC -> "YT Music (New)"
+        PlayerStyle.YT_MUSIC -> "YT Music"
         PlayerStyle.CLASSIC -> "Classic (SuvMusic)"
         PlayerStyle.LIQUID_GLASS -> "Liquid Glass (iOS)"
     }
@@ -86,8 +86,8 @@ val PlayerStyle.label: String
  *   - `dpadFocusable` (Android-only TV helper) replaced with
  *     Modifier.clickable on rows and ListItem default click handling
  *     in the bottom-sheet pickers.
- *   - Same five ModalBottomSheet pickers (theme mode, app theme, player
- *     style, lyrics text position, lyrics animation type).
+ *   - Same four ModalBottomSheet pickers (theme mode, app theme, lyrics
+ *     text position, lyrics animation type).
  *   - "Pure Black" toggle still gates on `isSystemInDarkTheme()` —
  *     CMP-compatible (foundation API).
  *   - "Dynamic Colors" subtitle reads "Use Android 12+ wallpaper colors"
@@ -105,7 +105,6 @@ fun AppearanceSettingsScreen(
     playerAnimatedBackgroundEnabled: Boolean,
     albumArtDynamicColorsEnabled: Boolean,
     rotatingVinylAnimationEnabled: Boolean,
-    playerStyle: PlayerStyle,
     forceMaxRefreshRateEnabled: Boolean,
     lyricsTextPosition: LyricsTextPosition,
     lyricsAnimationType: LyricsAnimationType,
@@ -117,7 +116,6 @@ fun AppearanceSettingsScreen(
     onPlayerAnimatedBackgroundChange: (Boolean) -> Unit,
     onAlbumArtDynamicColorsChange: (Boolean) -> Unit,
     onRotatingVinylAnimationChange: (Boolean) -> Unit,
-    onPlayerStyleChange: (PlayerStyle) -> Unit,
     onForceMaxRefreshRateChange: (Boolean) -> Unit,
     onLyricsTextPositionChange: (LyricsTextPosition) -> Unit,
     onLyricsAnimationTypeChange: (LyricsAnimationType) -> Unit,
@@ -137,9 +135,6 @@ fun AppearanceSettingsScreen(
 
     var showAppThemeSheet by remember { mutableStateOf(false) }
     val appThemeSheetState = rememberModalBottomSheetState()
-
-    var showPlayerStyleSheet by remember { mutableStateOf(false) }
-    val playerStyleSheetState = rememberModalBottomSheetState()
 
     var showLyricsPositionSheet by remember { mutableStateOf(false) }
     val lyricsPositionSheetState = rememberModalBottomSheetState()
@@ -256,13 +251,6 @@ fun AppearanceSettingsScreen(
                     checked = rotatingVinylAnimationEnabled,
                     onCheckedChange = onRotatingVinylAnimationChange,
                 )
-                ThinDivider()
-                NavRow(
-                    icon = Icons.Default.Palette,
-                    title = "Player Style",
-                    subtitle = playerStyle.label,
-                    onClick = { showPlayerStyleSheet = true },
-                )
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -347,27 +335,6 @@ fun AppearanceSettingsScreen(
             },
             onDismiss = { showAppThemeSheet = false },
             sheetState = appThemeSheetState,
-        )
-    }
-
-    // Player Style picker
-    if (showPlayerStyleSheet) {
-        EnumPickerSheet(
-            title = "Player Style",
-            // Liquid Glass (iOS) has been retired — only YT Music and Classic
-            // remain selectable; users on Liquid Glass are migrated to YT Music.
-            entries = PlayerStyle.entries.filter { it != PlayerStyle.LIQUID_GLASS },
-            selected = playerStyle,
-            label = { it.label },
-            onSelect = { style ->
-                onPlayerStyleChange(style)
-                scope.launch {
-                    playerStyleSheetState.hide()
-                    showPlayerStyleSheet = false
-                }
-            },
-            onDismiss = { showPlayerStyleSheet = false },
-            sheetState = playerStyleSheetState,
         )
     }
 

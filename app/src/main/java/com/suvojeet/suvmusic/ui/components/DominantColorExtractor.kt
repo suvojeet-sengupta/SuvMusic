@@ -26,7 +26,8 @@ data class DominantColors(
     val primary: Color = Color(0xFF1A1A1A),
     val secondary: Color = Color(0xFF2A2A2A),
     val accent: Color = Color(0xFF888888),
-    val onBackground: Color = Color.White
+    val onBackground: Color = Color.White,
+    val artLuminance: Float = -1f
 )
 
 /**
@@ -203,7 +204,8 @@ private fun extractColorsFromBitmap(bitmap: Bitmap, isDarkTheme: Boolean = true)
         primary = primary,
         secondary = secondary,
         accent = accent,
-        onBackground = onBackground
+        onBackground = onBackground,
+        artLuminance = ColorUtils.calculateLuminance(android.graphics.Color.rgb(avgR, avgG, avgB)).toFloat()
     )
 }
 

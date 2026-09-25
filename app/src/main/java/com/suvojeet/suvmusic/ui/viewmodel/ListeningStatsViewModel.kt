@@ -22,6 +22,12 @@ import javax.inject.Inject
 
 data class ListeningStatsUiState(
     val totalSongsPlayed: Int = 0,
+    val totalPlays: Int = 0,
+    val listeningStreakDays: Int = 0,
+    val thisWeekMs: Long = 0L,
+    val weekOverWeekChange: Int? = null,
+    val peakHour: Int? = null,
+    val timeOfDayInMinutes: Boolean = false,
     val totalListeningTimeMs: Long = 0L,
     val totalMonthsListened: Double = 0.0,
     val averageDailyMs: Long = 0L,
@@ -70,13 +76,28 @@ class ListeningStatsViewModel @Inject constructor(
             ) { topSongs, recentHistory ->
                 val globalStats = listeningHistoryRepository.getListeningStats()
                 val topArtists = listeningHistoryRepository.getTopArtists(10)
-                
-                val timeOfDayStats = calculateTimeOfDayStats(recentHistory)
-                val weeklyTrends = calculateWeeklyTrends(recentHistory)
-                
-                val avgDaily = if (weeklyTrends.isNotEmpty()) {
-                    weeklyTrends.map { it.minutesListen }.average().toLong() * 60 * 1000
-                } else 0L
+                val activityLog = listeningHistoryRepository.getListeningActivityLog()
+
+                val hourTotalMs = activityLog.msByHour.sum()
+                val timeOfDayInMinutes = hourTotalMs > 0L
+                val timeOfDayStats = if (timeOfDayInMinutes) {
+                    timeOfDayFromHourLog(activityLog.msByHour)
+                } else {
+                    calculateTimeOfDayStats(recentHistory)
+                }
+                val peakHour = if (timeOfDayInMinutes) {
+                    activityLog.msByHour.indices.maxByOrNull { activityLog.msByHour[it] }
+                } else null
+
+                val dailyMs = dailyListeningMs(activityLog.msByDay, recentHistory, 14)
+                val weeklyTrends = dailyMs.takeLast(7).map { (dayName, ms) -> DailyListening(dayName, ms / 60_000L) }
+                val thisWeekMs = dailyMs.takeLast(7).sumOf { it.second }
+                val lastWeekMs = dailyMs.take(7).sumOf { it.second }
+                val weekOverWeekChange = if (lastWeekMs > 0L) {
+                    (((thisWeekMs - lastWeekMs) * 100) / lastWeekMs).toInt()
+                } else null
+
+                val avgDaily = thisWeekMs / 7
                 
                 val personality = determinePersonality(timeOfDayStats, globalStats.totalSongsPlayed, avgDaily)
                 
@@ -91,6 +112,12 @@ class ListeningStatsViewModel @Inject constructor(
 
                 ListeningStatsUiState(
                     totalSongsPlayed = globalStats.totalSongsPlayed,
+                    totalPlays = globalStats.totalPlays,
+                    listeningStreakDays = listeningStreak(activityLog.msByDay),
+                    thisWeekMs = thisWeekMs,
+                    weekOverWeekChange = weekOverWeekChange,
+                    peakHour = peakHour,
+                    timeOfDayInMinutes = timeOfDayInMinutes,
                     totalListeningTimeMs = globalStats.totalListeningTimeMs,
                     totalMonthsListened = totalMonths,
                     averageDailyMs = avgDaily,
@@ -149,28 +176,66 @@ class ListeningStatsViewModel @Inject constructor(
         return stats
     }
     
-    private fun calculateWeeklyTrends(history: List<ListeningHistory>): List<DailyListening> {
+    private fun dailyListeningMs(
+        msByDay: Map<Int, Long>,
+        history: List<ListeningHistory>,
+        days: Int
+    ): List<Pair<String, Long>> {
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
-        
         val todayStart = calendar.timeInMillis
         val msPerDay = 24 * 60 * 60 * 1000L
-        
-        return (6 downTo 0).map { i ->
+        val firstLoggedDay = msByDay.keys.minOrNull()
+
+        return (days - 1 downTo 0).map { i ->
             val dayStart = todayStart - (i * msPerDay)
-            val dayEnd = dayStart + msPerDay
-            
-            val playsOnDay = history.filter { it.lastPlayed in dayStart until dayEnd }
-            val totalMinutes = playsOnDay.sumOf { it.duration } / 1000 / 60
-            
             val dayCal = Calendar.getInstance().apply { timeInMillis = dayStart }
+            val dayKey = dayKeyOf(dayCal)
             val dayName = dayCal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault()) ?: "?"
-            
-            DailyListening(dayName, totalMinutes)
+            val ms = if (firstLoggedDay != null && dayKey >= firstLoggedDay) {
+                msByDay[dayKey] ?: 0L
+            } else {
+                history.filter { it.lastPlayed in dayStart until dayStart + msPerDay }
+                    .sumOf { it.duration }
+            }
+            dayName to ms
         }
+    }
+
+    private fun listeningStreak(msByDay: Map<Int, Long>): Int {
+        if (msByDay.isEmpty()) return 0
+        val calendar = Calendar.getInstance()
+        if ((msByDay[dayKeyOf(calendar)] ?: 0L) <= 0L) {
+            calendar.add(Calendar.DAY_OF_MONTH, -1)
+        }
+        var streak = 0
+        while ((msByDay[dayKeyOf(calendar)] ?: 0L) > 0L) {
+            streak++
+            calendar.add(Calendar.DAY_OF_MONTH, -1)
+        }
+        return streak
+    }
+
+    private fun dayKeyOf(calendar: Calendar): Int =
+        calendar.get(Calendar.YEAR) * 10000 +
+            (calendar.get(Calendar.MONTH) + 1) * 100 +
+            calendar.get(Calendar.DAY_OF_MONTH)
+
+    private fun timeOfDayFromHourLog(msByHour: List<Long>): Map<TimeOfDay, Int> {
+        val stats = TimeOfDay.entries.associateWith { 0L }.toMutableMap()
+        msByHour.forEachIndexed { hour, ms ->
+            val timeOfDay = when (hour) {
+                in 5..11 -> TimeOfDay.MORNING
+                in 12..16 -> TimeOfDay.AFTERNOON
+                in 17..21 -> TimeOfDay.EVENING
+                else -> TimeOfDay.NIGHT
+            }
+            stats[timeOfDay] = (stats[timeOfDay] ?: 0L) + ms
+        }
+        return stats.mapValues { (it.value / 60_000L).toInt() }
     }
     
     private fun determinePersonality(timeStats: Map<TimeOfDay, Int>, totalSongs: Int, avgDailyMs: Long): MusicPersonality {

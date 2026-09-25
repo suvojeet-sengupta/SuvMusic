@@ -48,6 +48,8 @@ import com.suvojeet.suvmusic.core.model.SeekbarStyle
 import com.suvojeet.suvmusic.core.model.ArtworkShape
 import com.suvojeet.suvmusic.core.model.ArtworkSize
 import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
+import com.suvojeet.suvmusic.core.model.PlayerStyle
+import com.suvojeet.suvmusic.composeapp.ui.settings.label
 import com.suvojeet.suvmusic.core.model.PlayerBackgroundStyle
 import com.suvojeet.suvmusic.ui.theme.GradientEnd
 import com.suvojeet.suvmusic.ui.theme.GradientMiddle
@@ -111,6 +113,8 @@ fun CustomizationScreen(
         .collectAsStateWithLifecycle(initialValue = 80f)
     val playerGlassIntensity by sessionManager.playerGlassIntensityFlow
         .collectAsStateWithLifecycle(initialValue = 1.25f)
+    val albumArtPulseRadius by sessionManager.albumArtPulseRadiusFlow
+        .collectAsStateWithLifecycle(initialValue = 1.35f)
 
     val miniPlayerAlpha = uiState.miniPlayerAlpha
     val navBarAlpha = uiState.navBarAlpha
@@ -121,6 +125,7 @@ fun CustomizationScreen(
     
     // Style Selection Dialog/Sheet
     var showMiniPlayerStyleSheet by remember { mutableStateOf(false) }
+    var showPlayerStyleSheet by remember { mutableStateOf(false) }
     var showHomeSectionsSheet by remember { mutableStateOf(false) }
     var showPlayerBackgroundSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -190,6 +195,15 @@ fun CustomizationScreen(
                 SettingsSectionTitle("Player Styles")
                 SettingsCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     CustomizationNavigationItem(
+                        icon = Icons.Default.Palette,
+                        title = "Player Style",
+                        subtitle = uiState.playerStyle.label,
+                        onClick = { showPlayerStyleSheet = true }
+                    )
+
+                    HorizontalDivider()
+
+                    CustomizationNavigationItem(
                         icon = Icons.Default.Tune,
                         title = "Seekbar Style",
                         subtitle = formatSeekbarStyleName(currentSeekbarStyle),
@@ -242,6 +256,20 @@ fun CustomizationScreen(
                             viewModel.setAlbumArtColorFlashingEnabled(!uiState.albumArtColorFlashingEnabled)
                         }
                     )
+
+                    if (uiState.albumArtColorFlashingEnabled) {
+                        HorizontalDivider()
+
+                        IntensitySliderItem(
+                            title = "Pulse Radius",
+                            icon = Icons.Default.BlurCircular,
+                            intensity = albumArtPulseRadius,
+                            valueRange = 1f..2f,
+                            onIntensityChange = { value ->
+                                scope.launch { sessionManager.setAlbumArtPulseRadius(value) }
+                            }
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -289,28 +317,74 @@ fun CustomizationScreen(
                         onAlphaChange = { viewModel.setNavBarAlpha(it) }
                     )
 
-                    HorizontalDivider()
+                    if (currentPlayerBackground == PlayerBackgroundStyle.AMBIENT) {
+                        HorizontalDivider()
 
-                    BlurSliderItem(
-                        title = "Player Background Blur",
-                        icon = Icons.Default.BlurOn,
-                        blur = playerGlassBlur,
-                        onBlurChange = { value ->
-                            scope.launch { sessionManager.setPlayerGlassBlur(value) }
-                        }
+                        BlurSliderItem(
+                            title = "Player Background Blur",
+                            icon = Icons.Default.BlurOn,
+                            blur = playerGlassBlur,
+                            onBlurChange = { value ->
+                                scope.launch { sessionManager.setPlayerGlassBlur(value) }
+                            }
+                        )
+
+                        HorizontalDivider()
+
+                        IntensitySliderItem(
+                            title = "Album Art Pulse Intensity",
+                            icon = Icons.Default.BrightnessHigh,
+                            intensity = playerGlassIntensity,
+                            onIntensityChange = { value ->
+                                scope.launch { sessionManager.setPlayerGlassIntensity(value) }
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+
+    if (showPlayerStyleSheet) {
+        com.suvojeet.suvmusic.ui.components.glass.GlassModalBottomSheet(
+            onDismissRequest = { showPlayerStyleSheet = false },
+            sheetState = sheetState,
+            fallbackContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Player Style",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+
+                PlayerStyle.entries.filter { it != PlayerStyle.LIQUID_GLASS }.forEach { style ->
+                    ListItem(
+                        headlineContent = { Text(style.label) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = uiState.playerStyle == style,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusable(
+                                onClick = {
+                                    viewModel.setPlayerStyle(style)
+                                    scope.launch {
+                                        sheetState.hide()
+                                        showPlayerStyleSheet = false
+                                    }
+                                },
+                                shape = SquircleShape
+                            )
+                            .padding(horizontal = 8.dp),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
-
-                    HorizontalDivider()
-
-                    IntensitySliderItem(
-                        title = "Album Art Pulse Intensity",
-                        icon = Icons.Default.BrightnessHigh,
-                        intensity = playerGlassIntensity,
-                        onIntensityChange = { value ->
-                            scope.launch { sessionManager.setPlayerGlassIntensity(value) }
-                        }
-                    )
-
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -814,7 +888,8 @@ private fun IntensitySliderItem(
     title: String,
     icon: ImageVector,
     intensity: Float,
-    onIntensityChange: (Float) -> Unit
+    onIntensityChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0.3f..1.5f
 ) {
     Column(
         modifier = Modifier
@@ -854,7 +929,7 @@ private fun IntensitySliderItem(
         Slider(
             value = intensity,
             onValueChange = onIntensityChange,
-            valueRange = 0.3f..1.5f,
+            valueRange = valueRange,
             steps = 0,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,

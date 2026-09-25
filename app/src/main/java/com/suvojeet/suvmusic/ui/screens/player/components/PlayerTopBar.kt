@@ -52,21 +52,25 @@ fun PlayerTopBar(
             .padding(start = 2.dp, end = 0.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left side: Back Button
         Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(dominantColors.onBackground.copy(alpha = 0.07f))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
+            modifier = if (audioArEnabled) Modifier else Modifier.width(94.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Close",
-                tint = dominantColors.onBackground,
-                modifier = Modifier.size(28.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(dominantColors.onBackground.copy(alpha = 0.07f))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Close",
+                    tint = dominantColors.onBackground,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
 
         // Center: Switch or Title — fills the space between the side clusters

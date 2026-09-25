@@ -33,6 +33,7 @@ import com.suvojeet.suvmusic.util.MusicHapticsManager
 import com.suvojeet.suvmusic.ui.theme.SquircleShape
 import com.suvojeet.suvmusic.ui.theme.PillShape
 import com.suvojeet.suvmusic.util.dpadFocusable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import com.suvojeet.suvmusic.ui.components.SettingsCard
@@ -67,6 +68,10 @@ fun PlaybackSettingsScreen(
     val hapticsIntensitySheetState = rememberModalBottomSheetState()
 
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sessionManager = remember { com.suvojeet.suvmusic.data.SessionManager(context) }
+    val showCodecInfo by sessionManager.showCodecInfoFlow
+        .collectAsStateWithLifecycle(initialValue = false)
 
     Scaffold(
         topBar = {
@@ -186,6 +191,16 @@ fun PlaybackSettingsScreen(
                         subtitle = "More natural stereo imaging for headphones",
                         checked = uiState.crossfeedEnabled,
                         onCheckedChange = { viewModel.setCrossfeedEnabled(it) }
+                    )
+
+                    HorizontalDivider()
+
+                    SettingsSwitchRow(
+                        icon = Icons.Default.Info,
+                        title = "Show Codec",
+                        subtitle = "Show the codec and bitrate of the playing song on the player",
+                        checked = showCodecInfo,
+                        onCheckedChange = { scope.launch { sessionManager.setShowCodecInfo(it) } }
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))

@@ -254,6 +254,11 @@ class SessionManager @Inject constructor(
         private val PLAYER_BACKGROUND_IMAGE_URI_KEY = stringPreferencesKey("player_background_image_uri")
         private val PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("player_glass_blur")
         private val PLAYER_GLASS_INTENSITY_KEY = floatPreferencesKey("player_glass_intensity")
+        private val ALBUM_ART_PULSE_RADIUS_KEY = floatPreferencesKey("album_art_pulse_radius")
+        private val SHOW_CODEC_INFO_KEY = booleanPreferencesKey("show_codec_info")
+        private val LISTENING_DAY_LOG_KEY = stringPreferencesKey("listening_day_log")
+        private val LISTENING_HOUR_LOG_KEY = stringPreferencesKey("listening_hour_log")
+        private const val LISTENING_DAY_LOG_RETENTION = 60
         private val MINI_PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("mini_player_glass_blur")
         private val CROSSFADE_MS_KEY = intPreferencesKey("crossfade_ms")
         private val DOWNLOAD_LOCATION_KEY = stringPreferencesKey("download_location")
@@ -1672,6 +1677,73 @@ class SessionManager @Inject constructor(
 
     suspend fun setPlayerGlassIntensity(value: Float) {
         context.dataStore.edit { it[PLAYER_GLASS_INTENSITY_KEY] = value }
+    }
+
+    val albumArtPulseRadiusFlow: Flow<Float> = context.dataStore.data.map { preferences ->
+        (preferences[ALBUM_ART_PULSE_RADIUS_KEY] ?: 1.35f).coerceIn(1f, 2f)
+    }
+
+    suspend fun setAlbumArtPulseRadius(value: Float) {
+        context.dataStore.edit { it[ALBUM_ART_PULSE_RADIUS_KEY] = value.coerceIn(1f, 2f) }
+    }
+
+    val showCodecInfoFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[SHOW_CODEC_INFO_KEY] ?: false
+    }
+
+    suspend fun setShowCodecInfo(enabled: Boolean) {
+        context.dataStore.edit { it[SHOW_CODEC_INFO_KEY] = enabled }
+    }
+
+    suspend fun recordListeningActivity(timestampMs: Long, listenedMs: Long) {
+        if (listenedMs <= 0L) return
+        val calendar = java.util.Calendar.getInstance().apply { timeInMillis = timestampMs }
+        val dayKey = calendar.get(java.util.Calendar.YEAR) * 10000 +
+            (calendar.get(java.util.Calendar.MONTH) + 1) * 100 +
+            calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        context.dataStore.edit { prefs ->
+            val days = parseListeningDayLog(prefs[LISTENING_DAY_LOG_KEY]).toMutableMap()
+            days[dayKey] = (days[dayKey] ?: 0L) + listenedMs
+            prefs[LISTENING_DAY_LOG_KEY] = days.entries
+                .sortedByDescending { it.key }
+                .take(LISTENING_DAY_LOG_RETENTION)
+                .joinToString(";") { "${it.key}=${it.value}" }
+
+            val hours = parseListeningHourLog(prefs[LISTENING_HOUR_LOG_KEY])
+            hours[hour] += listenedMs
+            prefs[LISTENING_HOUR_LOG_KEY] = hours.joinToString(",")
+        }
+    }
+
+    suspend fun getListeningActivityLog(): ListeningActivityLog {
+        val prefs = context.dataStore.data.first()
+        return ListeningActivityLog(
+            msByDay = parseListeningDayLog(prefs[LISTENING_DAY_LOG_KEY]),
+            msByHour = parseListeningHourLog(prefs[LISTENING_HOUR_LOG_KEY]).toList()
+        )
+    }
+
+    suspend fun clearListeningActivityLog() {
+        context.dataStore.edit {
+            it.remove(LISTENING_DAY_LOG_KEY)
+            it.remove(LISTENING_HOUR_LOG_KEY)
+        }
+    }
+
+    private fun parseListeningDayLog(raw: String?): Map<Int, Long> =
+        raw.orEmpty().split(';').mapNotNull { entry ->
+            val key = entry.substringBefore('=', "").toIntOrNull()
+            val value = entry.substringAfter('=', "").toLongOrNull()
+            if (key != null && value != null) key to value else null
+        }.toMap()
+
+    private fun parseListeningHourLog(raw: String?): LongArray {
+        val hours = LongArray(24)
+        raw.orEmpty().split(',').forEachIndexed { index, value ->
+            if (index < 24) hours[index] = value.toLongOrNull() ?: 0L
+        }
+        return hours
     }
 
     val miniPlayerGlassBlurFlow: Flow<Float> = context.dataStore.data.map { preferences ->
@@ -3341,3 +3413,8 @@ data class LastPlaybackState(
 )
 
 // MusicSource enum moved to :core:model — see com.suvojeet.suvmusic.core.model.MusicSource
+
+data class ListeningActivityLog(
+    val msByDay: Map<Int, Long>,
+    val msByHour: List<Long>
+)

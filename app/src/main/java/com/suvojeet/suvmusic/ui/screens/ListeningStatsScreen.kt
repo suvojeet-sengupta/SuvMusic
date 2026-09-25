@@ -19,6 +19,9 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -180,7 +183,7 @@ fun ListeningStatsScreen(
                 item(key = "weekly") {
                     AnimatedEntry(delay = 200) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            WeeklyActivitySection(uiState.weeklyTrends)
+                            WeeklyActivitySection(uiState.weeklyTrends, uiState.thisWeekMs, uiState.weekOverWeekChange)
                         }
                     }
                 }
@@ -239,7 +242,7 @@ fun ListeningStatsScreen(
                 item(key = "time_of_day") {
                     AnimatedEntry(delay = 600) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            TimeOfDaySection(uiState.timeOfDayStats)
+                            TimeOfDaySection(uiState.timeOfDayStats, uiState.timeOfDayInMinutes, uiState.peakHour)
                         }
                     }
                 }
@@ -501,7 +504,11 @@ private fun MusicPersonalityHero(personality: MusicPersonality) {
 }
 
 @Composable
-fun WeeklyActivitySection(trends: List<DailyListening>) {
+fun WeeklyActivitySection(
+    trends: List<DailyListening>,
+    thisWeekMs: Long = 0L,
+    weekOverWeekChange: Int? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -524,6 +531,25 @@ fun WeeklyActivitySection(trends: List<DailyListening>) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (thisWeekMs > 0L) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                formatListeningDuration(thisWeekMs) + " this week",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (weekOverWeekChange != null) {
+                                Spacer(Modifier.width(8.dp))
+                                val up = weekOverWeekChange >= 0
+                                Text(
+                                    (if (up) "▲ " else "▼ ") + "${kotlin.math.abs(weekOverWeekChange)}% vs last week",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (up) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
                 }
                 Icon(Icons.Default.Timeline, null, tint = MaterialTheme.colorScheme.primary)
             }
@@ -701,15 +727,33 @@ private fun GlobalStatsRow(uiState: ListeningStatsUiState) {
         ) {
             StatCardSmall(
                 modifier = Modifier.weight(1f),
-                title = "Total Songs",
-                value = uiState.totalSongsPlayed.toString(),
-                icon = Icons.Default.GraphicEq
+                title = "Total Plays",
+                value = uiState.totalPlays.toString(),
+                icon = Icons.Default.PlayArrow
             )
             StatCardSmall(
                 modifier = Modifier.weight(1f),
                 title = "Total Time",
                 value = "${totalHours}h ${totalMinutes}m",
                 icon = Icons.Default.AccessTime
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Unique Songs",
+                value = uiState.totalSongsPlayed.toString(),
+                icon = Icons.Default.GraphicEq
+            )
+            StatCardSmall(
+                modifier = Modifier.weight(1f),
+                title = "Day Streak",
+                value = if (uiState.listeningStreakDays == 1) "1 day" else "${uiState.listeningStreakDays} days",
+                icon = Icons.Default.LocalFireDepartment
             )
         }
         
@@ -721,7 +765,7 @@ private fun GlobalStatsRow(uiState: ListeningStatsUiState) {
                 modifier = Modifier.weight(1f),
                 title = "Months With Us",
                 value = String.format("%.1f", uiState.totalMonthsListened),
-                icon = Icons.Default.Timeline
+                icon = Icons.Default.CalendarMonth
             )
             StatCardSmall(
                 modifier = Modifier.weight(1f),
@@ -888,7 +932,11 @@ private fun TopArtistCard(artist: ArtistStats) {
 }
 
 @Composable
-private fun TimeOfDaySection(stats: Map<TimeOfDay, Int>) {
+private fun TimeOfDaySection(
+    stats: Map<TimeOfDay, Int>,
+    inMinutes: Boolean = false,
+    peakHour: Int? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp)
@@ -899,6 +947,13 @@ private fun TimeOfDaySection(stats: Map<TimeOfDay, Int>) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            if (peakHour != null) {
+                Text(
+                    text = "Peak hour: ${formatHourRange(peakHour)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(Modifier.height(16.dp))
             
             val max = stats.values.maxOrNull()?.toFloat() ?: 1f
@@ -941,7 +996,7 @@ private fun TimeOfDaySection(stats: Map<TimeOfDay, Int>) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = count.toString(),
+                        text = if (inMinutes) formatListeningDuration(count * 60_000L) else "$count plays",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -979,4 +1034,20 @@ private fun EmptyStatsState(padding: PaddingValues) {
             )
         }
     }
+}
+
+private fun formatListeningDuration(ms: Long): String {
+    val hours = TimeUnit.MILLISECONDS.toHours(ms)
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+}
+
+private fun formatHourRange(hour: Int): String {
+    fun label(h: Int): String {
+        val normalized = ((h % 24) + 24) % 24
+        val suffix = if (normalized < 12) "AM" else "PM"
+        val display = if (normalized % 12 == 0) 12 else normalized % 12
+        return "$display $suffix"
+    }
+    return "${label(hour)} – ${label(hour + 1)}"
 }

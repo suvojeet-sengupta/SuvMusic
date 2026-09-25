@@ -119,8 +119,9 @@ fun SongActionsSheet(
         }
     }
 
-    if (isVisible) {
-        // Frosts against the now-playing artwork when opened from the player.
+    if (isVisible) androidx.compose.runtime.CompositionLocalProvider(
+        com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork provides null
+    ) {
         com.suvojeet.suvmusic.ui.components.glass.ArtGlassSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,

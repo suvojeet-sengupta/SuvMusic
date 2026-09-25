@@ -241,6 +241,7 @@ fun PlayerScreen(
     val volumeSliderEnabled by sessionManager.volumeSliderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     val playerGlassBlur by sessionManager.playerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 80f)
     val playerGlassIntensity by sessionManager.playerGlassIntensityFlow.collectAsStateWithLifecycle(initialValue = 1.25f)
+    val showCodecInfo by sessionManager.showCodecInfoFlow.collectAsStateWithLifecycle(initialValue = false)
     val audioArEnabled by sessionManager.audioArEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
@@ -258,10 +259,20 @@ fun PlayerScreen(
 
     // A pinned player backdrop overrides the app theme for everything drawn on top of
     // it — text colors, status-bar icons and the sheets' frosting all key off this.
-    val isAppInDarkTheme = when (playerBackgroundStyle) {
+    val baseDarkTheme = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.BLACK -> true
         PlayerBackgroundStyle.LIGHT -> false
         PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM -> isThemeDark
+    }
+    val artLuminance = rememberDominantColors(song?.thumbnailUrl, baseDarkTheme).artLuminance
+    val isAppInDarkTheme = if (
+        playerBackgroundStyle == PlayerBackgroundStyle.AMBIENT &&
+        !playerState.isVideoMode &&
+        artLuminance >= 0f
+    ) {
+        ambientBackdropIsDark(artLuminance, playerGlassIntensity, baseDarkTheme)
+    } else {
+        baseDarkTheme
     }
 
     val isAIAutoModeEnabled by playerViewModel.isAIAutoModeEnabled.collectAsStateWithLifecycle()
@@ -403,6 +414,8 @@ fun PlayerScreen(
     } else {
       androidx.compose.runtime.CompositionLocalProvider(
         com.suvojeet.suvmusic.ui.screens.player.components.LocalCurrentDownloadProgress provides currentDownloadProgress,
+        com.suvojeet.suvmusic.ui.screens.player.components.LocalCodecInfoLabel provides
+            if (showCodecInfo && !playerState.isVideoMode) codecInfoLabel(playerState.audioCodec, playerState.audioBitrate) else null,
         // Publishes the current artwork so every sheet opened from the player frosts
         // against the same backdrop instead of painting its own flat slab over it.
         com.suvojeet.suvmusic.ui.components.glass.LocalGlassArtwork provides
@@ -979,4 +992,30 @@ fun BoxScope.OverlaysContent(
     if (isFullScreen) {
         FullScreenVideoPlayer(viewModel = playerViewModel, dominantColors = dominantColors, onDismiss = { playerViewModel.setFullScreen(false) })
     }
+}
+
+private fun ambientBackdropIsDark(artLuminance: Float, intensity: Float, themeDark: Boolean): Boolean {
+    val i = intensity.coerceIn(0.3f, 1.5f)
+    return if (themeDark) {
+        val scrim = (0.55f * i).coerceAtMost(1f)
+        artLuminance * (1f - scrim) < 0.3f
+    } else {
+        val scrim = (0.40f * i * 0.8f).coerceAtMost(1f)
+        artLuminance * (1f - scrim) + scrim < 0.2f
+    }
+}
+
+private fun codecInfoLabel(codec: String?, bitrateKbps: Int?): String? {
+    val name = when (codec?.lowercase()) {
+        null, "" -> return null
+        "opus" -> "Opus"
+        "aac" -> "AAC"
+        "mp3" -> "MP3"
+        "flac" -> "FLAC"
+        "vorbis" -> "Vorbis"
+        "wav" -> "WAV"
+        "webm" -> "WebM"
+        else -> codec.uppercase()
+    }
+    return if (bitrateKbps != null && bitrateKbps > 0) "$name · $bitrateKbps kbps" else name
 }

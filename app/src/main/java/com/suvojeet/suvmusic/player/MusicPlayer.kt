@@ -3383,9 +3383,18 @@ class MusicPlayer @Inject constructor(
         
         val item = queue.removeAt(fromIndex)
         queue.add(toIndex, item)
-        
-        _playerState.update { it.copy(queue = queue) }
-        
+
+        val currentIndex = _playerState.value.currentIndex
+        val newCurrentIndex = when {
+            currentIndex < 0 -> currentIndex
+            fromIndex == currentIndex -> toIndex
+            fromIndex < currentIndex && toIndex >= currentIndex -> currentIndex - 1
+            fromIndex > currentIndex && toIndex <= currentIndex -> currentIndex + 1
+            else -> currentIndex
+        }
+
+        _playerState.update { it.copy(queue = queue, currentIndex = newCurrentIndex) }
+
         mediaController?.moveMediaItem(fromIndex, toIndex)
     }
 

@@ -358,6 +358,7 @@ fun ModernQueueView(
                             onMoreClick = { onMoreClick(song) },
                             onDragMove = { from, to -> onMoveItem(from, to) },
                             itemIndex = histIndex,
+                            dragRange = 0 until currentIndex,
                             dominantColors = dominantColors,
                             isDarkTheme = isDarkTheme,
                             contentColor = historyContentColor,
@@ -397,14 +398,18 @@ fun ModernQueueView(
                         // Swipe a row towards the start (left in LTR) to remove it from
                         // the queue. Only up-next rows are removable — history and the
                         // current track keep their existing interactions.
+                        val latestIndex by androidx.compose.runtime.rememberUpdatedState(actualIndex)
+                        val latestOnRemove by androidx.compose.runtime.rememberUpdatedState(onRemoveItems)
                         val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    onRemoveItems(listOf(actualIndex))
-                                    true
-                                } else false
-                            }
+                            confirmValueChange = { it != SwipeToDismissBoxValue.StartToEnd }
                         )
+                        LaunchedEffect(dismissState.currentValue) {
+                            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                                latestOnRemove(listOf(latestIndex))
+                                kotlinx.coroutines.delay(350)
+                                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            }
+                        }
                         SwipeToDismissBox(
                             state = dismissState,
                             enableDismissFromStartToEnd = false,
@@ -456,6 +461,7 @@ fun ModernQueueView(
                                 onMoreClick = { onMoreClick(song) },
                                 onDragMove = { from, to -> onMoveItem(from, to) },
                                 itemIndex = actualIndex,
+                                dragRange = (currentIndex + 1)..(currentIndex + upNextSongs.size),
                                 dominantColors = dominantColors,
                                 isDarkTheme = isDarkTheme,
                                 contentColor = contentColor,
@@ -524,6 +530,7 @@ private fun LazyItemScope.ModernQueueListItem(
     song: Song, isCurrent: Boolean, isPlaying: Boolean, isSelected: Boolean, isSelectionMode: Boolean,
     onClick: () -> Unit, onLongPressEnterSelection: () -> Unit, onMoreClick: () -> Unit,
     onDragMove: (Int, Int) -> Unit, itemIndex: Int,
+    dragRange: IntRange = IntRange.EMPTY,
     dominantColors: DominantColors, isDarkTheme: Boolean, contentColor: Color, secondaryContentColor: Color
 ) {
     var offsetY by remember { mutableStateOf(0f) }
@@ -545,6 +552,7 @@ private fun LazyItemScope.ModernQueueListItem(
     // Remember updated values for indices to prevent stale state capture in the drag lambda
     val currentIndexState by androidx.compose.runtime.rememberUpdatedState(itemIndex)
     val onDragMoveState by androidx.compose.runtime.rememberUpdatedState(onDragMove)
+    val dragRangeState by androidx.compose.runtime.rememberUpdatedState(dragRange)
 
     // While dragging the row needs an opaque surface so the shadow elevation
     // reads as a "lifted" tile in light mode (where shadow is faint against
@@ -671,12 +679,20 @@ private fun LazyItemScope.ModernQueueListItem(
                                 val threshold = with(density) { 64.dp.toPx() }
                                 var workingIndex = currentIndexState
                                 while (offsetY > threshold) {
+                                    if (workingIndex + 1 !in dragRangeState) {
+                                        offsetY = threshold
+                                        break
+                                    }
                                     onDragMoveState(workingIndex, workingIndex + 1)
                                     workingIndex += 1
                                     offsetY -= threshold
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 while (offsetY < -threshold) {
+                                    if (workingIndex - 1 !in dragRangeState) {
+                                        offsetY = -threshold
+                                        break
+                                    }
                                     onDragMoveState(workingIndex, workingIndex - 1)
                                     workingIndex -= 1
                                     offsetY += threshold

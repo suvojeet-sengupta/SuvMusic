@@ -58,12 +58,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -108,39 +111,27 @@ fun AlbumArtwork(
     val colorFlashingEnabled by sessionManager.albumArtColorFlashingEnabledFlow
         .collectAsStateWithLifecycle(initialValue = false)
 
-    // Slow, breathing color pulse — peaceful, not strobing.
-    // Cycles through primary → accent → secondary so the glow shifts hue gently.
-    // Only spin up the always-on infinite transition when the glow is actually
-    // shown (feature enabled AND playing); otherwise the animated values aren't
-    // consumed and the transition would just burn frames.
+    val pulseRadius by sessionManager.albumArtPulseRadiusFlow
+        .collectAsStateWithLifecycle(initialValue = 1.35f)
+
     val glowActive = colorFlashingEnabled && isPlaying
+    val isLightBackdrop = dominantColors.onBackground.luminance() < 0.5f
+    val pulseBaseColor = remember(dominantColors.accent, isLightBackdrop) {
+        pulseColorFor(dominantColors.accent, isLightBackdrop)
+    }
     val glowColor = if (glowActive) {
         val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
-        val pulseAlpha by pulseTransition.animateFloat(
-            initialValue = 0.25f,
-            targetValue = 0.75f,
+        val animatedAlpha by pulseTransition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.85f,
             animationSpec = infiniteRepeatable(
                 animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse,
             ),
             label = "pulse_alpha",
         )
-        val hueShift by pulseTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 6000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "pulse_hue",
-        )
-        androidx.compose.ui.graphics.lerp(
-            dominantColors.primary,
-            dominantColors.accent,
-            hueShift,
-        ).copy(alpha = pulseAlpha)
+        pulseBaseColor.copy(alpha = animatedAlpha)
     } else {
-        // Flat YT-Music look: keep only a faint art-colored glow, not a heavy halo.
         dominantColors.primary.copy(alpha = 0.25f)
     }
 
@@ -295,8 +286,25 @@ fun AlbumArtwork(
                         scaleY = dynamicScale
                         rotationZ = rotation + currentRotation
                     }
+                    .drawBehind {
+                        if (glowActive) {
+                            val outer = size.minDimension / 2f * pulseRadius.coerceIn(1f, 2f)
+                            val inner = (size.minDimension / 2f) / outer
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    0f to glowColor,
+                                    (inner * 0.85f) to glowColor,
+                                    1f to Color.Transparent,
+                                    center = center,
+                                    radius = outer
+                                ),
+                                radius = outer,
+                                center = center
+                            )
+                        }
+                    }
                     .shadow(
-                        elevation = if (colorFlashingEnabled && isPlaying) 28.dp else 8.dp,
+                        elevation = if (glowActive) 20.dp else 8.dp,
                         shape = RoundedCornerShape(safeCornerRadius),
                         spotColor = glowColor,
                         ambientColor = glowColor
@@ -590,4 +598,12 @@ private fun ShapeOption(
             fontSize = 10.sp
         )
     }
+}
+
+private fun pulseColorFor(accent: Color, lightBackdrop: Boolean): Color {
+    val hsl = FloatArray(3)
+    androidx.core.graphics.ColorUtils.colorToHSL(accent.toArgb(), hsl)
+    hsl[1] = (hsl[1] * 1.25f).coerceIn(0.35f, 1f)
+    hsl[2] = if (lightBackdrop) hsl[2].coerceIn(0.28f, 0.4f) else hsl[2].coerceIn(0.55f, 0.7f)
+    return Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
 }
