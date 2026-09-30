@@ -8,6 +8,7 @@ import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -47,7 +48,22 @@ class SpotifyImportHelper @Inject constructor(
             } else url
 
             val (type, id) = extractTypeAndId(finalUrl)
-            
+
+            // Playlists go through the playlist-scraper API, which returns every
+            // track instead of the embed page's first 100.
+            if (type == "playlist" && id != null) {
+                val fullPlaylist = try {
+                    fetchPlaylistFromBackend(id)
+                } catch (e: Exception) {
+                    Log.w("SpotifyImportHelper", "Playlist API failed", e)
+                    null
+                }
+                if (fullPlaylist != null && fullPlaylist.second.isNotEmpty()) {
+                    onTrackFetch(fullPlaylist.second.size)
+                    return@withContext fullPlaylist.first.ifBlank { playlistName } to fullPlaylist.second
+                }
+            }
+
             if (id != null && type != null) {
                 val accessToken = getSpotifyAccessToken(finalUrl)
                 if (accessToken != null) {
@@ -309,6 +325,45 @@ class SpotifyImportHelper @Inject constructor(
             }
         }
         return null
+    }
+
+    /**
+     * Imports a playlist through the playlist-scraper API
+     * (`GET /api/v1/playlist/import?url=`). Returns null when it cannot be
+     * reached, so the caller can fall back.
+     */
+    private fun fetchPlaylistFromBackend(playlistId: String): Pair<String, List<SpotifyTrack>>? {
+        val url = PLAYLIST_API_BASE_URL.toHttpUrl().newBuilder()
+            .addPathSegments("api/v1/playlist/import")
+            .addQueryParameter("url", "https://open.spotify.com/playlist/$playlistId")
+            .build()
+        val client = okHttpClient.newBuilder()
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+            if (!response.isSuccessful) {
+                Log.w("SpotifyImportHelper", "Playlist backend returned ${response.code}")
+                return null
+            }
+            val root = gson.fromJson(response.body.string(), JsonObject::class.java)
+            // The gateway wraps the scraper result in {success, data, metadata}.
+            val result = root.getAsJsonObject("data")?.takeIf { it.has("tracks") } ?: root
+            val name = result.getAsJsonObject("playlist")?.get("name")
+                ?.takeIf { !it.isJsonNull }?.asString.orEmpty()
+            val tracks = result.getAsJsonArray("tracks")?.mapNotNull { element ->
+                val track = element.asJsonObject
+                val title = track.get("title")?.takeIf { !it.isJsonNull }?.asString
+                    ?: return@mapNotNull null
+                val artists = track.getAsJsonArray("artists")
+                    ?.mapNotNull { it.asJsonObject.get("name")?.takeIf { n -> !n.isJsonNull }?.asString }
+                    ?.joinToString(", ")
+                    .orEmpty()
+                SpotifyTrack(title, artists, track.get("duration_ms")?.asLong ?: 0L)
+            }.orEmpty()
+            Log.i("SpotifyImportHelper", "Playlist backend returned ${tracks.size} tracks")
+            return name to tracks
+        }
     }
 
     private suspend fun fetchSpotifyTracksWithApi(
@@ -670,5 +725,8 @@ class SpotifyImportHelper @Inject constructor(
 
         /** TOTP version Spotify expects alongside the code. */
         private const val TOTP_VERSION = 5
+
+        /** Deployed playlist-scraper API gateway. */
+        private const val PLAYLIST_API_BASE_URL = "https://playlist.suvojeetsengupta.in"
     }
 }
