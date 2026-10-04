@@ -44,12 +44,24 @@ class WrappedGenerator @Inject constructor(
                 return@withContext WrappedReport.empty(window)
             }
 
-            val topSongs = relevant.sortedByDescending { it.playCount }.take(5)
+            val topSongs = relevant
+                .groupBy { "${it.songTitle.trim().lowercase()}|${primaryArtist(it.artist).lowercase()}" }
+                .map { (_, dupes) ->
+                    val best = dupes.maxBy { it.playCount }
+                    best.copy(
+                        playCount = dupes.sumOf { it.playCount },
+                        totalDurationMs = dupes.sumOf { it.totalDurationMs },
+                        thumbnailUrl = dupes.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
+                    )
+                }
+                .sortedWith(compareByDescending<ListeningHistory> { it.playCount }.thenByDescending { it.totalDurationMs })
+                .take(5)
             val topArtists = relevant
-                .groupBy { it.artist }
-                .map { (artist, plays) ->
+                .filter { it.artist.isNotBlank() && !it.artist.equals("Unknown Artist", ignoreCase = true) }
+                .groupBy { primaryArtist(it.artist).lowercase() }
+                .map { (_, plays) ->
                     TopArtist(
-                        name = artist,
+                        name = plays.groupingBy { primaryArtist(it.artist) }.eachCount().maxBy { it.value }.key,
                         totalPlays = plays.sumOf { it.playCount },
                         thumbnailUrl = plays.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
                     )
@@ -87,6 +99,11 @@ class WrappedGenerator @Inject constructor(
             )
         }
 }
+
+private val artistSeparators = Regex("\\s*(,|\\bfeat\\.?|\\bft\\.)\\s*", RegexOption.IGNORE_CASE)
+
+private fun primaryArtist(artist: String): String =
+    artist.split(artistSeparators).firstOrNull { it.isNotBlank() }?.trim() ?: artist.trim()
 
 enum class WrappedWindow { LAST_30_DAYS, LAST_365_DAYS, THIS_YEAR }
 
