@@ -1519,6 +1519,10 @@ class MusicPlayerService : MediaLibraryService() {
         })
         .setSessionActivity(sessionActivityPendingIntent)
         .setBitmapLoader(CoilBitmapLoader(this))
+        .setSessionExtras(android.os.Bundle().apply {
+            putBoolean(androidx.media3.session.MediaConstants.EXTRAS_KEY_SLOT_RESERVATION_SEEK_TO_PREV, true)
+            putBoolean(androidx.media3.session.MediaConstants.EXTRAS_KEY_SLOT_RESERVATION_SEEK_TO_NEXT, true)
+        })
         .build()
 
         androidx.core.content.ContextCompat.registerReceiver(
@@ -1542,6 +1546,7 @@ class MusicPlayerService : MediaLibraryService() {
         setupSleepTimerNotification()
     }
     
+    @OptIn(UnstableApi::class)
     private fun getCustomLayout(): List<CommandButton> {
         val player = mediaLibrarySession?.player
         val isShuffleOn = player?.shuffleModeEnabled == true
@@ -1563,21 +1568,25 @@ class MusicPlayerService : MediaLibraryService() {
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_shuffle))
                 .setSessionCommand(SessionCommand(COMMAND_SHUFFLE, android.os.Bundle.EMPTY))
                 .setIconResId(shuffleIcon)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_like))
                 .setSessionCommand(SessionCommand(COMMAND_LIKE, android.os.Bundle.EMPTY))
                 .setIconResId(likeIcon)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName(getString(com.suvojeet.suvmusic.R.string.notification_action_repeat))
                 .setSessionCommand(SessionCommand(COMMAND_REPEAT, android.os.Bundle.EMPTY))
                 .setIconResId(repeatIcon)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName("Start Radio")
                 .setSessionCommand(SessionCommand(COMMAND_START_RADIO, android.os.Bundle.EMPTY))
                 .setIconResId(com.suvojeet.suvmusic.R.drawable.ic_play)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build()
         )
     }
