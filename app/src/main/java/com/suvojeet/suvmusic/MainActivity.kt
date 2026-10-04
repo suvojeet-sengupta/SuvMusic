@@ -1154,8 +1154,9 @@ fun SuvMusicApp(
                     },
                     onLoadMoreRadioSongs = { playerViewModel.loadMoreAutoplaySongs() },
                     onPlayFromQueue = { index ->
-                        if (playerState.queue.isNotEmpty() && index in playerState.queue.indices) {
-                            playerViewModel.playSong(playerState.queue[index], playerState.queue, index)
+                        val queue = livePlayerState.value.queue
+                        if (index in queue.indices) {
+                            playerViewModel.playSong(queue[index], queue, index)
                         }
                     },
                     onSwitchDevice = { device -> playerViewModel.switchOutputDevice(device) },
