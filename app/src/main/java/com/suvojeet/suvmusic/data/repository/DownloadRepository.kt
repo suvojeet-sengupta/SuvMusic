@@ -1042,7 +1042,7 @@ class DownloadRepository @Inject constructor(
         val uri = android.net.Uri.parse(streamUrl)
         val dataSpec = androidx.media3.datasource.DataSpec.Builder()
             .setUri(uri)
-            .setKey(song.id)
+            .setKey(com.suvojeet.suvmusic.util.StreamCacheKey.of(song.id, streamUrl))
             .build()
 
         val tempFile = File(context.cacheDir, "${song.id}_download.$extension")
@@ -1052,7 +1052,8 @@ class DownloadRepository @Inject constructor(
             dataSource = dataSourceFactory.createDataSource()
             val openT0 = System.currentTimeMillis()
             val length = dataSource.open(dataSpec)
-            val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length else -1L
+            val contentLength = if (length != androidx.media3.common.C.LENGTH_UNSET.toLong()) length
+                else uri.getQueryParameter("clen")?.toLongOrNull() ?: -1L
             android.util.Log.i(
                 DL_TAG,
                 "[OPEN] OK id=${song.id} contentLength=$contentLength " +

@@ -119,11 +119,23 @@ fun AlbumArtwork(
     val pulseBaseColor = remember(dominantColors.accent, isLightBackdrop) {
         pulseColorFor(dominantColors.accent, isLightBackdrop)
     }
+    val pulseStrength = ((pulseRadius - 1f) / 0.5f).coerceIn(0f, 1f)
+    var pulseBreath = 1f
     val glowColor = if (glowActive) {
         val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
+        val breath by pulseTransition.animateFloat(
+            initialValue = 1f - 0.1f * pulseStrength,
+            targetValue = 1f + 0.12f * pulseStrength,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse_breath",
+        )
+        pulseBreath = breath
         val animatedAlpha by pulseTransition.animateFloat(
-            initialValue = 0.35f,
-            targetValue = 0.85f,
+            initialValue = 0.3f + 0.2f * pulseStrength,
+            targetValue = 0.75f + 0.25f * pulseStrength,
             animationSpec = infiniteRepeatable(
                 animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse,
@@ -288,7 +300,7 @@ fun AlbumArtwork(
                     }
                     .drawBehind {
                         if (glowActive) {
-                            val outer = size.minDimension / 2f * pulseRadius.coerceIn(1f, 2f)
+                            val outer = size.minDimension / 2f * (1.1f + 0.9f * pulseStrength) * pulseBreath
                             val inner = (size.minDimension / 2f) / outer
                             drawCircle(
                                 brush = Brush.radialGradient(
@@ -304,7 +316,7 @@ fun AlbumArtwork(
                         }
                     }
                     .shadow(
-                        elevation = if (glowActive) 20.dp else 8.dp,
+                        elevation = if (glowActive) (16f + 20f * pulseStrength).dp else 8.dp,
                         shape = RoundedCornerShape(safeCornerRadius),
                         spotColor = glowColor,
                         ambientColor = glowColor

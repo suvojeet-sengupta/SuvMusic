@@ -1680,11 +1680,11 @@ class SessionManager @Inject constructor(
     }
 
     val albumArtPulseRadiusFlow: Flow<Float> = context.dataStore.data.map { preferences ->
-        (preferences[ALBUM_ART_PULSE_RADIUS_KEY] ?: 1.35f).coerceIn(1f, 2f)
+        (preferences[ALBUM_ART_PULSE_RADIUS_KEY] ?: 1.35f).coerceIn(1f, 1.5f)
     }
 
     suspend fun setAlbumArtPulseRadius(value: Float) {
-        context.dataStore.edit { it[ALBUM_ART_PULSE_RADIUS_KEY] = value.coerceIn(1f, 2f) }
+        context.dataStore.edit { it[ALBUM_ART_PULSE_RADIUS_KEY] = value.coerceIn(1f, 1.5f) }
     }
 
     val showCodecInfoFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

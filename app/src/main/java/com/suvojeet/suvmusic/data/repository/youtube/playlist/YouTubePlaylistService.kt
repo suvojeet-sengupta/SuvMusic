@@ -283,6 +283,7 @@ class YouTubePlaylistService @Inject constructor(
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
             val response = apiClient.fetchInternalApi(browseId)
             var playlist = parser.parsePlaylist(response, playlistId)
+            if (playlist.songs.isEmpty()) return false
             emit(playlist)
 
             val songs = playlist.songs.toMutableList()
@@ -298,11 +299,12 @@ class YouTubePlaylistService @Inject constructor(
                 val continuationResponse = apiClient.fetchInternalApiWithContinuation(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parser.parseSongs(continuationResponse)
-                if (newSongs.isEmpty()) break
                 songs.addAll(newSongs)
 
-                playlist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
-                emit(playlist)
+                if (newSongs.isNotEmpty()) {
+                    playlist = playlist.copy(songs = songs.distinctBy { it.setVideoId ?: it.id })
+                    emit(playlist)
+                }
 
                 currentJson = JSONObject(continuationResponse)
                 continuationToken = jsonParser.extractContinuationToken(currentJson)

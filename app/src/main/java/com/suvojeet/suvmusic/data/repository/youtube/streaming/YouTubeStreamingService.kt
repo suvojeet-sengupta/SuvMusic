@@ -423,11 +423,11 @@ class YouTubeStreamingService @Inject constructor(
                     
                     val bestVideoStream = videoOnlyStreams
                         .filter { stream ->
-                            val height = stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                            val height = heightOf(stream.resolution)
                             height in 1..targetResolution
                         }
                         .maxByOrNull { stream ->
-                            stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                            heightOf(stream.resolution)
                         }
                     
                     val bestAudioStream = audioStreams.maxByOrNull { it.averageBitrate }
@@ -455,13 +455,13 @@ class YouTubeStreamingService @Inject constructor(
                 val muxedStreams = streamExtractor.videoStreams
                 val bestMuxedStream = muxedStreams
                     .filter { stream ->
-                        val height = stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                        val height = heightOf(stream.resolution)
                         height <= targetResolution && height > 0
                     }
                     .maxByOrNull { stream ->
-                        stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                        heightOf(stream.resolution)
                     } ?: muxedStreams.maxByOrNull { 
-                        it.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                        heightOf(it.resolution)
                     }
 
                 bestMuxedStream?.content?.let { videoUrl ->
@@ -519,13 +519,13 @@ class YouTubeStreamingService @Inject constructor(
             val videoStreams = streamExtractor.videoStreams
             val best = videoStreams
                 .filter { stream ->
-                    val h = stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                    val h = heightOf(stream.resolution)
                     h in 1..maxResolution
                 }
                 .maxByOrNull { stream ->
-                    stream.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                    heightOf(stream.resolution)
                 } ?: videoStreams.maxByOrNull { 
-                    it.resolution?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0
+                    heightOf(it.resolution)
                 }
 
             best?.content
@@ -585,6 +585,9 @@ class YouTubeStreamingService @Inject constructor(
             thumbnailUrl = item.thumbnails.lastOrNull()?.url
         )
     }
+
+    private fun heightOf(resolution: String?): Int =
+        resolution?.substringBefore('p')?.filter { it.isDigit() }?.toIntOrNull() ?: 0
 
     fun clearCacheFor(videoId: String) {
         streamCache.remove("audio_$videoId")

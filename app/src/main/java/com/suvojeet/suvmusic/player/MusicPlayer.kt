@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.player
 
+import com.suvojeet.suvmusic.util.StreamCacheKey
 import android.content.ComponentName
 import android.content.Context
 import androidx.annotation.OptIn
@@ -121,6 +122,7 @@ class MusicPlayer @Inject constructor(
     private var preloadedNextSongId: String? = null
     private var lastPreloadAttemptTime: Long = 0L
     private var preloadedStreamUrl: String? = null
+    private var preloadedAudioUrl: String? = null
     private var preloadedIsVideoMode: Boolean = false  // Track if preloaded URL is video or audio
     private var isPreloading = false
     
@@ -1050,6 +1052,7 @@ class MusicPlayer @Inject constructor(
                             // Reset preload state as we've consumed it
                             preloadedNextSongId = null
                             preloadedStreamUrl = null
+                            preloadedAudioUrl = null
                             preloadedIsVideoMode = false
                             isPreloading = false
 
@@ -1101,14 +1104,16 @@ class MusicPlayer @Inject constructor(
                     if (needsResolution && preloadedNextSongId == song.id && capturedPreloadUrl != null && !isExpired) {
                         val cachedUrl = capturedPreloadUrl
                         val cachedIsVideo = preloadedIsVideoMode
+                        val cachedAudioUrl = preloadedAudioUrl
                         preloadedNextSongId = null
                         preloadedStreamUrl = null
+                        preloadedAudioUrl = null
                         preloadedIsVideoMode = false
                         isPreloading = false
                         
                         currentResolutionJob?.cancel()
                         currentResolutionJob = scope.launch {
-                            val cacheKey = if (cachedIsVideo) "${song.id}_${_playerState.value.videoQuality.name}" else audioCacheKey(song, cachedUrl)
+                            val cacheKey = if (cachedIsVideo) videoCacheKey(song, cachedUrl) else audioCacheKey(song, cachedUrl)
                             val newMediaItem = MediaItem.Builder()
                                 .setUri(cachedUrl)
                                 .setMediaId(song.id)
@@ -1124,6 +1129,7 @@ class MusicPlayer @Inject constructor(
                                         .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                                         .build()
                                 )
+                                .withDualAudio(if (cachedIsVideo) cachedAudioUrl else null)
                                 .build()
                             
                             if (index < controller.mediaItemCount && controller.getMediaItemAt(index).mediaId == song.id) {
@@ -1369,7 +1375,7 @@ class MusicPlayer @Inject constructor(
             // Constrain video size to the selected quality
             val params = player.trackSelectionParameters
                 .buildUpon()
-                .setMaxVideoSize(maxResolution, maxResolution)
+                .setMaxVideoSize(maxResolution * 16 / 9, maxResolution)
                 .build()
             player.trackSelectionParameters = params
             android.util.Log.d("MusicPlayer", "Updated track selection: Max video size $maxResolution")
@@ -1464,11 +1470,14 @@ class MusicPlayer @Inject constructor(
     private fun audioCacheKey(song: Song, streamUrl: String?): String {
         val hq = isRemoteAudioStreamUrl(streamUrl)
         return when {
-            song.source == SongSource.REMOTE -> if (hq || streamUrl == null) song.id else "${song.id}_yt"
+            song.source == SongSource.REMOTE -> if (hq || streamUrl == null) song.id else StreamCacheKey.of("${song.id}_yt", streamUrl)
             hq -> "${song.id}_hq"
-            else -> song.id
+            else -> StreamCacheKey.of(song.id, streamUrl)
         }
     }
+
+    private fun videoCacheKey(song: Song, streamUrl: String?): String =
+        StreamCacheKey.of("${song.id}_${_playerState.value.videoQuality.name}", streamUrl)
 
     private suspend fun resolveStreamForSource(song: Song, source: MusicSource): String? =
         if (source == MusicSource.REMOTE) {
@@ -2037,7 +2046,7 @@ class MusicPlayer @Inject constructor(
                     return@withLock
                 }
 
-                val cacheKey = if (_playerState.value.isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}" else audioCacheKey(song, streamUrl)
+                val cacheKey = if (_playerState.value.isVideoMode) videoCacheKey(song, streamUrl) else audioCacheKey(song, streamUrl)
 
                 if (song.source != SongSource.LOCAL && song.source != SongSource.DOWNLOADED) {
                     startAggressiveCaching(cacheKey, streamUrl)
@@ -2513,6 +2522,7 @@ class MusicPlayer @Inject constructor(
         preloadJob?.cancel()
         preloadedNextSongId = null
         preloadedStreamUrl = null
+        preloadedAudioUrl = null
         preloadedIsVideoMode = false
         preloadedTimestamp = 0L
         isPreloading = false
@@ -2565,6 +2575,7 @@ class MusicPlayer @Inject constructor(
         lastPreloadAttemptTime = System.currentTimeMillis()
         preloadJob = scope.launch {
             try {
+                var audioUrl: String? = null
                 val streamUrl = when (nextSong.source) {
                     SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
                     SongSource.REMOTE -> remoteStreamUrlFor(nextSong)
@@ -2575,6 +2586,7 @@ class MusicPlayer @Inject constructor(
                                 resolvedVideoIds.put(nextSong.id, it) 
                             }
                             val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                            audioUrl = videoResult?.audioUrl
                             videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
                         } else {
                             // Hybrid: preload the HQ stream too, so gapless next-track
@@ -2598,10 +2610,11 @@ class MusicPlayer @Inject constructor(
                     //
                     // In non-shuffle mode, replace the item normally for true gapless playback.
                     if (!state.shuffleEnabled) {
-                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl, isVideoMode)
+                        updateNextMediaItemWithPreloadedUrl(nextIndex, nextSong, streamUrl, isVideoMode, audioUrl)
                     }
                     preloadedNextSongId = nextSong.id
                     preloadedStreamUrl = streamUrl
+                    preloadedAudioUrl = audioUrl
                     preloadedIsVideoMode = isVideoMode
                     preloadedTimestamp = System.currentTimeMillis()
                 }
@@ -2630,6 +2643,7 @@ class MusicPlayer @Inject constructor(
         song: Song,
         streamUrl: String,
         isVideoMode: Boolean = _playerState.value.isVideoMode,
+        audioStreamUrl: String? = null,
     ) {
         mediaController?.let { controller ->
             // The index was captured before the stream resolved. A play-next insert or a
@@ -2640,7 +2654,7 @@ class MusicPlayer @Inject constructor(
                     .setUri(streamUrl)
                     .setMediaId(song.id)
                     .setCustomCacheKey(
-                    if (isVideoMode) "${song.id}_${_playerState.value.videoQuality.name}"
+                    if (isVideoMode) videoCacheKey(song, streamUrl)
                     else audioCacheKey(song, streamUrl)
                 ) // CRITICAL: Stable cache key matching video/audio mode
                     .setMediaMetadata(
@@ -2654,6 +2668,7 @@ class MusicPlayer @Inject constructor(
                             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                             .build()
                     )
+                    .withDualAudio(if (isVideoMode) audioStreamUrl else null)
                     .build()
                 
                 // Bug Fix: Use replaceMediaItem instead of remove+add to avoid
@@ -2667,6 +2682,15 @@ class MusicPlayer @Inject constructor(
         }
     }
     
+    private fun MediaItem.Builder.withDualAudio(audioUrl: String?): MediaItem.Builder {
+        if (audioUrl.isNullOrEmpty()) return this
+        return setRequestMetadata(
+            MediaItem.RequestMetadata.Builder()
+                .setExtras(android.os.Bundle().apply { putString("audioStreamUrl", audioUrl) })
+                .build()
+        )
+    }
+
     private var playJob: Job? = null
 
     // ─── Listen Together guest gating ────────────────────────────────────────
@@ -2742,6 +2766,7 @@ class MusicPlayer @Inject constructor(
         // Reset preload state
         preloadedNextSongId = null
         preloadedStreamUrl = null
+        preloadedAudioUrl = null
         preloadedIsVideoMode = false
         isPreloading = false
 
@@ -2896,7 +2921,7 @@ class MusicPlayer @Inject constructor(
         
         // Use video-quality-aware cache key when in video mode (matches resolveAndPlayCurrentItem)
         val cacheKey = if (_playerState.value.isVideoMode && resolveStream) {
-            "${song.id}_${_playerState.value.videoQuality.name}"
+            videoCacheKey(song, uri)
         } else {
             audioCacheKey(song, uri)
         }
@@ -2987,6 +3012,7 @@ class MusicPlayer @Inject constructor(
         // the wrong song in onMediaItemTransition's fast-path.
         preloadedNextSongId = null
         preloadedStreamUrl = null
+        preloadedAudioUrl = null
         preloadedIsVideoMode = false
         preloadedTimestamp = 0L
         val state = _playerState.value
@@ -3020,6 +3046,7 @@ class MusicPlayer @Inject constructor(
                     _playerState.update { it.copy(isLoading = true) }
                     currentResolutionJob = scope.launch {
                         try {
+                            var audioUrl: String? = null
                             val streamUrl = when (nextSong.source) {
                                 SongSource.LOCAL, SongSource.DOWNLOADED -> nextSong.localUri.orEmpty()
                                 SongSource.REMOTE -> remoteStreamUrlFor(nextSong)
@@ -3030,6 +3057,7 @@ class MusicPlayer @Inject constructor(
                                                 resolvedVideoIds.put(nextSong.id, it)
                                             }
                                         val videoResult = youTubeRepository.getVideoStreamResult(videoId, _playerState.value.videoQuality)
+                                        audioUrl = videoResult?.audioUrl
                                         videoResult?.videoUrl ?: youTubeRepository.getVideoStreamUrl(videoId)
                                     } else {
                                         youTubeRepository.getStreamUrl(nextSong.id)
@@ -3051,9 +3079,11 @@ class MusicPlayer @Inject constructor(
                                     nextSong,
                                     streamUrl,
                                     _playerState.value.isVideoMode,
+                                    audioUrl,
                                 )
                                 preloadedNextSongId = nextSong.id
                                 preloadedStreamUrl = streamUrl
+                                preloadedAudioUrl = audioUrl
                                 preloadedIsVideoMode = _playerState.value.isVideoMode
                             }
                         } catch (e: Exception) {
@@ -3126,6 +3156,7 @@ class MusicPlayer @Inject constructor(
         lastPreloadAttemptTime = 0L
         preloadedNextSongId = null
         preloadedStreamUrl = null
+        preloadedAudioUrl = null
         preloadedIsVideoMode = false
         preloadedTimestamp = 0L
 
@@ -3721,7 +3752,7 @@ class MusicPlayer @Inject constructor(
                 }
                 
                 val cacheKey = if (newVideoMode) {
-                    "${song.id}_${_playerState.value.videoQuality.name}"
+                    videoCacheKey(song, streamUrl)
                 } else {
                     audioCacheKey(song, streamUrl)
                 }

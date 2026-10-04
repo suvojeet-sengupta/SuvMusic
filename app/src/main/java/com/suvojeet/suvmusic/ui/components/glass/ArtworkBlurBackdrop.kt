@@ -124,7 +124,7 @@ fun ArtworkBlurBackdrop(
                     Brush.radialGradient(
                         colors = listOf(
                             (if (isDarkTheme) dominantColors.primary else dominantColors.primary.copy(alpha = 0.5f))
-                                .copy(alpha = 0.18f * i),
+                                .copy(alpha = 0.28f * i),
                             Color.Transparent
                         )
                     )

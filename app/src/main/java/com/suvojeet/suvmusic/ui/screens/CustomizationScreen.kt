@@ -261,10 +261,10 @@ fun CustomizationScreen(
                         HorizontalDivider()
 
                         IntensitySliderItem(
-                            title = "Pulse Radius",
+                            title = "Pulse Intensity",
                             icon = Icons.Default.BlurCircular,
                             intensity = albumArtPulseRadius,
-                            valueRange = 1f..2f,
+                            valueRange = 1f..1.5f,
                             onIntensityChange = { value ->
                                 scope.launch { sessionManager.setAlbumArtPulseRadius(value) }
                             }
@@ -332,7 +332,7 @@ fun CustomizationScreen(
                         HorizontalDivider()
 
                         IntensitySliderItem(
-                            title = "Album Art Pulse Intensity",
+                            title = "Backdrop Intensity",
                             icon = Icons.Default.BrightnessHigh,
                             intensity = playerGlassIntensity,
                             onIntensityChange = { value ->

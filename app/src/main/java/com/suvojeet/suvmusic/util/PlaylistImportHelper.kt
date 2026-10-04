@@ -60,21 +60,26 @@ class PlaylistImportHelper @Inject constructor(
         onTrackFetch: (Int) -> Unit
     ): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {
         try {
-            val uri = Uri.parse(url)
-            var playlistId = uri.getQueryParameter("list") ?: url.substringAfter("list=", "").substringBefore("&")
-            
-            // Handle album browse IDs too if they are provided
-            if (playlistId.isBlank() && (url.contains("browse/") || url.contains("channel/"))) {
-                playlistId = url.substringAfter("browse/").substringAfter("channel/").substringBefore("?").substringBefore("/")
+            val cleanUrl = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
+            val uri = Uri.parse(cleanUrl)
+            var playlistId = uri.getQueryParameter("list")
+                ?: cleanUrl.substringAfter("list=", "").substringBefore("&").substringBefore("#")
+
+            if (playlistId.isBlank() && (cleanUrl.contains("browse/") || cleanUrl.contains("channel/"))) {
+                playlistId = cleanUrl.substringAfter("browse/").substringAfter("channel/")
+                    .substringBefore("?").substringBefore("/")
             }
+            playlistId = playlistId.trim()
 
             if (playlistId.isNotBlank()) {
                 val playlist = youTubeRepository.getPlaylist(playlistId, autoSave = false)
-                val tracks = playlist.songs.map { 
-                    ImportTrack(it.title, it.artist, it.duration, it.id, it)
-                }
+                val tracks = playlist.songs
+                    .filter { it.id.isNotBlank() }
+                    .distinctBy { it.id }
+                    .map { ImportTrack(it.title, it.artist, it.duration, it.id, it) }
                 onTrackFetch(tracks.size)
-                return@withContext playlist.title to tracks
+                if (tracks.isNotEmpty()) return@withContext playlist.title to tracks
+                Log.w("PlaylistImportHelper", "YouTube playlist $playlistId returned no songs")
             }
         } catch (e: Exception) {
             Log.e("PlaylistImportHelper", "YouTube import failed", e)
