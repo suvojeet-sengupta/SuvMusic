@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.6.8.0] - 2026-10-04
+
+### Changed
+- **Smoother Player**: The player screen no longer redraws itself on every position update, and the seek bar wave and album art pulse animate without recomposing, so playback stays smooth on low-end phones.
+- **Faster Startup**: Startup code is now precompiled on install, and the update check waits until the first screen has loaded.
+- **Video Audio Fix**: Video mode no longer goes silent after skipping to the next song.
+- **4K Video**: Added 1440p and 4K video quality; 60fps streams are now picked correctly.
+- **Video Track Switch**: When the song changes in video mode, the next video's thumbnail and a spinner show until it starts, like YouTube.
+- **Half-Playing Songs**: Fixed songs and downloads that played halfway and then turned to noise when YouTube served a different audio format.
+- **YouTube Playlist Import**: Importing YouTube and YT Music playlist links works again, including long playlists.
+- **Swipe to Expand**: The mini player opens the full player with a shorter swipe or a quick flick.
+- **Android Auto**: Previous/next stay in place on car screens and steering wheel controls, with extra actions moved to the overflow menu.
+- **App Updates**: Update downloads are more reliable: no duplicate downloads, cancel button, checksum and package verification, a clear Install button and readable error messages.
+- **Album Art Pulse**: Pulse Intensity (100–150%) now produces a much stronger breathing glow.
+- **Classic Seek Bar**: Restyled with a Material 3 Expressive pill thumb, track gap and end dot.
+- **Lyrics Settings**: Redesigned lyrics settings sheet with accent colours, units, 0.1s sync steps and a Reset button.
+- **Share Insights**: Listening stats can now be shared as an image.
+- **Wrapped**: Duplicate tracks are merged and featured artists are grouped under the main artist.
+- **Listen Together**: Paste the whole invite message to join; the room code is picked out automatically.
+
 ## [2.6.7.0] - 2026-09-25
 
 ### Changed

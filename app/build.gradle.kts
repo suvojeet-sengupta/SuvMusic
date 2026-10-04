@@ -19,8 +19,8 @@ android {
         applicationId = "com.suvojeet.suvmusic"
         minSdk = 26
         targetSdk = 37
-        versionCode = 46
-        versionName = "2.6.7.0"
+        versionCode = 47
+        versionName = "2.6.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -144,6 +144,7 @@ protobuf {
 dependencies {
     // Core Library Desugaring for Java 8+ APIs on older Android
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
+    implementation(libs.androidx.profileinstaller)
     
     // Logging & Crash Reporting
     implementation(libs.acra.core)
