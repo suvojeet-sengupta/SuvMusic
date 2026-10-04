@@ -139,6 +139,7 @@ fun LyricsScreen(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     
     // Lyrics Settings State
@@ -536,8 +537,8 @@ fun LyricsScreen(
         if (showSettingsSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSettingsSheet = false },
-                sheetState = sheetState,
-                containerColor = Color.Black.copy(alpha = 0.92f), // More immersive dark
+                sheetState = settingsSheetState,
+                containerColor = Color(0xFF111114).copy(alpha = 0.96f),
                 contentColor = Color.White,
                 dragHandle = { 
                     BottomSheetDefaults.DragHandle(
@@ -553,12 +554,34 @@ fun LyricsScreen(
                         .padding(bottom = 48.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(
-                        text = "Customize Lyrics",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-                        color = Color.White,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Customize Lyrics",
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+                                color = Color.White
+                            )
+                            Text(
+                                text = selectedProvider.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                onFontSizeChange(26f)
+                                onLineSpacingChange(1.5f)
+                                onBlurChange(2.5f)
+                                onTextPositionChange(LyricsTextPosition.CENTER)
+                                syncOffset = 0L
+                            }
+                        ) {
+                            Text("Reset", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        }
+                    }
 
                     // Appearance Section
                     SettingsSectionHeader(title = "Appearance", icon = Icons.Default.Tune)
@@ -576,7 +599,8 @@ fun LyricsScreen(
                             value = lyricsFontSize,
                             onValueChange = onFontSizeChange,
                             valueRange = 16f..50f,
-                            icon = Icons.Default.FormatSize
+                            icon = Icons.Default.FormatSize,
+                            valueLabel = "${lyricsFontSize.toInt()} sp"
                         )
                         
                         Spacer(modifier = Modifier.height(24.dp))
@@ -587,7 +611,8 @@ fun LyricsScreen(
                             value = lyricsLineSpacing,
                             onValueChange = onLineSpacingChange,
                             valueRange = 1.0f..2.5f,
-                            icon = Icons.Default.FormatAlignLeft
+                            icon = Icons.Default.FormatAlignLeft,
+                            valueLabel = "%.1f×".format(lyricsLineSpacing)
                         )
                         
                         Spacer(modifier = Modifier.height(24.dp))
@@ -598,7 +623,8 @@ fun LyricsScreen(
                             value = lyricsBlur,
                             onValueChange = onBlurChange,
                             valueRange = 0f..12f,
-                            icon = Icons.Default.BlurOn
+                            icon = Icons.Default.BlurOn,
+                            valueLabel = if (lyricsBlur < 0.1f) "Off" else "%.1f".format(lyricsBlur)
                         )
                     }
 
@@ -632,15 +658,15 @@ fun LyricsScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                         .clickable { onTextPositionChange(position) }
-                                        .padding(vertical = 8.dp),
+                                        .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = position.name.lowercase().replaceFirstChar { it.uppercase() },
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.55f)
                                     )
                                 }
                             }
@@ -661,25 +687,14 @@ fun LyricsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        BounceButton(
-                            onClick = { syncOffset -= 500L },
-                            modifier = Modifier.size(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) { isPressed ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("-0.5s", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
-                            }
-                        }
+                        SyncStepButton("-0.5s") { syncOffset -= 500L }
+                        SyncStepButton("-0.1s") { syncOffset -= 100L }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "${if (syncOffset > 0) "+" else ""}${syncOffset}ms",
-                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                                maxLines = 1,
                                 color = if (syncOffset != 0L) MaterialTheme.colorScheme.primary else Color.White
                             )
                             if (syncOffset != 0L) {
@@ -695,20 +710,8 @@ fun LyricsScreen(
                             }
                         }
 
-                        BounceButton(
-                            onClick = { syncOffset += 500L },
-                            modifier = Modifier.size(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) { isPressed ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("+0.5s", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
-                            }
-                        }
+                        SyncStepButton("+0.1s") { syncOffset += 100L }
+                        SyncStepButton("+0.5s") { syncOffset += 500L }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -824,7 +827,7 @@ fun LyricsScreen(
                                         onClick = null,
                                         enabled = isEnabled,
                                         colors = RadioButtonDefaults.colors(
-                                            selectedColor = Color.White,
+                                            selectedColor = MaterialTheme.colorScheme.primary,
                                             unselectedColor = Color.White.copy(alpha = 0.3f)
                                         )
                                     )
@@ -999,16 +1002,43 @@ private fun SettingsSectionHeader(title: String, icon: androidx.compose.ui.graph
 }
 
 @Composable
+private fun SyncStepButton(label: String, onClick: () -> Unit) {
+    BounceButton(
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 2.dp).size(width = 48.dp, height = 44.dp),
+        shape = RoundedCornerShape(14.dp)
+    ) { isPressed ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = if (isPressed) 0.15f else 0.08f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+        }
+    }
+}
+
+@Composable
 private fun SettingsSlider(
     label: String,
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    valueLabel: String? = null
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label, 
@@ -1017,9 +1047,9 @@ private fun SettingsSlider(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = if (value % 1f == 0f) value.toInt().toString() else "%.1f".format(value),
+                text = valueLabel ?: if (value % 1f == 0f) value.toInt().toString() else "%.1f".format(value),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.primary
             )
         }
         Slider(
@@ -1028,9 +1058,9 @@ private fun SettingsSlider(
             valueRange = valueRange,
             modifier = Modifier.padding(top = 4.dp),
             colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White.copy(alpha = 0.8f),
-                inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = Color.White.copy(alpha = 0.12f)
             )
         )
     }
