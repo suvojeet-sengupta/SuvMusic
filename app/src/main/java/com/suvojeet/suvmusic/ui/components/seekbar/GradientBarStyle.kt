@@ -23,7 +23,7 @@ object GradientBarStyle {
         val height = size.height
         val centerY = height / 2
         val progressX = progress * width
-        val trackHeight = 8.dp.toPx()
+        val trackHeight = (if (isDragging) 11.dp else 8.dp).toPx()
         
         val gradientStart = activeColor.copy(alpha = 0.4f)
         val gradientMiddle = activeColor.copy(alpha = 0.7f)
@@ -38,7 +38,7 @@ object GradientBarStyle {
         )
         
         // Glow effect
-        drawRoundRect(
+        if (progressX > trackHeight * 2) drawRoundRect(
             brush = Brush.horizontalGradient(
                 colors = listOf(
                     gradientStart.copy(alpha = 0.3f),
