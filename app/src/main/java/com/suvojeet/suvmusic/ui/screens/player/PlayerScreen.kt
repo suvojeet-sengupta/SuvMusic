@@ -98,7 +98,10 @@ import com.suvojeet.suvmusic.ui.components.RingtoneProgressDialog
  */
 data class PlayerScreenState(
     val playbackInfo: PlayerState,
+    /** Structural player state: position and buffer fields are frozen so ticks don't recompose the screen. */
     val playerState: PlayerState,
+    /** Live state, read only inside position providers so ticks invalidate just their readers. */
+    val livePlayerState: androidx.compose.runtime.State<PlayerState>? = null,
     val lyrics: Lyrics? = null,
     val isFetchingLyrics: Boolean = false,
     val relatedSongs: List<com.suvojeet.suvmusic.core.model.Song> = emptyList(),
@@ -375,16 +378,17 @@ fun PlayerScreen(
     var pendingSeekPosition by remember { mutableStateOf<Long?>(null) }
     var seekDebounceJob by remember { mutableStateOf<Job?>(null) }
 
-    val playerStateProvider by androidx.compose.runtime.rememberUpdatedState(playerState)
+    val fallbackLiveState = androidx.compose.runtime.rememberUpdatedState(playerState)
+    val liveStateHolder by androidx.compose.runtime.rememberUpdatedState(state.livePlayerState ?: fallbackLiveState)
 
-    val progressProvider = remember { { playerStateProvider.progress } }
-    val positionProvider = remember { { playerStateProvider.currentPosition } }
-    val durationProvider = remember { { playerStateProvider.duration } }
+    val progressProvider = remember { { liveStateHolder.value.progress } }
+    val positionProvider = remember { { liveStateHolder.value.currentPosition } }
+    val durationProvider = remember { { liveStateHolder.value.duration } }
 
     val handleDoubleTapSeek: (Boolean) -> Unit = remember {
         { forward ->
-            val currentPos = playerStateProvider.currentPosition
-            val duration = playerStateProvider.duration
+            val currentPos = liveStateHolder.value.currentPosition
+            val duration = liveStateHolder.value.duration
             val current = pendingSeekPosition ?: currentPos
             val seekAmount = 10000L // default
             val newPos = if (forward) (current + seekAmount).coerceAtMost(duration) else (current - seekAmount).coerceAtLeast(0)

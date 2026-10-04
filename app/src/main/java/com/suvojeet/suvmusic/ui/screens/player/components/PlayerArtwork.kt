@@ -120,29 +120,21 @@ fun AlbumArtwork(
         pulseColorFor(dominantColors.accent, isLightBackdrop)
     }
     val pulseStrength = ((pulseRadius - 1f) / 0.5f).coerceIn(0f, 1f)
-    var pulseBreath = 1f
+    // The phase is read only inside drawBehind, so the pulse redraws each frame
+    // without recomposing the artwork (matters a lot on low-end devices).
+    val pulsePhase: androidx.compose.runtime.State<Float>? = if (glowActive) {
+        rememberInfiniteTransition(label = "art_color_pulse").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse_phase",
+        )
+    } else null
     val glowColor = if (glowActive) {
-        val pulseTransition = rememberInfiniteTransition(label = "art_color_pulse")
-        val breath by pulseTransition.animateFloat(
-            initialValue = 1f - 0.1f * pulseStrength,
-            targetValue = 1f + 0.12f * pulseStrength,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "pulse_breath",
-        )
-        pulseBreath = breath
-        val animatedAlpha by pulseTransition.animateFloat(
-            initialValue = 0.3f + 0.2f * pulseStrength,
-            targetValue = 0.75f + 0.25f * pulseStrength,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "pulse_alpha",
-        )
-        pulseBaseColor.copy(alpha = animatedAlpha)
+        pulseBaseColor.copy(alpha = 0.55f + 0.35f * pulseStrength)
     } else {
         dominantColors.primary.copy(alpha = 0.25f)
     }
@@ -299,13 +291,17 @@ fun AlbumArtwork(
                         rotationZ = rotation + currentRotation
                     }
                     .drawBehind {
-                        if (glowActive) {
-                            val outer = size.minDimension / 2f * (1.1f + 0.9f * pulseStrength) * pulseBreath
+                        val phase = pulsePhase?.value
+                        if (glowActive && phase != null) {
+                            val breath = 1f + (-0.1f + 0.22f * phase) * pulseStrength
+                            val alpha = (0.3f + 0.2f * pulseStrength) + (0.45f + 0.05f * pulseStrength) * phase
+                            val pulseColor = pulseBaseColor.copy(alpha = alpha.coerceIn(0f, 1f))
+                            val outer = size.minDimension / 2f * (1.1f + 0.9f * pulseStrength) * breath
                             val inner = (size.minDimension / 2f) / outer
                             drawCircle(
                                 brush = Brush.radialGradient(
-                                    0f to glowColor,
-                                    (inner * 0.85f) to glowColor,
+                                    0f to pulseColor,
+                                    (inner * 0.85f) to pulseColor,
                                     1f to Color.Transparent,
                                     center = center,
                                     radius = outer

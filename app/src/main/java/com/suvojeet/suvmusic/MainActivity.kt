@@ -206,7 +206,8 @@ class MainActivity : ComponentActivity() {
         enableMaxRefreshRate()
         
         lifecycleScope.launch {
-            // Check for manual updates on launch
+            // Let the first screen load before spending network and CPU on the update check.
+            kotlinx.coroutines.delay(5_000)
             val channel = sessionManager.getUpdateChannel()
             updateViewModel.checkForUpdate(
                 com.suvojeet.suvmusic.BuildConfig.VERSION_CODE,
@@ -700,7 +701,7 @@ fun SuvMusicApp(
     
     // Sleep Timer
     val sleepTimerOption by playerViewModel.sleepTimerOption.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.player.SleepTimerOption.OFF)
-    val sleepTimerRemainingMs by playerViewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle(initialValue = null)
+    val sleepTimerRemainingState = playerViewModel.sleepTimerRemainingMs.collectAsStateWithLifecycle(initialValue = null)
     
     // Radio Mode
     val isRadioMode by playerViewModel.isRadioMode.collectAsStateWithLifecycle(initialValue = false)
@@ -1002,7 +1003,7 @@ fun SuvMusicApp(
                             isFetchingLyrics = isFetchingLyrics,
                             isLoggedIn = isLoggedIn,
                             sleepTimerOption = sleepTimerOption,
-                            sleepTimerRemainingMs = sleepTimerRemainingMs,
+                            sleepTimerRemainingMs = sleepTimerRemainingState.value,
                             onSetSleepTimer = { option, minutes -> playerViewModel.setSleepTimer(option, minutes) },
                             onSetPlaybackParameters = { speed, pitch -> playerViewModel.setPlaybackParameters(speed, pitch) },
                             volumeKeyEvents = volumeKeyEvents,
@@ -1106,10 +1107,16 @@ fun SuvMusicApp(
                 // state only recomposes the open player screen — never the nav host, mini
                 // player, or the underlying browse screen. This lambda is composed solely
                 // while the player is expanded (see ExpandablePlayerSheet.showFullPlayer).
-                val playerState by playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
+                val livePlayerState = playerViewModel.playerState.collectAsStateWithLifecycle(initialValue = com.suvojeet.suvmusic.core.model.PlayerState())
+                val structuralPlayerState by remember(livePlayerState) {
+                    androidx.compose.runtime.derivedStateOf(androidx.compose.runtime.structuralEqualityPolicy()) {
+                        livePlayerState.value.copy(currentPosition = 0L, bufferedPercentage = 0)
+                    }
+                }
                 val playerScreenState = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenState(
                     playbackInfo = playbackInfo,
-                    playerState = playerState,
+                    playerState = structuralPlayerState,
+                    livePlayerState = livePlayerState,
                     lyrics = lyrics,
                     isFetchingLyrics = isFetchingLyrics,
                     relatedSongs = relatedSongs,
@@ -1122,7 +1129,7 @@ fun SuvMusicApp(
                     enabledLyricsProviders = playerViewModel.enabledLyricsProviders.collectAsStateWithLifecycle().value,
                     listenTogetherBufferingUsers = playerViewModel.listenTogetherBufferingUsers.collectAsStateWithLifecycle().value,
                     sleepTimerOption = sleepTimerOption,
-                    sleepTimerRemainingMs = sleepTimerRemainingMs
+                    sleepTimerRemainingMs = sleepTimerRemainingState.value
                 )
 
                 val playerScreenActions = com.suvojeet.suvmusic.ui.screens.player.PlayerScreenActions(

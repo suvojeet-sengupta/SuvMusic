@@ -1,0 +1,27 @@
+# Baseline profile for SuvMusic. The app ships as a sideloaded APK, so Play's cloud
+# profiles never apply; ProfileInstaller compiles these rules ahead of time on install
+# so cold start, the home feed and the player run from optimized code on first launch.
+
+# Startup
+HSPLcom/suvojeet/suvmusic/SuvMusicApplication;->**(**)**
+HSPLcom/suvojeet/suvmusic/MainActivity;->**(**)**
+HSPLcom/suvojeet/suvmusic/MainActivityKt**;->**(**)**
+HSPLcom/suvojeet/suvmusic/crash/CrashLoopGuard;->**(**)**
+HSPLcom/suvojeet/suvmusic/cache/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/di/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/data/SessionManager**;->**(**)**
+HSPLcom/suvojeet/suvmusic/navigation/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/ui/theme/**;->**(**)**
+
+# Home and shared UI
+HSPLcom/suvojeet/suvmusic/ui/components/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/ui/screens/HomeScreen**;->**(**)**
+HSPLcom/suvojeet/suvmusic/ui/viewmodel/HomeViewModel**;->**(**)**
+HSPLcom/suvojeet/suvmusic/ui/viewmodel/MainViewModel**;->**(**)**
+HSPLcom/suvojeet/suvmusic/ui/viewmodel/PlayerViewModel**;->**(**)**
+
+# Player
+HSPLcom/suvojeet/suvmusic/ui/screens/player/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/player/**;->**(**)**
+HSPLcom/suvojeet/suvmusic/service/MusicPlayerService**;->**(**)**
+HSPLcom/suvojeet/suvmusic/core/model/**;->**(**)**

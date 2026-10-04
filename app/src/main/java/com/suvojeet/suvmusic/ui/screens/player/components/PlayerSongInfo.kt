@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -311,7 +312,7 @@ fun SongInfoSection(
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "aiPulse")
-                    val alpha by infiniteTransition.animateFloat(
+                    val alphaState = infiniteTransition.animateFloat(
                         initialValue = 0.4f,
                         targetValue = 1f,
                         animationSpec = infiniteRepeatable(
@@ -325,7 +326,7 @@ fun SongInfoSection(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(dominantColors.accent.copy(alpha = alpha))
+                            .drawBehind { drawRect(dominantColors.accent.copy(alpha = alphaState.value)) }
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(

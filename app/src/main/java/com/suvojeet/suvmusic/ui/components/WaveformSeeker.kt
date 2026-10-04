@@ -108,14 +108,13 @@ fun WaveformSeeker(
         currentStyle == SeekbarStyle.WAVEFORM ||
             currentStyle == SeekbarStyle.WAVE_LINE ||
             currentStyle == SeekbarStyle.DOTS ||
-            currentStyle == SeekbarStyle.M3E_WAVY ||
             currentStyle == SeekbarStyle.NEON
     )
     
-    // Animation for wave movement only when needed
-    val wavePhase = if (shouldAnimateWave) {
+    // Read only from the Canvas draw block, so the wave animates without recomposing.
+    val wavePhaseState: androidx.compose.runtime.State<Float>? = if (shouldAnimateWave) {
         val infiniteTransition = rememberInfiniteTransition(label = "wave")
-        val phase by infiniteTransition.animateFloat(
+        infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
@@ -124,9 +123,8 @@ fun WaveformSeeker(
             ),
             label = "wavePhase"
         )
-        phase
     } else {
-        0f
+        null
     }
 
     // M3E Wavy: spring-animated amplitude (1.2f when playing for better visibility, 0f when paused)
@@ -148,11 +146,12 @@ fun WaveformSeeker(
     var currentProgress by remember { mutableFloatStateOf(progressProvider()) }
     var dragX by remember { mutableFloatStateOf(0f) }
     
-    // Update currentProgress from external progress only when NOT dragging
-    val externalProgress = progressProvider()
-    LaunchedEffect(externalProgress) {
-        if (!isDragging) {
-            currentProgress = externalProgress
+    // Update currentProgress from external progress only when NOT dragging. Collected
+    // through snapshotFlow so position ticks never recompose this composable.
+    val latestProgressProvider by androidx.compose.runtime.rememberUpdatedState(progressProvider)
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { latestProgressProvider() }.collect { external ->
+            if (!isDragging) currentProgress = external
         }
     }
     
@@ -253,7 +252,7 @@ fun WaveformSeeker(
                                     draw(
                                         progress = currentProgress,
                                         isPlaying = isPlaying,
-                                        wavePhase = wavePhase,
+                                        wavePhase = wavePhaseState?.value ?: 0f,
                                         waveAmplitudes = waveAmplitudes,
                                         activeColor = activeColor,
                                         inactiveColor = inactiveColor,
@@ -264,7 +263,7 @@ fun WaveformSeeker(
                                     draw(
                                         progress = currentProgress,
                                         isPlaying = isPlaying,
-                                        wavePhase = wavePhase,
+                                        wavePhase = wavePhaseState?.value ?: 0f,
                                         activeColor = activeColor,
                                         inactiveColor = inactiveColor,
                                         isDragging = isDragging
@@ -282,7 +281,7 @@ fun WaveformSeeker(
                                     draw(
                                         progress = currentProgress,
                                         isPlaying = isPlaying,
-                                        wavePhase = wavePhase,
+                                        wavePhase = wavePhaseState?.value ?: 0f,
                                         activeColor = activeColor,
                                         inactiveColor = inactiveColor,
                                         isDragging = isDragging
