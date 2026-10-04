@@ -1270,7 +1270,9 @@ fun SuvMusicApp(
                 },
                 onUpdate = { 
                     scope.launch { sessionManager.clearPendingUpdateInfo() }
-                    updateViewModel.downloadAndInstallUpdate(info) 
+                    updateViewModel.downloadAndInstallUpdate(info)
+                    updateViewModel.dismissDialog()
+                    android.widget.Toast.makeText(context, "Downloading update — progress is in the notification", android.widget.Toast.LENGTH_SHORT).show()
                 }
             )
         }

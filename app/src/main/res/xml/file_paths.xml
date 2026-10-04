@@ -12,4 +12,6 @@
     <cache-path name="playlists" path="playlists/" />
     <!-- Public downloads for APK installation -->
     <external-path name="external_downloads" path="Download" />
+    <!-- App-specific downloads for update APKs -->
+    <external-files-path name="update_apks" path="Download/updates/" />
 </paths>

@@ -81,6 +81,10 @@ class UpdateViewModel @Inject constructor(
         downloader.downloadAndInstall(info.downloadUrl, info.versionName, info.sha256)
     }
 
+    fun cancelDownload() = downloader.cancel()
+
+    fun installDownloadedUpdate() = downloader.install()
+
     fun triggerUpdateAvailable(versionCode: Int, versionName: String, currentVersionCode: Int) {
         // We re-fetch to get the real download URL and sha256
         checkForUpdate(currentVersionCode, silent = true)

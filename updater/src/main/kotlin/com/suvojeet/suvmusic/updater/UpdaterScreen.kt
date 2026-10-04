@@ -93,6 +93,8 @@ fun UpdaterScreen(
                     lastUpdated = lastUpdated,
                     onCheckUpdate = { viewModel.checkForUpdate(currentVersionCode) },
                     onDownloadUpdate = { info -> viewModel.downloadAndInstallUpdate(info) },
+                    onCancelDownload = { viewModel.cancelDownload() },
+                    onInstall = { viewModel.installDownloadedUpdate() },
                     onDismiss = { viewModel.resetUpdateState() }
                 )
             }
@@ -170,6 +172,8 @@ fun StatusCard(
     lastUpdated: Long?,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: (UpdateInfo) -> Unit,
+    onCancelDownload: () -> Unit = {},
+    onInstall: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     Surface(
@@ -230,7 +234,74 @@ fun StatusCard(
 
             if (downloadState is DownloadState.Downloading) {
                 DownloadProgressView(downloadState)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onCancelDownload,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = SquircleShape
+                ) {
+                    Text("Cancel download")
+                }
+            } else if (downloadState is DownloadState.Verifying) {
+                PulseLoadingIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Verifying update...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            } else if (downloadState is DownloadState.Completed) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Update downloaded and verified",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "If the installer didn't open, allow installs from SuvMusic and tap Install.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(
+                    onClick = onInstall,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = SquircleShape
+                ) {
+                    Text("Install", fontWeight = FontWeight.Bold)
+                }
             } else {
+                if (downloadState is DownloadState.Error) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = SquircleShape,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                downloadState.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
                 when (updateState) {
                     is UpdateState.Idle -> {
                         Text(
@@ -359,7 +430,7 @@ fun DownloadProgressView(state: DownloadState.Downloading) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "${(state.progress * 100).toInt()}%",
+                text = if (state.totalBytes > 0) "${(state.progress * 100).toInt()}%" else "Starting…",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.primary
@@ -368,15 +439,27 @@ fun DownloadProgressView(state: DownloadState.Downloading) {
         
         Spacer(modifier = Modifier.height(12.dp))
         
-        LinearProgressIndicator(
-            progress = { state.progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp)
-                .clip(CircleShape),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        )
+        if (state.totalBytes > 0) {
+            val animatedProgress by animateFloatAsState(state.progress, label = "update_progress")
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        } else {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
         
         Spacer(modifier = Modifier.height(8.dp))
         
@@ -384,7 +467,7 @@ fun DownloadProgressView(state: DownloadState.Downloading) {
         val totalMb = String.format("%.1f", state.totalBytes / (1024f * 1024f))
         
         Text(
-            text = "$downloadedMb MB / $totalMb MB",
+            text = if (state.totalBytes > 0) "$downloadedMb MB / $totalMb MB" else "$downloadedMb MB",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )

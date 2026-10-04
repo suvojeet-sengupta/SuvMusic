@@ -1,18 +1,18 @@
 package com.suvojeet.suvmusic.updater
 
 import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import androidx.core.content.ContextCompat
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +28,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 sealed class DownloadState {
     data object Idle : DownloadState()
     data class Downloading(val progress: Float, val bytesDownloaded: Long, val totalBytes: Long) : DownloadState()
+    data object Verifying : DownloadState()
     data class Completed(val file: File) : DownloadState()
     data class Error(val message: String) : DownloadState()
 }
@@ -37,15 +38,19 @@ class UpdateDownloader @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var downloadId: Long = -1
     private var progressJob: Job? = null
+    private var targetFile: File? = null
 
-    // Expected SHA-256 of the APK being downloaded (hex, lowercase). When set,
-    // the downloaded file is verified before install; mismatch aborts install.
     private var expectedSha256: String? = null
 
     private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
+
+    private fun updatesDir(): File =
+        File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir, "updates")
+            .apply { mkdirs() }
 
     /**
      * @param sha256 Optional hex-encoded SHA-256 of the expected APK. If supplied,
@@ -53,14 +58,27 @@ class UpdateDownloader @Inject constructor(
      *               does not match — protects against MITM swap attacks.
      */
     fun downloadAndInstall(url: String, versionName: String, sha256: String? = null) {
-        expectedSha256 = sha256?.lowercase()
+        val current = _downloadState.value
+        if (current is DownloadState.Downloading || current is DownloadState.Verifying) return
 
-        val fileName = "SuvMusic-v$versionName.apk"
+        expectedSha256 = sha256?.lowercase()
+        val file = File(updatesDir(), "SuvMusic-v$versionName.apk")
+        targetFile = file
+
+        if (file.exists() && file.length() > 0 && isValidApk(file) && hashMatches(file)) {
+            _downloadState.value = DownloadState.Completed(file)
+            installApk(file)
+            return
+        }
+
+        updatesDir().listFiles()?.forEach { runCatching { it.delete() } }
+
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("Downloading SuvMusic Update")
             .setDescription("Version $versionName")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            .setMimeType("application/vnd.android.package-archive")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setDestinationUri(Uri.fromFile(file))
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
 
@@ -69,66 +87,102 @@ class UpdateDownloader @Inject constructor(
             request.setRequiresDeviceIdle(false)
         }
 
-        downloadId = downloadManager.enqueue(request)
-        _downloadState.value = DownloadState.Downloading(0f, 0, 0)
-
-        startProgressTracking()
-
-        // Register the completion receiver privately — system DownloadManager
-        // dispatches to registered receivers, but NOT_EXPORTED blocks other apps
-        // from spoofing ACTION_DOWNLOAD_COMPLETE with a malicious download id.
-        val completionReceiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-                if (id == downloadId) {
-                    stopProgressTracking()
-                    val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
-                    _downloadState.value = DownloadState.Completed(file)
-                    installApk(file)
-                    try { ctx.unregisterReceiver(this) } catch (_: Exception) {}
-                }
-            }
+        downloadId = try {
+            downloadManager.enqueue(request)
+        } catch (e: Exception) {
+            _downloadState.value = DownloadState.Error("Couldn't start download: ${e.message ?: "unknown error"}")
+            return
         }
-        ContextCompat.registerReceiver(
-            context,
-            completionReceiver,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        _downloadState.value = DownloadState.Downloading(0f, 0, 0)
+        startProgressTracking(file)
     }
 
-    private fun startProgressTracking() {
+    fun cancel() {
+        stopProgressTracking()
+        if (downloadId != -1L) runCatching { downloadManager.remove(downloadId) }
+        downloadId = -1
+        targetFile?.let { runCatching { it.delete() } }
+        _downloadState.value = DownloadState.Idle
+    }
+
+    /** Re-launch the installer for an already downloaded, verified APK. */
+    fun install() {
+        (_downloadState.value as? DownloadState.Completed)?.let { installApk(it.file) }
+    }
+
+    fun clearError() {
+        if (_downloadState.value is DownloadState.Error) _downloadState.value = DownloadState.Idle
+    }
+
+    private fun startProgressTracking(file: File) {
         progressJob?.cancel()
-        progressJob = CoroutineScope(Dispatchers.IO).launch {
-            var isDownloading = true
-            while (isDownloading) {
-                val query = DownloadManager.Query().setFilterById(downloadId)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val bytesDownloadedColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                    val totalBytesColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                    val statusColumnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+        progressJob = scope.launch {
+            var stalledPolls = 0
+            var lastBytes = -1L
+            while (isActive) {
+                val snapshot = runCatching {
+                    downloadManager.query(DownloadManager.Query().setFilterById(downloadId))?.use { c ->
+                        if (!c.moveToFirst()) null
+                        else Triple(
+                            c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)),
+                            c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)),
+                            c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)) to
+                                c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                        )
+                    }
+                }.getOrNull()
 
-                    if (bytesDownloadedColumnIndex != -1 && totalBytesColumnIndex != -1 && statusColumnIndex != -1) {
-                        val bytesDownloaded = cursor.getLong(bytesDownloadedColumnIndex)
-                        val totalBytes = cursor.getLong(totalBytesColumnIndex)
-                        val status = cursor.getInt(statusColumnIndex)
-
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            isDownloading = false
-                        } else if (status == DownloadManager.STATUS_FAILED) {
-                            _downloadState.value = DownloadState.Error("Download failed")
-                            isDownloading = false
-                        } else if (totalBytes > 0) {
-                            val progress = bytesDownloaded.toFloat() / totalBytes.toFloat()
-                            _downloadState.value = DownloadState.Downloading(progress, bytesDownloaded, totalBytes)
+                if (snapshot == null) {
+                    _downloadState.value = DownloadState.Error("Download was cancelled")
+                    return@launch
+                }
+                val (status, bytes, totalAndReason) = snapshot
+                val (total, reason) = totalAndReason
+                when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        finishDownload(file)
+                        return@launch
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        runCatching { downloadManager.remove(downloadId) }
+                        _downloadState.value = DownloadState.Error(failureMessage(reason))
+                        return@launch
+                    }
+                    else -> {
+                        val progress = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
+                        _downloadState.value = DownloadState.Downloading(progress, bytes, total.coerceAtLeast(0))
+                        stalledPolls = if (bytes == lastBytes) stalledPolls + 1 else 0
+                        lastBytes = bytes
+                        if (status == DownloadManager.STATUS_PAUSED && stalledPolls > 240) {
+                            runCatching { downloadManager.remove(downloadId) }
+                            _downloadState.value = DownloadState.Error("Download stalled. Check your connection and retry.")
+                            return@launch
                         }
                     }
                 }
-                cursor.close()
-                delay(500) // Poll every 500ms
+                delay(400)
             }
         }
+    }
+
+    private fun finishDownload(file: File) {
+        _downloadState.value = DownloadState.Verifying
+        if (!file.exists() || file.length() == 0L) {
+            _downloadState.value = DownloadState.Error("Downloaded file is missing. Please retry.")
+            return
+        }
+        if (!hashMatches(file)) {
+            runCatching { file.delete() }
+            _downloadState.value = DownloadState.Error("Update rejected: checksum mismatch")
+            return
+        }
+        if (!isValidApk(file)) {
+            runCatching { file.delete() }
+            _downloadState.value = DownloadState.Error("Downloaded update is corrupted. Please retry.")
+            return
+        }
+        _downloadState.value = DownloadState.Completed(file)
+        installApk(file)
     }
 
     private fun stopProgressTracking() {
@@ -136,18 +190,39 @@ class UpdateDownloader @Inject constructor(
         progressJob = null
     }
 
-    private fun installApk(file: File) {
-        if (!file.exists()) return
+    private fun failureMessage(reason: Int): String = when (reason) {
+        DownloadManager.ERROR_INSUFFICIENT_SPACE -> "Not enough storage space for the update"
+        DownloadManager.ERROR_HTTP_DATA_ERROR, DownloadManager.ERROR_CANNOT_RESUME -> "Connection interrupted. Please retry."
+        DownloadManager.ERROR_TOO_MANY_REDIRECTS, DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "Update server error. Please retry later."
+        else -> "Download failed. Please retry."
+    }
 
-        // Refuse to launch the installer if an expected hash was supplied and
-        // the downloaded file doesn't match — defends against MITM swaps.
-        expectedSha256?.let { expected ->
-            val actual = sha256(file)
-            if (actual == null || !actual.equals(expected, ignoreCase = true)) {
-                try { file.delete() } catch (_: Exception) {}
-                _downloadState.value = DownloadState.Error("Update rejected: signature check failed")
-                return
-            }
+    private fun hashMatches(file: File): Boolean {
+        val expected = expectedSha256 ?: return true
+        return sha256(file)?.equals(expected, ignoreCase = true) == true
+    }
+
+    private fun isValidApk(file: File): Boolean = runCatching {
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
+        info != null && info.packageName == context.packageName
+    }.getOrDefault(false)
+
+    private fun installApk(file: File) {
+        if (!file.exists()) {
+            _downloadState.value = DownloadState.Error("Update file not found. Please retry.")
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            val settings = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}")
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { context.startActivity(settings) }
+            return
         }
 
         val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -164,7 +239,7 @@ class UpdateDownloader @Inject constructor(
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            _downloadState.value = DownloadState.Error("Error starting installation")
+            _downloadState.value = DownloadState.Error("Couldn't open the installer")
         }
     }
 
