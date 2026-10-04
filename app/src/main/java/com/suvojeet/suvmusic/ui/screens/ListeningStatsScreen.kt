@@ -18,6 +18,11 @@ import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -75,6 +80,9 @@ fun ListeningStatsScreen(
     }
 
     if (showShareDialog) {
+        val cardLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+        val shareScope = rememberCoroutineScope()
+        var isSharingImage by remember { mutableStateOf(false) }
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showShareDialog = false }
         ) {
@@ -86,9 +94,49 @@ fun ListeningStatsScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     SpotifyWrappedShareCard(
                         uiState = uiState,
-                        modifier = Modifier.clip(RoundedCornerShape(24.dp))
+                        modifier = Modifier
+                            .drawWithContent {
+                                cardLayer.record { this@drawWithContent.drawContent() }
+                                drawLayer(cardLayer)
+                            }
+                            .clip(RoundedCornerShape(24.dp))
                     )
                     Button(
+                        onClick = {
+                            if (isSharingImage) return@Button
+                            isSharingImage = true
+                            shareScope.launch {
+                                try {
+                                    val bitmap = cardLayer.toImageBitmap().asAndroidBitmap()
+                                    val uri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        val dir = java.io.File(context.cacheDir, "images").apply { mkdirs() }
+                                        dir.listFiles { f -> f.name.startsWith("insights_") }?.forEach { it.delete() }
+                                        val file = java.io.File(dir, "insights_${System.currentTimeMillis()}.png")
+                                        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                                        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                                    }
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/png"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        putExtra(Intent.EXTRA_TEXT, "My Music Insights on SuvMusic 🎵 #SuvMusic")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share your insights"))
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Couldn't create image", android.widget.Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isSharingImage = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Image, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share as Image")
+                    }
+                    OutlinedButton(
                         onClick = {
                             val topArtist = uiState.topArtists.firstOrNull()?.artist ?: "Unknown"
                             val totalMinutes = uiState.totalListeningTimeMs / 60000
@@ -102,7 +150,7 @@ fun ListeningStatsScreen(
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share your insights"))
                         },
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Share, null)
