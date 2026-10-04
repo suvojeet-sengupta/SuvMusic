@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -95,7 +93,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.material.icons.filled.BrightnessLow
-import androidx.media3.ui.PlayerView
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.suvojeet.suvmusic.core.model.VideoDownloadQuality
@@ -385,24 +382,13 @@ fun FullScreenVideoPlayer(
             }
     ) {
         // Video
-        AndroidView<PlayerView>(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = player
-                    useController = false
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    this.resizeMode = resizeMode
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            },
-            update = { it.resizeMode = resizeMode },
-            modifier = Modifier.fillMaxSize()
-        )
+        if (player != null) {
+            com.suvojeet.suvmusic.ui.screens.player.components.VideoSurface(
+                player = player,
+                resizeMode = resizeMode,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Double tap seek indicators
         Row(modifier = Modifier.fillMaxSize()) {

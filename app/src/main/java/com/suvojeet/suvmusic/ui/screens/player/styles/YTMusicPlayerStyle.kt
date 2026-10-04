@@ -233,17 +233,7 @@ private fun YTMusicPortraitContent(
                                 tonalElevation = 16.dp,
                                 shadowElevation = 16.dp
                             ) {
-                                AndroidView(
-                                    factory = { context ->
-                                        PlayerView(context).apply {
-                                            this.player = player
-                                            useController = false
-                                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                            setBackgroundColor(android.graphics.Color.BLACK)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                player?.let { com.suvojeet.suvmusic.ui.screens.player.components.VideoSurface(player = it, modifier = Modifier.fillMaxSize()) }
                                 
                                 Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
                                     Icon(
@@ -408,17 +398,7 @@ private fun YTMusicLandscapeContent(
                             tonalElevation = 16.dp,
                             shadowElevation = 16.dp
                         ) {
-                            AndroidView(
-                                factory = { context ->
-                                    PlayerView(context).apply {
-                                        this.player = player
-                                        useController = false
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        setBackgroundColor(android.graphics.Color.BLACK)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            player?.let { com.suvojeet.suvmusic.ui.screens.player.components.VideoSurface(player = it, modifier = Modifier.fillMaxSize()) }
                             
                             Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.TopEnd) {
                                 Icon(

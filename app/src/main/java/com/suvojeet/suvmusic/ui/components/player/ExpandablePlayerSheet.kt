@@ -278,8 +278,17 @@ fun ExpandablePlayerSheet(
                         // — the previous 10% threshold required a
                         // long, deliberate drag that often felt unresponsive.
                         val dismissThreshold = -0.05f
+                        val expandThreshold = 0.15f
+                        val flingVelocityPx = 600.dp.toPx()
+                        val velocityTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                        var dragTotal = 0f
                         detectVerticalDragGestures(
+                            onDragStart = {
+                                velocityTracker.resetTracking()
+                                dragTotal = 0f
+                            },
                             onDragEnd = {
+                                val velocityY = velocityTracker.calculateVelocity().y
                                 coroutineScope.launch {
                                     if (expansion.value <= dismissThreshold && swipeDownToDismissEnabled) {
                                         // Animate the mini player off the bottom edge before
@@ -292,7 +301,12 @@ fun ExpandablePlayerSheet(
                                         onClose()
                                         expansion.snapTo(0f)
                                     } else {
-                                        val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                        val targetValue = when {
+                                            velocityY < -flingVelocityPx -> 1f
+                                            velocityY > flingVelocityPx -> 0f
+                                            expansion.value > expandThreshold -> 1f
+                                            else -> 0f
+                                        }
                                         expansion.animateTo(
                                             targetValue = targetValue,
                                             animationSpec = tween(
@@ -306,7 +320,7 @@ fun ExpandablePlayerSheet(
                             },
                             onDragCancel = {
                                 coroutineScope.launch {
-                                    val targetValue = if (expansion.value > 0.4f) 1f else 0f
+                                    val targetValue = if (expansion.value > expandThreshold) 1f else 0f
                                     expansion.animateTo(
                                         targetValue = targetValue,
                                         animationSpec = tween(
@@ -318,6 +332,8 @@ fun ExpandablePlayerSheet(
                                 }
                             },
                             onVerticalDrag = { change, dragAmount ->
+                                dragTotal += dragAmount
+                                velocityTracker.addPosition(change.uptimeMillis, androidx.compose.ui.geometry.Offset(0f, dragTotal))
                                 change.consume()
                                 val delta = -dragAmount / dragRange
                                 coroutineScope.launch {

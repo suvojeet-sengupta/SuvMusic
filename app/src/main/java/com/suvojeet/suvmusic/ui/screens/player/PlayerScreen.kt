@@ -779,7 +779,7 @@ fun AdaptiveSupportingContent(
 fun PiPPlayerContent(song: com.suvojeet.suvmusic.core.model.Song?, isVideoMode: Boolean, player: Player?) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
         if (isVideoMode && player != null) {
-            AndroidView(factory = { context -> PlayerView(context).apply { this.player = player; useController = false } }, modifier = Modifier.fillMaxSize())
+            player?.let { com.suvojeet.suvmusic.ui.screens.player.components.VideoSurface(player = it, modifier = Modifier.fillMaxSize()) }
         } else {
             if (song?.thumbnailUrl != null) {
                 coil3.compose.AsyncImage(model = song.thumbnailUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, alpha = 0.6f)

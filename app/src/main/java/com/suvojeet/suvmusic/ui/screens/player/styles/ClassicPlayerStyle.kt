@@ -219,7 +219,7 @@ private fun ClassicPortraitContent(
                                     .clickable { onSetFullScreen(true) },
                                 tonalElevation = 16.dp, shadowElevation = 16.dp
                             ) {
-                                AndroidView(factory = { context -> PlayerView(context).apply { this.player = player; useController = false; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setBackgroundColor(android.graphics.Color.BLACK) } }, modifier = Modifier.fillMaxSize())
+                                player?.let { com.suvojeet.suvmusic.ui.screens.player.components.VideoSurface(player = it, modifier = Modifier.fillMaxSize()) }
                                 M3ELoadingOverlay(isLoading = combinedLoading, dominantColors = dominantColors, modifier = Modifier.fillMaxSize())
                             }
                         }
