@@ -746,12 +746,7 @@ fun SetupContent(
 
                 OutlinedTextField(
                     value = roomCode,
-                    onValueChange = { input ->
-                        // Only the 6 uppercase alphanumeric characters a room code can contain.
-                        roomCode = input.uppercase()
-                            .filter { it.isLetterOrDigit() }
-                            .take(LISTEN_TOGETHER_ROOM_CODE_LENGTH)
-                    },
+                    onValueChange = { input -> roomCode = extractRoomCode(input) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Room code") },
                     placeholder = {
@@ -761,6 +756,20 @@ fun SetupContent(
                         )
                     },
                     leadingIcon = { Icon(Icons.Default.Tag, null, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = if (roomCode.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { roomCode = "" }) {
+                                Icon(Icons.Default.Close, "Clear code", modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    } else null,
+                    supportingText = {
+                        Text("Tip: paste the whole invite message, the code is picked out automatically")
+                    },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters,
+                        autoCorrectEnabled = false
+                    ),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Black,
@@ -1496,16 +1505,20 @@ fun RoomContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val shareInvite = {
+                        val shareIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                "Join my SuvMusic Listen Together session! 🎧\nOpen SuvMusic → Listen Together → Join, and enter code: ${room.roomCode}"
+                            )
+                        }
+                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Session Code"))
+                    }
                     Button(
-                        onClick = {
-                            val shareIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_TEXT, "Join my SuvMusic session! Code: ${room.roomCode}")
-                            }
-                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Session Code"))
-                        },
-                        modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = { /* handled by onClick above */ }, shape = SquircleShape),
+                        onClick = shareInvite,
+                        modifier = Modifier.weight(1f).height(56.dp).dpadFocusable(onClick = shareInvite, shape = SquircleShape),
                         shape = SquircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -2193,4 +2206,17 @@ private fun M3HorizontalDivider(modifier: Modifier = Modifier, color: Color) {
         modifier = modifier,
         color = color
     )
+}
+
+private val roomCodeAfterLabel = Regex("CODE\\s*[:：-]?\\s*([A-Z0-9]{${LISTEN_TOGETHER_ROOM_CODE_LENGTH}})\\b")
+private val standaloneRoomCode = Regex("\\b([A-Z0-9]{${LISTEN_TOGETHER_ROOM_CODE_LENGTH}})\\b")
+
+/** Accepts a typed code or a pasted invite message and returns just the room code. */
+internal fun extractRoomCode(input: String): String {
+    val upper = input.uppercase()
+    val compact = upper.filter { it.isLetterOrDigit() }
+    if (compact.length <= LISTEN_TOGETHER_ROOM_CODE_LENGTH) return compact
+    roomCodeAfterLabel.find(upper)?.let { return it.groupValues[1] }
+    standaloneRoomCode.findAll(upper).lastOrNull { m -> m.value.any { it.isDigit() } }?.let { return it.value }
+    return compact.take(LISTEN_TOGETHER_ROOM_CODE_LENGTH)
 }
