@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.6.9.0] - 2026-10-13
+
+### Changed
+- **Performance and UI Improvements**: General performance optimizations and user interface improvements.
+
 ## [2.6.8.0] - 2026-10-04
 
 ### Changed

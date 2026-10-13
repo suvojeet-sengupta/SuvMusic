@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "versionName": "2.6.9.0",
+      "versionCode": 48,
+      "date": "October 13, 2026",
+      "description": "• Performance and UI Improvements: General performance optimizations and user interface improvements.",
+      "isMajorUpdate": false
+    },
+    {
       "versionName": "2.6.8.0",
       "versionCode": 47,
       "date": "October 4, 2026",
