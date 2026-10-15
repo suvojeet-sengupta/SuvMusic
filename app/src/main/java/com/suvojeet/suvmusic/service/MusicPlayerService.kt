@@ -161,6 +161,10 @@ class MusicPlayerService : MediaLibraryService() {
     @Volatile
     private var wasPlayingBeforeSuppression: Boolean = false
 
+    // Watches a transient focus loss; if it turns out to be a call that outlasts
+    // CALL_RESUME_WINDOW_MS, playback is stopped instead of resuming when it ends.
+    private var callResumeWindowJob: kotlinx.coroutines.Job? = null
+
     private var audioSinkKickstartDone = false
     
     // Audio AR & Effects state
@@ -584,8 +588,16 @@ class MusicPlayerService : MediaLibraryService() {
                             "MusicPlayerService",
                             "Suppression started (reason=$playbackSuppressionReason). wasPlayingBeforeSuppression=$wasPlayingBeforeSuppression",
                         )
+                        if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS &&
+                            wasPlayingBeforeSuppression
+                        ) {
+                            startCallResumeWindow()
+                        }
                         return
                     }
+
+                    callResumeWindowJob?.cancel()
+                    callResumeWindowJob = null
 
                     // Suppression cleared. Only resume if playback was actually running
                     // when suppression started AND the user has auto-resume enabled.
@@ -1924,7 +1936,40 @@ class MusicPlayerService : MediaLibraryService() {
         )
     }
 
+    private fun isInCall(): Boolean {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return audioManager.mode != AudioManager.MODE_NORMAL
+    }
+
+    /**
+     * Music pauses for a call and resumes when it ends — but only if the call was short.
+     * After [CALL_RESUME_WINDOW_MS] in a call the session is treated as over: playback is
+     * stopped so it doesn't blare back on long after the user stopped expecting it.
+     * Non-call focus holders (assistants, other apps) keep Media3's normal resume.
+     */
+    private fun startCallResumeWindow() {
+        callResumeWindowJob?.cancel()
+        callResumeWindowJob = serviceScope.launch {
+            var sawCall = isInCall()
+            val steps = (CALL_RESUME_WINDOW_MS / CALL_STATE_POLL_MS).toInt()
+            repeat(steps) {
+                delay(CALL_STATE_POLL_MS)
+                if (isInCall()) sawCall = true
+            }
+            val player = mediaLibrarySession?.player ?: return@launch
+            val stillSuppressed = player.playbackSuppressionReason ==
+                Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+            if (stillSuppressed && sawCall) {
+                android.util.Log.d("MusicPlayerService", "Call outlasted resume window — stopping playback.")
+                wasPlayingBeforeSuppression = false
+                player.pause()
+            }
+        }
+    }
+
     companion object {
         private const val NOTIFICATION_ID_SLEEP_TIMER = 1002
+        private const val CALL_RESUME_WINDOW_MS = 2 * 60 * 1000L
+        private const val CALL_STATE_POLL_MS = 5_000L
     }
 }
