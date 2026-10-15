@@ -285,47 +285,23 @@ fun ModernQueueView(
                 QueueFilterChips(dominantColors = dominantColors, contentColor = contentColor)
             }
 
-            // Compose's LazyList requires unique keys. The queue can legitimately
-            // contain the same song twice (manual "Add to queue" of a track that
-            // is already enqueued, repeat-one transitions, autoplay echoes), so we
-            // disambiguate duplicates by their *occurrence index* within the list
-            // rather than by their absolute queue position. The previous
-            // "${currentIndex + 1 + idx}_${s.id}" scheme made the key change every
-            // time `currentIndex` advanced (every track transition) and every time
-            // a row was reordered — which destroyed the row's composable slot
-            // mid-gesture. That cancelled the in-flight pointerInput drag
-            // coroutine and reset the row's offsetY, so the drag handle worked
-            // for exactly one row and then went dead, and the whole list visibly
-            // snapped on each track change.
-            val keyedUpNext = remember(upNextSongs) {
-                val seen = HashMap<String, Int>(upNextSongs.size)
-                upNextSongs.map { song ->
+            // One list for history, current and up-next, keyed by occurrence so a row
+            // keeps its slot (and its in-flight drag) when it crosses the current track.
+            val keyedQueue = remember(queue) {
+                val seen = HashMap<String, Int>(queue.size)
+                queue.map { song ->
                     val occ = seen.getOrDefault(song.id, 0)
                     seen[song.id] = occ + 1
                     song to "${song.id}#$occ"
                 }
             }
-
-            // Already-played songs (everything before the current track), shown dimmed
-            // above the current item — YouTube-Music-style history. Keyed by occurrence
-            // like keyedUpNext so duplicates don't collide.
-            val keyedHistory = remember(queue, currentIndex) {
-                val end = currentIndex.coerceIn(0, queue.size)
-                val seen = HashMap<String, Int>(end)
-                (0 until end).map { idx ->
-                    val song = queue[idx]
-                    val occ = seen.getOrDefault(song.id, 0)
-                    seen[song.id] = occ + 1
-                    Triple(song, idx, "hist_${song.id}#$occ")
-                }
-            }
+            val hasHistory = currentIndex > 0 && keyedQueue.isNotEmpty()
             val historyContentColor = contentColor.copy(alpha = 0.55f)
             val historySecondaryColor = secondaryContentColor.copy(alpha = 0.75f)
 
-            // Open with the current track pinned at the top; history sits above it (scroll
-            // up to reveal). Re-centers on track change, matching YouTube Music.
-            LaunchedEffect(currentSong?.id, keyedHistory.size) {
-                listState.scrollToItem(if (keyedHistory.isNotEmpty()) keyedHistory.size + 1 else 0)
+            LaunchedEffect(currentSong?.id, queue.isNotEmpty()) {
+                val target = currentIndex.coerceAtLeast(0) + if (hasHistory) 1 else 0
+                listState.scrollToItem(target)
             }
 
             LazyColumn(
@@ -333,7 +309,7 @@ fun ModernQueueView(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                if (keyedHistory.isNotEmpty()) {
+                if (hasHistory) {
                     item(key = "history_label", contentType = "label") {
                         Text(
                             text = "Previously played",
@@ -342,44 +318,21 @@ fun ModernQueueView(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
-                    itemsIndexed(
-                        keyedHistory,
-                        key = { _, t -> t.third },
-                        contentType = { _, _ -> "queue_item" }
-                    ) { _, (song, histIndex, _) ->
-                        ModernQueueListItem(
-                            song = song,
-                            isCurrent = false,
-                            isPlaying = false,
-                            isSelected = selectedQueueIndices.contains(histIndex),
-                            isSelectionMode = isSelectionMode,
-                            onClick = { if (isSelectionMode) onToggleSelection(histIndex) else onSongClick(histIndex) },
-                            onLongPressEnterSelection = { onToggleSelection(histIndex) },
-                            onMoreClick = { onMoreClick(song) },
-                            onDragMove = { from, to -> onMoveItem(from, to) },
-                            itemIndex = histIndex,
-                            dragRange = 0 until currentIndex,
-                            dominantColors = dominantColors,
-                            isDarkTheme = isDarkTheme,
-                            contentColor = historyContentColor,
-                            secondaryContentColor = historySecondaryColor
-                        )
-                    }
                 }
 
-                if (currentSong != null) {
+                if (keyedQueue.isEmpty() && currentSong != null) {
                     item(key = "current_${currentSong.id}", contentType = "queue_item") {
                         ModernQueueListItem(
                             song = currentSong,
                             isCurrent = true,
                             isPlaying = isPlaying,
-                            isSelected = selectedQueueIndices.contains(currentIndex),
+                            isSelected = false,
                             isSelectionMode = isSelectionMode,
-                            onClick = { if (isSelectionMode) onToggleSelection(currentIndex) else onPlayPause() },
-                            onLongPressEnterSelection = { onToggleSelection(currentIndex) },
+                            onClick = onPlayPause,
+                            onLongPressEnterSelection = {},
                             onMoreClick = { onMoreClick(currentSong) },
-                            onDragMove = { from, to -> onMoveItem(from, to) },
-                            itemIndex = currentIndex,
+                            onDragMove = { _, _ -> },
+                            itemIndex = 0,
                             dominantColors = dominantColors,
                             isDarkTheme = isDarkTheme,
                             contentColor = contentColor,
@@ -388,86 +341,82 @@ fun ModernQueueView(
                     }
                 }
 
-                if (upNextSongs.isNotEmpty()) {
-                    itemsIndexed(
-                        keyedUpNext,
-                        key = { _, pair -> pair.second },
-                        contentType = { _, _ -> "queue_item" }
-                    ) { indexInList, (song, _) ->
-                        val actualIndex = currentIndex + 1 + indexInList
-                        // Swipe a row towards the start (left in LTR) to remove it from
-                        // the queue. Only up-next rows are removable — history and the
-                        // current track keep their existing interactions.
-                        val latestIndex by androidx.compose.runtime.rememberUpdatedState(actualIndex)
-                        val latestOnRemove by androidx.compose.runtime.rememberUpdatedState(onRemoveItems)
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { it != SwipeToDismissBoxValue.StartToEnd }
-                        )
-                        LaunchedEffect(dismissState.currentValue) {
-                            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                                latestOnRemove(listOf(latestIndex))
-                                kotlinx.coroutines.delay(350)
-                                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                            }
+                itemsIndexed(
+                    keyedQueue,
+                    key = { _, pair -> pair.second },
+                    contentType = { _, _ -> "queue_item" }
+                ) { index, (song, _) ->
+                    val isCurrentRow = index == currentIndex
+                    val isHistoryRow = index < currentIndex
+                    val latestIndex by androidx.compose.runtime.rememberUpdatedState(index)
+                    val latestOnRemove by androidx.compose.runtime.rememberUpdatedState(onRemoveItems)
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { it != SwipeToDismissBoxValue.StartToEnd }
+                    )
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            latestOnRemove(listOf(latestIndex))
+                            kotlinx.coroutines.delay(350)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         }
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {
-                                // Rows are transparent over the dynamic background, so
-                                // only draw the delete affordance mid-swipe.
-                                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
-                                    // Match the row's own inset and radius so this reads as the
-                                    // row turning red rather than a hard-edged bar behind it,
-                                    // and keep the tile opaque — blending errorContainer into
-                                    // the art-derived backdrop muddies it in dark mode and
-                                    // washes it out in light.
-                                    val armed = dismissState.targetValue ==
-                                        SwipeToDismissBoxValue.EndToStart
-                                    val iconScale by animateFloatAsState(
-                                        targetValue = if (armed) 1.1f else 0.85f,
-                                        label = "SwipeDeleteIconScale"
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(
-                                                horizontal = QueueRowHorizontalInset,
-                                                vertical = QueueRowVerticalInset
-                                            )
-                                            .clip(QueueRowShape)
-                                            .background(MaterialTheme.colorScheme.errorContainer)
-                                            .padding(horizontal = 20.dp),
-                                        contentAlignment = Alignment.CenterEnd
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = "Remove from queue",
-                                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                                            modifier = Modifier.scale(iconScale)
+                    }
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        enableDismissFromEndToStart = !isCurrentRow,
+                        backgroundContent = {
+                            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                                val armed = dismissState.targetValue ==
+                                    SwipeToDismissBoxValue.EndToStart
+                                val iconScale by animateFloatAsState(
+                                    targetValue = if (armed) 1.1f else 0.85f,
+                                    label = "SwipeDeleteIconScale"
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(
+                                            horizontal = QueueRowHorizontalInset,
+                                            vertical = QueueRowVerticalInset
                                         )
-                                    }
+                                        .clip(QueueRowShape)
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = "Remove from queue",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.scale(iconScale)
+                                    )
                                 }
                             }
-                        ) {
-                            ModernQueueListItem(
-                                song = song,
-                                isCurrent = false,
-                                isPlaying = false,
-                                isSelected = selectedQueueIndices.contains(actualIndex),
-                                isSelectionMode = isSelectionMode,
-                                onClick = { if (isSelectionMode) onToggleSelection(actualIndex) else onSongClick(actualIndex) },
-                                onLongPressEnterSelection = { onToggleSelection(actualIndex) },
-                                onMoreClick = { onMoreClick(song) },
-                                onDragMove = { from, to -> onMoveItem(from, to) },
-                                itemIndex = actualIndex,
-                                dragRange = (currentIndex + 1)..(currentIndex + upNextSongs.size),
-                                dominantColors = dominantColors,
-                                isDarkTheme = isDarkTheme,
-                                contentColor = contentColor,
-                                secondaryContentColor = secondaryContentColor
-                            )
                         }
+                    ) {
+                        ModernQueueListItem(
+                            song = song,
+                            isCurrent = isCurrentRow,
+                            isPlaying = isCurrentRow && isPlaying,
+                            isSelected = selectedQueueIndices.contains(index),
+                            isSelectionMode = isSelectionMode,
+                            onClick = {
+                                when {
+                                    isSelectionMode -> onToggleSelection(index)
+                                    isCurrentRow -> onPlayPause()
+                                    else -> onSongClick(index)
+                                }
+                            },
+                            onLongPressEnterSelection = { onToggleSelection(index) },
+                            onMoreClick = { onMoreClick(song) },
+                            onDragMove = { from, to -> onMoveItem(from, to) },
+                            itemIndex = index,
+                            dragRange = keyedQueue.indices,
+                            dominantColors = dominantColors,
+                            isDarkTheme = isDarkTheme,
+                            contentColor = if (isHistoryRow) historyContentColor else contentColor,
+                            secondaryContentColor = if (isHistoryRow) historySecondaryColor else secondaryContentColor
+                        )
                     }
                 }
 
@@ -633,9 +582,7 @@ private fun LazyItemScope.ModernQueueListItem(
             )
         }
         
-        // Drag Handle (Shown only in selection mode or by default on the right if NOT current)
-        if (!isCurrent) {
-            // Improved handle visibility with better contrast for both light and dark modes
+        if (!dragRange.isEmpty()) {
             Box(
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
