@@ -11,11 +11,15 @@ import com.suvojeet.suvmusic.core.domain.repository.LibraryRepository
 import com.suvojeet.suvmusic.data.repository.YouTubeRepository
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.util.PlaylistExportHelper
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.net.URLDecoder
 import java.util.UUID
 import javax.inject.Inject
@@ -75,6 +79,9 @@ class PlaylistViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow(PlaylistUiState())
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
+
+    private var localReorderJob: Job? = null
+    private val remoteReorderMutex = Mutex()
     
     val batchProgress = downloadRepository.batchProgress
 
@@ -117,6 +124,7 @@ class PlaylistViewModel @Inject constructor(
         if (playlistId.startsWith("local_") || playlistId == "LM" || playlistId == "CACHED_ALL") {
             viewModelScope.launch {
                 libraryRepository.getCachedPlaylistSongsFlow(playlistId).collect { songs ->
+                    if (localReorderJob?.isActive == true) return@collect
                     if (songs == _uiState.value.originalSongs) return@collect
 
                     _uiState.update { state ->
@@ -523,34 +531,36 @@ class PlaylistViewModel @Inject constructor(
             )
         }
         
+        val isLocalId = playlistId.startsWith("local_") || playlistId == "LM"
+        if (isLocalId) {
+            persistLocalOrder(songs)
+            return
+        }
+
+        // Fair mutex taken before the first suspension keeps the per-step moves in drag order.
         viewModelScope.launch {
-            val isLocal = libraryRepository.getPlaylistById(playlistId) != null || playlistId == "LM"
-            if (isLocal) {
-                // Local reorder - just replace the whole list in DB
-                libraryRepository.replacePlaylistSongs(playlistId, songs)
-                return@launch
-            }
-
-            // Remote (YouTube) playlist reorder
-            if (!sessionManager.isLoggedIn()) {
-                // Not logged in, can't sync. Keep in-memory change.
-                return@launch
-            }
-
-            val setVideoId = movedSong.setVideoId
-            
-            if (setVideoId != null) {
-                // Determine predecessor
-                // if toIndex == 0, predecessor is null (move to top)
-                // else predecessor is the song at toIndex - 1 (in the NEW list)
-                val predecessorId = if (toIndex > 0) songs[toIndex - 1].setVideoId else null
-                
-                val success = youTubeRepository.moveSongInPlaylist(playlistId, setVideoId, predecessorId)
-                if (!success) {
-                    // Revert UI on failure (don't call loadPlaylist which shows loader)
-                    // Optionally show a message
+            remoteReorderMutex.withLock {
+                if (libraryRepository.getPlaylistById(playlistId) != null) {
+                    persistLocalOrder(songs)
+                    return@withLock
                 }
+                if (!sessionManager.isLoggedIn()) return@withLock
+
+                val setVideoId = movedSong.setVideoId ?: return@withLock
+                val predecessorId = if (toIndex > 0) songs[toIndex - 1].setVideoId else null
+                youTubeRepository.moveSongInPlaylist(playlistId, setVideoId, predecessorId)
             }
+        }
+    }
+
+    // A drag fires one reorder per row crossed; writing each step lets the DB flow
+    // echo stale intermediate orders back into the list mid-drag, so only the
+    // settled order is written.
+    private fun persistLocalOrder(songs: List<Song>) {
+        localReorderJob?.cancel()
+        localReorderJob = viewModelScope.launch {
+            delay(600)
+            libraryRepository.replacePlaylistSongs(playlistId, songs)
         }
     }
 

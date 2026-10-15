@@ -45,6 +45,7 @@ import com.suvojeet.suvmusic.util.dpadFocusable
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
@@ -484,6 +485,7 @@ private fun LazyItemScope.ModernQueueListItem(
 ) {
     var offsetY by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
+    var rowHeightPx by remember { mutableStateOf(0) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val rowShape = QueueRowShape
@@ -517,6 +519,7 @@ private fun LazyItemScope.ModernQueueListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .onSizeChanged { rowHeightPx = it.height }
             .padding(
                 horizontal = QueueRowHorizontalInset,
                 vertical = QueueRowVerticalInset
@@ -606,24 +609,10 @@ private fun LazyItemScope.ModernQueueListItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                // Match the playlist screen's threshold
-                                // (~64dp ≈ row height incl. padding) so the
-                                // row that was dragged into the dropping
-                                // slot ends up exactly under the user's
-                                // finger after the swap. The previous 56dp
-                                // value caused a visible ~8dp jump on each
-                                // step because the LazyColumn snapped the
-                                // item to its new layout position which is
-                                // a few dp lower than where translationY
-                                // had reset to.
-                                //
-                                // Track the working index locally so a fast
-                                // drag that crosses several rows in one
-                                // callback uses fresh indices for each
-                                // move instead of repeatedly hitting the
-                                // (now-stale) `currentIndexState` value
-                                // captured at the start of this dispatch.
-                                val threshold = with(density) { 64.dp.toPx() }
+                                // Step by the measured row height so the swapped row lands under
+                                // the finger; a fixed guess left a visible jump on every step.
+                                val threshold = rowHeightPx.takeIf { it > 0 }?.toFloat()
+                                    ?: with(density) { 64.dp.toPx() }
                                 var workingIndex = currentIndexState
                                 while (offsetY > threshold) {
                                     if (workingIndex + 1 !in dragRangeState) {

@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -70,6 +71,7 @@ fun LazyItemScope.ReorderableSongRow(
 ) {
     var offsetY by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
+    var rowHeightPx by remember { mutableStateOf(0) }
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
 
@@ -104,6 +106,7 @@ fun LazyItemScope.ReorderableSongRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .onSizeChanged { rowHeightPx = it.height }
             .animateItem(
                 placementSpec = if (isDragging) null else androidx.compose.animation.core.spring(
                     stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
@@ -224,7 +227,8 @@ fun LazyItemScope.ReorderableSongRow(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetY += dragAmount.y
-                                val threshold = with(density) { 60.dp.toPx() }
+                                val threshold = rowHeightPx.takeIf { it > 0 }?.toFloat()
+                                    ?: with(density) { 68.dp.toPx() }
                                 // Use a `while` loop with a locally-tracked
                                 // working index so a fast drag that crosses
                                 // several rows in a single callback walks

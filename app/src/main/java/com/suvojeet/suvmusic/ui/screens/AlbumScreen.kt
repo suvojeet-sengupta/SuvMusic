@@ -248,7 +248,15 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    itemsIndexed(album.songs, key = { index, song -> "album_song_${index}_${song.id}" }) { index, song ->
+                    val albumSongKeys = remember(album.songs) {
+                        val seen = HashMap<String, Int>()
+                        album.songs.map { song ->
+                            val occ = seen.getOrDefault(song.id, 0)
+                            seen[song.id] = occ + 1
+                            "album_song_${song.id}#$occ"
+                        }
+                    }
+                    itemsIndexed(album.songs, key = { index, _ -> albumSongKeys[index] }) { index, song ->
                         val isSelected = uiState.selectedSongIds.contains(song.id)
                         ReorderableSongRow(
                             song = song,

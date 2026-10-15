@@ -75,9 +75,15 @@ fun PlaylistScreen(
     var playlistSearchQuery by rememberSaveable { mutableStateOf("") }
     val playlist = uiState.playlist
     val filteredSongs = remember(playlist?.songs, playlistSearchQuery) {
+        val seen = HashMap<String, Int>()
         playlist?.songs.orEmpty()
-            .mapIndexed { index, song -> index to song }
-            .filter { (_, song) ->
+            .mapIndexed { index, song ->
+                val base = song.setVideoId ?: song.id
+                val occ = seen.getOrDefault(base, 0)
+                seen[base] = occ + 1
+                Triple(index, song, "$base#$occ")
+            }
+            .filter { (_, song, _) ->
                 val query = playlistSearchQuery.trim()
                 query.isBlank() || song.title.contains(query, ignoreCase = true) ||
                     song.artist.contains(query, ignoreCase = true) ||
@@ -404,7 +410,7 @@ fun PlaylistScreen(
                 } else {
                     // Keep original indices so playback and editing still target
                     // the correct entry while search is active.
-                    items(filteredSongs, key = { it.first }) { (originalIndex, song) ->
+                    items(filteredSongs, key = { it.third }) { (originalIndex, song, _) ->
                         val isSelected = uiState.selectedSongIds.contains(song.setVideoId ?: song.id)
                         ReorderableSongRow(
                             song = song,
