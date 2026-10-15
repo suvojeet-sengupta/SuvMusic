@@ -249,7 +249,7 @@ fun PlayerScreen(
     val rotatingVinylAnimationEnabled by sessionManager.rotatingVinylAnimationEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
     val themeMode by sessionManager.themeModeFlow.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
-    val playerBackgroundStyle by sessionManager.playerBackgroundStyleFlow
+    val selectedBackgroundStyle by sessionManager.playerBackgroundStyleFlow
         .collectAsStateWithLifecycle(initialValue = PlayerBackgroundStyle.AMBIENT)
     val customBackgroundUri by sessionManager.playerBackgroundImageUriFlow
         .collectAsStateWithLifecycle(initialValue = null)
@@ -260,12 +260,17 @@ fun PlayerScreen(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
+    val playerBackgroundStyle = when (selectedBackgroundStyle) {
+        PlayerBackgroundStyle.AUTO -> if (isThemeDark) PlayerBackgroundStyle.BLACK else PlayerBackgroundStyle.LIGHT
+        else -> selectedBackgroundStyle
+    }
+
     // A pinned player backdrop overrides the app theme for everything drawn on top of
     // it — text colors, status-bar icons and the sheets' frosting all key off this.
     val baseDarkTheme = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.BLACK -> true
         PlayerBackgroundStyle.LIGHT -> false
-        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM -> isThemeDark
+        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM, PlayerBackgroundStyle.AUTO -> isThemeDark
     }
     val artLuminance = rememberDominantColors(song?.thumbnailUrl, baseDarkTheme).artLuminance
     val isAppInDarkTheme = if (
@@ -406,7 +411,7 @@ fun PlayerScreen(
     val playerBackgroundColor = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.BLACK -> Color.Black
         PlayerBackgroundStyle.LIGHT -> Color(0xFFF7F7F9)
-        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM -> if (isAppInDarkTheme) Color.Black else Color.White
+        PlayerBackgroundStyle.AMBIENT, PlayerBackgroundStyle.CUSTOM, PlayerBackgroundStyle.AUTO -> if (isAppInDarkTheme) Color.Black else Color.White
     }
     val playerBackdropArtwork = when (playerBackgroundStyle) {
         PlayerBackgroundStyle.CUSTOM -> customBackgroundUri ?: song?.thumbnailUrl
