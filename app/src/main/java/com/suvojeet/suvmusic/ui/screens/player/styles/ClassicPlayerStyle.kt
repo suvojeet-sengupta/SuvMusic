@@ -190,13 +190,13 @@ private fun ClassicPortraitContent(
                 onRecenter = onRecenterAr
             )
 
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 1f))
-            
+            Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(if (isVeryShort) 1.5f else 4f, fill = false)
-                    .then(if (!isVeryShort) Modifier.aspectRatio(1f) else Modifier),
+                    .weight(1f)
+                    .padding(vertical = if (isVeryShort) 4.dp else 0.dp),
                 contentAlignment = Alignment.Center
             ) {
                  AnimatedContent(
@@ -206,9 +206,7 @@ private fun ClassicPortraitContent(
                 ) { isVideo ->
                     if (isVideo) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
-                                .aspectRatio(1f),
+                            modifier = Modifier.aspectRatio(1f),
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
@@ -225,9 +223,7 @@ private fun ClassicPortraitContent(
                         }
                     } else {
                         Box(
-                            modifier = Modifier
-                                .fillMaxHeight(if (isVeryShort) 0.9f else 1f)
-                                .aspectRatio(1f),
+                            modifier = Modifier.aspectRatio(1f),
                             contentAlignment = Alignment.Center
                         ) {
                             AlbumArtwork(
@@ -242,7 +238,7 @@ private fun ClassicPortraitContent(
                 }
             }
             
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.2f else 1f))
+            Spacer(modifier = Modifier.height(if (isVeryShort) 8.dp else 20.dp))
 
             SongInfoSection(
                 song = song, isFavorite = playerState.isLiked, onFavoriteClick = actions.onToggleLike, isDisliked = playerState.isDisliked,
@@ -257,13 +253,13 @@ private fun ClassicPortraitContent(
                 onSwitchAudioSource = actions.onSwitchAudioSource
             )
 
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
+            Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
 
             SeekbarSection(combinedLoading, dominantColors, progressProvider, playbackInfo.isPlaying, actions, durationProvider, currentSeekbarStyle, onSeekbarStyleChange, sponsorSegments, isVeryShort)
 
             TimeLabelsWithQuality(currentPositionProvider = positionProvider, durationProvider = durationProvider, dominantColors = dominantColors)
 
-            Spacer(modifier = Modifier.weight(if (isVeryShort) 0.1f else 0.4f))
+            Spacer(modifier = Modifier.height(if (isVeryShort) 2.dp else 4.dp))
 
             ClassicPlaybackControls(
                 isPlaying = playerState.isPlaying, shuffleEnabled = playerState.shuffleEnabled, repeatMode = playerState.repeatMode,
@@ -271,14 +267,14 @@ private fun ClassicPortraitContent(
                 onRepeatToggle = actions.onRepeatToggle, dominantColors = dominantColors, compact = isShort
             )
 
-            Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 16.dp))
+            Spacer(modifier = Modifier.height(if (isVeryShort) 4.dp else 8.dp))
 
             ClassicBottomActions(
                 onLyricsClick = onShowLyrics, onCastClick = onShowDevices, onQueueClick = onShowQueue, onRelatedClick = onShowRelated, onDownloadClick = actions.onDownload,
                 downloadState = playerState.downloadState, dominantColors = dominantColors, isYouTubeSong = song?.source == com.suvojeet.suvmusic.core.model.SongSource.YOUTUBE,
                 isVideoMode = playerState.isVideoMode, onVideoToggle = actions.onToggleVideoMode, compact = isShort
             )
-            Spacer(modifier = Modifier.height(if (isVeryShort) 8.dp else 24.dp))
+            Spacer(modifier = Modifier.height(if (isVeryShort) 8.dp else 16.dp))
         }
     }
 }
