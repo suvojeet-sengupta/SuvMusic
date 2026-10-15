@@ -838,11 +838,11 @@ fun BoxScope.OverlaysContent(
             ModalBottomSheet(
                 onDismissRequest = { if (currentOverlay is PlayerOverlay.Queue) onOverlayChange(PlayerOverlay.None) },
                 sheetState = queueSheetState,
-                containerColor = if (isAppInDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface,
+                containerColor = if (isAppInDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else Color.White,
                 contentWindowInsets = { WindowInsets(0) },
                 // Hide the top "pull" handle once fully expanded so the queue reads as a
                 // standalone screen; it reappears when partially expanded for dragging.
-                dragHandle = if (isQueueExpanded) null else ({ BottomSheetDefaults.DragHandle() }),
+                dragHandle = if (isQueueExpanded) null else ({ BottomSheetDefaults.DragHandle(color = (if (isAppInDarkTheme) Color.White else Color.Black).copy(alpha = 0.4f)) }),
                 scrimColor = Color.Black.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 modifier = Modifier.fillMaxHeight()

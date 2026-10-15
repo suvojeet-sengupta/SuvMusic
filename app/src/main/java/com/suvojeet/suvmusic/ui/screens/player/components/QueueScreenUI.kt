@@ -109,7 +109,9 @@ fun ModernQueueView(
     var showQueueMenu by remember { mutableStateOf(false) }
     
     // Flat YouTube-Music-style queue: a single solid surface, no color-tint gradient.
-    val backgroundColor = if (isDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else MaterialTheme.colorScheme.surface
+    // Explicit colors rather than MaterialTheme: the player can be pinned light while the
+    // app theme is dark (or vice versa), and the queue must follow the player.
+    val backgroundColor = if (isDarkTheme) com.suvojeet.suvmusic.ui.theme.YtFlatBackground else Color.White
     val contentColor = if (isDarkTheme) Color.White else Color.Black
     val secondaryContentColor = contentColor.copy(alpha = 0.6f)
 
@@ -509,7 +511,7 @@ private fun LazyItemScope.ModernQueueListItem(
     // reads as a "lifted" tile in light mode (where shadow is faint against
     // a near-white background) instead of a translucent floating row.
     val rowBackground = when {
-        isDragging -> MaterialTheme.colorScheme.surfaceContainerHigh
+        isDragging -> if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFF0F0F2)
         isSelected -> dominantColors.accent.copy(alpha = 0.15f)
         isCurrent -> dominantColors.primary.copy(alpha = 0.22f)
         else -> Color.Transparent
