@@ -60,6 +60,14 @@ fun AlbumScreen(
     val uiState by viewModel.uiState.collectAsState()
     val batchProgress by viewModel.batchProgress.collectAsState()
     val album = uiState.album
+    val albumSongKeys = remember(album?.songs) {
+        val seen = HashMap<String, Int>()
+        album?.songs.orEmpty().map { song ->
+            val occ = seen.getOrDefault(song.id, 0)
+            seen[song.id] = occ + 1
+            "album_song_${song.id}#$occ"
+        }
+    }
     val focusedSongId = viewModel.selectedSongId ?: currentSong?.id
     val haptic = LocalHapticFeedback.current
 
@@ -248,15 +256,7 @@ fun AlbumScreen(
                     }
                     
                     // Song List
-                    val albumSongKeys = remember(album.songs) {
-                        val seen = HashMap<String, Int>()
-                        album.songs.map { song ->
-                            val occ = seen.getOrDefault(song.id, 0)
-                            seen[song.id] = occ + 1
-                            "album_song_${song.id}#$occ"
-                        }
-                    }
-                    itemsIndexed(album.songs, key = { index, _ -> albumSongKeys[index] }) { index, song ->
+                    itemsIndexed(album.songs, key = { index, song -> albumSongKeys.getOrNull(index) ?: "album_song_${index}_${song.id}" }) { index, song ->
                         val isSelected = uiState.selectedSongIds.contains(song.id)
                         ReorderableSongRow(
                             song = song,
