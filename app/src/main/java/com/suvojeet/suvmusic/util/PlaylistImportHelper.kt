@@ -88,47 +88,78 @@ class PlaylistImportHelper @Inject constructor(
     }
 
     /**
-     * Parse an .m3u file from a Uri.
+     * Parse an .m3u / .m3u8 file from a Uri.
+     *
+     * Each non-comment line is one entry. Metadata comes from the preceding `#EXTINF`
+     * (duration and "Artist - Title"), `#EXTART`, or failing that the file name. Entries
+     * that point at YouTube carry their video id so they resolve directly instead of
+     * through a fuzzy search.
      */
     suspend fun parseM3U(uri: Uri): Pair<String, List<ImportTrack>> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<ImportTrack>()
-        var playlistName = uri.lastPathSegment?.substringBeforeLast(".") ?: "M3U Import"
-        
+        var playlistName = uri.lastPathSegment
+            ?.substringAfterLast('/')
+            ?.substringBeforeLast(".")
+            ?.takeIf { it.isNotBlank() }
+            ?: "M3U Import"
+
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                    var line: String?
+                BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
                     var currentTitle: String? = null
                     var currentArtist: String? = null
-                    
-                    while (reader.readLine().also { line = it } != null) {
-                        val trimmed = line!!.trim()
-                        if (trimmed.startsWith("#EXTINF:")) {
-                            // Parse #EXTINF:duration,Artist - Title
-                            // Or #EXTINF:duration,Title
-                            val info = trimmed.substringAfter("#EXTINF:")
-                            val commaIndex = info.indexOf(',')
-                            if (commaIndex != -1) {
-                                val metadata = info.substring(commaIndex + 1)
-                                if (metadata.contains(" - ")) {
-                                    currentArtist = metadata.substringBefore(" - ").trim()
-                                    currentTitle = metadata.substringAfter(" - ").trim()
-                                } else {
-                                    currentTitle = metadata.trim()
-                                    currentArtist = "Unknown Artist"
+                    var currentDurationMs = 0L
+
+                    reader.lineSequence().forEach { raw ->
+                        val trimmed = raw.removePrefix("\uFEFF").trim()
+                        when {
+                            trimmed.isEmpty() -> Unit
+                            trimmed.startsWith("#PLAYLIST:", ignoreCase = true) -> {
+                                trimmed.substringAfter(':').trim().takeIf { it.isNotBlank() }?.let { playlistName = it }
+                            }
+                            trimmed.startsWith("#EXTINF:", ignoreCase = true) -> {
+                                val info = trimmed.substring("#EXTINF:".length)
+                                val commaIndex = m3uInfoCommaIndex(info)
+                                val durationPart = (if (commaIndex >= 0) info.substring(0, commaIndex) else info)
+                                    .trim().substringBefore(' ')
+                                currentDurationMs = durationPart.toDoubleOrNull()
+                                    ?.takeIf { it > 0 }
+                                    ?.let { (it * 1000).toLong() } ?: 0L
+                                if (commaIndex >= 0) {
+                                    val (artist, title) = splitArtistTitle(info.substring(commaIndex + 1).trim())
+                                    currentArtist = artist
+                                    currentTitle = title
                                 }
                             }
-                        } else if (trimmed.isNotBlank() && !trimmed.startsWith("#")) {
-                            // This is a file path or URL
-                            // If we didn't get metadata from #EXTINF, use filename
-                            val title = currentTitle ?: trimmed.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.')
-                            val artist = currentArtist ?: "Unknown Artist"
-                            
-                            tracks.add(ImportTrack(title, artist))
-                            
-                            // Reset for next
-                            currentTitle = null
-                            currentArtist = null
+                            trimmed.startsWith("#EXTART:", ignoreCase = true) -> {
+                                currentArtist = trimmed.substringAfter(':').trim().takeIf { it.isNotBlank() }
+                            }
+                            trimmed.startsWith("#") -> Unit
+                            else -> {
+                                val videoId = youTubeVideoIdOf(trimmed)
+                                val (fileArtist, fileTitle) = if (currentTitle.isNullOrBlank() && videoId == null) {
+                                    splitArtistTitle(fileNameOf(trimmed))
+                                } else {
+                                    null to null
+                                }
+                                val title = currentTitle?.takeIf { it.isNotBlank() } ?: fileTitle.orEmpty()
+                                val artist = currentArtist?.takeIf { it.isNotBlank() } ?: fileArtist.orEmpty()
+
+                                if (title.isNotBlank() || videoId != null) {
+                                    tracks.add(
+                                        ImportTrack(
+                                            title = title.ifBlank { videoId.orEmpty() },
+                                            artist = artist,
+                                            durationMs = currentDurationMs,
+                                            sourceId = videoId
+                                        )
+                                    )
+                                }
+
+                                currentTitle = null
+                                currentArtist = null
+                                currentDurationMs = 0L
+                            }
                         }
                     }
                 }
@@ -136,8 +167,58 @@ class PlaylistImportHelper @Inject constructor(
         } catch (e: Exception) {
             Log.e("PlaylistImportHelper", "M3U parse failed", e)
         }
-        
+
         playlistName to tracks
+    }
+
+    /** The comma ending `#EXTINF` attributes, skipping commas inside quoted attribute values. */
+    private fun m3uInfoCommaIndex(info: String): Int {
+        var insideQuotes = false
+        info.forEachIndexed { index, c ->
+            when {
+                c == '"' -> insideQuotes = !insideQuotes
+                c == ',' && !insideQuotes -> return index
+            }
+        }
+        return -1
+    }
+
+    private fun splitArtistTitle(value: String): Pair<String?, String> {
+        val cleaned = value.trim()
+        val separator = listOf(" - ", " – ", " — ").firstOrNull { cleaned.contains(it) }
+            ?: return null to cleaned
+        val artist = cleaned.substringBefore(separator).trim()
+        val title = cleaned.substringAfter(separator).trim()
+        return if (artist.isBlank() || title.isBlank()) null to cleaned else artist to title
+    }
+
+    private fun fileNameOf(path: String): String {
+        val decoded = runCatching { Uri.decode(path) }.getOrDefault(path)
+        return decoded
+            .substringBefore('?')
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .substringBeforeLast('.')
+            .replace('_', ' ')
+            // Leading track numbers ("01 - ", "1. ", "07 ") but not titles like "22 Bahane"
+            .replace(Regex("^\\s*(?:\\d{1,3}\\s*[-.)]|0\\d)\\s+"), "")
+            .trim()
+    }
+
+    private fun youTubeVideoIdOf(entry: String): String? {
+        if (!entry.contains("youtube.com", ignoreCase = true) && !entry.contains("youtu.be", ignoreCase = true)) {
+            return null
+        }
+        val uri = runCatching { Uri.parse(entry) }.getOrNull() ?: return null
+        val id = uri.getQueryParameter("v")
+            ?: uri.pathSegments.let { segments ->
+                when {
+                    uri.host?.contains("youtu.be", ignoreCase = true) == true -> segments.firstOrNull()
+                    segments.size >= 2 && segments[0] in setOf("shorts", "embed", "live", "v") -> segments[1]
+                    else -> null
+                }
+            }
+        return id?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
     }
 
     /**

@@ -174,6 +174,38 @@ class YouTubeApiClient @Inject constructor(
     }
 
     /**
+     * Browse a page that is public (e.g. a shared playlist), signed when logged in and
+     * anonymous otherwise.
+     */
+    suspend fun fetchBrowseSignedIfAvailable(
+        browseId: String,
+        hl: String = YouTubeConfig.DEFAULT_HL,
+        gl: String = YouTubeConfig.DEFAULT_GL
+    ): String = withContext(Dispatchers.IO) {
+        val jsonBody = "{ ${contextJson(hl, gl)}, \"browseId\": \"$browseId\" }"
+        val request = okhttp3.Request.Builder()
+            .url("${YouTubeConfig.BASE_URL}/browse")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addYouTubeAuthHeaders(sessionManager.getCookies(), sessionManager.getAuthUserIndex(), visitorDataProvider.get())
+            .build()
+        executeForBody(request)
+    }
+
+    suspend fun fetchContinuationSignedIfAvailable(
+        continuationToken: String,
+        hl: String = YouTubeConfig.DEFAULT_HL,
+        gl: String = YouTubeConfig.DEFAULT_GL
+    ): String = withContext(Dispatchers.IO) {
+        val jsonBody = "{ \"continuation\": \"$continuationToken\", ${contextJson(hl, gl)} }"
+        val request = okhttp3.Request.Builder()
+            .url("${YouTubeConfig.BASE_URL}/browse?ctoken=$continuationToken&continuation=$continuationToken")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .addYouTubeAuthHeaders(sessionManager.getCookies(), sessionManager.getAuthUserIndex(), visitorDataProvider.get())
+            .build()
+        executeForBody(request)
+    }
+
+    /**
      * Fetch public YouTube Music API without authentication.
      * Used for charts, trending, and public browse content.
      * @param params Optional browse params token, for mood/genre categories that require one.

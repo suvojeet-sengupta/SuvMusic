@@ -488,7 +488,14 @@ class SpotifyImportHelper @Inject constructor(
      * (remix, live, acoustic, instrumental, cover, sped up …) are kept and must match on
      * both sides.
      */
-    suspend fun findMatchResult(title: String, artist: String, durationMs: Long = 0): MatchResult {
+    suspend fun findMatchResult(title: String, rawArtist: String, durationMs: Long = 0): MatchResult {
+        // A placeholder artist must never reach the search query, or it steers results
+        // towards whatever happens to be titled "… Unknown Artist".
+        val artist = rawArtist.trim().takeUnless {
+            it.equals("Unknown Artist", ignoreCase = true) ||
+                it.equals("<unknown>", ignoreCase = true) ||
+                it.equals("Unknown", ignoreCase = true)
+        }.orEmpty()
         val coreTitle = coreTitleOf(title)
         val featured = featuredArtistsOf(title)
         val primaryArtist = artist.substringBefore(",").trim()
@@ -577,6 +584,11 @@ class SpotifyImportHelper @Inject constructor(
                 durationDelta <= 30_000L -> 0.5
                 else -> 0.0
             }
+
+            // Without an artist, a same-titled song by someone else is the usual false
+            // match, so a known running time has to agree.
+            val durationContradicts = !hasKnownArtist && durationKnown && durationDelta > 30_000L
+            if (durationContradicts) return@mapNotNull null
 
             val accepted = if (strict) {
                 artistIsCompatible && titleScore >= 0.75

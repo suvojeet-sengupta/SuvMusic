@@ -183,14 +183,17 @@ class PlaylistImportService : Service() {
                         for (attempt in 0..MAX_TRANSIENT_RETRIES) {
                             ensureActive()
                             transient = false
-                            when {
-                                track.song != null -> match = track.song
-                                track.sourceId != null -> {
-                                    match = runCatching { youTubeRepository.getSongDetails(track.sourceId) }
-                                        .onFailure { transient = true }
-                                        .getOrNull()
-                                }
-                                else -> when (
+                            if (track.song != null) {
+                                match = track.song
+                            } else if (track.sourceId != null) {
+                                match = runCatching { youTubeRepository.getSongDetails(track.sourceId) }
+                                    .onFailure { transient = true }
+                                    .getOrNull()
+                            }
+                            // A dead or region-locked id still has usable title metadata.
+                            val canSearch = track.title.isNotBlank() && track.title != track.sourceId
+                            if (match == null && !transient && track.song == null && canSearch) {
+                                when (
                                     val result = spotifyImportHelper.findMatchResult(track.title, track.artist, track.durationMs)
                                 ) {
                                     is SpotifyImportHelper.MatchResult.Found -> match = result.song

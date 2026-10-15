@@ -281,7 +281,7 @@ class YouTubePlaylistService @Inject constructor(
     ): Boolean {
         try {
             val browseId = if (playlistId.startsWith("VL")) playlistId else "VL$playlistId"
-            val response = apiClient.fetchInternalApi(browseId)
+            val response = apiClient.fetchBrowseSignedIfAvailable(browseId)
             var playlist = parser.parsePlaylist(response, playlistId)
             if (playlist.songs.isEmpty()) return false
             emit(playlist)
@@ -296,7 +296,7 @@ class YouTubePlaylistService @Inject constructor(
             val maxPages = if (isAutoMix) 5 else 100
 
             while (continuationToken != null && pageCount < maxPages) {
-                val continuationResponse = apiClient.fetchInternalApiWithContinuation(continuationToken)
+                val continuationResponse = apiClient.fetchContinuationSignedIfAvailable(continuationToken)
                 if (continuationResponse.isEmpty()) break
                 val newSongs = parser.parseSongs(continuationResponse)
                 songs.addAll(newSongs)
