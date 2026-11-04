@@ -1,7 +1,8 @@
 {
-  "versionName": "2.6.8.0",
-  "versionCode": 47,
-  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.6.8.0/SuvMusic-v2.6.6.0.apk",
+  "versionName": "2.6.9.0",
+  "versionCode": 48,
+  "downloadUrl": "https://github.com/suvojeet-sengupta/SuvMusic/releases/download/v2.6.9.0/SuvMusic-v2.6.9.0.apk",
   "forceUpdate": false,
-  "size": "27.1 MB"
+  "size": "27.1 MB",
+  "sha256": "70bbbf749ba5ecdb6f8d5045f2a7324d185b6e39bcea766b421aaeb4d9c7398d"
 }
