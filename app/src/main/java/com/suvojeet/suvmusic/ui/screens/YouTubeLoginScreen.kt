@@ -6,12 +6,14 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,13 +22,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,9 +44,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.YouTubeCookieParser
 import kotlinx.coroutines.launch
 
 /**
@@ -54,9 +61,11 @@ import kotlinx.coroutines.launch
 fun YouTubeLoginScreen(
     sessionManager: SessionManager,
     onLoginSuccess: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    verifyAccount: suspend () -> Boolean = { true }
 ) {
     var isLoading by remember { mutableStateOf(true) }
+    var showCookieDialog by remember { mutableStateOf(false) }
     var currentUrl by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     
@@ -85,6 +94,9 @@ fun YouTubeLoginScreen(
                         contentDescription = "Back"
                     )
                 }
+            },
+            actions = {
+                TextButton(onClick = { showCookieDialog = true }) { Text("Use cookie") }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -257,9 +269,100 @@ fun YouTubeLoginScreen(
         }
     }
     
+    if (showCookieDialog) {
+        CookieLoginDialog(
+            sessionManager = sessionManager,
+            verifyAccount = verifyAccount,
+            onDismiss = { showCookieDialog = false },
+            onLoginSuccess = {
+                showCookieDialog = false
+                onLoginSuccess()
+            }
+        )
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             // Clean up if needed
         }
     }
+}
+
+@Composable
+private fun CookieLoginDialog(
+    sessionManager: SessionManager,
+    verifyAccount: suspend () -> Boolean,
+    onDismiss: () -> Unit,
+    onLoginSuccess: () -> Unit
+) {
+    var input by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var isVerifying by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = { if (!isVerifying) onDismiss() },
+        title = { Text("Sign in with cookie") },
+        text = {
+            Column {
+                Text(
+                    text = "Paste your music.youtube.com cookies as a Cookie header, cookies.txt, or JSON export. They give full access to your account, so only use your own.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = {
+                        input = it
+                        error = null
+                    },
+                    label = { Text("Cookies") },
+                    enabled = !isVerifying,
+                    isError = error != null,
+                    supportingText = error?.let { message -> { Text(message) } },
+                    maxLines = 6,
+                    keyboardOptions = KeyboardOptions(
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Password
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = input.isNotBlank() && !isVerifying,
+                onClick = {
+                    val cookies = YouTubeCookieParser.parse(input)
+                    if (cookies == null) {
+                        error = "No YouTube login cookie (SAPISID) found"
+                        return@TextButton
+                    }
+                    isVerifying = true
+                    scope.launch {
+                        val previousCookies = sessionManager.getCookies()
+                        val previousAuthUser = sessionManager.getAuthUserIndex()
+                        sessionManager.saveCookies(cookies)
+                        sessionManager.setAuthUserIndex(0)
+                        if (verifyAccount()) {
+                            onLoginSuccess()
+                            return@launch
+                        }
+                        if (previousCookies != null) {
+                            sessionManager.saveCookies(previousCookies)
+                            sessionManager.setAuthUserIndex(previousAuthUser)
+                        } else {
+                            sessionManager.clearCookies()
+                        }
+                        isVerifying = false
+                        error = "YouTube rejected these cookies, or you're offline"
+                    }
+                }
+            ) { Text(if (isVerifying) "Checking…" else "Sign in") }
+        },
+        dismissButton = {
+            TextButton(enabled = !isVerifying, onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }

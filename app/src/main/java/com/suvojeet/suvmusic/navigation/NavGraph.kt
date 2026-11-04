@@ -625,6 +625,7 @@ fun NavGraph(
                     scope.launch {
                         youTubeAccountService.fetchAccountInfo()?.let { account ->
                             if (account.email.isNotBlank()) {
+                verifyAccount = { youTubeAccountService.fetchAccountInfo() != null },
                                 sessionManager.saveCurrentAccountToHistory(
                                     account.name,
                                     account.email,
