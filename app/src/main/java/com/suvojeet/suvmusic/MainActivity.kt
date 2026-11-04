@@ -406,14 +406,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun enableMaxRefreshRate() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val modes = display?.supportedModes
-            val maxRefreshRate = modes?.maxByOrNull { it.refreshRate }?.refreshRate ?: return
-            val preferredMode = modes.find { it.refreshRate == maxRefreshRate } ?: return
-            
-            window.attributes = window.attributes.apply {
-                preferredDisplayModeId = preferredMode.modeId
-            }
+        @Suppress("DEPRECATION")
+        val currentDisplay = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay)
+            ?: return
+        val currentMode = currentDisplay.mode
+        // Some panels list their top rate at another resolution; stay on the current one.
+        val preferredMode = currentDisplay.supportedModes
+            .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
+            .maxByOrNull { it.refreshRate }
+            ?: return
+        window.attributes = window.attributes.apply {
+            preferredDisplayModeId = preferredMode.modeId
         }
     }
     

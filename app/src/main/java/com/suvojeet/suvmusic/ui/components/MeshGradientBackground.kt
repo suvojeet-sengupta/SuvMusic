@@ -29,7 +29,8 @@ fun MeshGradientBackground(
     dominantColors: DominantColors?, // Nullable to handle loading states gracefully
     modifier: Modifier = Modifier,
     speedMultiplier: Float = 1f,
-    backgroundColor: Color = MaterialTheme.colorScheme.background
+    backgroundColor: Color = MaterialTheme.colorScheme.background,
+    paused: () -> Boolean = { false }
 ) {
     // If no colors provided yet, just show default background or a simple placeholder
     val colors = dominantColors ?: DominantColors(
@@ -92,6 +93,10 @@ fun MeshGradientBackground(
         label = "y3"
     )
 
+    // Holds the last drawn blob positions. While paused the animated values go unread, so a
+    // scrolling list isn't also redrawing three full-screen gradients every frame.
+    val motion = remember { FloatArray(6) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -118,12 +123,20 @@ fun MeshGradientBackground(
                     val secondary = animatedSecondaryState.value
                     val accent = animatedAccentState.value
 
-                    val x1 = x1State.value
-                    val y1 = y1State.value
-                    val x2 = x2State.value
-                    val y2 = y2State.value
-                    val x3 = x3State.value
-                    val y3 = y3State.value
+                    if (!paused() || motion.all { it == 0f }) {
+                        motion[0] = x1State.value
+                        motion[1] = y1State.value
+                        motion[2] = x2State.value
+                        motion[3] = y2State.value
+                        motion[4] = x3State.value
+                        motion[5] = y3State.value
+                    }
+                    val x1 = motion[0]
+                    val y1 = motion[1]
+                    val x2 = motion[2]
+                    val y2 = motion[3]
+                    val x3 = motion[4]
+                    val y3 = motion[5]
 
                     // Blob 1: Primary
                     drawCircle(

@@ -33,7 +33,7 @@ fun Modifier.animateEnter(
     // the item stays in composition but resets if the item is disposed.
     // That's fine because we only want to skip replays for items that
     // scroll back, and LazyColumn keeps nearby items in composition.
-    val hasAnimated = remember { mutableStateOf(false) }
+    val hasAnimated = androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     if (hasAnimated.value) {
         // Already animated — render at full opacity, no translation.
@@ -68,6 +68,7 @@ fun Modifier.animateEnter(
                 )
             )
         }
+
 
         // Mark as animated once the longer animation finishes
         hasAnimated.value = true

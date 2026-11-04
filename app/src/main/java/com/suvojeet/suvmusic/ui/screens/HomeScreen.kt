@@ -12,6 +12,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -197,6 +198,7 @@ fun HomeScreen(
         // fluid mesh gradient background
         if (animatedBackgroundEnabled) {
             com.suvojeet.suvmusic.ui.components.MeshGradientBackground(
+                paused = { lazyListState.isScrollInProgress },
                 dominantColors = dominantColors
             )
         } else {
@@ -254,214 +256,175 @@ fun HomeScreen(
                         )
                     }
                 ) {
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        // Greeting & Profile Header
-                        if (uiState.homeSectionsVisibility.contains("greeting")) {
-                            item(key = "header", contentType = "header") {
-                                val glassCfg = com.suvojeet.suvmusic.ui.components.glass.rememberLiquidGlassConfig()
-                                if (glassCfg.enabled) {
-                                    // Frosted top bar to match the Liquid Glass nav bar.
-                                    com.suvojeet.suvmusic.ui.components.glass.GlassCard(
-                                        modifier = Modifier
-                                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-                                            .animateEnter(index = 0),
-                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
-                                    ) {
+                    CompositionLocalProvider(LocalIndication provides NoPressIndication) {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 140.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            // Greeting & Profile Header
+                            if (uiState.homeSectionsVisibility.contains("greeting")) {
+                                item(key = "header", contentType = "header") {
+                                    val glassCfg = com.suvojeet.suvmusic.ui.components.glass.rememberLiquidGlassConfig()
+                                    if (glassCfg.enabled) {
+                                        // Frosted top bar to match the Liquid Glass nav bar.
+                                        com.suvojeet.suvmusic.ui.components.glass.GlassCard(
+                                            modifier = Modifier
+                                                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
+                                                .animateEnter(index = 0),
+                                            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                                        ) {
+                                            ProfileHeader(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                avatarUrl = uiState.userAvatarUrl,
+                                                onHistoryClick = onHistoryClick,
+                                                onListenTogetherClick = onListenTogetherClick
+                                            )
+                                        }
+                                    } else {
                                         ProfileHeader(
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            modifier = Modifier
+                                                .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 4.dp)
+                                                .animateEnter(index = 0),
                                             avatarUrl = uiState.userAvatarUrl,
                                             onHistoryClick = onHistoryClick,
                                             onListenTogetherClick = onListenTogetherClick
                                         )
                                     }
-                                } else {
-                                    ProfileHeader(
-                                        modifier = Modifier
-                                            .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 4.dp)
-                                            .animateEnter(index = 0),
+                                }
+                            }
+
+                            // Mood Chips Section
+                            if (uiState.homeSectionsVisibility.contains("mood_chips")) {
+                                item(key = "mood_chips", contentType = "mood_chips") {
+                                    MoodChipsSection(
+                                        selectedMood = uiState.selectedMood,
+                                        loadingMood = uiState.loadingMood,
+                                        onMoodSelected = viewModel::onMoodSelected,
+                                        modifier = Modifier.animateEnter(index = 1)
+                                    )
+                                }
+                            }
+
+                            // Personalized "For You" Banner — shown when logged in
+                            if (uiState.isLoggedIn && uiState.homeSectionsVisibility.contains("for_you_banner")) {
+                                item(key = "for_you_banner", contentType = "for_you_banner") {
+                                    AnimatedVisibility(
+                                        visible = uiState.isForYouBannerVisible,
+                                        exit = fadeOut() + shrinkVertically()
+                                    ) {
+                                        ForYouBanner(
+                                            onStartRadio = onStartRadio,
+                                            onDismiss = viewModel::onDismissForYouBanner,
+                                            modifier = Modifier
+                                                .padding(horizontal = 16.dp)
+                                                .animateEnter(index = 2)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Recommended Artists (Last.fm)
+                            if (uiState.recommendedArtists.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
+                                item(key = "recommended_artists", contentType = "artists") {
+                                    RecommendedArtistsSection(
+                                        artists = uiState.recommendedArtists,
+                                        modifier = Modifier.animateEnter(index = 2)
+                                    )
+                                }
+                            }
+
+                            // Recommended Tracks (Last.fm)
+                            if (uiState.recommendedTracks.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
+                                item(key = "recommended_tracks", contentType = "tracks") {
+                                    RecommendedTracksSection(
+                                        tracks = uiState.recommendedTracks,
+                                        modifier = Modifier.animateEnter(index = 3)
+                                    )
+                                }
+                            }
+
+                            // Speed dial — YouTube-Music quick-access grid of top picks
+                            if (uiState.recommendations.isNotEmpty() && uiState.homeSectionsVisibility.contains("quick_picks")) {
+                                item(key = "speed_dial", contentType = "speed_dial") {
+                                    SpeedDialGrid(
+                                        songs = uiState.recommendations,
+                                        currentSong = currentSong,
+                                        userName = uiState.userName,
                                         avatarUrl = uiState.userAvatarUrl,
-                                        onHistoryClick = onHistoryClick,
-                                        onListenTogetherClick = onListenTogetherClick
+                                        onSongClick = onSongClick,
+                                        onSongLongClick = onSongMoreClickHandler,
+                                        onShuffleClick = viewModel::playRandomMix,
+                                        modifier = Modifier.animateEnter(index = 4)
                                     )
                                 }
                             }
-                        }
 
-                        // Mood Chips Section
-                        if (uiState.homeSectionsVisibility.contains("mood_chips")) {
-                            item(key = "mood_chips", contentType = "mood_chips") {
-                                MoodChipsSection(
-                                    selectedMood = uiState.selectedMood,
-                                    loadingMood = uiState.loadingMood,
-                                    onMoodSelected = viewModel::onMoodSelected,
-                                    modifier = Modifier.animateEnter(index = 1)
-                                )
-                            }
-                        }
-
-                        // Personalized "For You" Banner — shown when logged in
-                        if (uiState.isLoggedIn && uiState.homeSectionsVisibility.contains("for_you_banner")) {
-                            item(key = "for_you_banner", contentType = "for_you_banner") {
-                                AnimatedVisibility(
-                                    visible = uiState.isForYouBannerVisible,
-                                    exit = fadeOut() + shrinkVertically()
-                                ) {
-                                    ForYouBanner(
-                                        onStartRadio = onStartRadio,
-                                        onDismiss = viewModel::onDismissForYouBanner,
-                                        modifier = Modifier
-                                            .padding(horizontal = 16.dp)
-                                            .animateEnter(index = 2)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Recommended Artists (Last.fm)
-                        if (uiState.recommendedArtists.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
-                            item(key = "recommended_artists", contentType = "artists") {
-                                RecommendedArtistsSection(
-                                    artists = uiState.recommendedArtists,
-                                    modifier = Modifier.animateEnter(index = 2)
-                                )
-                            }
-                        }
-
-                        // Recommended Tracks (Last.fm)
-                        if (uiState.recommendedTracks.isNotEmpty() && uiState.homeSectionsVisibility.contains("recommendations")) {
-                            item(key = "recommended_tracks", contentType = "tracks") {
-                                RecommendedTracksSection(
-                                    tracks = uiState.recommendedTracks,
-                                    modifier = Modifier.animateEnter(index = 3)
-                                )
-                            }
-                        }
-
-                        // Speed dial — YouTube-Music quick-access grid of top picks
-                        if (uiState.recommendations.isNotEmpty() && uiState.homeSectionsVisibility.contains("quick_picks")) {
-                            item(key = "speed_dial", contentType = "speed_dial") {
-                                SpeedDialGrid(
-                                    songs = uiState.recommendations,
-                                    currentSong = currentSong,
-                                    userName = uiState.userName,
-                                    avatarUrl = uiState.userAvatarUrl,
-                                    onSongClick = onSongClick,
-                                    onSongLongClick = onSongMoreClickHandler,
-                                    onShuffleClick = viewModel::playRandomMix,
-                                    modifier = Modifier.animateEnter(index = 4)
-                                )
-                            }
-                        }
-
-                        // Sections Loop
-                        if (uiState.homeSectionsVisibility.contains("youtube_sections")) {
-                            itemsIndexed(
-                                items = uiState.filteredSections,
-                                key = { _, section -> section.title },
-                                contentType = { _, section -> section.type }
-                            ) { index, section ->
-                            val enterModifier = Modifier.animateEnter(index = index)
+                            // Sections Loop
+                            if (uiState.homeSectionsVisibility.contains("youtube_sections")) {
+                                itemsIndexed(
+                                    items = uiState.filteredSections,
+                                    key = { _, section -> section.title },
+                                    contentType = { _, section -> section.type }
+                                ) { index, section ->
+                                val enterModifier = sectionEnterModifier(index, lazyListState)
                             
-                            when (section.type) {
-                                HomeSectionType.LargeCardWithList -> {
-                                    com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier,
-                                    )
-                                }
-                                HomeSectionType.Grid -> {
-                                    com.suvojeet.suvmusic.ui.components.GridSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier,
-                                    )
-                                }
-                                HomeSectionType.VerticalList -> {
-                                    com.suvojeet.suvmusic.ui.components.VerticalListSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier,
-                                    )
-                                }
-                                HomeSectionType.HorizontalCarousel -> {
-                                    com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier,
-                                    )
-                                }
-                                HomeSectionType.CommunityCarousel -> {
-                                    com.suvojeet.suvmusic.ui.components.CommunityCarouselSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onStartRadio = onStartRadio,
-                                        onSavePlaylist = { playlist ->
-                                            com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved ${playlist.name} to Library")
-                                        },
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier
-                                    )
-                                }
-                                HomeSectionType.QuickPicks -> {
-                                    com.suvojeet.suvmusic.ui.components.QuickPicksSection(
-                                        section = section,
-                                        onSongClick = onSongClick,
-                                        onPlaylistClick = onPlaylistClick,
-                                        onAlbumClick = onAlbumClick,
-                                        onSongMoreClick = onSongMoreClickHandler,
-                                        modifier = enterModifier,
-                                    )
-                                }
-                                HomeSectionType.ExploreGrid -> {
-                                    com.suvojeet.suvmusic.ui.components.ExploreGridSection(
-                                        section = section,
-                                        onExploreItemClick = onExploreClick,
-                                        modifier = enterModifier
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
-                        if (uiState.personalizedSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("personalized")) {
-                            // Personalized section header
-                            item(key = "personalized_header", contentType = "personalized_header") {
-                                PersonalizedSectionHeader(
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .animateEnter(index = 0)
-                                )
-                            }
-
-                            itemsIndexed(
-                                items = uiState.personalizedSections,
-                                key = { _, section -> "personalized_${section.title}" },
-                                contentType = { _, section -> "personalized_${section.type}" }
-                            ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index)
-
                                 when (section.type) {
+                                    HomeSectionType.LargeCardWithList -> {
+                                        com.suvojeet.suvmusic.ui.components.LargeCardWithListSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = onSongMoreClickHandler,
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                    HomeSectionType.Grid -> {
+                                        com.suvojeet.suvmusic.ui.components.GridSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = onSongMoreClickHandler,
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                    HomeSectionType.VerticalList -> {
+                                        com.suvojeet.suvmusic.ui.components.VerticalListSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = onSongMoreClickHandler,
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                    HomeSectionType.HorizontalCarousel -> {
+                                        com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = onSongMoreClickHandler,
+                                            modifier = enterModifier,
+                                        )
+                                    }
+                                    HomeSectionType.CommunityCarousel -> {
+                                        com.suvojeet.suvmusic.ui.components.CommunityCarouselSection(
+                                            section = section,
+                                            onSongClick = onSongClick,
+                                            onPlaylistClick = onPlaylistClick,
+                                            onAlbumClick = onAlbumClick,
+                                            onStartRadio = onStartRadio,
+                                            onSavePlaylist = { playlist ->
+                                                com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Saved ${playlist.name} to Library")
+                                            },
+                                            onSongMoreClick = onSongMoreClickHandler,
+                                            modifier = enterModifier
+                                        )
+                                    }
                                     HomeSectionType.QuickPicks -> {
                                         com.suvojeet.suvmusic.ui.components.QuickPicksSection(
                                             section = section,
@@ -472,150 +435,191 @@ fun HomeScreen(
                                             modifier = enterModifier,
                                         )
                                     }
-                                    else -> {
-                                        // Personalized rows get the vinyl-disc treatment so
-                                        // they read distinctly from regular YouTube carousels.
-                                        com.suvojeet.suvmusic.ui.components.PersonalizedMixCarousel(
+                                    HomeSectionType.ExploreGrid -> {
+                                        com.suvojeet.suvmusic.ui.components.ExploreGridSection(
                                             section = section,
-                                            onSongClick = onSongClick,
-                                            onPlaylistClick = onPlaylistClick,
-                                            onAlbumClick = onAlbumClick,
-                                            onSongMoreClick = onSongMoreClickHandler,
-                                            modifier = enterModifier,
+                                            onExploreItemClick = onExploreClick,
+                                            modifier = enterModifier
                                         )
                                     }
                                 }
                             }
                         }
 
-                        // Genre-Based Discovery Sections ("Because you like Pop", "Your R&B Mix", etc.)
-                        if (uiState.genreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("genres")) {
-                            item(key = "genre_header", contentType = "genre_header") {
-                                SectionDividerHeader(
-                                    title = "Your Genres",
-                                    subtitle = "Because of your taste",
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .animateEnter(index = 0)
-                                )
-                            }
-
-                            itemsIndexed(
-                                items = uiState.genreSections,
-                                key = { _, section -> "genre_${section.title}" },
-                                contentType = { _, section -> "genre_${section.type}" }
-                            ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index)
-                                // Genre rows get a tinted ring + tag-chip header so each
-                                // "Because you like X" feels visually labeled by genre.
-                                com.suvojeet.suvmusic.ui.components.GenreCarousel(
-                                    section = section,
-                                    onSongClick = onSongClick,
-                                    onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    modifier = enterModifier,
-                                )
-                            }
-                        }
-
-                        // Context-Aware Sections (time-of-day, listening patterns)
-                        if (uiState.contextSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("contextual")) {
-                            itemsIndexed(
-                                items = uiState.contextSections,
-                                key = { _, section -> "context_${section.title}" },
-                                contentType = { _, section -> "context_${section.type}" }
-                            ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index)
-                                com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
-                                    section = section,
-                                    onSongClick = onSongClick,
-                                    onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    onSongMoreClick = onSongMoreClickHandler,
-                                    modifier = enterModifier,
-                                )
-                            }
-                        }
-
-                        // Detected Mood Banner
-                        uiState.detectedMood?.let { mood ->
-                            if (uiState.selectedMood == null && uiState.homeSectionsVisibility.contains("mood_banner")) {
-                                item(key = "mood_banner", contentType = "mood_banner") {
-                                    DetectedMoodBanner(
-                                        mood = mood,
-                                        onExplore = { viewModel.onMoodSelected(mood) },
+                        // Personalized Recommendation Sections (artist mixes, discovery, forgotten favorites, time-based)
+                            if (uiState.personalizedSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("personalized")) {
+                                // Personalized section header
+                                item(key = "personalized_header", contentType = "personalized_header") {
+                                    PersonalizedSectionHeader(
                                         modifier = Modifier
                                             .padding(horizontal = 16.dp)
-                                            .animateEnter(index = 12)
+                                            .animateEnter(index = 0)
+                                    )
+                                }
+
+                                itemsIndexed(
+                                    items = uiState.personalizedSections,
+                                    key = { _, section -> "personalized_${section.title}" },
+                                    contentType = { _, section -> "personalized_${section.type}" }
+                                ) { index, section ->
+                                    val enterModifier = sectionEnterModifier(index, lazyListState)
+
+                                    when (section.type) {
+                                        HomeSectionType.QuickPicks -> {
+                                            com.suvojeet.suvmusic.ui.components.QuickPicksSection(
+                                                section = section,
+                                                onSongClick = onSongClick,
+                                                onPlaylistClick = onPlaylistClick,
+                                                onAlbumClick = onAlbumClick,
+                                                onSongMoreClick = onSongMoreClickHandler,
+                                                modifier = enterModifier,
+                                            )
+                                        }
+                                        else -> {
+                                            // Personalized rows get the vinyl-disc treatment so
+                                            // they read distinctly from regular YouTube carousels.
+                                            com.suvojeet.suvmusic.ui.components.PersonalizedMixCarousel(
+                                                section = section,
+                                                onSongClick = onSongClick,
+                                                onPlaylistClick = onPlaylistClick,
+                                                onAlbumClick = onAlbumClick,
+                                                onSongMoreClick = onSongMoreClickHandler,
+                                                modifier = enterModifier,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Genre-Based Discovery Sections ("Because you like Pop", "Your R&B Mix", etc.)
+                            if (uiState.genreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("genres")) {
+                                item(key = "genre_header", contentType = "genre_header") {
+                                    SectionDividerHeader(
+                                        title = "Your Genres",
+                                        subtitle = "Because of your taste",
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp)
+                                            .animateEnter(index = 0)
+                                    )
+                                }
+
+                                itemsIndexed(
+                                    items = uiState.genreSections,
+                                    key = { _, section -> "genre_${section.title}" },
+                                    contentType = { _, section -> "genre_${section.type}" }
+                                ) { index, section ->
+                                    val enterModifier = sectionEnterModifier(index, lazyListState)
+                                    // Genre rows get a tinted ring + tag-chip header so each
+                                    // "Because you like X" feels visually labeled by genre.
+                                    com.suvojeet.suvmusic.ui.components.GenreCarousel(
+                                        section = section,
+                                        onSongClick = onSongClick,
+                                        onPlaylistClick = onPlaylistClick,
+                                        onAlbumClick = onAlbumClick,
+                                        modifier = enterModifier,
                                     )
                                 }
                             }
-                        }
 
-                        // Create a Mix Section (Quick Access)
-                        if (uiState.homeSectionsVisibility.contains("create_mix")) {
-                            item(key = "create_mix", contentType = "create_mix") {
-                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                     HomeSectionHeader(title = "More specifically")
-                                     Spacer(modifier = Modifier.height(12.dp))
-                                     CreateMixCard(onClick = onCreateMixClick)
-                                 }
+                            // Context-Aware Sections (time-of-day, listening patterns)
+                            if (uiState.contextSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("contextual")) {
+                                itemsIndexed(
+                                    items = uiState.contextSections,
+                                    key = { _, section -> "context_${section.title}" },
+                                    contentType = { _, section -> "context_${section.type}" }
+                                ) { index, section ->
+                                    val enterModifier = sectionEnterModifier(index, lazyListState)
+                                    com.suvojeet.suvmusic.ui.components.HorizontalCarouselSection(
+                                        section = section,
+                                        onSongClick = onSongClick,
+                                        onPlaylistClick = onPlaylistClick,
+                                        onAlbumClick = onAlbumClick,
+                                        onSongMoreClick = onSongMoreClickHandler,
+                                        modifier = enterModifier,
+                                    )
+                                }
                             }
-                        }
 
-                        // ──────────────────────────────────────────────────
-                        // "More for you" — Scroll-loaded sections (varied styles)
-                        // ──────────────────────────────────────────────────
-                        if (uiState.moreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("youtube_sections")) {
-                            itemsIndexed(
-                                items = uiState.moreSections,
-                                key = { _, section -> "more_${section.title}" },
-                                contentType = { _, section -> "more_${section.type}" }
-                            ) { index, section ->
-                                val enterModifier = Modifier.animateEnter(index = index)
-                                RenderHomeSection(
-                                    section = section,
-                                    onSongClick = onSongClick,
-                                    onPlaylistClick = onPlaylistClick,
-                                    onAlbumClick = onAlbumClick,
-                                    onExploreClick = onExploreClick,
-                                    onStartRadio = onStartRadio,
-                                    onSongMoreClick = onSongMoreClickHandler,
-                                    modifier = enterModifier
-                                )
+                            // Detected Mood Banner
+                            uiState.detectedMood?.let { mood ->
+                                if (uiState.selectedMood == null && uiState.homeSectionsVisibility.contains("mood_banner")) {
+                                    item(key = "mood_banner", contentType = "mood_banner") {
+                                        DetectedMoodBanner(
+                                            mood = mood,
+                                            onExplore = { viewModel.onMoodSelected(mood) },
+                                            modifier = Modifier
+                                                .padding(horizontal = 16.dp)
+                                                .animateEnter(index = 12)
+                                        )
+                                    }
+                                }
                             }
-                        }
 
-                        // Loading More Indicator
-                        if (uiState.isLoadingMore) {
-                            item(key = "loading_more", contentType = "loading_more") {
-                                LoadingMoreIndicator(
+                            // Create a Mix Section (Quick Access)
+                            if (uiState.homeSectionsVisibility.contains("create_mix")) {
+                                item(key = "create_mix", contentType = "create_mix") {
+                                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                         HomeSectionHeader(title = "More specifically")
+                                         Spacer(modifier = Modifier.height(12.dp))
+                                         CreateMixCard(onClick = onCreateMixClick)
+                                     }
+                                }
+                            }
+
+                            // ──────────────────────────────────────────────────
+                            // "More for you" — Scroll-loaded sections (varied styles)
+                            // ──────────────────────────────────────────────────
+                            if (uiState.moreSections.isNotEmpty() && uiState.homeSectionsVisibility.contains("youtube_sections")) {
+                                itemsIndexed(
+                                    items = uiState.moreSections,
+                                    key = { _, section -> "more_${section.title}" },
+                                    contentType = { _, section -> "more_${section.type}" }
+                                ) { index, section ->
+                                    val enterModifier = sectionEnterModifier(index, lazyListState)
+                                    RenderHomeSection(
+                                        section = section,
+                                        onSongClick = onSongClick,
+                                        onPlaylistClick = onPlaylistClick,
+                                        onAlbumClick = onAlbumClick,
+                                        onExploreClick = onExploreClick,
+                                        onStartRadio = onStartRadio,
+                                        onSongMoreClick = onSongMoreClickHandler,
+                                        modifier = enterModifier
+                                    )
+                                }
+                            }
+
+                            // Loading More Indicator
+                            if (uiState.isLoadingMore) {
+                                item(key = "loading_more", contentType = "loading_more") {
+                                    LoadingMoreIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp)
+                                    )
+                                }
+                            }
+
+                            // End-of-Feed or App Footer
+                            if (uiState.hasReachedEnd) {
+                                item(key = "end_of_feed", contentType = "end_of_feed") {
+                                    EndOfFeedCard(
+                                        onStartRadio = onStartRadio,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+
+                            // App Footer
+                            item(key = "footer", contentType = "footer") {
+                                AppFooter(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 32.dp)
+                                        .padding(vertical = 24.dp)
                                 )
                             }
-                        }
-
-                        // End-of-Feed or App Footer
-                        if (uiState.hasReachedEnd) {
-                            item(key = "end_of_feed", contentType = "end_of_feed") {
-                                EndOfFeedCard(
-                                    onStartRadio = onStartRadio,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-
-                        // App Footer
-                        item(key = "footer", contentType = "footer") {
-                            AppFooter(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 24.dp)
-                            )
                         }
                     }
                 }
@@ -1120,6 +1124,26 @@ private fun SpeedDialTile(
             )
         }
     }
+}
+
+/** Cards give their own press feedback, so a ripple would only flash their rectangular bounds. */
+private object NoPressIndication : androidx.compose.foundation.IndicationNodeFactory {
+    override fun create(
+        interactionSource: androidx.compose.foundation.interaction.InteractionSource
+    ): androidx.compose.ui.node.DelegatableNode = object : Modifier.Node() {}
+
+    override fun hashCode(): Int = -1
+
+    override fun equals(other: Any?): Boolean = other === this
+}
+
+/** Fades in sections on screen at load, but not ones scrolled to later, which would lag a fling. */
+@Composable
+private fun sectionEnterModifier(index: Int, listState: androidx.compose.foundation.lazy.LazyListState): Modifier {
+    val animate = remember {
+        androidx.compose.runtime.snapshots.Snapshot.withoutReadObservation { listState.firstVisibleItemIndex == 0 }
+    }
+    return if (animate) Modifier.animateEnter(index = index) else Modifier
 }
 
 // Unused local cards removed for cleanliness
