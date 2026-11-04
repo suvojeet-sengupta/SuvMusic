@@ -54,6 +54,13 @@ import com.suvojeet.suvmusic.navigation.Destination
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import kotlin.random.Random
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
+import com.suvojeet.suvmusic.ui.components.liquid.LiquidGlassBottomBar
+import com.suvojeet.suvmusic.ui.components.liquid.LiquidGlassBottomBarItem
+import com.suvojeet.suvmusic.ui.components.liquid.isLiquidGlassSupported
+import top.yukonga.miuix.kmp.blur.Backdrop
 
 /**
  * iOS 26-style Liquid Glass Bottom Navigation Bar.
@@ -77,7 +84,8 @@ fun ExpressiveBottomNav(
     alpha: Float = 0f,
     iosLiquidGlassEnabled: Boolean = false,
     backgroundColor: Color? = null,
-    iosNavBarBlur: Float = 60f
+    iosNavBarBlur: Float = 60f,
+    glassBackdrop: Backdrop? = null
 ) {
     val navItems = listOf(
         BottomNavItem(Destination.Home, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_home), Icons.Outlined.Home, Icons.Filled.Home),
@@ -86,7 +94,17 @@ fun ExpressiveBottomNav(
         BottomNavItem(Destination.Settings, androidx.compose.ui.res.stringResource(com.suvojeet.suvmusic.R.string.nav_settings), Icons.Outlined.Settings, Icons.Filled.Settings)
     )
 
-    if (iosLiquidGlassEnabled) {
+    if (glassBackdrop != null && isLiquidGlassSupported) {
+        MiuixLiquidGlassNavBar(
+            navItems = navItems,
+            currentDestination = currentDestination,
+            onDestinationChange = onDestinationChange,
+            onReClick = onReClick,
+            backdrop = glassBackdrop,
+            modifier = modifier,
+            alpha = alpha
+        )
+    } else if (iosLiquidGlassEnabled) {
         LiquidGlassNavBar(
             navItems = navItems,
             currentDestination = currentDestination,
@@ -106,6 +124,64 @@ fun ExpressiveBottomNav(
             alpha = alpha,
             backgroundColor = backgroundColor
         )
+    }
+}
+
+@Composable
+private fun MiuixLiquidGlassNavBar(
+    navItems: List<BottomNavItem>,
+    currentDestination: Destination,
+    onDestinationChange: (Destination) -> Unit,
+    onReClick: (Destination) -> Unit,
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier,
+    alpha: Float = 0f
+) {
+    val selectedIndex = navItems
+        .indexOfFirst { it.destination == currentDestination }
+        .coerceAtLeast(0)
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomPadding = if (bottomInset != 0.dp) bottomInset + 8.dp else 20.dp
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = bottomPadding),
+        contentAlignment = Alignment.Center
+    ) {
+        LiquidGlassBottomBar(
+            selectedIndex = selectedIndex,
+            onSelected = { index -> onDestinationChange(navItems[index].destination) },
+            onReselected = { index -> onReClick(navItems[index].destination) },
+            backdrop = backdrop,
+            tabsCount = navItems.size,
+            transparency = alpha,
+            modifier = Modifier.pointerInput(Unit) { detectTapGestures { } }
+        ) { activateTab ->
+            navItems.forEachIndexed { index, item ->
+                val isSelected = currentDestination == item.destination
+                LiquidGlassBottomBarItem(
+                    selected = isSelected,
+                    onClick = { activateTab(index) },
+                    modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.label,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = item.label,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Visible
+                    )
+                }
+            }
+        }
     }
 }
 
