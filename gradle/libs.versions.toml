@@ -9,7 +9,7 @@ splashscreen = "1.2.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2026.03.01"
-material3 = "1.5.0-alpha16"
+material3 = "1.5.0-beta02"
 media3 = "1.10.1"
 mediarouter = "1.8.1"
 newpipeExtractor = "v0.26.4"
@@ -39,6 +39,7 @@ coroutines = "1.9.0"
 detekt = "1.23.8"
 ktlint = "1.7.1"
 adaptive = "1.3.0-alpha10"
+miuix = "0.9.4"
 
 # KMP migration (Phase 0)
 composeMultiplatform = "1.10.0"
@@ -105,6 +106,9 @@ androidx-compose-animation-core = { group = "androidx.compose.animation", name =
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+
+kotlin-metadata-jvm = { group = "org.jetbrains.kotlin", name = "kotlin-metadata-jvm", version = "2.4.20" }
+miuix-blur = { group = "top.yukonga.miuix.kmp", name = "miuix-blur-android", version.ref = "miuix" }
 
 # Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }

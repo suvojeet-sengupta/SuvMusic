@@ -254,6 +254,7 @@ class SessionManager @Inject constructor(
 
         private val FORCE_MAX_REFRESH_RATE_KEY = booleanPreferencesKey("force_max_refresh_rate")
         private val IOS_LIQUID_GLASS_ENABLED_KEY = booleanPreferencesKey("ios_liquid_glass_enabled")
+        private val LIQUID_GLASS_NAV_BAR_KEY = booleanPreferencesKey("liquid_glass_nav_bar")
         private val PLAYER_BACKGROUND_IMAGE_URI_KEY = stringPreferencesKey("player_background_image_uri")
         private val PLAYER_GLASS_BLUR_KEY = floatPreferencesKey("player_glass_blur")
         private val PLAYER_GLASS_INTENSITY_KEY = floatPreferencesKey("player_glass_intensity")
@@ -1692,6 +1693,16 @@ class SessionManager @Inject constructor(
     suspend fun setIosLiquidGlassEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IOS_LIQUID_GLASS_ENABLED_KEY] = enabled
+        }
+    }
+
+    val liquidGlassNavBarFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[LIQUID_GLASS_NAV_BAR_KEY] ?: false
+    }
+
+    suspend fun setLiquidGlassNavBar(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[LIQUID_GLASS_NAV_BAR_KEY] = enabled
         }
     }
 

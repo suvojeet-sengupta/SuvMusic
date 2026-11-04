@@ -64,6 +64,7 @@ import kotlin.random.Random
 import androidx.compose.material3.HorizontalDivider as M3HorizontalDivider
 import com.suvojeet.suvmusic.ui.components.SettingsCard
 import com.suvojeet.suvmusic.ui.components.glass.MAX_BLUR_RADIUS
+import com.suvojeet.suvmusic.ui.components.liquid.isLiquidGlassSupported
 
 /**
  * Customization settings screen for player appearance with Material 3 Expressive design.
@@ -115,6 +116,8 @@ fun CustomizationScreen(
         .collectAsStateWithLifecycle(initialValue = 1.25f)
     val albumArtPulseRadius by sessionManager.albumArtPulseRadiusFlow
         .collectAsStateWithLifecycle(initialValue = 1.35f)
+    val liquidGlassNavBar by sessionManager.liquidGlassNavBarFlow
+        .collectAsStateWithLifecycle(initialValue = false)
 
     val miniPlayerAlpha = uiState.miniPlayerAlpha
     val navBarAlpha = uiState.navBarAlpha
@@ -292,6 +295,32 @@ fun CustomizationScreen(
                         title = "Home Screen Layout",
                         subtitle = "Configure visible sections",
                         onClick = { showHomeSectionsSheet = true }
+                    )
+
+                    HorizontalDivider()
+
+                    CustomizationNavigationItem(
+                        icon = Icons.Default.Layers,
+                        title = "Liquid Glass Navigation Bar",
+                        subtitle = when {
+                            !isLiquidGlassSupported -> "Needs Android 13 or newer"
+                            liquidGlassNavBar -> "Floating glass bar"
+                            else -> "Off"
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = liquidGlassNavBar && isLiquidGlassSupported,
+                                enabled = isLiquidGlassSupported,
+                                onCheckedChange = { enabled ->
+                                    scope.launch { sessionManager.setLiquidGlassNavBar(enabled) }
+                                }
+                            )
+                        },
+                        onClick = {
+                            if (isLiquidGlassSupported) {
+                                scope.launch { sessionManager.setLiquidGlassNavBar(!liquidGlassNavBar) }
+                            }
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
