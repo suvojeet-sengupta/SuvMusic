@@ -251,6 +251,15 @@ class YouTubeJsonParser @Inject constructor() {
 
     // --- Continuation Token Extraction ---
 
+    /** Pages only this shelf, ignoring section-level tokens such as a playlist's Suggestions. */
+    fun extractShelfContinuationToken(shelf: JSONObject): String? =
+        extractContinuationItemToken(shelf.optJSONArray("contents"))
+            ?: shelf.optJSONArray("continuations")
+                ?.optJSONObject(0)
+                ?.optJSONObject("nextContinuationData")
+                ?.optString("continuation")
+                ?.takeIf { it.isNotEmpty() }
+
     fun extractContinuationToken(json: JSONObject): String? {
         try {
             // 1. Direct continuation contents (used for next pages)

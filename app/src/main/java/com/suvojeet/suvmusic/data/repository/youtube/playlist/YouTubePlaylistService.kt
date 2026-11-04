@@ -296,8 +296,8 @@ class YouTubePlaylistService @Inject constructor(
             emit(playlist)
 
             val songs = playlist.songs.toMutableList()
-            var currentJson = JSONObject(response)
-            var continuationToken = jsonParser.extractContinuationToken(currentJson)
+            var currentJson: JSONObject
+            var continuationToken = parser.playlistContinuationToken(response)
             var pageCount = 0
             // Auto-mixes are effectively endless; paging them out stalls Android Auto's
             // callback window, so they get a much shorter leash.
@@ -542,6 +542,7 @@ class YouTubePlaylistService @Inject constructor(
      * the add-to-playlist sheet showed nothing to add to.
      */
     suspend fun getUserEditablePlaylists(): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+        repairUnknownPlaylistNames()
         val playlists = mutableListOf<PlaylistDisplayItem>()
 
         try {
@@ -565,6 +566,21 @@ class YouTubePlaylistService @Inject constructor(
         }
 
         playlists.distinctBy { it.id }
+    }
+
+    /** Heals rows saved before the parser could read titles from two-column responses. */
+    suspend fun repairUnknownPlaylistNames() = withContext(Dispatchers.IO) {
+        if (!networkMonitor.isCurrentlyConnected()) return@withContext
+        val saved = libraryRepository.getSavedPlaylists().firstOrNull().orEmpty()
+        saved.filter { it.name == UNKNOWN_PLAYLIST_TITLE && !isLocalPlaylist(it.id) }
+            .take(MAX_NAME_REPAIRS)
+            .forEach { item ->
+                runCatching {
+                    val browseId = if (item.id.startsWith("VL")) item.id else "VL${item.id}"
+                    val title = parser.parsePlaylist(apiClient.fetchBrowseSignedIfAvailable(browseId), item.id).title
+                    if (title != UNKNOWN_PLAYLIST_TITLE) libraryRepository.updatePlaylistName(item.id, title)
+                }
+            }
     }
 
     private fun isEditableYouTubePlaylist(item: PlaylistDisplayItem, userName: String): Boolean {
@@ -683,6 +699,8 @@ class YouTubePlaylistService @Inject constructor(
         playlistAction("ACTION_REMOVE_VIDEO") { put("setVideoId", setVideoId) }
 
     companion object {
+        private const val UNKNOWN_PLAYLIST_TITLE = "Unknown Playlist"
+        private const val MAX_NAME_REPAIRS = 20
         private const val TAG = "YouTubePlaylistService"
 
         const val LIKED_ID = "LM"

@@ -342,6 +342,7 @@ class LibraryViewModel @Inject constructor(
      * library. Now a section that fails simply keeps whatever it was already showing.
      */
     private suspend fun fetchRemoteLibrary() = kotlinx.coroutines.coroutineScope {
+        launch { runCatching { youTubeRepository.repairUnknownPlaylistNames() } }
         val playlists = async { runCatching { youTubeRepository.getUserPlaylists(autoSave = false) }.getOrNull() }
         val artists = async { runCatching { youTubeRepository.getLibraryArtists() }.getOrNull() }
         val albums = async { runCatching { youTubeRepository.getLibraryAlbums() }.getOrNull() }

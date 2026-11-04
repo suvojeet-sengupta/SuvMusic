@@ -883,12 +883,16 @@ fun GridPlaylistCard(
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Text(
-            text = "Playlist • ${playlist.uploaderName}", // Placeholder logic
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.suvojeet.suvmusic.ui.components.PlaylistSourceTag(playlist.id, modifier = Modifier.padding(end = 6.dp))
+            Text(
+                text = playlist.uploaderName.ifBlank { "Playlist" },
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -975,11 +979,14 @@ fun PlaylistsList(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(playlist.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        text = if (playlist.songCount > 0) "Playlist • ${playlist.songCount} songs" else "Playlist",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        com.suvojeet.suvmusic.ui.components.PlaylistSourceTag(playlist.id, modifier = Modifier.padding(end = 6.dp))
+                        Text(
+                            text = if (playlist.songCount > 0) "${playlist.songCount} songs" else "Playlist",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 IconButton(onClick = { onMoreClick(playlist) }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onSurfaceVariant)

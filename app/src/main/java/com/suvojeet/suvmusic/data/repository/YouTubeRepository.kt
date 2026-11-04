@@ -233,6 +233,8 @@ class YouTubeRepository @Inject constructor(
     // Playlists
     // ============================================================================================
 
+    suspend fun repairUnknownPlaylistNames() = playlistService.repairUnknownPlaylistNames()
+
     suspend fun getUserPlaylists(autoSave: Boolean = true, includeUnsynced: Boolean = false): List<PlaylistDisplayItem> =
         playlistService.getUserPlaylists(autoSave, includeUnsynced)
 

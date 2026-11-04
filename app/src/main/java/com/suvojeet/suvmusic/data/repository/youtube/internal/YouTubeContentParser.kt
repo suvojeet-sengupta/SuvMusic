@@ -140,14 +140,14 @@ class YouTubeContentParser @Inject constructor(
             ?: header?.optJSONObject("title")?.optString("simpleText")
             ?: "Unknown Playlist"
 
-        val subtitle = json.getRunText(header?.optJSONObject("subtitle"))
-            ?: json.getRunText(header?.optJSONObject("straplineTextOne"))
+        val strapline = json.getRunText(header?.optJSONObject("straplineTextOne"))
+        val subtitle = json.getRunText(header?.optJSONObject("subtitle")) ?: strapline
         val author = subtitle?.split("•")?.firstOrNull()
             ?.replace("Playlist", "")
             ?.replace("Auto playlist", "YouTube Music")
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.lowercase() != "unknown" }
-            ?: ""
+            ?: strapline?.trim().orEmpty()
 
         val description = json.getRunText(header?.optJSONObject("description"))
             ?: json.getRunText(header?.optJSONObject("descriptionText"))
@@ -160,10 +160,15 @@ class YouTubeContentParser @Inject constructor(
                 ?.optJSONArray("thumbnails")
                 ?.let { arr -> arr.optJSONObject(arr.length() - 1)?.optString("url") }
 
-        val songs = parseSongs(response)
+        // The response also carries a Suggestions shelf of songs that aren't in the playlist.
+        val songs = playlistShelf(root)
+            ?.let { parseSongs(it.toString(), includeTwoRowItems = false) }
+            ?: parseSongs(response)
         if (thumbnailUrl == null && songs.isNotEmpty()) {
             thumbnailUrl = songs.firstOrNull()?.thumbnailUrl
         }
+
+        val songCountText = json.getRunText(header?.optJSONObject("secondSubtitle")) ?: subtitle
 
         return Playlist(
             id = playlistId,
@@ -172,8 +177,20 @@ class YouTubeContentParser @Inject constructor(
             thumbnailUrl = thumbnailUrl,
             songs = songs,
             description = description,
-            totalSongCount = subtitle?.let { extractSongCount(it) }
+            totalSongCount = songCountText?.let { extractSongCount(it) }
         )
+    }
+
+    fun playlistContinuationToken(response: String): String? {
+        val root = JSONObject(response)
+        val shelf = playlistShelf(root)
+        return if (shelf != null) json.extractShelfContinuationToken(shelf) else json.extractContinuationToken(root)
+    }
+
+    private fun playlistShelf(root: JSONObject): JSONObject? {
+        val shelves = mutableListOf<JSONObject>()
+        json.findAllObjects(root, "musicPlaylistShelfRenderer", shelves)
+        return shelves.firstOrNull()
     }
 
     fun parsePlaylistDisplayItems(response: String): List<PlaylistDisplayItem> {
@@ -946,7 +963,12 @@ class YouTubeContentParser @Inject constructor(
 
     /** Playlist and album pages ship the same header under four different renderer names. */
     private fun playlistHeader(root: JSONObject): JSONObject? {
-        val header = root.optJSONObject("header") ?: return null
+        // Two-column responses keep the header inside the tab content, not at the root.
+        val header = root.optJSONObject("header") ?: run {
+            val headers = mutableListOf<JSONObject>()
+            json.findAllObjects(root, "musicResponsiveHeaderRenderer", headers)
+            return headers.firstOrNull()
+        }
         return header.optJSONObject("musicDetailHeaderRenderer")
             ?: header.optJSONObject("musicResponsiveHeaderRenderer")
             ?: header.optJSONObject("musicEditablePlaylistDetailHeaderRenderer")

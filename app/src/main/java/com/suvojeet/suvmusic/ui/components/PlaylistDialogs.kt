@@ -314,18 +314,17 @@ fun AddToPlaylistSheet(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                        PlaylistSourceTag(playlist.id, modifier = Modifier.padding(end = 6.dp))
                                         Text(
-                                            text = playlist.uploaderName,
+                                            text = listOfNotNull(
+                                                playlist.uploaderName.takeIf { it.isNotBlank() },
+                                                "${playlist.songCount} songs".takeIf { playlist.songCount > 0 }
+                                            ).joinToString(" • "),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
-                                        if (playlist.songCount > 0) {
-                                            Text(
-                                                text = " • ${playlist.songCount} songs",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
                                     }
                                 }
                                 
