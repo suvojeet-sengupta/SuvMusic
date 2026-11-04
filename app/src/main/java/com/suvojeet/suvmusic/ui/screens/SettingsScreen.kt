@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwitchAccount
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -107,6 +108,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     onLoginClick: () -> Unit = {},
+    onYouTubeSyncClick: () -> Unit = {},
     onPlaybackClick: () -> Unit = {},
     onAppearanceClick: () -> Unit = {},
     onCustomizationClick: () -> Unit = {},
@@ -296,6 +298,12 @@ fun SettingsScreen(
                         HorizontalDivider()
 
                         // Account Actions
+                        SettingsActionItem(
+                            icon = Icons.Default.Sync,
+                            title = "YouTube Music sync",
+                            onClick = onYouTubeSyncClick
+                        )
+
                         SettingsActionItem(
                             icon = Icons.Default.SwitchAccount,
                             title = "Switch Account",

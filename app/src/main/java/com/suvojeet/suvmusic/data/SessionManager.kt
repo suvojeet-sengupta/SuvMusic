@@ -211,6 +211,9 @@ class SessionManager @Inject constructor(
         private val SCROBBLE_DELAY_SECONDS_KEY = intPreferencesKey("scrobble_delay_seconds")
         private val PREFERRED_LANGUAGES_KEY = stringSetPreferencesKey("preferred_languages")
         private val YOUTUBE_HISTORY_SYNC_ENABLED_KEY = booleanPreferencesKey("youtube_history_sync_enabled")
+        private val YOUTUBE_PULL_ONLY_KEY = booleanPreferencesKey("youtube_pull_only")
+        private val YOUTUBE_SYNC_EXCLUDED_PLAYLISTS_KEY = stringSetPreferencesKey("youtube_sync_excluded_playlists")
+        const val YOUTUBE_PULL_ONLY_MESSAGE = "Can't change YouTube Music while \"YouTube Music to app only\" is on"
         private val IGNORE_AUDIO_FOCUS_DURING_CALLS_KEY = booleanPreferencesKey("ignore_audio_focus_during_calls")
         private val INCOGNITO_MODE_KEY = booleanPreferencesKey("incognito_mode_enabled")
         private val AUTORESUME_AFTER_CALL_KEY = booleanPreferencesKey("autoresume_after_call")
@@ -1394,6 +1397,39 @@ class SessionManager @Inject constructor(
     suspend fun setYouTubeHistorySyncEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[YOUTUBE_HISTORY_SYNC_ENABLED_KEY] = enabled
+        }
+    }
+
+    // --- YouTube Music Playlist Sync ---
+
+    val youtubePullOnlyFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[YOUTUBE_PULL_ONLY_KEY] ?: false
+    }
+
+    suspend fun isYouTubePullOnlyEnabled(): Boolean = youtubePullOnlyFlow.first()
+
+    suspend fun setYouTubePullOnlyEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[YOUTUBE_PULL_ONLY_KEY] = enabled
+        }
+    }
+
+    suspend fun canPushToYouTube(): Boolean = isLoggedIn() && !isYouTubePullOnlyEnabled()
+
+    suspend fun youTubeWriteError(fallback: String): String =
+        if (isYouTubePullOnlyEnabled()) YOUTUBE_PULL_ONLY_MESSAGE else fallback
+
+    val youtubeSyncExcludedPlaylistsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[YOUTUBE_SYNC_EXCLUDED_PLAYLISTS_KEY] ?: emptySet()
+    }
+
+    suspend fun getYouTubeSyncExcludedPlaylists(): Set<String> = youtubeSyncExcludedPlaylistsFlow.first()
+
+    suspend fun setYouTubePlaylistSynced(playlistId: String, synced: Boolean) {
+        context.dataStore.edit { preferences ->
+            val excluded = preferences[YOUTUBE_SYNC_EXCLUDED_PLAYLISTS_KEY] ?: emptySet()
+            preferences[YOUTUBE_SYNC_EXCLUDED_PLAYLISTS_KEY] =
+                YouTubeSyncSelection.updated(excluded, playlistId, synced)
         }
     }
 

@@ -825,7 +825,7 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
 
-                if (syncWithYt && sessionManager.isLoggedIn()) {
+                if (syncWithYt && sessionManager.canPushToYouTube()) {
                     val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                     val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
                     

@@ -48,6 +48,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -358,7 +359,14 @@ fun CreatePlaylistDialog(
     if (isVisible) {
         var title by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val sessionManager = remember { com.suvojeet.suvmusic.data.SessionManager(context) }
+        val pullOnly by sessionManager.youtubePullOnlyFlow.collectAsState(initial = false)
+        val canSync = isLoggedIn && !pullOnly
         var syncWithYt by remember { mutableStateOf(isLoggedIn) }
+        androidx.compose.runtime.LaunchedEffect(canSync) {
+            if (!canSync) syncWithYt = false
+        }
         var isPrivate by remember { mutableStateOf(true) }
         
         val onSurface = MaterialTheme.colorScheme.onSurface
@@ -500,7 +508,7 @@ fun CreatePlaylistDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable(enabled = !isCreating && isLoggedIn) { syncWithYt = !syncWithYt }
+                                        .clickable(enabled = !isCreating && canSync) { syncWithYt = !syncWithYt }
                                         .padding(20.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
@@ -509,6 +517,8 @@ fun CreatePlaylistDialog(
                                         Text("Sync with YouTube Music", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = onSurface)
                                         if (!isLoggedIn) {
                                             Text("Login required", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        } else if (pullOnly) {
+                                            Text("Off while \"YouTube Music to app only\" is on", style = MaterialTheme.typography.bodySmall, color = secondaryText)
                                         } else {
                                             Text("Changes will reflect on YT Music", style = MaterialTheme.typography.bodySmall, color = secondaryText)
                                         }
@@ -516,7 +526,7 @@ fun CreatePlaylistDialog(
                                     androidx.compose.material3.Switch(
                                         checked = syncWithYt,
                                         onCheckedChange = { syncWithYt = it },
-                                        enabled = !isCreating && isLoggedIn
+                                        enabled = !isCreating && canSync
                                     )
                                 }
                                 

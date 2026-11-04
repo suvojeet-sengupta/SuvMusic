@@ -29,6 +29,7 @@ import com.suvojeet.suvmusic.ui.viewmodel.RingtoneViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SearchViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SettingsViewModel
 import com.suvojeet.suvmusic.ui.viewmodel.SongInfoViewModel
+import com.suvojeet.suvmusic.ui.viewmodel.YouTubeSyncViewModel
 import com.suvojeet.suvmusic.updater.UpdateViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -170,6 +171,7 @@ private val sqlDelightModule: Module = module {
 private val viewModelsModule: Module = module {
     // chunk 1c.1
     viewModelOf(::AboutViewModel)
+    viewModelOf(::YouTubeSyncViewModel)
     viewModelOf(::PickMusicViewModel)
     viewModelOf(::SongInfoViewModel)
     viewModelOf(::ExploreViewModel)

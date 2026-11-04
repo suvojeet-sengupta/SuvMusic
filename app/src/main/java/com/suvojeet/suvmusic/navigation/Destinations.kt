@@ -34,6 +34,8 @@ sealed class Destination {
     @Serializable
     data object YouTubeLogin : Destination()
     @Serializable
+    data object YouTubeSync : Destination()
+    @Serializable
     data object LastFmLogin : Destination()
     @Serializable
     data object About : Destination()

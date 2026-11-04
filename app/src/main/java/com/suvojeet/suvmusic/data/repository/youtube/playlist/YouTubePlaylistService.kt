@@ -5,6 +5,7 @@ import com.suvojeet.suvmusic.core.model.Playlist
 import com.suvojeet.suvmusic.core.model.PlaylistDisplayItem
 import com.suvojeet.suvmusic.core.model.Song
 import com.suvojeet.suvmusic.data.SessionManager
+import com.suvojeet.suvmusic.data.YouTubeSyncSelection
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeApiClient
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeContentParser
 import com.suvojeet.suvmusic.data.repository.youtube.internal.YouTubeJsonParser
@@ -50,19 +51,24 @@ class YouTubePlaylistService @Inject constructor(
     // Reading
     // ============================================================================================
 
-    suspend fun getUserPlaylists(autoSave: Boolean = true): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+    suspend fun getUserPlaylists(
+        autoSave: Boolean = true,
+        includeUnsynced: Boolean = false
+    ): List<PlaylistDisplayItem> = withContext(Dispatchers.IO) {
+        val excluded = if (includeUnsynced) emptySet() else sessionManager.getYouTubeSyncExcludedPlaylists()
         if (!networkMonitor.isCurrentlyConnected()) {
-            return@withContext sessionManager.getCachedLibraryPlaylistsSync()
+            return@withContext YouTubeSyncSelection.visible(sessionManager.getCachedLibraryPlaylistsSync(), excluded)
         }
         if (!sessionManager.isLoggedIn()) return@withContext emptyList()
 
         try {
             val hl = YouTubeLocale.hl(sessionManager)
             val response = apiClient.fetchInternalApi("FEmusic_liked_playlists", hl = hl)
-            val ytPlaylists = parser.parsePlaylistDisplayItems(response)
+            val allPlaylists = parser.parsePlaylistDisplayItems(response)
+            val ytPlaylists = YouTubeSyncSelection.visible(allPlaylists, excluded)
 
-            if (ytPlaylists.isNotEmpty()) {
-                sessionManager.saveLibraryPlaylistsCache(ytPlaylists)
+            if (allPlaylists.isNotEmpty()) {
+                sessionManager.saveLibraryPlaylistsCache(allPlaylists)
 
                 // Saving into LibraryRepository duplicates local playlists and makes them
                 // uneditable, so callers that just want to list opt out.
@@ -85,7 +91,7 @@ class YouTubePlaylistService @Inject constructor(
             e.printStackTrace()
             // Never return an empty library because one fetch failed — the cache is better
             // than nothing and is what the screen was already showing.
-            sessionManager.getCachedLibraryPlaylistsSync()
+            YouTubeSyncSelection.visible(sessionManager.getCachedLibraryPlaylistsSync(), excluded)
         }
     }
 
@@ -107,6 +113,9 @@ class YouTubePlaylistService @Inject constructor(
      */
     suspend fun syncLikedSongs(fetchAll: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         if (!networkMonitor.isCurrentlyConnected() || !sessionManager.isLoggedIn()) return@withContext false
+        if (!YouTubeSyncSelection.isSynced(LIKED_ID, sessionManager.getYouTubeSyncExcludedPlaylists())) {
+            return@withContext true
+        }
 
         try {
             val hl = YouTubeLocale.hl(sessionManager)
@@ -542,6 +551,9 @@ class YouTubePlaylistService @Inject constructor(
         }
 
         if (!sessionManager.isLoggedIn()) return@withContext playlists.distinctBy { it.id }
+        if (sessionManager.isYouTubePullOnlyEnabled()) {
+            return@withContext playlists.filter { isLocalPlaylist(it.id) }.distinctBy { it.id }
+        }
 
         try {
             val userName = sessionManager.getUserName().orEmpty()
@@ -593,6 +605,9 @@ class YouTubePlaylistService @Inject constructor(
 
             if (!sessionManager.isLoggedIn()) {
                 return@withContext AddToPlaylistResult.Failed("Sign in to edit YouTube playlists")
+            }
+            if (sessionManager.isYouTubePullOnlyEnabled()) {
+                return@withContext AddToPlaylistResult.Failed(SessionManager.YOUTUBE_PULL_ONLY_MESSAGE)
             }
 
             val success = addSongsToPlaylist(playlistId, songs.map { it.id })

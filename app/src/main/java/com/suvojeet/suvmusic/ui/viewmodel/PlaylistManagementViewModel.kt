@@ -120,7 +120,7 @@ class PlaylistManagementViewModel @Inject constructor(
             _uiState.update { it.copy(isCreatingPlaylist = true) }
             
             val songs = _uiState.value.selectedSongs
-            val playlistId = if (syncWithYt && sessionManager.isLoggedIn()) {
+            val playlistId = if (syncWithYt && sessionManager.canPushToYouTube()) {
                 val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                 youTubeRepository.createPlaylist(title, description, privacyStatus)
             } else {

@@ -115,11 +115,14 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     
+    private var excludedPlaylists: Set<String> = emptySet()
+
     init {
         _uiState.update { it.copy(isLoggedIn = sessionManager.isLoggedIn()) }
         loadData()
         observeAuthState()
         observeDownloads()
+        observeSyncedPlaylists()
         observeLibraryPlaylists()
         observeSavedAlbums()
         observeImportService()
@@ -439,6 +442,17 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun observeSyncedPlaylists() {
+        viewModelScope.launch {
+            sessionManager.youtubeSyncExcludedPlaylistsFlow.collect { excluded ->
+                excludedPlaylists = excluded
+                _uiState.update { state ->
+                    state.copy(playlists = presentPlaylists(rawPlaylists, state.sortOption, state.librarySearchQuery))
+                }
+            }
+        }
+    }
+
     /** Unsorted, unfiltered source list — sort/search are presentation-only. */
     private var rawPlaylists: List<PlaylistDisplayItem> = emptyList()
 
@@ -448,7 +462,8 @@ class LibraryViewModel @Inject constructor(
         query: String
     ): List<PlaylistDisplayItem> {
         val q = query.trim().lowercase()
-        val filtered = if (q.isEmpty()) list else list.filter {
+        val synced = com.suvojeet.suvmusic.data.YouTubeSyncSelection.visible(list, excludedPlaylists)
+        val filtered = if (q.isEmpty()) synced else synced.filter {
             it.name.lowercase().contains(q) || it.uploaderName.lowercase().contains(q)
         }
         return when (sort) {
@@ -469,7 +484,7 @@ class LibraryViewModel @Inject constructor(
     fun createPlaylist(title: String, description: String, isPrivate: Boolean, syncWithYt: Boolean, onComplete: () -> Unit) {
         viewModelScope.launch {
             try {
-                if (syncWithYt && sessionManager.isLoggedIn()) {
+                if (syncWithYt && sessionManager.canPushToYouTube()) {
                     val privacyStatus = if (isPrivate) "PRIVATE" else "PUBLIC"
                     val playlistId = youTubeRepository.createPlaylist(title, description, privacyStatus)
                     if (playlistId != null) {
@@ -616,7 +631,8 @@ class LibraryViewModel @Inject constructor(
                 if (success) {
                     refresh()
                 } else if (!isLocal) {
-                     _uiState.update { it.copy(error = "Failed to delete from YouTube") }
+                     val message = sessionManager.youTubeWriteError("Failed to delete from YouTube")
+                     _uiState.update { it.copy(error = message) }
                 }
             } catch (e: Exception) {
                  _uiState.update { it.copy(error = "Failed to delete: ${e.message}") }
@@ -639,7 +655,8 @@ class LibraryViewModel @Inject constructor(
                 if (success) {
                     refresh()
                 } else {
-                    _uiState.update { it.copy(error = "Failed to rename playlist") }
+                    val message = sessionManager.youTubeWriteError("Failed to rename playlist")
+                    _uiState.update { it.copy(error = message) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to rename: ${e.message}") }

@@ -432,6 +432,7 @@ fun NavGraph(
         composable<Destination.Settings> {
             SettingsScreen(
                 onLoginClick = { navController.navigate(Destination.YouTubeLogin) },
+                onYouTubeSyncClick = { navController.navigate(Destination.YouTubeSync) },
                 onPlaybackClick = { navController.navigate(Destination.PlaybackSettings) },
                 onAppearanceClick = { navController.navigate(Destination.AppearanceSettings) },
                 onCustomizationClick = { navController.navigate(Destination.CustomizationSettings) },
@@ -621,6 +622,12 @@ fun NavGraph(
             )
         }
 
+
+        composable<Destination.YouTubeSync> {
+            com.suvojeet.suvmusic.ui.screens.YouTubeSyncScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
 
         composable<Destination.YouTubeLogin> {
             YouTubeLoginScreen(

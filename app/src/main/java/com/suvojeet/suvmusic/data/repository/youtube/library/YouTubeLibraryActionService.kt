@@ -36,6 +36,8 @@ class YouTubeLibraryActionService @Inject constructor(
         rate(rating, JSONObject().put("target", JSONObject().put("playlistId", playlistId)))
 
     private suspend fun rate(rating: String, body: JSONObject): Boolean = withContext(Dispatchers.IO) {
+        // Callers treat false as a failed like and undo it; here it should still apply locally.
+        if (sessionManager.isYouTubePullOnlyEnabled()) return@withContext true
         try {
             val endpoint = when (rating) {
                 "LIKE" -> "like/like"

@@ -233,8 +233,8 @@ class YouTubeRepository @Inject constructor(
     // Playlists
     // ============================================================================================
 
-    suspend fun getUserPlaylists(autoSave: Boolean = true): List<PlaylistDisplayItem> =
-        playlistService.getUserPlaylists(autoSave)
+    suspend fun getUserPlaylists(autoSave: Boolean = true, includeUnsynced: Boolean = false): List<PlaylistDisplayItem> =
+        playlistService.getUserPlaylists(autoSave, includeUnsynced)
 
     suspend fun getUserEditablePlaylists(): List<PlaylistDisplayItem> =
         playlistService.getUserEditablePlaylists()

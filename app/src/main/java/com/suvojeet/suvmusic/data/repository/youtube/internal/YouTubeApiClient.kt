@@ -248,7 +248,7 @@ class YouTubeApiClient @Inject constructor(
      * need something out of it (a new playlist id, say). Null means the action failed.
      */
     suspend fun performAuthenticatedActionForBody(endpoint: String, innerBody: String): String? = withContext(Dispatchers.IO) {
-        if (!sessionManager.isLoggedIn()) return@withContext null
+        if (!sessionManager.canPushToYouTube()) return@withContext null
         val cookies = sessionManager.getCookies() ?: return@withContext null
 
         val url = "${YouTubeConfig.BASE_URL}/$endpoint"
@@ -352,7 +352,7 @@ class YouTubeApiClient @Inject constructor(
      * @return true if history was successfully reported
      */
     suspend fun reportPlaybackForHistory(videoId: String, durationSeconds: Int = 30): Boolean {
-        if (!sessionManager.isLoggedIn()) return false
+        if (!sessionManager.canPushToYouTube()) return false
         val cookies = sessionManager.getCookies() ?: return false
         if (YouTubeAuthUtils.getAuthorizationHeader(cookies) == null) return false
         val authUser = sessionManager.getAuthUserIndex()
