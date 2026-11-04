@@ -187,16 +187,16 @@ class PickMusicViewModel @Inject constructor(
 
     private fun getRandomSuccessMessage(): String {
         val messages = listOf(
-            "Your playlist is ready to vibe!",
-            "This mix is going to be fire! 🔥",
-            "Curated just for you!",
-            "Music to your ears, literally.",
-            "Ready to rock and roll!",
-            "Your soundtrack is served.",
-            "Beats tailored to your taste.",
-            "Hope you have your dancing shoes on!",
-            "Excellent choice, Maestro!",
-            "Your ears will thank you."
+            "Your playlist is ready",
+            "Your mix is ready",
+            "Made from your picks",
+            "All set, press play",
+            "Ready when you are",
+            "Your mix is saved",
+            "Made from the artists you picked",
+            "Enjoy the mix",
+            "Good picks",
+            "Ready to play"
         )
         return messages.random()
     }

@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
@@ -66,7 +66,7 @@ fun AIEqPromptInput(
         value = prompt,
         onValueChange = onPromptChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("e.g., 'Make it feel like a live stadium concert'") },
+        placeholder = { Text("Like a live concert, or more bass") },
         maxLines = 3,
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
@@ -126,7 +126,7 @@ fun AIEqLogsPanel(
                     val icon = when {
                         log.startsWith("Error") || log.contains("FAILED") -> Icons.Default.Clear
                         log.startsWith("SUCCESS") -> Icons.Default.CheckCircle
-                        log.startsWith("AUTO") -> Icons.Default.AutoAwesome
+                        log.startsWith("AUTO") -> Icons.Default.Tune
                         log.startsWith("Validation") -> Icons.Default.Refresh
                         else -> Icons.Default.History
                     }
@@ -236,7 +236,7 @@ fun AIEqResultActions(
         ) {
             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Save Profile")
+            Text("Save")
         }
     }
 }
@@ -256,7 +256,7 @@ fun AIEqPromptHistoryDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Neural History", fontWeight = FontWeight.Bold)
+                Text("Past requests", fontWeight = FontWeight.Bold)
                 if (promptHistory.entries.isNotEmpty()) {
                     TextButton(onClick = onClearAll) { Text("Clear All") }
                 }

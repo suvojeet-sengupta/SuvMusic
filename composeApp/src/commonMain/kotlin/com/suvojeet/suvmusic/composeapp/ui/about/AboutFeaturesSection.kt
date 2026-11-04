@@ -39,7 +39,7 @@ internal fun AboutFeaturesSection() {
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = dividerColor)
         FeatureListItem(
             icon = Icons.Default.AutoAwesome,
-            title = "AI Equalizer",
+            title = "Sound Tuner",
             subtitle = "Neural processing for perfect sound",
         )
     }

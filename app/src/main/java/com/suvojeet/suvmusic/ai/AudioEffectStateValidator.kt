@@ -133,7 +133,7 @@ object AudioEffectStateValidator {
         // 7. Detection of generic/unresponsive states
         val isFlat = rawBands.all { abs(it) < 0.1f }
         if (isFlat && sanitizedBass < 0.05f && sanitizedVirt < 0.05f) {
-            warnings.add("AI suggests flat response (Neutral)")
+            warnings.add("No change needed, keeping it flat")
         }
 
         val sanitizedState = AudioEffectState(

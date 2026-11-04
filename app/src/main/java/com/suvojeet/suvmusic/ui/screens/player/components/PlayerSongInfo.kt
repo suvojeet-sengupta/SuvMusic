@@ -149,14 +149,14 @@ fun SongInfoSection(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.AutoAwesome,
+                                                imageVector = Icons.Default.Tune,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(12.dp),
                                                 tint = dominantColors.accent
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(
-                                                "AI",
+                                                "Tuned",
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontWeight = FontWeight.ExtraBold,
                                                     fontSize = 9.sp

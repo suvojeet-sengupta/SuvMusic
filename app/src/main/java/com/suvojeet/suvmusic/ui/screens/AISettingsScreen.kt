@@ -42,7 +42,7 @@ fun AISettingsScreen(
             TopAppBar(
                 title = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("AI Assistant Settings", fontWeight = FontWeight.Bold)
+                        Text("Sound Tuner", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(8.dp))
                         BetaBadge()
                     }
@@ -63,7 +63,7 @@ fun AISettingsScreen(
         ) {
             item {
                 Text(
-                    "Select AI Provider",
+                    "Choose a provider",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -78,15 +78,15 @@ fun AISettingsScreen(
                             viewModel.setSelectedAiProvider("CHAT_PROXY")
                         }
                         M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        AIProviderItem("Gemini", "Google's powerful model", uiState.selectedAiProvider == "GEMINI") {
+                        AIProviderItem("Gemini", "From Google", uiState.selectedAiProvider == "GEMINI") {
                             viewModel.setSelectedAiProvider("GEMINI")
                         }
                         M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        AIProviderItem("OpenAI", "GPT-4o and more", uiState.selectedAiProvider == "OPENAI") {
+                        AIProviderItem("OpenAI", "GPT models", uiState.selectedAiProvider == "OPENAI") {
                             viewModel.setSelectedAiProvider("OPENAI")
                         }
                         M3HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        AIProviderItem("Anthropic", "Claude 3.5 Sonnet", uiState.selectedAiProvider == "ANTHROPIC") {
+                        AIProviderItem("Anthropic", "Claude models", uiState.selectedAiProvider == "ANTHROPIC") {
                             viewModel.setSelectedAiProvider("ANTHROPIC")
                         }
                     }

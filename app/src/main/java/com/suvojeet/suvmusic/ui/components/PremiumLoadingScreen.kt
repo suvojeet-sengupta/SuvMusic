@@ -38,16 +38,16 @@ fun PremiumLoadingScreen(
 
     val loadingMessages = remember {
         listOf(
-            "Polishing the audio tracks...",
-            "Preparing your VIP experience...",
-            "Tidying up the playlist...",
-            "Finding the rhythmic soul...",
-            "Warming up the speakers...",
-            "Gathering the melodies...",
-            "Fetching the musical vibes...",
-            "Just a moment, music is magic...",
-            "Creating a harmonious space...",
-            "Almost ready to play..."
+            "Loading your music",
+            "Getting things ready",
+            "Loading your playlists",
+            "Just a second",
+            "Almost there",
+            "Loading your songs",
+            "Fetching your music",
+            "One moment",
+            "Nearly done",
+            "Almost ready"
         )
     }
     val currentMessage = remember { loadingMessages.random() }

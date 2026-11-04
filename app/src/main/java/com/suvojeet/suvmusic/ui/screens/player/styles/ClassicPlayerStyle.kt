@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -557,7 +558,7 @@ private fun ClassicBottomActions(
             }
 
             IconButton(onClick = onRelatedClick, modifier = Modifier.weight(1f)) {
-                Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "Related", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
+                Icon(imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Related", tint = dominantColors.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(iconSize))
             }
 
             IconButton(

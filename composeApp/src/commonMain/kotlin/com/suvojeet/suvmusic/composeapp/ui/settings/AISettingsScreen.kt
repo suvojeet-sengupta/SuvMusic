@@ -87,7 +87,7 @@ fun AISettingsScreen(
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "AI Assistant",
+                    text = "Sound Tuner",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -99,7 +99,7 @@ fun AISettingsScreen(
 
         item {
             Text(
-                "Select AI Provider",
+                "Choose a provider",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 8.dp),

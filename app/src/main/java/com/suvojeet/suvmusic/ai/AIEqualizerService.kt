@@ -80,7 +80,7 @@ class AIEqualizerService @Inject constructor(
                 // previously we only restored the UI label, leaving the engine
                 // in its default flat state.
                 applySettings(restoredState)
-                addLog("Restored saved AI profile to audio engine.")
+                addLog("Back to your saved sound.")
             }
         }
 
@@ -119,22 +119,22 @@ class AIEqualizerService @Inject constructor(
     private suspend fun autoProcessCurrentSong() {
         val currentSong = musicPlayer.playerState.value.currentSong ?: return
 
-        _autoStatus.value = "Analyzing \"${currentSong.title}\"..."
+        _autoStatus.value = "Checking \"${currentSong.title}\"..."
         addLog("AUTO: Song change detected - \"${currentSong.title}\"")
         delay(500)
 
         // 1. Check if we already have saved AI settings for this song
         if (checkAndAutoApplyAIForSong(currentSong.id)) {
-            _autoStatus.value = "Profile Restored"
-            addLog("AUTO: Applied previously saved AI profile")
+            _autoStatus.value = "Using your saved sound"
+            addLog("AUTO: Using your saved sound for this song")
             delay(1500)
             _autoStatus.value = null
             return
         }
 
         // 2. If not, generate new AI profile based on genre/metadata
-        _autoStatus.value = "Generating Intelligent Profile..."
-        addLog("AUTO: Generating intelligent profile for \"${currentSong.artist}\"...")
+        _autoStatus.value = "Tuning this song..."
+        addLog("AUTO: Tuning for \"${currentSong.artist}\"...")
 
         val autoPrompt = "Analyze this song: '${currentSong.title}' by '${currentSong.artist}'. " +
                 "Provide a professional audio engineer's EQ and DSP setup that best fits its genre and characteristics. " +
@@ -156,7 +156,7 @@ class AIEqualizerService @Inject constructor(
         )
 
         if (_lastResult.value != null) {
-            _autoStatus.value = "Neural Link Established"
+            _autoStatus.value = "Tuned for this song"
             delay(2000)
         }
         _autoStatus.value = null
@@ -209,7 +209,7 @@ class AIEqualizerService @Inject constructor(
 
     fun revertAIChanges() {
         stateBeforeAI?.let { previousState ->
-            addLog("Reverting to pre-AI state...")
+            addLog("Going back to your earlier sound...")
             applySettings(previousState)
             addLog("SUCCESS: Reverted to previous audio settings")
             stateBeforeAI = null
@@ -223,13 +223,13 @@ class AIEqualizerService @Inject constructor(
                 sessionManager.savePersistedAIState(null)
             }
         } ?: run {
-            addLog("Notice: No AI changes to revert")
+            addLog("Nothing to undo yet")
         }
     }
 
     fun toggleABCompare() {
         if (aiState == null || originalState == null) {
-            addLog("Notice: No AI settings to compare")
+            addLog("Nothing to compare yet")
             return
         }
 
@@ -238,7 +238,7 @@ class AIEqualizerService @Inject constructor(
             addLog("A/B Compare: Switched to ORIGINAL settings")
             applySettings(originalState!!)
         } else {
-            addLog("A/B Compare: Switched to AI-optimized settings")
+            addLog("A/B Compare: Switched to the tuned sound")
             applySettings(aiState!!)
         }
     }
@@ -270,7 +270,7 @@ class AIEqualizerService @Inject constructor(
         stateBeforeAI = null
         _isABCompareActive.value = false
         _validationWarnings.value = emptyList()
-        addLog("AI compare state cleared (song change)")
+        addLog("New song, comparison reset")
     }
 
     /**
@@ -302,7 +302,7 @@ class AIEqualizerService @Inject constructor(
     suspend fun checkAndAutoApplyAIForSong(songId: String): Boolean {
         val savedSettings = sessionManager.getSongAISettings(songId)
         if (savedSettings != null) {
-            addLog("Auto-applying saved AI settings for this song...")
+            addLog("Using your saved sound for this song...")
             // Capture the engine state BEFORE we apply the saved profile so
             // revert + A/B compare can flip back to the user's pre-AI sound.
             // (Previously this snapshot was taken AFTER applySettings, which
@@ -330,7 +330,7 @@ class AIEqualizerService @Inject constructor(
         )
         
         sessionManager.saveSongAISettings(currentSong.id, songSettings)
-        addLog("AI settings saved for: ${currentSong.title}")
+        addLog("Sound saved for: ${currentSong.title}")
     }
 
     suspend fun processPrompt(
@@ -345,7 +345,7 @@ class AIEqualizerService @Inject constructor(
         }
 
         _isProcessing.value = true
-        addLog("Starting AI process with ${provider.name} using model $model...")
+        addLog("Asking ${provider.name} ($model)...")
 
         val currentSong = musicPlayer.playerState.value.currentSong
         val songContext = currentSong?.let {
@@ -386,7 +386,7 @@ class AIEqualizerService @Inject constructor(
                 }
             }
 
-            addLog("Analyzing current audio engine state...")
+            addLog("Checking the current sound...")
             val currentStatus = spatialAudioProcessor.getCurrentState()
             
             // Save original state for A/B compare ONLY if not already in A/B mode
@@ -399,7 +399,7 @@ class AIEqualizerService @Inject constructor(
             val stats = spatialAudioProcessor.getSignalStats()
             addLog("Live Signal: Peak ${"%.2f".format(stats.peakLevel)}, RMS ${"%.2f".format(stats.rmsLevel)}")
 
-            addLog("Contacting AI for hardware-level tuning...")
+            addLog("Working out the settings...")
             val result = client.getAudioEffectState(prompt, currentStatus, songContext)
 
             result.onSuccess { rawState ->
@@ -426,7 +426,7 @@ class AIEqualizerService @Inject constructor(
                     sessionManager.savePersistedAIState(state.toJson())
                 }
 
-                addLog("Optimization complete. New parameters calculated:")
+                addLog("Done. New settings:")
                 addLog(" EQ: ${if(state.isEqEnabled) "Enabled" else "Disabled"}")
                 addLog(" Bands (dB): ${state.safeEqBands.map { "%.1f".format(it) }.joinToString(", ")}")
                 addLog(" Bass Boost: ${"%.2f".format(state.safeBassBoost)}")
@@ -435,7 +435,7 @@ class AIEqualizerService @Inject constructor(
                 addLog(" Limiter Gain: ${"%.1f".format(state.safeLimiterMakeupGain)} dB")
 
                 applySettings(state)
-                addLog("SUCCESS: All parameters pushed to the native audio engine.")
+                addLog("SUCCESS: Sound updated.")
 
                 // Save to history and persistence
                 savePromptToHistory(prompt)
@@ -443,7 +443,7 @@ class AIEqualizerService @Inject constructor(
                     saveCurrentAISettings(prompt)
                 }
             }.onFailure { error ->
-                addLog("AI API FAILED: ${error.message}")
+                addLog("Request FAILED: ${error.message}")
 
                 // === IMPROVEMENT #2: Fallback to local presets ===
                 addLog("Attempting local preset matching as fallback...")
@@ -471,7 +471,7 @@ class AIEqualizerService @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            addLog("SYSTEM FAILURE: ${e.message}")
+            addLog("FAILED: ${e.message}")
 
             // Fallback for system-level failures too
             addLog("Attempting local preset matching as fallback...")

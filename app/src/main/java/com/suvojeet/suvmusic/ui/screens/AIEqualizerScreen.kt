@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.History
@@ -97,7 +97,7 @@ fun AIEqualizerScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Neural Equalizer",
+                                "Sound Tuner",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 20.sp
                             )
@@ -105,7 +105,7 @@ fun AIEqualizerScreen(
                             BetaBadge()
                         }
                         Text(
-                            text = if (isAutoModeEnabled) "Auto-Tuning Active" else "Manual Mode",
+                            text = if (isAutoModeEnabled) "Tuning every song" else "Manual Mode",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isAutoModeEnabled) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant
@@ -132,7 +132,7 @@ fun AIEqualizerScreen(
                         Icon(Icons.Default.History, contentDescription = "Prompt History")
                     }
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = "AI Settings")
+                        Icon(Icons.Default.Tune, contentDescription = "Tuner settings")
                     }
                 }
             )
@@ -152,7 +152,7 @@ fun AIEqualizerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                "Sound Architecture Prompt",
+                "How should it sound?",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
@@ -191,7 +191,7 @@ fun AIEqualizerScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                "Neural Processing History",
+                "What it did",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
@@ -215,7 +215,7 @@ fun AIEqualizerScreen(
                     onRevert = { aiService.revertAIChanges() },
                     onSave = {
                         scope.launch {
-                            aiService.saveCurrentAISettings(prompt.ifBlank { "Neural Optimized" })
+                            aiService.saveCurrentAISettings(prompt.ifBlank { "My sound" })
                         }
                     }
                 )
@@ -271,7 +271,7 @@ fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.AutoAwesome,
+                        Icons.Default.Tune,
                         contentDescription = null,
                         tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.onSurface,
@@ -280,9 +280,9 @@ fun AutoModeToggleCard(isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text("Auto Neural Link", fontWeight = FontWeight.Bold)
+                    Text("Tune every song", fontWeight = FontWeight.Bold)
                     Text(
-                        "Automatically tune each song",
+                        "Adjusts the sound when a new song starts",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -316,7 +316,7 @@ fun AIResultCard(state: com.suvojeet.suvmusic.ai.AudioEffectState) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Current Architecture",
+                    "Current sound",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -420,7 +420,7 @@ fun PromptHistoryItem(
                 )
                 if (entry.songTitle != null) {
                     Text(
-                        text = "🎵 ${entry.songTitle}",
+                        text = entry.songTitle,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1
