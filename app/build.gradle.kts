@@ -154,6 +154,7 @@ dependencies {
     // Core
     implementation(libs.androidx.core)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.miuix.blur)
     implementation(libs.androidx.core.role)
     implementation(libs.androidx.core.animation)
     androidTestImplementation(libs.androidx.core.animation.testing)
@@ -222,6 +223,7 @@ dependencies {
     // Hilt DI
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    ksp(libs.kotlin.metadata.jvm)
     implementation(libs.hilt.navigation.compose)
 
     // Koin DI (Phase 1 of KMP migration — coexists with Hilt during the swap)
