@@ -216,7 +216,28 @@ class MusicPlayer @Inject constructor(
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>?) {
             scheduleDeviceRefresh(primaryDelayMs = 500L, secondaryDelayMs = 2000L)
+            pauseIfHeadphonesGone(removedDevices.orEmpty())
         }
+    }
+
+    private val headphoneDeviceTypes = setOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+        AudioDeviceInfo.TYPE_BLE_HEADSET,
+        AudioDeviceInfo.TYPE_BLE_SPEAKER,
+        AudioDeviceInfo.TYPE_HEARING_AID,
+    )
+
+    /** Taking out earbuds or unplugging stops the music rather than moving it to the speaker. */
+    private fun pauseIfHeadphonesGone(removed: Array<out AudioDeviceInfo>) {
+        if (removed.none { it.type in headphoneDeviceTypes }) return
+        if (audioManager.mode != AudioManager.MODE_NORMAL) return
+        val removedIds = removed.mapTo(HashSet()) { it.id }
+        val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        if (outputs.any { it.id !in removedIds && it.type in headphoneDeviceTypes }) return
+        pause()
     }
 
     // Tracks the most recent BT-connect event so we can debounce
@@ -465,6 +486,11 @@ class MusicPlayer @Inject constructor(
         
         deviceReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY &&
+                    audioManager.mode == AudioManager.MODE_NORMAL
+                ) {
+                    pause()
+                }
                 // Debounce refresh so rapid connect/disconnect bursts don't stack coroutines.
                 // Bluetooth autoplay + safe-volume ducking are handled by the AudioDeviceCallback,
                 // which fires reliably without requiring BLUETOOTH_CONNECT permission.
