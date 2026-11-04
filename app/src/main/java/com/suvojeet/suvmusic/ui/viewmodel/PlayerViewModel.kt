@@ -31,7 +31,9 @@ import com.suvojeet.suvmusic.player.SleepTimerOption
 import com.suvojeet.suvmusic.providers.lyrics.Lyrics
 import com.suvojeet.suvmusic.providers.lyrics.LyricsProviderType
 import com.suvojeet.suvmusic.recommendation.RecommendationEngine
+import com.suvojeet.suvmusic.recommendation.QueueMix
 import com.suvojeet.suvmusic.recommendation.SmartQueueManager
+import com.suvojeet.suvmusic.util.SnackbarUtil
 import com.suvojeet.suvmusic.service.DownloadService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -215,6 +217,15 @@ class PlayerViewModel @Inject constructor(
     private val _isRadioMode = MutableStateFlow(false)
     val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
     
+    private val _queueMix = MutableStateFlow(QueueMix.ALL)
+    val queueMix: StateFlow<QueueMix> = _queueMix.asStateFlow()
+
+    private val _loadingQueueMix = MutableStateFlow<QueueMix?>(null)
+    val loadingQueueMix: StateFlow<QueueMix?> = _loadingQueueMix.asStateFlow()
+
+    private var queueMixJob: kotlinx.coroutines.Job? = null
+    private var untunedUpcoming: List<Song>? = null
+
     private val _isLoadingMoreSongs = MutableStateFlow(false)
     val isLoadingMoreSongs: StateFlow<Boolean> = _isLoadingMoreSongs.asStateFlow()
     
@@ -560,6 +571,7 @@ class PlayerViewModel @Inject constructor(
     }
     
     fun playSong(song: Song, queue: List<Song> = listOf(song), startIndex: Int = 0) {
+        resetQueueMix()
         // Reset radio base so Autoplay adapts to this new song
         radioBaseSongId = null
         _isRadioMode.value = false
@@ -699,6 +711,67 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /** Retunes the songs after the current one; [QueueMix.ALL] restores the original queue. */
+    fun selectQueueMix(mix: QueueMix) {
+        queueMixJob?.cancel()
+        _loadingQueueMix.value = null
+        if (mix == _queueMix.value) return
+        if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+            SnackbarUtil.showMessage("Only the host can change the queue")
+            return
+        }
+        if (mix == QueueMix.ALL) {
+            untunedUpcoming?.let { upcoming ->
+                val state = playerState.value
+                val playedIds = state.queue.take(state.currentIndex.coerceAtLeast(0)).mapTo(HashSet()) { it.id }
+                setUpcoming(upcoming.filter { it.id !in playedIds })
+            }
+            untunedUpcoming = null
+            _queueMix.value = QueueMix.ALL
+            return
+        }
+        val seed = playerState.value.currentSong ?: return
+        _loadingQueueMix.value = mix
+        queueMixJob = viewModelScope.launch {
+            try {
+                val state = playerState.value
+                val history = state.queue.take(state.currentIndex.coerceAtLeast(0))
+                val songs = recommendationEngine.getQueueMix(seed, mix, history.mapTo(HashSet()) { it.id } + seed.id)
+                if (songs.isEmpty()) {
+                    SnackbarUtil.showMessage("No ${mix.label} songs found for this track")
+                } else {
+                    if (untunedUpcoming == null) {
+                        val latest = playerState.value
+                        untunedUpcoming = latest.queue.drop(latest.currentIndex.coerceAtLeast(0) + 1)
+                    }
+                    setUpcoming(songs)
+                    _queueMix.value = mix
+                }
+                _loadingQueueMix.value = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error tuning queue", e)
+                SnackbarUtil.showError("Couldn't load ${mix.label} songs")
+                _loadingQueueMix.value = null
+            }
+        }
+    }
+
+    private fun setUpcoming(upcoming: List<Song>) {
+        val state = playerState.value
+        val current = state.currentSong ?: return
+        val history = state.queue.take(state.currentIndex.coerceAtLeast(0)).filter { it.id != current.id }
+        musicPlayer.replaceQueue(history + current + upcoming.filter { it.id != current.id })
+    }
+
+    private fun resetQueueMix() {
+        queueMixJob?.cancel()
+        _loadingQueueMix.value = null
+        _queueMix.value = QueueMix.ALL
+        untunedUpcoming = null
+    }
+
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
         musicPlayer.moveInQueue(fromIndex, toIndex)
     }
@@ -735,6 +808,7 @@ class PlayerViewModel @Inject constructor(
         // Clearing the queue also ends the current radio session. Autoplay may
         // repopulate it afterward; with autoplay disabled the current song stays
         // alone and no radio recommendations are added.
+        resetQueueMix()
         _isRadioMode.value = false
         radioBaseSongId = null
         musicPlayer.updateRadioMode(false)
@@ -859,6 +933,7 @@ class PlayerViewModel @Inject constructor(
      * @param initialQueue Optional list of songs to start with (e.g. search results).
      */
     fun startRadio(song: Song, initialQueue: List<Song>? = null) {
+        resetQueueMix()
         viewModelScope.launch {
             _isRadioMode.value = true
             musicPlayer.updateRadioMode(true)
@@ -944,13 +1019,21 @@ class PlayerViewModel @Inject constructor(
         _isLoadingMoreSongs.value = true
         viewModelScope.launch {
             try {
-                val newSongs = smartQueueManager.ensureQueueHealth(
-                    currentSong = currentSong,
-                    currentIndex = state.currentIndex,
-                    queue = state.queue,
-                    isRadioMode = radioMode,
-                    isAutoplayEnabled = isAutoplayEnabled
-                )
+                val mix = _queueMix.value
+                val mixSongs = if (mix == QueueMix.ALL) {
+                    emptyList()
+                } else {
+                    recommendationEngine.getQueueMix(currentSong, mix, state.queue.mapTo(HashSet()) { it.id })
+                }
+                val newSongs = mixSongs.ifEmpty {
+                    smartQueueManager.ensureQueueHealth(
+                        currentSong = currentSong,
+                        currentIndex = state.currentIndex,
+                        queue = state.queue,
+                        isRadioMode = radioMode,
+                        isAutoplayEnabled = isAutoplayEnabled
+                    )
+                }
                 
                 if (newSongs.isNotEmpty()) {
                     musicPlayer.addToQueue(newSongs)

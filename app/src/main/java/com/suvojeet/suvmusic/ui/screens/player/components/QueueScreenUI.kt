@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.ui.screens.player.components
 
+import com.suvojeet.suvmusic.recommendation.QueueMix
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -77,6 +78,9 @@ fun ModernQueueView(
     isFavorite: Boolean,
     isRadioMode: Boolean = false,
     isLoadingMore: Boolean = false,
+    selectedQueueMix: QueueMix = QueueMix.ALL,
+    loadingQueueMix: QueueMix? = null,
+    onSelectQueueMix: (QueueMix) -> Unit = {},
     onBack: () -> Unit,
     onSongClick: (Int) -> Unit,
     onPlayPause: () -> Unit,
@@ -285,7 +289,12 @@ fun ModernQueueView(
 
             // YouTube-Music-style mix filter chips (All / Familiar / Popular / …).
             if (!isSelectionMode) {
-                QueueFilterChips(dominantColors = dominantColors, contentColor = contentColor)
+                QueueFilterChips(
+                    selected = loadingQueueMix ?: selectedQueueMix,
+                    loading = loadingQueueMix,
+                    onSelect = onSelectQueueMix,
+                    contentColor = contentColor
+                )
             }
 
             // One list for history, current and up-next, keyed by occurrence so a row
@@ -435,15 +444,14 @@ fun ModernQueueView(
     }
 }
 
-/**
- * YouTube-Music-style mix filter chips shown above the queue. Selection is local
- * and presentational for now — the app's autoplay does not expose mix-tuning
- * categories (Familiar / Popular / Discover / Deep cuts), so these tune nothing yet.
- */
+/** Mix chips above the queue: each one retunes the upcoming songs. */
 @Composable
-private fun QueueFilterChips(dominantColors: DominantColors, contentColor: Color) {
-    val filters = remember { listOf("All", "Familiar", "Popular", "Discover", "Deep cuts") }
-    var selected by remember { mutableStateOf("All") }
+private fun QueueFilterChips(
+    selected: QueueMix,
+    loading: QueueMix?,
+    onSelect: (QueueMix) -> Unit,
+    contentColor: Color
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -451,7 +459,7 @@ private fun QueueFilterChips(dominantColors: DominantColors, contentColor: Color
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        filters.forEach { filter ->
+        QueueMix.entries.forEach { filter ->
             val isSel = filter == selected
             val background = if (isSel) contentColor.copy(alpha = 0.95f) else contentColor.copy(alpha = 0.08f)
             val foreground = if (isSel) {
@@ -462,15 +470,33 @@ private fun QueueFilterChips(dominantColors: DominantColors, contentColor: Color
             Surface(
                 color = background,
                 shape = CircleShape,
-                modifier = Modifier.clickable { selected = filter }
+                modifier = Modifier.clickable { onSelect(filter) }
             ) {
-                Text(
-                    text = filter,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = foreground,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = filter == loading,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
+                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(14.dp),
+                            color = foreground,
+                            trackColor = foreground.copy(alpha = 0.25f),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    Text(
+                        text = filter.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = foreground
+                    )
+                }
             }
         }
     }

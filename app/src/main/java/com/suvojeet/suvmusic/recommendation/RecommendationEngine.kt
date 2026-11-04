@@ -59,6 +59,9 @@ class RecommendationEngine @Inject constructor(
         private const val TAG = "RecommendationEngine"
         /** Max concurrent YouTube API calls to prevent throttling */
         private const val MAX_CONCURRENT_API_CALLS = 5
+        private const val LOGGED_OUT_ARTIST_SEEDS = 4
+        private const val LOGGED_OUT_LANGUAGE_SEEDS = 2
+        private const val QUEUE_MIX_HISTORY_POOL = 60
     }
 
     /** Application-scoped coroutine scope with SupervisorJob — survives child failures */
@@ -606,8 +609,10 @@ class RecommendationEngine @Inject constructor(
         val seenIds = ConcurrentHashMap.newKeySet<String>()
         val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
 
+        val isLoggedIn = youTubeRepository.isLoggedIn()
+
         // --- Priority 1: YT Music's official personalized recommendations ---
-        if (youTubeRepository.isLoggedIn()) {
+        if (isLoggedIn) {
             try {
                 val ytRecs = youTubeRepository.getRecommendations()
                 candidates.addAll(deduplicate(ytRecs, seenIds, seenFingerprints))
@@ -619,10 +624,15 @@ class RecommendationEngine @Inject constructor(
         // --- Priority 2: Related songs from multiple recent plays (multi-seed) ---
         if (candidates.size < limit) {
             try {
-                val recentIds = profile.recentSongIds.take(5)
-                if (recentIds.isNotEmpty()) {
+                // Without an account YouTube has no taste signal, so lean on local top plays too.
+                val seedIds = if (isLoggedIn) {
+                    profile.recentSongIds.take(5)
+                } else {
+                    (profile.recentSongIds.take(4) + profile.topPlayedSongIds.take(3)).distinct()
+                }
+                if (seedIds.isNotEmpty()) {
                     coroutineScope {
-                        val relatedJobs = recentIds.map { songId ->
+                        val relatedJobs = seedIds.map { songId ->
                             async(Dispatchers.IO) {
                                 apiSemaphore.withPermit {
                                     try {
@@ -642,8 +652,12 @@ class RecommendationEngine @Inject constructor(
             }
         }
 
-        // --- Priority 3: "My Supermix" ---
-        if (candidates.size < limit) {
+        if (!isLoggedIn && candidates.size < limit) {
+            candidates.addAll(deduplicate(fetchLoggedOutCandidates(profile), seenIds, seenFingerprints))
+        }
+
+        // --- Priority 3: "My Supermix" (account-only) ---
+        if (isLoggedIn && candidates.size < limit) {
             try {
                 val supermix = youTubeRepository.getPlaylist("RTM")
                 candidates.addAll(deduplicate(supermix.songs, seenIds, seenFingerprints))
@@ -669,6 +683,21 @@ class RecommendationEngine @Inject constructor(
 
         cache.putSongs(RecommendationCache.Keys.QUICK_PICKS, scored) // Cache full ranked list
         return result
+    }
+
+    /** Seeds from the user's favourite artists and languages, interleaved so none dominates. */
+    private suspend fun fetchLoggedOutCandidates(profile: UserTasteProfile): List<Song> = coroutineScope {
+        val year = Calendar.getInstance().get(Calendar.YEAR)
+        val topArtists = (profile.likedArtists +
+            profile.artistAffinities.entries.sortedByDescending { it.value }.map { it.key })
+            .take(LOGGED_OUT_ARTIST_SEEDS)
+        val languages = sessionManager.getPreferredLanguages().take(LOGGED_OUT_LANGUAGE_SEEDS)
+        val queries = topArtists.map { "$it songs" } + languages.map { "top $it hits $year" }
+        val shelves = queries.map { query ->
+            async(Dispatchers.IO) { apiSemaphore.withPermit { searchSongs(query) } }
+        }.awaitAll()
+        val longest = shelves.maxOfOrNull { it.size } ?: 0
+        (0 until longest).flatMap { index -> shelves.mapNotNull { it.getOrNull(index) } }
     }
 
     // ============================================================================================
@@ -732,6 +761,53 @@ class RecommendationEngine @Inject constructor(
         // 5. Score, filter skips, and rank
         val scored = scoreAndRank(candidates, profile)
         scored.take(count)
+    }
+
+    /** Upcoming songs for a queue chip, seeded from [seed]. Fetches only what [mix] needs. */
+    suspend fun getQueueMix(
+        seed: Song,
+        mix: QueueMix,
+        excludeIds: Set<String>,
+        count: Int = 25
+    ): List<Song> = withContext(Dispatchers.IO) {
+        val profile = tasteProfileBuilder.getProfile()
+        val history = listeningHistoryDao.getAllHistory()
+        val artist = QueueMixPolicy.primaryArtist(seed.artist)
+
+        val sources = coroutineScope {
+            val related = async {
+                if (mix == QueueMix.DEEP_CUTS) emptyList()
+                else runCatching { youTubeRepository.getRelatedSongs(seed.id) }.getOrDefault(emptyList())
+            }
+            val artistTop = async {
+                if (mix == QueueMix.POPULAR || mix == QueueMix.DEEP_CUTS) searchSongs("$artist top songs") else emptyList()
+            }
+            val artistCatalog = async {
+                if (mix == QueueMix.DEEP_CUTS) searchSongs("$artist album tracks") else emptyList()
+            }
+            QueueMixSources(
+                seedArtist = artist,
+                related = related.await(),
+                artistTop = artistTop.await(),
+                artistCatalog = artistCatalog.await(),
+                history = history
+                    .sortedByDescending { it.playCount }
+                    .take(QUEUE_MIX_HISTORY_POOL)
+                    .shuffled()
+                    .mapNotNull {
+                        Song.fromYouTube(it.songId, it.songTitle, it.artist, it.album, it.duration, it.thumbnailUrl)
+                    },
+                playedIds = history.mapTo(HashSet()) { it.songId },
+                knownArtists = (profile.artistAffinities.keys + profile.likedArtists)
+                    .mapTo(HashSet(), QueueMixPolicy::normalized),
+            )
+        }
+
+        val seenIds = excludeIds.toMutableSet()
+        val seenFingerprints = ConcurrentHashMap.newKeySet<String>()
+        deduplicate(QueueMixPolicy.select(mix, sources), seenIds, seenFingerprints)
+            .filter { QueueMixPolicy.normalized(it.artist) !in dislikedArtists }
+            .take(count)
     }
 
     /**

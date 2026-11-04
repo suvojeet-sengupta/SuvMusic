@@ -123,27 +123,35 @@ class YouTubeBrowseService @Inject constructor(
         val sections = mutableListOf<HomeSection>()
         val preferredLanguages = sessionManager.getPreferredLanguages()
         val hl = YouTubeLocale.hl(sessionManager)
+        val gl = java.util.Locale.getDefault().country.ifBlank { DEFAULT_PUBLIC_GL }
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
 
         // Charts and home are independent round-trips; running them sequentially doubles
         // the cold-start wait before anything is on screen.
         coroutineScope {
             val chartsDeferred = async(Dispatchers.IO) {
-                runCatching { parser.parseChartsSections(apiClient.fetchPublicApi("FEmusic_charts", hl = hl, gl = PUBLIC_GL)) }
+                runCatching { parser.parseChartsSections(apiClient.fetchPublicApi("FEmusic_charts", hl = hl, gl = gl)) }
                     .getOrDefault(emptyList())
             }
             val homeDeferred = async(Dispatchers.IO) {
-                runCatching { parser.parseHomeSections(apiClient.fetchPublicApi("FEmusic_home", hl = hl, gl = PUBLIC_GL)) }
+                runCatching { parser.parseHomeSections(apiClient.fetchPublicApi("FEmusic_home", hl = hl, gl = gl)) }
                     .getOrDefault(emptyList())
             }
             sections.addAll(chartsDeferred.await())
             sections.addAll(homeDeferred.await())
         }
 
-        if (sections.isNotEmpty()) return sections.distinctBy { it.title }
+        if (sections.isNotEmpty()) {
+            // Public feeds ignore language taste, so lead with shelves for preferred languages.
+            val languageQueries = fallbackShelves(year)
+                .filter { (_, _, languages) -> languages.size == 1 && languages.first() in preferredLanguages }
+                .take(MAX_LANGUAGE_SHELVES)
+                .map { it.first to it.second }
+            return (searchShelves(languageQueries) + sections).distinctBy { it.title }
+        }
 
         // Nothing public came back — build shelves out of searches instead, filtered to the
         // languages this user cares about.
-        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
         val sectionQueries = if (preferredLanguages.isEmpty()) {
             fallbackShelves(year).take(10).map { it.first to it.second }
         } else {
@@ -152,24 +160,25 @@ class YouTubeBrowseService @Inject constructor(
                 .map { it.first to it.second }
         }
 
-        // Up to 14 sequential searches used to run before the screen had anything on it.
-        coroutineScope {
-            sectionQueries.map { (title, query) ->
-                async(Dispatchers.IO) {
-                    try {
-                        val songs = searchService.search(query, YouTubeSearchService.FILTER_SONGS)
-                            .take(10)
-                            .map { HomeItem.SongItem(it) }
-                        if (songs.isEmpty()) null
-                        else HomeSection(title, songs, parser.homeSectionTypeFor(title))
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-            }.awaitAll().filterNotNull().forEach { sections.add(it) }
-        }
-
+        sections.addAll(searchShelves(sectionQueries))
         return sections
+    }
+
+    // Up to 14 sequential searches used to run before the screen had anything on it.
+    private suspend fun searchShelves(queries: List<Pair<String, String>>): List<HomeSection> = coroutineScope {
+        queries.map { (title, query) ->
+            async(Dispatchers.IO) {
+                try {
+                    val songs = searchService.search(query, YouTubeSearchService.FILTER_SONGS)
+                        .take(10)
+                        .map { HomeItem.SongItem(it) }
+                    if (songs.isEmpty()) null
+                    else HomeSection(title, songs, parser.homeSectionTypeFor(title))
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        }.awaitAll().filterNotNull()
     }
 
     suspend fun getBrowseSections(browseId: String): List<HomeSection> = withContext(Dispatchers.IO) {
@@ -268,7 +277,7 @@ class YouTubeBrowseService @Inject constructor(
             }
 
             if (categories.isEmpty()) {
-                val publicJson = apiClient.fetchPublicApi("FEmusic_moods_and_genres", hl = hl, gl = PUBLIC_GL)
+                val publicJson = apiClient.fetchPublicApi("FEmusic_moods_and_genres", hl = hl, gl = DEFAULT_PUBLIC_GL)
                 if (publicJson.isNotBlank()) categories.addAll(parser.parseMoodsAndGenres(publicJson))
             }
 
@@ -307,7 +316,7 @@ class YouTubeBrowseService @Inject constructor(
             }
 
             if (songs.isEmpty()) {
-                val publicJson = apiClient.fetchPublicApi(browseId, hl = hl, gl = PUBLIC_GL, params = params?.takeIf { it.isNotBlank() })
+                val publicJson = apiClient.fetchPublicApi(browseId, hl = hl, gl = DEFAULT_PUBLIC_GL, params = params?.takeIf { it.isNotBlank() })
                 if (publicJson.isNotBlank()) songs = parser.parseSongs(publicJson)
             }
 
@@ -368,8 +377,8 @@ class YouTubeBrowseService @Inject constructor(
     companion object {
         const val SEARCH_BROWSE_PREFIX = "SEARCH::"
 
-        /** Unauthenticated browse calls have always been made against the US catalogue. */
-        private const val PUBLIC_GL = "US"
+        private const val DEFAULT_PUBLIC_GL = "US"
+        private const val MAX_LANGUAGE_SHELVES = 3
 
         private val QUICK_PICK_TITLES = listOf(
             "Quick picks", "Listen again", "Your favorites", "Your top", "Mixed for you", "Made for you"
