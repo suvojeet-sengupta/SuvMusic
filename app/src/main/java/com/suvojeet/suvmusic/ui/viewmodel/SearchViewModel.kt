@@ -390,29 +390,49 @@ class SearchViewModel @Inject constructor(
                             
                             when (filter) {
                                 ResultFilter.ALL -> {
-                                    val songsDeferred = async { youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS) }
-                                    val videosDeferred = async { youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS) }
-                                    val artistsDeferred = async { youTubeRepository.searchArtists(query) }
-                                    val playlistsDeferred = async { youTubeRepository.searchPlaylists(query) }
-                                    val albumsDeferred = async { youTubeRepository.searchAlbums(query) }
-                                    
-                                    val songs = songsDeferred.await()
-                                    val videos = videosDeferred.await()
-                                    val artists = artistsDeferred.await()
-                                    val playlists = playlistsDeferred.await()
-                                    val albums = albumsDeferred.await()
-                                    
-                                    val combinedResults = (songs + videos).distinctBy { it.id }
-                                    
-                                    _uiState.update { 
+                                    // Each section appears as soon as it lands; waiting for all
+                                    // five made the slowest search hold back the whole screen.
+                                    _uiState.update {
                                         it.copy(
-                                            results = combinedResults,
-                                            artistResults = artists,
-                                            playlistResults = playlists,
-                                            albumResults = albums,
-                                            isLoading = false
+                                            results = emptyList(),
+                                            artistResults = emptyList(),
+                                            playlistResults = emptyList(),
+                                            albumResults = emptyList()
                                         )
                                     }
+                                    val publish: ((SearchUiState) -> SearchUiState) -> Unit = { change ->
+                                        _uiState.update { state ->
+                                            val next = change(state)
+                                            val hasResults = next.results.isNotEmpty() ||
+                                                next.artistResults.isNotEmpty() ||
+                                                next.playlistResults.isNotEmpty() ||
+                                                next.albumResults.isNotEmpty()
+                                            next.copy(isLoading = !hasResults)
+                                        }
+                                    }
+                                    val songsDeferred = async {
+                                        youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
+                                            .also { songs -> publish { it.copy(results = (songs + it.results).distinctBy { song -> song.id }) } }
+                                    }
+                                    val videosDeferred = async {
+                                        youTubeRepository.search(query, YouTubeRepository.FILTER_VIDEOS)
+                                            .also { videos -> publish { it.copy(results = (it.results + videos).distinctBy { song -> song.id }) } }
+                                    }
+                                    val artistsDeferred = async {
+                                        youTubeRepository.searchArtists(query)
+                                            .also { artists -> publish { it.copy(artistResults = artists) } }
+                                    }
+                                    val playlistsDeferred = async {
+                                        youTubeRepository.searchPlaylists(query)
+                                            .also { playlists -> publish { it.copy(playlistResults = playlists) } }
+                                    }
+                                    val albumsDeferred = async {
+                                        youTubeRepository.searchAlbums(query)
+                                            .also { albums -> publish { it.copy(albumResults = albums) } }
+                                    }
+                                    listOf(songsDeferred, videosDeferred, artistsDeferred, playlistsDeferred, albumsDeferred)
+                                        .forEach { it.await() }
+                                    _uiState.update { it.copy(isLoading = false) }
                                 }
                                 ResultFilter.SONGS -> {
                                     val results = youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
