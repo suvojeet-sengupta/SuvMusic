@@ -1015,7 +1015,8 @@ fun SuvMusicApp(
                             // Removed sharedTransitionScope
                             dominantColors = currentDominantColors,
                             snackbarHostState = snackbarHostState,
-                            songInfoSong = pendingSongInfo
+                            songInfoSong = pendingSongInfo,
+                            onOpenSongInfo = { pendingSongInfo = it }
                         )
                     }
 

@@ -55,6 +55,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1177,7 +1178,7 @@ fun NewReleaseCard(
 
     androidx.compose.material3.Card(
         modifier = modifier
-            .clickable(onClick = onClick),
+            .combinedClickable(onLongClick = onMoreClick, onClick = onClick),
         shape = NewReleaseCardShape,
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = containerColor
@@ -1435,6 +1436,7 @@ fun PersonalizedMixCarousel(
     onSongClick: (List<Song>, Int) -> Unit,
     onPlaylistClick: (PlaylistDisplayItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onSongMoreClick: (Song) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (section.items.isEmpty()) return
@@ -1467,6 +1469,9 @@ fun PersonalizedMixCarousel(
                     title = title,
                     subtitle = subtitle,
                     imageUrl = image,
+                    onLongClick = if (item is HomeItem.SongItem) {
+                        { onSongMoreClick(item.song) }
+                    } else null,
                     onClick = {
                         when (item) {
                             is HomeItem.SongItem -> {
@@ -1489,6 +1494,7 @@ fun PersonalizedMixCard(
     title: String,
     subtitle: String?,
     imageUrl: String?,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1498,7 +1504,7 @@ fun PersonalizedMixCard(
     Column(
         modifier = Modifier
             .width(coverSize + discPeek)
-            .bounceClick(onClick = onClick)
+            .bounceClick(onLongClick = onLongClick, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -1510,7 +1516,6 @@ fun PersonalizedMixCard(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .size(coverSize)
-                    .offset(x = discPeek - 4.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF1A1A1A))
             ) {

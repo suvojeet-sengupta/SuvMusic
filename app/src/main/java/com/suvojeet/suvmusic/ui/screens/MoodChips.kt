@@ -1,6 +1,11 @@
 package com.suvojeet.suvmusic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -47,6 +52,7 @@ private val MOODS = listOf(
 fun MoodChipsSection(
     selectedMood: String?,
     onMoodSelected: (String) -> Unit,
+    loadingMood: String? = null,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -58,6 +64,7 @@ fun MoodChipsSection(
             MoodChip(
                 mood = mood,
                 isSelected = mood.name == selectedMood,
+                isLoading = mood.name == loadingMood,
                 isOutlined = index % 2 == 1,
                 onClick = { onMoodSelected(mood.name) }
             )
@@ -69,6 +76,7 @@ fun MoodChipsSection(
 private fun MoodChip(
     mood: Mood,
     isSelected: Boolean,
+    isLoading: Boolean,
     isOutlined: Boolean,
     onClick: () -> Unit
 ) {
@@ -104,11 +112,27 @@ private fun MoodChip(
             .padding(horizontal = 16.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = mood.name,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = labelColor
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AnimatedVisibility(
+                visible = isLoading,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(14.dp),
+                    color = labelColor,
+                    trackColor = labelColor.copy(alpha = 0.25f),
+                    strokeWidth = 2.dp
+                )
+            }
+            Text(
+                text = mood.name,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = labelColor
+            )
+        }
     }
 }

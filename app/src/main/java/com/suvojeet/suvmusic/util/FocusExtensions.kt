@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.util
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -31,7 +32,8 @@ fun Modifier.dpadFocusable(
     borderWidth: androidx.compose.ui.unit.Dp = 2.dp,
     borderColor: Color = Color.White,
     focusBackgroundColor: Color = Color.White.copy(alpha = 0.1f),
-    showBorder: Boolean = true
+    showBorder: Boolean = true,
+    onLongClick: (() -> Unit)? = null
 ) = composed {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
@@ -50,9 +52,10 @@ fun Modifier.dpadFocusable(
         .scale(scale)
         .then(
             if (onClick != null) {
-                Modifier.clickable(
+                Modifier.combinedClickable(
                     interactionSource = interactionSource,
                     indication = androidx.compose.foundation.LocalIndication.current,
+                    onLongClick = onLongClick,
                     onClick = onClick
                 )
             } else {

@@ -109,6 +109,8 @@ fun HomeScreen(
     onExploreClick: (String, String) -> Unit = { _, _ -> },
     onStartRadio: () -> Unit = {},
     onCreateMixClick: () -> Unit = {},
+    onArtistClick: (String) -> Unit = {},
+    onSongInfoClick: (Song) -> Unit = {},
     currentSong: Song? = null,
     viewModel: HomeViewModel = koinViewModel(),
     playlistViewModel: PlaylistManagementViewModel = koinViewModel()
@@ -145,6 +147,8 @@ fun HomeScreen(
                     is HomeEvent.ShowAddToPlaylistSheet -> {
                         playlistViewModel.showAddToPlaylistSheet(event.song)
                     }
+                    is HomeEvent.OpenAlbum -> onAlbumClick(event.album)
+                    is HomeEvent.OpenArtist -> onArtistClick(event.artistId)
                     is HomeEvent.ScrollToTop -> {
                         if (uiState.homeSections.isNotEmpty() || uiState.recommendations.isNotEmpty()) {
                             lazyListState.animateScrollToItem(0)
@@ -293,6 +297,7 @@ fun HomeScreen(
                             item(key = "mood_chips", contentType = "mood_chips") {
                                 MoodChipsSection(
                                     selectedMood = uiState.selectedMood,
+                                    loadingMood = uiState.loadingMood,
                                     onMoodSelected = viewModel::onMoodSelected,
                                     modifier = Modifier.animateEnter(index = 1)
                                 )
@@ -346,6 +351,7 @@ fun HomeScreen(
                                     userName = uiState.userName,
                                     avatarUrl = uiState.userAvatarUrl,
                                     onSongClick = onSongClick,
+                                    onSongLongClick = onSongMoreClickHandler,
                                     onShuffleClick = viewModel::playRandomMix,
                                     modifier = Modifier.animateEnter(index = 4)
                                 )
@@ -474,6 +480,7 @@ fun HomeScreen(
                                             onSongClick = onSongClick,
                                             onPlaylistClick = onPlaylistClick,
                                             onAlbumClick = onAlbumClick,
+                                            onSongMoreClick = onSongMoreClickHandler,
                                             modifier = enterModifier,
                                         )
                                     }
@@ -648,6 +655,9 @@ fun HomeScreen(
                     context.startActivity(Intent.createChooser(sendIntent, "Share Song"))
                     showSongMenu = false
                 },
+                onViewArtist = { viewModel.openArtist(song) },
+                onViewAlbum = { viewModel.openAlbum(song) },
+                onSongInfo = { onSongInfoClick(song) },
                 onListenTogether = onListenTogetherClick
             )
         }
@@ -904,6 +914,7 @@ private fun SpeedDialGrid(
     userName: String?,
     avatarUrl: String?,
     onSongClick: (List<Song>, Int) -> Unit,
+    onSongLongClick: (Song) -> Unit,
     onShuffleClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -981,6 +992,7 @@ private fun SpeedDialGrid(
                                 song = song,
                                 isPlaying = song.id == currentSong?.id,
                                 onClick = { onSongClick(items, cellIndex) },
+                                onLongClick = { onSongLongClick(song) },
                                 modifier = Modifier.weight(1f)
                             )
                         } else {
@@ -1053,6 +1065,7 @@ private fun SpeedDialTile(
     song: Song,
     isPlaying: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1071,7 +1084,7 @@ private fun SpeedDialTile(
         modifier = modifier
             .aspectRatio(1f)
             .clip(shape)
-            .bounceClick(shape = shape, onClick = onClick)
+            .bounceClick(shape = shape, onLongClick = onLongClick, onClick = onClick)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -1654,8 +1667,12 @@ private fun CreateMixCard(
 private fun Modifier.bounceClick(
     scaleDown: Float = 0.95f,
     shape: Shape = RoundedCornerShape(8.dp),
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier {
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleDown else 1f,
@@ -1685,7 +1702,13 @@ private fun Modifier.bounceClick(
                         isPressed = false
                     }
                 },
-                onTap = { onClick() }
+                onLongPress = {
+                    currentOnLongClick?.let { longClick ->
+                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        longClick()
+                    }
+                },
+                onTap = { currentOnClick() }
             )
         }
 }

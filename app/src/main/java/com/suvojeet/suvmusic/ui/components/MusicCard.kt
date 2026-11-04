@@ -238,7 +238,11 @@ fun SquareSongCard(
         modifier = modifier
             .width(size)
             .bounceClick(onClick = onClick)
-            .dpadFocusable(onClick = onClick, shape = SquircleShape)
+            .dpadFocusable(
+                onClick = onClick,
+                onLongClick = if (showMoreButton) onMoreClick else null,
+                shape = SquircleShape
+            )
     ) {
         // Album Art Surface for elevation and shape
         Surface(

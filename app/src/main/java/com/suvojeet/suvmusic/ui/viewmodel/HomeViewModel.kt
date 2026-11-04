@@ -30,6 +30,8 @@ import javax.inject.Inject
 
 sealed class HomeEvent {
     data class ShowAddToPlaylistSheet(val song: Song) : HomeEvent()
+    data class OpenAlbum(val album: com.suvojeet.suvmusic.core.model.Album) : HomeEvent()
+    data class OpenArtist(val artistId: String) : HomeEvent()
     object ScrollToTop : HomeEvent()
     object Refresh : HomeEvent()
 }
@@ -57,6 +59,7 @@ data class HomeUiState(
     val error: String? = null,
     val currentSource: MusicSource = MusicSource.YOUTUBE,
     val selectedMood: String? = null,
+    val loadingMood: String? = null,
     /** Whether the user is logged in (for showing personalized content) */
     val isLoggedIn: Boolean = false,
     /** How many "load more" pages have been fetched (for infinite scroll) */
@@ -184,11 +187,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private var moodJob: kotlinx.coroutines.Job? = null
+
     fun onMoodSelected(mood: String) {
         val currentMood = _uiState.value.selectedMood
+        moodJob?.cancel()
         if (currentMood == mood) {
             // Deselect and reload default home
-            _uiState.update { it.copy(selectedMood = null) }
+            _uiState.update { it.copy(selectedMood = null, loadingMood = null) }
             loadData(forceRefresh = true) 
         } else {
             // Select new mood
@@ -198,8 +204,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun fetchMoodContent(mood: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+        moodJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingMood = mood, error = null) }
             try {
                 // Browsing always uses YouTube — the HQ Audio source only affects
                 // playback, not home/search content.
@@ -210,21 +216,58 @@ class HomeViewModel @Inject constructor(
                         homeSections = sections,
                         filteredSections = sections.filter { s -> !s.title.contains("Quick picks", ignoreCase = true) },
                         isLoading = false,
+                        loadingMood = null,
                         isRefreshing = false,
                         error = if (sections.isEmpty()) "No content found for $mood" else null
                     )
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.update { 
                     it.copy(
                         isLoading = false, 
+                        loadingMood = null,
                         error = e.toUserFriendlyMessage()
                     ) 
                 }
             }
         }
     }
-    
+
+    fun openArtist(song: Song) {
+        viewModelScope.launch {
+            val artistId = runCatching {
+                song.artistId
+                    ?: youTubeRepository.getSongDetails(song.id)?.artistId
+                    ?: youTubeRepository.searchArtists(song.artist.primaryArtistName()).firstOrNull()?.id
+            }.getOrNull()
+            if (artistId != null) {
+                _events.emit(HomeEvent.OpenArtist(artistId))
+            } else {
+                com.suvojeet.suvmusic.util.SnackbarUtil.showError("Couldn't find this artist")
+            }
+        }
+    }
+
+    fun openAlbum(song: Song) {
+        viewModelScope.launch {
+            val album = runCatching {
+                val albumName = song.album.ifBlank { youTubeRepository.getSongDetails(song.id)?.album.orEmpty() }
+                if (albumName.isBlank()) return@runCatching null
+                youTubeRepository.searchAlbums("$albumName ${song.artist.primaryArtistName()}")
+                    .firstOrNull { it.title.equals(albumName, ignoreCase = true) }
+            }.getOrNull()
+            if (album != null) {
+                _events.emit(HomeEvent.OpenAlbum(album))
+            } else {
+                com.suvojeet.suvmusic.util.SnackbarUtil.showError("Couldn't find this album")
+            }
+        }
+    }
+
+    private fun String.primaryArtistName(): String =
+        split(",", "&", " x ", " feat", " ft.").first().trim()
+
     private fun loadData(forceRefresh: Boolean = false) {
         if (_uiState.value.selectedMood != null && !forceRefresh) return
 

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
@@ -65,6 +66,7 @@ fun SongMenuBottomSheet(
     onMoveDown: (() -> Unit)? = null,
     onViewArtist: (() -> Unit)? = null,
     onViewAlbum: (() -> Unit)? = null,
+    onSongInfo: (() -> Unit)? = null,
     onListenTogether: () -> Unit = {},
     showShare: Boolean = true,
     isCurrentlyPlaying: Boolean = false
@@ -252,6 +254,14 @@ fun SongMenuBottomSheet(
                         icon = Icons.Default.Album,
                         title = "Go to album",
                         onClick = { onViewAlbum(); onDismiss() }
+                    )
+                }
+
+                if (onSongInfo != null) {
+                    MenuActionItem(
+                        icon = Icons.Default.Info,
+                        title = "Song info",
+                        onClick = { onSongInfo(); onDismiss() }
                     )
                 }
             }

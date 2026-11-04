@@ -104,7 +104,8 @@ fun NavGraph(
     startDestination: Any = Destination.Home,
     dominantColors: com.suvojeet.suvmusic.ui.components.DominantColors? = null,
     snackbarHostState: androidx.compose.material3.SnackbarHostState? = null,
-    songInfoSong: Song? = null
+    songInfoSong: Song? = null,
+    onOpenSongInfo: (Song) -> Unit = {}
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val formFactor = LocalDeviceFormFactor.current
@@ -229,6 +230,13 @@ fun NavGraph(
                         onStartRadio = { onStartRadio(null, null) },
                         onCreateMixClick = {
                             navController.navigate(Destination.PickMusic)
+                        },
+                        onArtistClick = { artistId ->
+                            navController.navigate(Destination.Artist(artistId))
+                        },
+                        onSongInfoClick = { song ->
+                            onOpenSongInfo(song)
+                            navController.navigate(Destination.SongInfo(song.id))
                         },
                         currentSong = playbackInfo.currentSong
                     )
@@ -617,6 +625,7 @@ fun NavGraph(
         composable<Destination.YouTubeLogin> {
             YouTubeLoginScreen(
                 sessionManager = sessionManager,
+                verifyAccount = { youTubeAccountService.fetchAccountInfo() != null },
                 onLoginSuccess = {
                     // Show success message
                     com.suvojeet.suvmusic.util.SnackbarUtil.showSuccess("Login Successful")
@@ -625,7 +634,6 @@ fun NavGraph(
                     scope.launch {
                         youTubeAccountService.fetchAccountInfo()?.let { account ->
                             if (account.email.isNotBlank()) {
-                verifyAccount = { youTubeAccountService.fetchAccountInfo() != null },
                                 sessionManager.saveCurrentAccountToHistory(
                                     account.name,
                                     account.email,

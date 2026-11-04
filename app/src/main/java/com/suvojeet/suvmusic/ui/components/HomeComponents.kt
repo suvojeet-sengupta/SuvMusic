@@ -3,6 +3,7 @@ package com.suvojeet.suvmusic.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -213,6 +214,7 @@ fun HomeSectionHeader(
 
 fun Modifier.bounceClick(
     scaleDown: Float = 0.95f,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
@@ -228,9 +230,10 @@ fun Modifier.bounceClick(
 
     this
         .scale(scale)
-        .clickable(
+        .combinedClickable(
             interactionSource = interactionSource,
             indication = null,
+            onLongClick = onLongClick,
             onClick = onClick
         )
 }
