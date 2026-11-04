@@ -31,14 +31,32 @@ class YouTubeSyncViewModel @Inject constructor(
     val pullOnly: StateFlow<Boolean> = sessionManager.youtubePullOnlyFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         viewModelScope.launch {
-            val fetched = runCatching {
-                youTubeRepository.getUserPlaylists(autoSave = false, includeUnsynced = true)
-            }.getOrDefault(emptyList())
-            _playlists.value = YouTubeSyncSelection.pickerItems(fetched)
+            _playlists.value = YouTubeSyncSelection.pickerItems(sessionManager.getCachedLibraryPlaylistsSync())
+            fetchPlaylists()
             _isLoading.value = false
         }
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        _isRefreshing.value = true
+        viewModelScope.launch {
+            fetchPlaylists()
+            _isRefreshing.value = false
+        }
+    }
+
+    /** A failed or empty fetch keeps the list already showing rather than blanking it. */
+    private suspend fun fetchPlaylists() {
+        val fetched = runCatching {
+            youTubeRepository.getUserPlaylists(autoSave = false, includeUnsynced = true)
+        }.getOrDefault(emptyList())
+        if (fetched.isNotEmpty()) _playlists.value = YouTubeSyncSelection.pickerItems(fetched)
     }
 
     fun setPullOnly(enabled: Boolean) {

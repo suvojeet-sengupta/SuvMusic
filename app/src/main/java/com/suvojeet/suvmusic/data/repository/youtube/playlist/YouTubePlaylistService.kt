@@ -64,7 +64,9 @@ class YouTubePlaylistService @Inject constructor(
         try {
             val hl = YouTubeLocale.hl(sessionManager)
             val response = apiClient.fetchInternalApi("FEmusic_liked_playlists", hl = hl)
+            // An empty parse is usually a throttled or degraded response, not an empty account.
             val allPlaylists = parser.parsePlaylistDisplayItems(response)
+                .ifEmpty { sessionManager.getCachedLibraryPlaylistsSync() }
             val ytPlaylists = YouTubeSyncSelection.visible(allPlaylists, excluded)
 
             if (allPlaylists.isNotEmpty()) {

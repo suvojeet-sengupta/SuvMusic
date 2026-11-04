@@ -48,6 +48,7 @@ fun YouTubeSyncScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val excluded by viewModel.excludedPlaylists.collectAsStateWithLifecycle()
     val pullOnly by viewModel.pullOnly.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -61,11 +62,14 @@ fun YouTubeSyncScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
             item(key = "pull_only") {
                 SyncRow(
                     title = "YouTube Music to app only",
@@ -114,7 +118,17 @@ fun YouTubeSyncScreen(
                         CircularProgressIndicator()
                     }
                 }
+            } else if (playlists.isEmpty()) {
+                item(key = "empty") {
+                    Text(
+                        text = "Couldn't load your playlists. Pull down to try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             }
+        }
         }
     }
 }
