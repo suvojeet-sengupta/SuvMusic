@@ -34,6 +34,7 @@ class ListenTogetherManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "ListenTogetherManager"
+        private const val HEARTBEAT_INTERVAL_MS = 5_000L
 
         // --- HQ (RemoteAudio) staggered resolution across the room ---
         // The RemoteAudio backend rate-limits hard and shares one backoff gate, so N
@@ -381,6 +382,7 @@ class ListenTogetherManager @Inject constructor(
                     handleGuestActionAsHost(event.action)
                 }
             }
+            is ListenTogetherEvent.HostChanged -> handleHostChanged()
             is ListenTogetherEvent.UserJoined -> {
                 if (isHost) {
                     player?.currentMediaItem?.let { item ->
@@ -568,13 +570,22 @@ class ListenTogetherManager @Inject constructor(
         bufferCompleteReceivedForTrack = null
     }
 
+    private var lastHardSeekAt = 0L
+    private var hardSeekStartedAt: Long? = null
+    private var seekLeadMs = 0L
+
     private fun startDriftCorrectionJob() {
         driftCorrectionJob?.cancel()
         driftCorrectionJob = scope.launch {
             while (true) {
-                delay(500) // Check every 500ms
+                delay(250)
                 val p = player ?: continue
                 if (!p.isPlaying) continue
+                if (p.playbackState == Player.STATE_READY && hardSeekStartedAt != null) {
+                    val took = System.currentTimeMillis() - (hardSeekStartedAt ?: 0L)
+                    seekLeadMs = ((seekLeadMs + took) / 2).coerceAtMost(ListenTogetherSync.MAX_SEEK_LEAD_MS)
+                    hardSeekStartedAt = null
+                }
                 // Only correct while the player is actually ready. Seeking during a
                 // buffer/stall creates a feedback loop: the wall-clock keeps advancing
                 // while the player is stuck, the gap grows past the hard-seek threshold,
@@ -600,7 +611,11 @@ class ListenTogetherManager @Inject constructor(
 
                 // Drift thresholds
                 when {
-                    kotlin.math.abs(drift) > 1500 -> {
+                    kotlin.math.abs(drift) > ListenTogetherSync.HARD_SEEK_DRIFT_MS -> {
+                        val now = System.currentTimeMillis()
+                        if (now - lastHardSeekAt < ListenTogetherSync.MIN_HARD_SEEK_GAP_MS) continue
+                        lastHardSeekAt = now
+                        hardSeekStartedAt = now
                         // Large drift: silently hard-seek THIS guest back into sync. We
                         // deliberately do NOT broadcast FORCE_SYNC here: that paused and
                         // re-buffered the ENTIRE room whenever any single guest drifted,
@@ -610,27 +625,60 @@ class ListenTogetherManager @Inject constructor(
                         if (p.playbackParameters.speed != 1.0f) {
                             p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
                         }
-                        p.seekTo(expectedPosition)
-                        anchorPosition = expectedPosition
-                        anchorTime = System.currentTimeMillis()
-                    }
-                    drift < -150 -> {
-                        // Behind by > 150ms: Speed up slightly (1.05x). Pitch pinned to 1.0
-                        // so the time-stretch does not audibly raise the pitch.
-                         p.playbackParameters = androidx.media3.common.PlaybackParameters(1.05f, 1.0f)
-                    }
-                    drift > 150 -> {
-                         // Ahead by > 150ms: Slow down slightly (0.95x), pitch preserved.
-                         p.playbackParameters = androidx.media3.common.PlaybackParameters(0.95f, 1.0f)
+                        p.seekTo(expectedPosition + seekLeadMs)
                     }
                     else -> {
-                        // Within 150ms: Sync is good, reset to normal speed
-                         if (p.playbackParameters.speed != 1.0f) {
-                             p.playbackParameters = androidx.media3.common.PlaybackParameters(1.0f, 1.0f)
-                         }
+                        // Pitch stays pinned to 1.0 so the time-stretch isn't audible.
+                        val speed = ListenTogetherSync.targetSpeed(drift, p.playbackParameters.speed)
+                        if (speed != p.playbackParameters.speed) {
+                            p.playbackParameters = androidx.media3.common.PlaybackParameters(speed, 1.0f)
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /** Network jitter on each heartbeat must not nudge an anchor that is already accurate. */
+    private fun updateAnchor(targetPosition: Long, trackId: String?) {
+        val now = System.currentTimeMillis()
+        val isTracking = driftCorrectionJob?.isActive == true && anchorTrackId == trackId
+        val expected = anchorPosition + (now - anchorTime)
+        if (isTracking && kotlin.math.abs(expected - targetPosition) <= ListenTogetherSync.ANCHOR_JITTER_MS) return
+        anchorPosition = targetPosition
+        anchorTime = now
+        anchorTrackId = trackId
+    }
+
+    /** The promoted guest becomes the room's clock; the old host starts following it. */
+    private fun handleHostChanged() {
+        val p = player
+        p?.let {
+            if (!playerListenerRegistered) {
+                it.addListener(playerListener)
+                playerListenerRegistered = true
+            }
+        }
+        if (!isHost) {
+            stopHeartbeat()
+            client.requestSync()
+            return
+        }
+        activeSyncJob?.cancel()
+        stopDriftCorrection()
+        isSyncing = false
+        bufferingTrackId = null
+        pendingSyncState = null
+        lastSyncedIsPlaying = p?.playWhenReady
+        lastSyncedTrackId = p?.currentMediaItem?.mediaId
+        startHeartbeat()
+        p?.currentMediaItem?.let { item ->
+            client.sendPlaybackAction(
+                PlaybackActions.FORCE_SYNC,
+                position = p.currentPosition,
+                trackId = item.mediaId,
+                trackInfo = getTrackInfo(item)
+            )
         }
     }
 
@@ -758,18 +806,16 @@ class ListenTogetherManager @Inject constructor(
         try {
             when (action.action) {
                 PlaybackActions.PLAY -> {
-                    // Server-time based position adjustment using raw clocks is inaccurate
-                    // due to clock desync between host and guest. We just use the base position
-                    // and a tiny estimated latency (50ms) to ensure we stay tightly synced.
+                    // Raw clocks differ between host and guest, so compensate with measured
+                    // network latency instead of comparing timestamps.
                     val basePos = action.position ?: 0L
-                    val targetPos = basePos + 50L
-                    
-                    // Update anchors
-                    anchorPosition = targetPos
-                    anchorTime = System.currentTimeMillis()
-                    anchorTrackId = action.trackId ?: p.currentMediaItem?.mediaId
+                    val targetPos = basePos + client.latencyCompensationMs
 
-                    if (kotlin.math.abs(p.currentPosition - targetPos) > 1000) p.seekTo(targetPos)
+                    updateAnchor(targetPos, action.trackId ?: p.currentMediaItem?.mediaId)
+
+                    if (kotlin.math.abs(p.currentPosition - targetPos) > ListenTogetherSync.HARD_SEEK_DRIFT_MS) {
+                        p.seekTo(targetPos)
+                    }
                     
                     // FORCE PLAY even if buffering was "active" logic-wise
                     // We trust the host's command. If we aren't actually ready, ExoPlayer will buffer anyway.
@@ -1472,7 +1518,7 @@ class ListenTogetherManager @Inject constructor(
         if (heartbeatJob?.isActive == true) return
         heartbeatJob = scope.launch {
             while (heartbeatJob?.isActive == true && isInRoom && isHost) {
-                delay(15000L)
+                delay(HEARTBEAT_INTERVAL_MS)
                 player?.let { p ->
                     if (p.playWhenReady && p.playbackState == Player.STATE_READY) {
                         val trackId = p.currentMediaItem?.mediaId

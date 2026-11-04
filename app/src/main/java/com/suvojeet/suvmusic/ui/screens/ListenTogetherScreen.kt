@@ -140,6 +140,7 @@ fun ListenTogetherScreen(
                                 },
                                 onSync = { viewModel.requestSync() },
                                 onBlockUser = { viewModel.blockUser(it) },
+                                onTransferHost = { viewModel.transferHost(it) },
                                 bufferingUsers = bufferingUsers,
                                 viewModel = viewModel,
                                 dominantColors = dominantColors
@@ -992,6 +993,7 @@ fun RoomContent(
     onCopyCode: (String) -> Unit,
     onSync: () -> Unit,
     onBlockUser: (String) -> Unit,
+    onTransferHost: (String) -> Unit,
     bufferingUsers: List<String>,
     viewModel: ListenTogetherViewModel,
     dominantColors: DominantColors
@@ -1493,7 +1495,10 @@ fun RoomContent(
                 isMe = user.userId == uiState.userId,
                 isBuffering = isBuffering,
                 accentColor = dominantColors.accent,
-                onBlock = { onBlockUser(user.userId) }
+                onBlock = { onBlockUser(user.userId) },
+                onMakeHost = if (uiState.userId == room.hostId && user.isConnected) {
+                    { onTransferHost(user.userId) }
+                } else null
             )
         }
 
@@ -1816,9 +1821,28 @@ fun UserListItem(
     isMe: Boolean,
     isBuffering: Boolean = false,
     accentColor: Color,
-    onBlock: () -> Unit
+    onBlock: () -> Unit,
+    onMakeHost: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var confirmMakeHost by remember { mutableStateOf(false) }
+
+    if (confirmMakeHost && onMakeHost != null) {
+        AlertDialog(
+            onDismissRequest = { confirmMakeHost = false },
+            title = { Text("Make ${user.username} the host?") },
+            text = { Text("They will control playback for the room, and you will follow along as a guest.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmMakeHost = false
+                    onMakeHost()
+                }) { Text("Make host") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmMakeHost = false }) { Text("Cancel") }
+            }
+        )
+    }
     
     Surface(
         color = Color.Transparent,
@@ -1918,6 +1942,16 @@ fun UserListItem(
                         onDismissRequest = { showMenu = false },
                         modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     ) {
+                        if (onMakeHost != null) {
+                            DropdownMenuItem(
+                                text = { Text("Make host") },
+                                onClick = {
+                                    showMenu = false
+                                    confirmMakeHost = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Verified, null, modifier = Modifier.size(18.dp)) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("Block User") },
                             onClick = { 

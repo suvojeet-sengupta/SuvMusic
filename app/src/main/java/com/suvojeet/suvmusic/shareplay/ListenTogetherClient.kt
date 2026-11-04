@@ -1,5 +1,6 @@
 package com.suvojeet.suvmusic.shareplay
 
+import android.os.SystemClock
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
@@ -126,6 +127,7 @@ class ListenTogetherClient @Inject constructor(
         private const val INITIAL_RECONNECT_DELAY_MS = 1000L
         private const val MAX_RECONNECT_DELAY_MS = 120000L
         private const val PING_INTERVAL_MS = 25000L
+        private const val ROOM_PING_INTERVAL_MS = 10000L
         private const val MAX_LOG_ENTRIES = 500
         private const val SESSION_GRACE_PERIOD_MS = 10 * 60 * 1000L
         private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L  // refreshed each ping
@@ -240,6 +242,11 @@ class ListenTogetherClient @Inject constructor(
     
     private var webSocket: WebSocket? = null
     private var pingJob: Job? = null
+    @Volatile private var pingSentAtMs: Long? = null
+    @Volatile private var smoothedRttMs: Long? = null
+
+    val latencyCompensationMs: Long
+        get() = ListenTogetherSync.latencyCompensation(smoothedRttMs)
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
     
@@ -631,16 +638,21 @@ class ListenTogetherClient @Inject constructor(
         scope.launch { _events.emit(ListenTogetherEvent.Disconnected) }
     }
 
+    private fun sendPing() {
+        pingSentAtMs = SystemClock.elapsedRealtime()
+        sendMessageNoPayload(MessageTypes.PING)
+    }
+
     private fun startPingJob() {
         pingJob?.cancel()
         pingJob = scope.launch {
             // Ping once right away so the live server stats (carried on the PONG)
             // populate within moments of connecting instead of after the first
             // 25s interval.
-            sendMessageNoPayload(MessageTypes.PING)
+            sendPing()
             while (true) {
-                delay(PING_INTERVAL_MS)
-                sendMessageNoPayload(MessageTypes.PING)
+                delay(if (isInRoom) ROOM_PING_INTERVAL_MS else PING_INTERVAL_MS)
+                sendPing()
                 // Re-arm the wake lock so it never silently expires during a long,
                 // otherwise-idle session (the timeout is shorter than a session can last).
                 if (isInRoom) acquireWakeLock()
@@ -1133,6 +1145,10 @@ class ListenTogetherClient @Inject constructor(
                 }
                 
                 MessageTypes.PONG -> {
+                    pingSentAtMs?.let { sentAt ->
+                        smoothedRttMs = ListenTogetherSync.smoothRtt(smoothedRttMs, SystemClock.elapsedRealtime() - sentAt)
+                    }
+                    pingSentAtMs = null
                     // Newer servers piggyback live stats; older ones send an empty
                     // PONG (all-zero defaults). Only publish when there's real data so
                     // we don't blank out the display talking to an old server.
