@@ -82,6 +82,8 @@ data class SearchUiState(
     )
 )
 
+private const val HQ_ALL_TOP_SONGS = 20
+
 @OptIn(FlowPreview::class)
 class SearchViewModel @Inject constructor(
     private val youTubeRepository: YouTubeRepository,
@@ -146,7 +148,8 @@ class SearchViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         currentSource = source,
-                        selectedTab = defaultTab
+                        selectedTab = defaultTab,
+                        resultFilter = defaultFilterFor(defaultTab)
                     )
                 }
                 loadBrowseCategories()
@@ -330,8 +333,22 @@ class SearchViewModel @Inject constructor(
         }
     }
     
+    private fun defaultFilterFor(tab: SearchTab): ResultFilter =
+        if (tab == SearchTab.REMOTE) ResultFilter.SONGS else ResultFilter.ALL
+
+    private fun publish(change: (SearchUiState) -> SearchUiState) {
+        _uiState.update { state ->
+            val next = change(state)
+            val hasResults = next.results.isNotEmpty() ||
+                next.artistResults.isNotEmpty() ||
+                next.playlistResults.isNotEmpty() ||
+                next.albumResults.isNotEmpty()
+            next.copy(isLoading = !hasResults)
+        }
+    }
+
     fun onTabChange(tab: SearchTab) {
-        _uiState.update { it.copy(selectedTab = tab) }
+        _uiState.update { it.copy(selectedTab = tab, resultFilter = defaultFilterFor(tab)) }
         if (_uiState.value.query.isNotBlank()) {
             search()
         }
@@ -400,16 +417,6 @@ class SearchViewModel @Inject constructor(
                                             albumResults = emptyList()
                                         )
                                     }
-                                    val publish: ((SearchUiState) -> SearchUiState) -> Unit = { change ->
-                                        _uiState.update { state ->
-                                            val next = change(state)
-                                            val hasResults = next.results.isNotEmpty() ||
-                                                next.artistResults.isNotEmpty() ||
-                                                next.playlistResults.isNotEmpty() ||
-                                                next.albumResults.isNotEmpty()
-                                            next.copy(isLoading = !hasResults)
-                                        }
-                                    }
                                     val songsDeferred = async {
                                         youTubeRepository.search(query, YouTubeRepository.FILTER_SONGS)
                                             .also { songs -> publish { it.copy(results = (songs + it.results).distinctBy { song -> song.id }) } }
@@ -475,16 +482,28 @@ class SearchViewModel @Inject constructor(
                             
                             when (filter) {
                                 ResultFilter.ALL -> {
-                                    val results = remoteAudioRepository.searchAll(query)
-                                    _uiState.update { 
+                                    _uiState.update {
                                         it.copy(
-                                            results = results.songs,
-                                            artistResults = results.artists,
-                                            albumResults = results.albums,
-                                            playlistResults = results.playlists,
-                                            isLoading = false
+                                            results = emptyList(),
+                                            artistResults = emptyList(),
+                                            playlistResults = emptyList(),
+                                            albumResults = emptyList()
                                         )
                                     }
+                                    val songsDeferred = async {
+                                        remoteAudioRepository.search(query)
+                                            .also { songs -> publish { it.copy(results = songs.take(HQ_ALL_TOP_SONGS)) } }
+                                    }
+                                    val artistsDeferred = async {
+                                        remoteAudioRepository.searchArtists(query)
+                                            .also { artists -> publish { it.copy(artistResults = artists) } }
+                                    }
+                                    val playlistsDeferred = async {
+                                        remoteAudioRepository.searchPlaylists(query)
+                                            .also { playlists -> publish { it.copy(playlistResults = playlists) } }
+                                    }
+                                    listOf(songsDeferred, artistsDeferred, playlistsDeferred).forEach { it.await() }
+                                    _uiState.update { it.copy(isLoading = false) }
                                 }
                                 ResultFilter.SONGS, ResultFilter.VIDEOS -> {
                                     val results = remoteAudioRepository.search(query)

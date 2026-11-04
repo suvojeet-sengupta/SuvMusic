@@ -153,6 +153,8 @@ fun SearchScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
+            val voiceContext = androidx.compose.ui.platform.LocalContext.current
+            var showVoiceSearch by remember { mutableStateOf(false) }
             val voiceSearchLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                 contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
             ) { result ->
@@ -163,6 +165,42 @@ fun SearchScreen(
                         viewModel.search()
                     }
                 }
+            }
+
+            val systemVoiceSearch: () -> Unit = {
+                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Say a song or artist")
+                }
+                try { voiceSearchLauncher.launch(intent) }
+                catch (e: Exception) {
+                    com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Voice search isn't available on this phone")
+                }
+            }
+            val micPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted) showVoiceSearch = true else systemVoiceSearch()
+            }
+            val startVoiceSearch: () -> Unit = {
+                val hasMic = androidx.core.content.ContextCompat.checkSelfPermission(
+                    voiceContext, android.Manifest.permission.RECORD_AUDIO
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                when {
+                    !android.speech.SpeechRecognizer.isRecognitionAvailable(voiceContext) -> systemVoiceSearch()
+                    hasMic -> showVoiceSearch = true
+                    else -> micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                }
+            }
+            if (showVoiceSearch) {
+                com.suvojeet.suvmusic.ui.components.VoiceSearchSheet(
+                    onResult = { spokenText ->
+                        showVoiceSearch = false
+                        viewModel.onQueryChange(spokenText)
+                        viewModel.search()
+                    },
+                    onDismiss = { showVoiceSearch = false }
+                )
             }
 
             AnimatedVisibility(
@@ -211,16 +249,7 @@ fun SearchScreen(
                                             Icon(Icons.Default.Clear, "Clear")
                                         }
                                     } else {
-                                        IconButton(onClick = {
-                                            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                                            }
-                                            try { voiceSearchLauncher.launch(intent) }
-                                            catch (e: Exception) {
-                                                com.suvojeet.suvmusic.util.SnackbarUtil.showWarning("Voice search not supported")
-                                            }
-                                        }) {
+                                        IconButton(onClick = startVoiceSearch) {
                                             Icon(Icons.Default.Mic, "Voice Search")
                                         }
                                     }
