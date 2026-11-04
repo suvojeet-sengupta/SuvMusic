@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.6.9.0] - 2026-11-04
+
+### Changed
+- **Calls with Bluetooth**: Music pauses when a call starts and resumes if it ended within 2 minutes. Longer calls leave it paused.
+- **Headphones Disconnected**: Music now pauses when you unplug wired earphones or disconnect Bluetooth earbuds.
+- **Voice Search**: New built-in voice search that shows your words as you speak.
+- **HQ Audio Search**: HQ search opens on Songs and loads faster. The All tab shows the top 20 songs first.
+- **Search Results**: All search results now appear section by section instead of waiting for everything.
+- **Long-press Menu**: Hold a song cover on the home screen to add it to a playlist or queue, see song info, go to its album or artist, or share it.
+- **Queue Chips**: Familiar, Popular, Discover and Deep cuts now change your upcoming songs.
+- **Cookie Login**: You can sign in to YouTube Music by pasting your cookies.
+- **YouTube Music Sync**: Choose which playlists sync, or turn on YouTube Music to app only so nothing is sent back. Pull down on the sync screen to refresh it.
+- **Playlist Fixes**: Synced playlists no longer include suggested songs, Unknown Playlist names are repaired, and playlists are tagged Synced or Local.
+- **Listen Together**: Tighter sync between devices, and the host can hand the room to someone else.
+- **Home Screen**: Album art no longer overlaps, tapping a card no longer flashes a box, mood chips show when they are loading, and scrolling is smoother on high refresh screens.
+- **Logged-out Suggestions**: Better picks without an account, based on your plays, artists, languages and country.
+- **Sound Tuner**: The AI Equalizer is now called Sound Tuner, with plainer wording across the app.
+- **Player and Queue**: Added an auto black or light player background, the queue follows the player's theme, and dragging songs in the queue and playlists is steadier.
+- **Playlist Import**: Public YouTube playlists import without login, and M3U imports are more reliable.
+
 ## [2.6.8.0] - 2026-10-04
 
 ### Changed
