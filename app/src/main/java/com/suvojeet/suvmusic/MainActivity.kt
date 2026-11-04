@@ -68,6 +68,9 @@ import com.suvojeet.suvmusic.core.model.MiniPlayerStyle
 import com.suvojeet.suvmusic.navigation.Destination
 import com.suvojeet.suvmusic.navigation.NavGraph
 import com.suvojeet.suvmusic.ui.components.ExpressiveBottomNav
+import com.suvojeet.suvmusic.ui.components.liquid.isLiquidGlassSupported
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import com.suvojeet.suvmusic.ui.components.player.ExpandablePlayerSheet
 import com.suvojeet.suvmusic.ui.components.DominantColors
 import com.suvojeet.suvmusic.ui.components.rememberDominantColors
@@ -496,6 +499,8 @@ fun SuvMusicApp(
     val miniPlayerAlpha by sessionManager.miniPlayerAlphaFlow.collectAsStateWithLifecycle(initialValue = 0f)
     val miniPlayerStyle by sessionManager.miniPlayerStyleFlow.collectAsStateWithLifecycle(initialValue = MiniPlayerStyle.YT_MUSIC)
     val miniPlayerGlassBlur by sessionManager.miniPlayerGlassBlurFlow.collectAsStateWithLifecycle(initialValue = 50f)
+    val liquidGlassNavBar by sessionManager.liquidGlassNavBarFlow.collectAsStateWithLifecycle(initialValue = false)
+    val navGlassBackdrop = if (liquidGlassNavBar && isLiquidGlassSupported) rememberLayerBackdrop() else null
     val swipeDownToDismissEnabled by sessionManager.swipeDownToDismissEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
     
     val navController = rememberNavController()
@@ -898,7 +903,8 @@ fun SuvMusicApp(
                                 alpha = navBarAlpha,
                                 iosLiquidGlassEnabled = iosLiquidGlassEnabled,
                                 backgroundColor = navBarColor,
-                                iosNavBarBlur = navBarBlur
+                                iosNavBarBlur = navBarBlur,
+                                glassBackdrop = navGlassBackdrop
                             )
                         }
                     }
@@ -958,6 +964,13 @@ fun SuvMusicApp(
                             .fillMaxSize()
                             .padding(
                                 bottom = 0.dp // Allow content to flow behind nav bar for glass effect
+                            )
+                            .then(
+                                if (navGlassBackdrop != null && showBottomNav && formFactor.isPhoneLike) {
+                                    Modifier.layerBackdrop(navGlassBackdrop)
+                                } else {
+                                    Modifier
+                                }
                             )
                     ) {
                         NavGraph(
