@@ -527,8 +527,10 @@ fun DownloadsScreen(
                     }
                 }
                 val visibleSingles = audioItems.filterIsInstance<DownloadItem.SongItem>().map { it.song }
-                val playableSingles = visibleSingles.filter { single ->
-                    downloadedSongs.any { it.id == single.id }
+                val downloadedIds = downloadedSongs.mapTo(HashSet()) { it.id }
+                val playableSingles = visibleSingles.filter { single -> single.id in downloadedIds }
+                val visibleIndexById = HashMap<String, Int>(visibleSingles.size).apply {
+                    visibleSingles.forEachIndexed { i, song -> putIfAbsent(song.id, i) }
                 }
                 itemsIndexed(audioItems, key = { _, item ->
                     when (item) {
@@ -548,7 +550,7 @@ fun DownloadsScreen(
                         is DownloadItem.SongItem -> {
                             DownloadedSongCard(
                                 song = item.song,
-                                index = visibleSingles.indexOfFirst { it.id == item.song.id } + 1,
+                                index = (visibleIndexById[item.song.id] ?: -1) + 1,
                                 isDownloading = item.isDownloading,
                                 progress = item.progress,
                                 failureReason = item.failureReason,
