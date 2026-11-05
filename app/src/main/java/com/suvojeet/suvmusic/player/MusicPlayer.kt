@@ -1497,7 +1497,9 @@ class MusicPlayer @Inject constructor(
         val hq = isRemoteAudioStreamUrl(streamUrl)
         return when {
             song.source == SongSource.REMOTE -> if (hq || streamUrl == null) song.id else StreamCacheKey.of("${song.id}_yt", streamUrl)
-            hq -> "${song.id}_hq"
+            hq -> sessionManager.getMatchedRemoteSongId(song.id)
+                ?.let { "${song.id}_hq_$it" }
+                ?: "${song.id}_hq"
             else -> StreamCacheKey.of(song.id, streamUrl)
         }
     }

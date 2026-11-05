@@ -1040,9 +1040,18 @@ class DownloadRepository @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val ct0 = System.currentTimeMillis()
         val uri = android.net.Uri.parse(streamUrl)
+        val isHqStream = song.source != SongSource.REMOTE && (
+            streamUrl.contains(com.suvojeet.suvmusic.data.repository.remote.RemoteConstants.CDN_HOST) ||
+                streamUrl.contains("saavn", ignoreCase = true)
+            )
+        val cacheKey = if (isHqStream) {
+            sessionManager.getMatchedRemoteSongId(song.id)?.let { "${song.id}_hq_$it" } ?: "${song.id}_hq"
+        } else {
+            com.suvojeet.suvmusic.util.StreamCacheKey.of(song.id, streamUrl)
+        }
         val dataSpec = androidx.media3.datasource.DataSpec.Builder()
             .setUri(uri)
-            .setKey(com.suvojeet.suvmusic.util.StreamCacheKey.of(song.id, streamUrl))
+            .setKey(cacheKey)
             .build()
 
         val tempFile = File(context.cacheDir, "${song.id}_download.$extension")
@@ -1764,11 +1773,11 @@ class DownloadRepository @Inject constructor(
         }
 
         return try {
-            var match = pickBestRemoteMatch(song, searchTyped(query))
+            var match = com.suvojeet.suvmusic.player.HqSongMatcher.pickBest(song, searchTyped(query))
             if (match == null) {
                 val titleOnly = cleanSongTitle(song.title)
                 if (titleOnly.isNotEmpty() && !titleOnly.equals(query, ignoreCase = true)) {
-                    match = pickBestRemoteMatch(song, searchTyped(titleOnly))
+                    match = com.suvojeet.suvmusic.player.HqSongMatcher.pickBest(song, searchTyped(titleOnly))
                 }
             }
             if (match != null) {
@@ -1779,53 +1788,6 @@ class DownloadRepository @Inject constructor(
             android.util.Log.w("DownloadRepository", "Hybrid RemoteAudio download resolve failed: ${e.message}")
             null
         }
-    }
-
-    private fun pickBestRemoteMatch(song: Song, candidates: List<Song>): Song? {
-        if (candidates.isEmpty()) return null
-        val noise = setOf(
-            "official", "video", "audio", "lyrics", "lyric", "full", "song", "songs",
-            "hd", "4k", "mv", "feat", "ft", "with", "the", "remastered", "version",
-            "original", "soundtrack", "ost", "from", "movie"
-        )
-        fun normalize(s: String): Set<String> =
-            s.lowercase()
-                .replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), " ")
-                .replace(Regex("[^a-z0-9\\s]"), " ")
-                .split(Regex("\\s+"))
-                .filter { it.isNotBlank() && it.length > 1 && it !in noise }
-                .toSet()
-
-        val targetTitle = normalize(song.title)
-        val targetArtist = normalize(song.artist)
-        if (targetTitle.isEmpty()) return null
-
-        var best: Song? = null
-        var bestScore = 0.0
-        for (c in candidates) {
-            val cTitle = normalize(c.title)
-            if (cTitle.isEmpty()) continue
-            val titleOverlap = targetTitle.intersect(cTitle).size.toDouble() / targetTitle.size
-            if (titleOverlap < 0.5) continue
-
-            var durBonus = 0.0
-            if (song.duration > 0 && c.duration > 0) {
-                val diff = kotlin.math.abs(song.duration - c.duration)
-                if (diff > 15_000L) continue
-                durBonus = (1.0 - diff / 15_000.0) * 0.15
-            }
-
-            val cArtist = normalize(c.artist)
-            val artistOverlap = if (targetArtist.isEmpty() || cArtist.isEmpty()) 0.0
-                else targetArtist.intersect(cArtist).size.toDouble() / targetArtist.size
-
-            val score = titleOverlap + artistOverlap * 0.5 + durBonus
-            if (score > bestScore) {
-                bestScore = score
-                best = c
-            }
-        }
-        return if (bestScore >= 0.6) best else null
     }
 
     private fun cleanSongTitle(title: String): String {
