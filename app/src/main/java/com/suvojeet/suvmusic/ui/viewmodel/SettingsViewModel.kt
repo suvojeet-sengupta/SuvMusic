@@ -113,6 +113,7 @@ data class SettingsUiState(
     // Content Preferences
     val preferredLanguages: Set<String> = emptySet(),
     val youtubeHistorySyncEnabled: Boolean = false,
+    val homeDataSaver: Boolean = false,
     val ignoreAudioFocusDuringCalls: Boolean = false,
     val autoResumeAfterCall: Boolean = true,
     // Bluetooth
@@ -489,6 +490,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.youtubeHistorySyncEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(youtubeHistorySyncEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            sessionManager.homeDataSaverFlow.collect { enabled ->
+                _uiState.update { it.copy(homeDataSaver = enabled) }
             }
         }
 
@@ -1013,6 +1020,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setScrobbleDelaySeconds(seconds)
             _uiState.update { it.copy(scrobbleDelaySeconds = seconds) }
+        }
+    }
+
+    fun setHomeDataSaver(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionManager.setHomeDataSaver(enabled)
+            _uiState.update { it.copy(homeDataSaver = enabled) }
         }
     }
 

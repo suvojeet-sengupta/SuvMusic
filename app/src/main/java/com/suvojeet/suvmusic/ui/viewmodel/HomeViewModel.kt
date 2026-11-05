@@ -117,6 +117,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             // 1. Prioritize base data (HomeSections from YouTube/RemoteAudio)
             loadData(forceRefresh)
+
+            if (sessionManager.shouldSaveHomeData()) {
+                kotlinx.coroutines.delay(2000L)
+                launch { loadRecommendations() }
+                return@launch
+            }
             
             // 2. Stagger background taste-profile-driven content with larger delays to prevent memory spikes
             kotlinx.coroutines.delay(2000L) 
@@ -561,6 +567,7 @@ class HomeViewModel @Inject constructor(
         if (currentState.isLoadingMore || currentState.hasReachedEnd) return
 
         viewModelScope.launch {
+            if (sessionManager.shouldSaveHomeData()) return@launch
             _uiState.update { it.copy(isLoadingMore = true) }
             try {
                 val page = currentState.loadMorePage + 1
