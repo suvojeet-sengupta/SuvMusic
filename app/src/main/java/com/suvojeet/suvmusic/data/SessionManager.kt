@@ -81,6 +81,7 @@ class SessionManager @Inject constructor(
         private val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         private val AUDIO_QUALITY_KEY = stringPreferencesKey("audio_quality")
         private val WIFI_AUDIO_QUALITY_KEY = stringPreferencesKey("wifi_audio_quality")
+        private val HOME_DATA_SAVER_KEY = booleanPreferencesKey("home_data_saver")
         private val MOBILE_AUDIO_QUALITY_KEY = stringPreferencesKey("mobile_audio_quality")
         private val GAPLESS_PLAYBACK_KEY = booleanPreferencesKey("gapless_playback")
         private val AUTOMIX_KEY = booleanPreferencesKey("automix")
@@ -2284,6 +2285,21 @@ class SessionManager @Inject constructor(
     
     private val connectivityManager by lazy {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    val homeDataSaverFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[HOME_DATA_SAVER_KEY] ?: false
+    }
+
+    suspend fun setHomeDataSaver(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[HOME_DATA_SAVER_KEY] = enabled
+        }
+    }
+
+    suspend fun shouldSaveHomeData(): Boolean {
+        if (context.dataStore.data.first()[HOME_DATA_SAVER_KEY] != true) return false
+        return connectivityManager.isActiveNetworkMetered
     }
 
     private fun isOnWifi(): Boolean {

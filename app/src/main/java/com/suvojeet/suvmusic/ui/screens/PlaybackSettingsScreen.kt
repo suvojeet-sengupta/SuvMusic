@@ -141,6 +141,16 @@ fun PlaybackSettingsScreen(
                         checked = uiState.youtubeHistorySyncEnabled,
                         onCheckedChange = { viewModel.setYouTubeHistorySyncEnabled(it) }
                     )
+
+                    HorizontalDivider()
+
+                    SettingsSwitchRow(
+                        icon = Icons.Default.DataSaverOn,
+                        title = "Home Data Saver",
+                        subtitle = "On mobile data, load only the main home feed",
+                        checked = uiState.homeDataSaver,
+                        onCheckedChange = { viewModel.setHomeDataSaver(it) }
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
