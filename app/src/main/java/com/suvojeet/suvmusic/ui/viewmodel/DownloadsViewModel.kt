@@ -59,6 +59,7 @@ class DownloadsViewModel @Inject constructor(
         // Failed songs are off the queue and not downloaded, so they'd disappear from
         // this list entirely — include them so the user can see and retry them.
         val allSongs = (downloaded + queued + failures.values.map { it.song }).distinctBy { it.id }
+        val downloadedIds = downloaded.mapTo(HashSet()) { it.id }
 
         val collections = allSongs.filter { it.collectionId != null }
             .groupBy { it.collectionId.orEmpty() }
@@ -70,7 +71,7 @@ class DownloadsViewModel @Inject constructor(
                     thumbnailUrl = first.thumbnailUrl,
                     songs = groupSongs.map { song ->
                         val isDownloading = downloading.contains(song.id)
-                        val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
+                        val progress = progressMap[song.id] ?: if (downloadedIds.contains(song.id)) 1.0f else 0.0f
                         SongStatus(song, isDownloading, progress, failures[song.id]?.reason)
                     }
                 )
@@ -79,7 +80,7 @@ class DownloadsViewModel @Inject constructor(
         val singles = allSongs.filter { it.collectionId == null }
             .map { song ->
                 val isDownloading = downloading.contains(song.id)
-                val progress = progressMap[song.id] ?: if (downloaded.any { it.id == song.id }) 1.0f else 0.0f
+                val progress = progressMap[song.id] ?: if (downloadedIds.contains(song.id)) 1.0f else 0.0f
                 DownloadItem.SongItem(song, isDownloading, progress, failures[song.id]?.reason)
             }
             

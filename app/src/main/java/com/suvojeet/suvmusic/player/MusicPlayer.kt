@@ -964,11 +964,12 @@ class MusicPlayer @Inject constructor(
                 // This is especially important when shuffle mode changes externally
                 val accurateQueue = mutableListOf<Song>()
                 val mediaItemCount = controller.mediaItemCount
+                val knownSongs = _playerState.value.queue.asReversed().associateBy { it.id }
                 for (i in 0 until mediaItemCount) {
                     val mediaItemAtIndex = controller.getMediaItemAt(i)
                     val videoId = mediaItemAtIndex.mediaId
                     // Try to get song from current state first
-                    var queueSong = _playerState.value.queue.firstOrNull { it.id == videoId }
+                    var queueSong = knownSongs[videoId]
                     if (queueSong == null && mediaItemAtIndex.mediaMetadata.title != null) {
                         // Create from metadata if not found in current state
                         val duration = if (controller.duration != androidx.media3.common.C.TIME_UNSET) controller.duration else 0L
@@ -2870,9 +2871,12 @@ class MusicPlayer @Inject constructor(
         val uri = when (song.source) {
             SongSource.LOCAL, SongSource.DOWNLOADED -> {
                 val local = song.localUri.orEmpty()
-                if (local.isNotEmpty() && isLocalUriReadable(local)) {
+                val canFallBackToStream = song.source == SongSource.DOWNLOADED && resolveStream
+                if (!canFallBackToStream) {
                     local
-                } else if (song.source == SongSource.DOWNLOADED && resolveStream) {
+                } else if (local.isNotEmpty() && withContext(Dispatchers.IO) { isLocalUriReadable(local) }) {
+                    local
+                } else {
                     // The downloaded file is gone — fall back to streaming the same
                     // track instead of failing playback with a source error.
                     android.util.Log.w("MusicPlayer", "Downloaded file missing for '${song.title}' — falling back to stream")
@@ -2883,8 +2887,6 @@ class MusicPlayer @Inject constructor(
                     )
                     youTubeRepository.getStreamUrl(song.id, forceLow = forceLow)
                         ?: local.ifEmpty { "https://placeholder.invalid/${song.id}" }
-                } else {
-                    local
                 }
             }
             SongSource.REMOTE -> {
