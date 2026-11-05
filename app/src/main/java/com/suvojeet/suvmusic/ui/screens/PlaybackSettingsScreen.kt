@@ -116,6 +116,17 @@ fun PlaybackSettingsScreen(
                         },
                         onClick = { showMusicSourceSheet = true }
                     )
+
+                    HorizontalDivider()
+
+                    SettingsSwitchRow(
+                        icon = Icons.Default.Download,
+                        title = "Download in HQ Audio",
+                        subtitle = if (uiState.preferRemoteAudio) "Use HQ Audio when a matching track is found"
+                                   else "Always download from YouTube Music",
+                        checked = uiState.preferRemoteAudio,
+                        onCheckedChange = { viewModel.setPreferRemoteAudio(it) }
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
